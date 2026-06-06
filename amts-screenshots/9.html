@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMTS - Advanced Location Transfer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, colors: { slate: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' } } } } }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+    <nav class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+        <div class="flex items-center space-x-8">
+            <div class="flex items-center space-x-2">
+                <div class="w-6 h-6 bg-blue-600 rounded-sm"></div>
+                <span class="font-bold text-xl tracking-tight text-slate-900">AMTS</span>
+            </div>
+            <div class="hidden md:flex space-x-1">
+                <a href="#" class="px-3 py-1.5 text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors">Dashboard</a>
+                <a href="#" class="px-3 py-1.5 bg-slate-100 text-slate-900 font-medium rounded-md text-sm">Assets</a>
+                <a href="#" class="px-3 py-1.5 text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors">Work Orders</a>
+                <a href="#" class="px-3 py-1.5 text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors">PM Rules</a>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 border-l border-slate-200 pl-4">
+                <div class="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-700">SJ</div>
+                <span class="text-sm font-medium text-slate-700">Sarah Jenkins (Manager)</span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="w-[85%] mx-auto px-6 py-8">
+        <div class="mb-6">
+            <nav class="flex text-sm text-slate-500 mb-2">
+                <a href="#" class="hover:text-slate-900">Assets</a> <span class="mx-2">/</span> <span class="text-slate-900 font-medium">AST-1001</span>
+            </nav>
+            <h1 class="text-2xl font-bold text-slate-900">Location Transfer & Chain of Custody</h1>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <div class="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h2 class="text-base font-semibold text-slate-800">Transfer Execution Form</h2>
+                    <span class="text-xs font-medium text-slate-500 border border-slate-200 bg-white px-2 py-1 rounded">Asset: Generator 12</span>
+                </div>
+                
+                <div class="p-6 space-y-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1 bg-slate-50 border border-slate-200 rounded-md p-3">
+                            <span class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Current Origin</span>
+                            <span class="text-sm font-medium text-slate-900">Site Alpha (Erbil)</span>
+                        </div>
+                        <svg class="w-6 h-6 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        <div class="flex-1">
+                            <span class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Destination *</span>
+                            <select class="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-md focus:ring-blue-500 block p-2">
+                                <option value="YARD_B" selected>Yard B Workshop</option>
+                                <option value="YARD_C">Storage Yard C</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Receiving Custodian *</label>
+                            <input type="text" value="Ahmed Raza" class="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-md focus:ring-blue-500 block p-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Transport Method *</label>
+                            <select class="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-md focus:ring-blue-500 block p-2.5">
+                                <option value="internal" selected>Internal Logistics Fleet</option>
+                                <option value="external">Third-Party Carrier</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Transfer Justification</label>
+                        <textarea rows="3" class="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-md focus:ring-blue-500 block p-2.5">Relocating to Yard B for intensive primary alternator repairs (Ref WO-2476). Equipment will be out of commission for approx 3 days.</textarea>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+                    <span class="text-xs text-slate-500">Date: June 3, 2026</span>
+                    <button class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Authorize Transfer</button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-md border border-slate-200 shadow-sm p-6">
+                <h3 class="text-sm font-bold text-slate-900 mb-5 border-b border-slate-200 pb-2">Historical Chain of Custody</h3>
+                <ul class="space-y-6 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-200">
+                    <li class="relative flex items-start">
+                        <div class="w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow flex-shrink-0 mt-1 relative z-10 ml-0 md:ml-auto md:mr-auto md:-translate-x-0.5"></div>
+                        <div class="ml-3 md:ml-0 md:w-full bg-slate-50 border border-slate-200 rounded-md p-3">
+                            <div class="flex justify-between items-start mb-1">
+                                <p class="text-sm font-bold text-slate-900">Arrived: Site Alpha (Erbil)</p>
+                                <span class="text-xs text-slate-500">Jan 10, 2026</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Custodian: Site Manager Davis</p>
+                            <p class="text-xs text-slate-500 mt-1">Reason: Operational Deployment Phase 1.</p>
+                        </div>
+                    </li>
+                    <li class="relative flex items-start">
+                        <div class="w-4 h-4 rounded-full bg-slate-300 border-2 border-white shadow flex-shrink-0 mt-1 relative z-10 ml-0 md:ml-auto md:mr-auto md:-translate-x-0.5"></div>
+                        <div class="ml-3 md:ml-0 md:w-full bg-white border border-slate-200 rounded-md p-3 opacity-75">
+                            <div class="flex justify-between items-start mb-1">
+                                <p class="text-sm font-bold text-slate-900">Arrived: Yard B Workshop</p>
+                                <span class="text-xs text-slate-500">Dec 01, 2025</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Custodian: Sarah Jenkins</p>
+                            <p class="text-xs text-slate-500 mt-1">Reason: Annual Overhaul and Certification.</p>
+                        </div>
+                    </li>
+                    <li class="relative flex items-start">
+                        <div class="w-4 h-4 rounded-full bg-slate-300 border-2 border-white shadow flex-shrink-0 mt-1 relative z-10 ml-0 md:ml-auto md:mr-auto md:-translate-x-0.5"></div>
+                        <div class="ml-3 md:ml-0 md:w-full bg-white border border-slate-200 rounded-md p-3 opacity-75">
+                            <div class="flex justify-between items-start mb-1">
+                                <p class="text-sm font-bold text-slate-900">Arrived: Storage Yard C</p>
+                                <span class="text-xs text-slate-500">Aug 15, 2025</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Custodian: Logistics Hub</p>
+                            <p class="text-xs text-slate-500 mt-1">Reason: Initial receipt from OEM supplier.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
