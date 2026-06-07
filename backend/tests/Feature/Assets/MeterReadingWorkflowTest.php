@@ -105,4 +105,37 @@ class MeterReadingWorkflowTest extends TestCase
              
         $this->assertNull($lowerReading->fresh()->confirmed_at);
     }
+
+    public function test_confirmed_readings_cannot_have_earlier_date(): void
+    {
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $asset = Asset::create(['erp_asset_code' => 'AST-RD-4', 'name' => 'Gen']);
+        $type = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
+        
+        // Existing confirmed reading
+        AssetMeterReading::create([
+            'asset_id' => $asset->id,
+            'usage_reading_type_id' => $type->id,
+            'reading_value' => 500,
+            'reading_at' => now()->subDays(2),
+            'source' => 'user',
+            'confirmed_at' => now(),
+            'confirmed_by_user_id' => $tech->id,
+        ]);
+
+        // New unverified reading, valid value, but EARLIER date
+        $earlierReading = AssetMeterReading::create([
+            'asset_id' => $asset->id,
+            'usage_reading_type_id' => $type->id,
+            'reading_value' => 510,
+            'reading_at' => now()->subDays(3), // Earlier!
+            'source' => 'user',
+        ]);
+
+        $this->actingAs($tech)->postJson("/api/assets/{$asset->id}/meter-readings/{$earlierReading->id}/confirm")
+             ->assertStatus(422)
+             ->assertJsonPath('message', 'Reading date cannot be earlier than the latest confirmed reading date.');
+             
+        $this->assertNull($earlierReading->fresh()->confirmed_at);
+    }
 }

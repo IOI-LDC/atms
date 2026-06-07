@@ -39,8 +39,8 @@ class LocationWorkflowTest extends TestCase
             'code' => 'WH-01',
         ];
 
-        $this->actingAs($manager)->postJson('/api/admin/master-data/locations', $payload)->assertForbidden();
-        $this->actingAs($admin)->postJson('/api/admin/master-data/locations', $payload)->assertCreated();
+        $this->actingAs($manager)->postJson('/api/admin/locations', $payload)->assertForbidden();
+        $this->actingAs($admin)->postJson('/api/admin/locations', $payload)->assertCreated();
     }
 
     public function test_only_authorized_roles_update_asset_location(): void
