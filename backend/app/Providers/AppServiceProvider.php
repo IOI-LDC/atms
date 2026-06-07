@@ -2,23 +2,39 @@
 
 namespace App\Providers;
 
+use App\Contracts\Notifications\AccountEmailTransport;
+use App\Notifications\Channels\AccountEmailChannel;
+use App\Services\Notifications\FakeAccountEmailTransport;
+use App\Services\Notifications\PowerAutomateAccountEmailTransport;
+use Illuminate\Notifications\ChannelManager;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        $this->app->singleton(AccountEmailTransport::class, function () {
+            $transport = config('account-email.transport', 'fake');
+
+            return match ($transport) {
+                'power_automate' => new PowerAutomateAccountEmailTransport,
+                default => new FakeAccountEmailTransport,
+            };
+        });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        Password::defaults(function () {
+            return Password::min(8);
+        });
+
+        Notification::resolved(function (ChannelManager $service) {
+            $service->extend('account_email', function ($app) {
+                return new AccountEmailChannel($app->make(AccountEmailTransport::class));
+            });
+        });
     }
 }

@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Notifications;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Notification;
+
+class PasswordResetNotification extends Notification implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(
+        public string $resetUrl
+    ) {}
+
+    public function via(object $notifiable): array
+    {
+        return ['account_email'];
+    }
+
+    public function toAccountEmail(object $notifiable): array
+    {
+        return [
+            'recipient' => $notifiable->email,
+            'subject' => 'Reset your ATMS password',
+            'actionUrl' => $this->resetUrl,
+        ];
+    }
+}
