@@ -3,7 +3,7 @@ set -eu
 
 echo "Checking Docker Compose services..."
 
-REQUIRED="web app postgres queue scheduler"
+REQUIRED="nginx api postgres queue scheduler"
 PROFILE_SERVICE="mock-erp"
 MISSING=0
 

@@ -1,5 +1,5 @@
 services:
-  app:
+  api:
     volumes:
       - ./backend:/var/www/html
       - attachments:/var/www/html/storage/app/attachments
@@ -7,7 +7,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
 
-  web:
+  nginx:
     volumes:
       - ./docker/backend/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
 

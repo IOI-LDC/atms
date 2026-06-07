@@ -1,9 +1,9 @@
 services:
-  app:
+  api:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
-    container_name: atms-app
+    container_name: atms-api
     working_dir: /var/www/html
     volumes:
       - attachments:/var/www/html/storage/app/attachments
@@ -36,17 +36,17 @@ services:
     networks:
       - internal
 
-  web:
+  nginx:
     image: nginx:alpine
-    container_name: atms-web
+    container_name: atms-nginx
     ports:
       - "${WEB_PORT:-80}:80"
     volumes:
       - ./docker/backend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     volumes_from:
-      - app:ro
+      - api:ro
     depends_on:
-      - app
+      - api
     networks:
       - internal
 
