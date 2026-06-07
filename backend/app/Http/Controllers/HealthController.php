@@ -24,7 +24,7 @@ class HealthController extends Controller
         }
 
         try {
-            $disk = Storage::disk(config('atms.attachment_disk'))->exists('.');
+            $disk = Storage::disk(config('atms.attachment_disk', 'attachments'))->exists('.');
         } catch (\Throwable) {
         }
 

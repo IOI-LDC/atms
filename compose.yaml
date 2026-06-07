@@ -21,7 +21,7 @@ services:
       SESSION_DOMAIN: "${SESSION_DOMAIN:-localhost}"
       SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-localhost}"
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
-      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-local}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
       MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
       MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
       ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
@@ -43,6 +43,8 @@ services:
       - "${WEB_PORT:-80}:80"
     volumes:
       - ./docker/backend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    volumes_from:
+      - app:ro
     depends_on:
       - app
     networks:
@@ -86,7 +88,7 @@ services:
       DB_PASSWORD: "${DB_PASSWORD:-secret}"
       QUEUE_CONNECTION: database
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
-      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-local}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
       MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
       MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
     depends_on:
@@ -116,7 +118,7 @@ services:
       DB_PASSWORD: "${DB_PASSWORD:-secret}"
       QUEUE_CONNECTION: database
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
-      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-local}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
       MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
       MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
     depends_on:

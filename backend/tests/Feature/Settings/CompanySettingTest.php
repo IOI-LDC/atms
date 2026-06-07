@@ -3,6 +3,7 @@
 namespace Tests\Feature\Settings;
 
 use App\Models\CompanySetting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,7 +14,7 @@ class CompanySettingTest extends TestCase
     public function test_unauthenticated_user_cannot_read_company_settings(): void
     {
         $this->getJson('/api/admin/company-settings')
-            ->assertUnauthorized();
+            ->assertStatus(401);
     }
 
     public function test_unauthenticated_user_cannot_update_company_settings(): void
@@ -21,12 +22,12 @@ class CompanySettingTest extends TestCase
         $this->patchJson('/api/admin/company-settings', [
             'timezone' => 'Europe/Berlin',
         ])
-            ->assertUnauthorized();
+            ->assertStatus(401);
     }
 
     public function test_company_settings_seed_default_timezone(): void
     {
-        CompanySetting::create(['timezone' => 'Africa/Tripoli']);
+        $this->seed();
 
         $setting = CompanySetting::first();
         $this->assertEquals('Africa/Tripoli', $setting->timezone);
@@ -42,14 +43,39 @@ class CompanySettingTest extends TestCase
         $this->assertEquals('Europe/Berlin', $setting->fresh()->timezone);
     }
 
-    public function test_company_settings_rejects_invalid_timezone(): void
+    public function test_authenticated_user_can_read_company_settings(): void
     {
-        CompanySetting::create(['timezone' => 'Africa/Tripoli']);
+        $this->seed();
+        $user = User::factory()->create();
 
-        $response = $this->patchJson('/api/admin/company-settings', [
-            'timezone' => 'Invalid/Timezone',
-        ]);
+        $this->actingAs($user)
+            ->getJson('/api/admin/company-settings')
+            ->assertOk()
+            ->assertJsonStructure(['timezone']);
+    }
 
-        $response->assertStatus(401);
+    public function test_authenticated_user_can_update_valid_timezone(): void
+    {
+        $this->seed();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patchJson('/api/admin/company-settings', [
+                'timezone' => 'Europe/Berlin',
+            ])
+            ->assertOk()
+            ->assertJson(['timezone' => 'Europe/Berlin']);
+    }
+
+    public function test_update_rejects_invalid_timezone_with_422(): void
+    {
+        $this->seed();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patchJson('/api/admin/company-settings', [
+                'timezone' => 'Invalid/Timezone',
+            ])
+            ->assertStatus(422);
     }
 }
