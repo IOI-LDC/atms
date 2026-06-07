@@ -33,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
 
             return new \App\Services\Employees\FakeEmployeeDirectorySource;
         });
+
+        $this->app->singleton(\App\Contracts\Erp\ErpSource::class, \App\Services\Erp\MockErpHttpSource::class);
     }
 
     public function boot(): void
