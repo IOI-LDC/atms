@@ -53,9 +53,6 @@ rules.
 | Manage ERP sync settings | Yes | No | No | No | No | No |
 | View technical audit logs | Yes | No | No | No | No | No |
 
-Entries marked `Optional` remain unresolved and require explicit approval before
-implementation.
-
 ## Important Rules
 
 - Work Orders are created only from approved Maintenance Requests.

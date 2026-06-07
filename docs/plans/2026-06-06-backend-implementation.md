@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build the complete ATMS Laravel backend, supporting local OrbStack and VPS Docker deployment, the read-only mock ERP, fixed-role workflows, SharePoint employee provisioning, PM scheduling, attachments, audit, and operational reporting.
+**Goal:** Build the complete mock-backed ATMS MVP backend foundation and workflows, supporting local OrbStack and VPS Docker deployment while keeping real SharePoint and client ERP transports behind deferred adapters.
 
 **Architecture:** Use a conventional modular Laravel 13 monolith in `backend/`, organized by domain with thin controllers and transactional Action classes. Run Nginx, PHP-FPM, PostgreSQL, database queue workers, and the scheduler through one Docker Compose topology; ship a separate profile-based Laravel mock ERP using seeded SQLite.
 
@@ -104,6 +104,9 @@ git commit -m "build: scaffold Laravel services and Docker topology"
 - Modify: `backend/config/database.php`
 - Modify: `backend/config/queue.php`
 - Create: `backend/config/atms.php`
+- Create: `backend/app/Models/CompanySetting.php`
+- Create: `backend/database/migrations/*_create_company_settings_table.php`
+- Create: `backend/app/Http/Controllers/Admin/CompanySettingController.php`
 - Modify: `backend/routes/api.php`
 - Create: `backend/app/Http/Controllers/HealthController.php`
 - Test: `backend/tests/Feature/Health/HealthEndpointTest.php`
@@ -115,6 +118,8 @@ Cover:
 - `/api/health/live` returns `200`.
 - `/api/health/ready` verifies database and attachment disk.
 - Response contains no secrets.
+- Administrator can read/update the company display timezone.
+- Non-Administrators cannot mutate company settings.
 
 **Step 2: Run focused tests**
 
@@ -130,6 +135,9 @@ Set:
 - PostgreSQL as default database
 - `database` as default queue
 - API middleware and stable JSON exception responses
+
+Persist company settings in PostgreSQL with `Africa/Tripoli` seeded as the
+initial display timezone. Expose Administrator-only read/update endpoints.
 
 **Step 4: Implement health endpoints**
 
@@ -539,6 +547,7 @@ Verify:
 - Priority snapshot and `WO-######`.
 - Only Manager/Admin assign active Technicians.
 - Assignment required for `in_progress`.
+- Explicit `POST /api/work-orders/{workOrder}/start` transition.
 - Assigned Technician edits/completes.
 - Manager/Admin may edit non-terminal execution details with audit.
 - Completion locks Technician edits.
@@ -648,6 +657,7 @@ Cover:
 - Executable/archive rejection.
 - Server-detected MIME.
 - Private authorized download.
+- Explicit `GET /api/attachments/{attachment}/download` endpoint.
 - Soft deletion hides list/download.
 - Metadata/file retained.
 - No restore/purge endpoint.

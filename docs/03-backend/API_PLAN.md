@@ -35,6 +35,7 @@ POST   /api/assets/{asset}/location
 GET    /api/assets/{asset}/maintenance-history
 GET    /api/assets/{asset}/attachments
 POST   /api/assets/{asset}/attachments
+GET    /api/attachments/{attachment}/download
 DELETE /api/attachments/{attachment}
 ```
 
@@ -104,6 +105,7 @@ GET    /api/work-orders
 GET    /api/work-orders/{workOrder}
 PATCH  /api/work-orders/{workOrder}
 POST   /api/work-orders/{workOrder}/assign
+POST   /api/work-orders/{workOrder}/start
 POST   /api/work-orders/{workOrder}/parts
 DELETE /api/work-orders/{workOrder}/parts/{partLine}
 POST   /api/work-orders/{workOrder}/attachments
@@ -219,6 +221,9 @@ POST   /api/admin/erp-sync/assets/run
 POST   /api/admin/erp-sync/parts/run
 
 GET    /api/admin/audit-logs
+
+GET    /api/admin/company-settings
+PATCH  /api/admin/company-settings
 ```
 
 Location-definition and master-data mutation endpoints are Administrator-only.
@@ -238,6 +243,9 @@ provides basic filtering only and no audit campaign, mutation, or deletion API.
 Users are never physically deleted. Deactivation immediately prevents
 authentication and invalidates active sessions while preserving historical
 record ownership and audit references.
+
+Company settings are Administrator-only. MVP company settings include the
+display timezone, initially `Africa/Tripoli`.
 
 SharePoint employee import and user provisioning are Administrator-only.
 Imported employees receive no access until explicitly provisioned with one
