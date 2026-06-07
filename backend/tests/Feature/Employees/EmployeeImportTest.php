@@ -29,6 +29,22 @@ class EmployeeImportTest extends TestCase
         ]);
     }
 
+    private function createNonAdmin(): User
+    {
+        return User::factory()->create([
+            'role_id' => Role::where('code', RoleCode::VIEWER)->first()->id,
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_non_administrator_cannot_import_employees(): void
+    {
+        $user = $this->createNonAdmin();
+
+        $this->actingAs($user)->postJson('/api/admin/employees/import')
+             ->assertForbidden();
+    }
+
     public function test_import_upserts_by_sharepoint_item_id_and_emp_id(): void
     {
         $fakeSource = new FakeEmployeeDirectorySource();

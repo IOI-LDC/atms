@@ -4,6 +4,7 @@ namespace App\Actions\Employees;
 
 use App\Contracts\Employees\EmployeeDirectorySource;
 use App\Models\Employee;
+use Illuminate\Support\Facades\DB;
 
 class ImportEmployees
 {
@@ -13,14 +14,21 @@ class ImportEmployees
 
     public function execute(): int
     {
-        $externalEmployees = $this->source->getEmployees();
-        $importedCount = 0;
+        return DB::transaction(function () {
+            $externalEmployees = $this->source->getEmployees();
+            $importedCount = 0;
 
-        foreach ($externalEmployees as $external) {
-            Employee::updateOrCreate(
-                ['emp_id' => $external->empId],
-                [
-                    'sharepoint_item_id' => $external->sharepointItemId,
+            foreach ($externalEmployees as $external) {
+                $employee = Employee::firstOrNew(
+                    ['sharepoint_item_id' => $external->sharepointItemId]
+                );
+                
+                // Only set emp_id on creation, as it is immutable post-provisioning.
+                if (! $employee->exists) {
+                    $employee->emp_id = $external->empId;
+                }
+
+                $employee->fill([
                     'name' => $external->name,
                     'email' => $external->email,
                     'department' => $external->department,
@@ -29,11 +37,12 @@ class ImportEmployees
                     'source_updated_at' => $external->updatedAt,
                     'source_raw_data' => $external->rawData,
                     'last_synced_at' => now(),
-                ]
-            );
-            $importedCount++;
-        }
+                ])->save();
 
-        return $importedCount;
+                $importedCount++;
+            }
+
+            return $importedCount;
+        });
     }
 }

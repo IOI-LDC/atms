@@ -29,6 +29,31 @@ class EmployeeProvisioningTest extends TestCase
         ]);
     }
 
+    private function createNonAdmin(): User
+    {
+        return User::factory()->create([
+            'role_id' => Role::where('code', RoleCode::VIEWER)->first()->id,
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_non_administrator_cannot_provision_users(): void
+    {
+        $user = $this->createNonAdmin();
+        $employee = Employee::create([
+            'sharepoint_item_id' => 'sp-001',
+            'emp_id' => 'EMP500',
+            'name' => 'Charlie Brown',
+            'email' => 'charlie@example.com',
+            'last_synced_at' => now(),
+        ]);
+        $role = Role::where('code', RoleCode::TECHNICIAN)->first();
+
+        $this->actingAs($user)->postJson("/api/admin/employees/{$employee->id}/provision-user", [
+            'role_id' => $role->id,
+        ])->assertForbidden();
+    }
+
     public function test_administrator_provisions_one_selected_employee_with_one_role(): void
     {
         Notification::fake();

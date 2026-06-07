@@ -15,14 +15,14 @@ class EmployeeController extends Controller
 {
     public function index(): JsonResponse
     {
-        Gate::authorize('viewAny', \App\Models\User::class); // Using User policy for admin check
+        Gate::authorize('viewAny', \App\Models\Employee::class);
 
         return response()->json(['data' => Employee::all()]);
     }
 
     public function import(ImportEmployees $action): JsonResponse
     {
-        Gate::authorize('manage', \App\Models\User::class);
+        Gate::authorize('manage', \App\Models\Employee::class);
 
         $count = $action->execute();
 
@@ -31,7 +31,7 @@ class EmployeeController extends Controller
 
     public function provisionUser(Request $request, Employee $employee, ProvisionEmployeeUser $action): JsonResponse
     {
-        Gate::authorize('manage', \App\Models\User::class);
+        Gate::authorize('manage', \App\Models\Employee::class);
 
         $validated = $request->validate([
             'role_id' => ['required', 'exists:roles,id'],

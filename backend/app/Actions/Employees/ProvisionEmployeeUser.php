@@ -28,7 +28,7 @@ class ProvisionEmployeeUser
                 'employee_id' => $employee->id,
                 'name' => $employee->name,
                 'email' => $employee->email,
-                'password' => \Illuminate\Support\Facades\Hash::make(Str::random(32)),
+                'password' => Str::random(32),
                 'role_id' => $role->id,
                 'is_active' => false,
             ]);
