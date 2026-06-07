@@ -10,6 +10,10 @@ class AssetController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'updated_since' => ['nullable', 'date'],
+        ]);
+
         $query = Asset::query();
 
         if ($request->has('updated_since')) {

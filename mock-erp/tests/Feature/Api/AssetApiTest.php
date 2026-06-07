@@ -35,6 +35,13 @@ class AssetApiTest extends TestCase
              ->assertOk();
     }
 
+    public function test_invalid_updated_since_returns_422(): void
+    {
+        $this->withHeader('X-Service-API-Key', 'test-secret')
+             ->getJson('/api/assets?updated_since=not-a-date')
+             ->assertStatus(422);
+    }
+
     public function test_asset_fields_match_contract(): void
     {
         Asset::create([
@@ -71,7 +78,7 @@ class AssetApiTest extends TestCase
         Asset::create(['code' => 'NEW', 'name' => 'New', 'created_at' => $newDate, 'updated_at' => $newDate]);
 
         $response = $this->withHeader('X-Service-API-Key', 'test-secret')
-                         ->getJson('/api/assets?updated_since=' . now()->subDays(5)->toIso8601String());
+                         ->getJson('/api/assets?updated_since=' . urlencode(now()->subDays(5)->toIso8601String()));
 
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));

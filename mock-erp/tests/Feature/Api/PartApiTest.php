@@ -21,6 +21,27 @@ class PartApiTest extends TestCase
         $this->getJson('/api/parts')->assertStatus(401);
     }
 
+    public function test_invalid_api_key_returns_401(): void
+    {
+        $this->withHeader('X-Service-API-Key', 'wrong-key')
+             ->getJson('/api/parts')
+             ->assertStatus(401);
+    }
+
+    public function test_valid_api_key_allows_access(): void
+    {
+        $this->withHeader('X-Service-API-Key', 'test-secret')
+             ->getJson('/api/parts')
+             ->assertOk();
+    }
+
+    public function test_invalid_updated_since_returns_422(): void
+    {
+        $this->withHeader('X-Service-API-Key', 'test-secret')
+             ->getJson('/api/parts?updated_since=not-a-date')
+             ->assertStatus(422);
+    }
+
     public function test_part_fields_match_contract(): void
     {
         Part::create([
@@ -55,7 +76,7 @@ class PartApiTest extends TestCase
         Part::create(['code' => 'NEW', 'name' => 'New', 'created_at' => $newDate, 'updated_at' => $newDate]);
 
         $response = $this->withHeader('X-Service-API-Key', 'test-secret')
-                         ->getJson('/api/parts?updated_since=' . now()->subDays(5)->toIso8601String());
+                         ->getJson('/api/parts?updated_since=' . urlencode(now()->subDays(5)->toIso8601String()));
 
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));

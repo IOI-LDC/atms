@@ -10,6 +10,10 @@ class PartController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'updated_since' => ['nullable', 'date'],
+        ]);
+
         $query = Part::query();
 
         if ($request->has('updated_since')) {
