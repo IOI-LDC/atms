@@ -1,0 +1,145 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: atms-app
+    working_dir: /var/www/html
+    volumes:
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "${APP_URL:-http://localhost}"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-atms}"
+      DB_USERNAME: "${DB_USERNAME:-atms}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+      QUEUE_CONNECTION: database
+      SESSION_DOMAIN: "${SESSION_DOMAIN:-localhost}"
+      SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-localhost}"
+      ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-local}"
+      MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
+      MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
+      ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
+      POWER_AUTOMATE_URL: "${POWER_AUTOMATE_URL:-}"
+      POWER_AUTOMATE_TENANT_ID: "${POWER_AUTOMATE_TENANT_ID:-}"
+      POWER_AUTOMATE_CLIENT_ID: "${POWER_AUTOMATE_CLIENT_ID:-}"
+      POWER_AUTOMATE_CLIENT_SECRET: "${POWER_AUTOMATE_CLIENT_SECRET:-}"
+      POWER_AUTOMATE_MAILBOX: "${POWER_AUTOMATE_MAILBOX:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  web:
+    image: nginx:alpine
+    container_name: atms-web
+    ports:
+      - "${WEB_PORT:-80}:80"
+    volumes:
+      - ./docker/backend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - internal
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: atms-postgres
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-atms}"
+      POSTGRES_USER: "${DB_USERNAME:-atms}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-secret}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-atms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: atms-queue
+    working_dir: /var/www/html
+    command: php artisan queue:work --tries=3
+    volumes:
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "${APP_URL:-http://localhost}"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-atms}"
+      DB_USERNAME: "${DB_USERNAME:-atms}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+      QUEUE_CONNECTION: database
+      ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-local}"
+      MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
+      MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: atms-scheduler
+    working_dir: /var/www/html
+    command: php artisan schedule:work
+    volumes:
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "${APP_URL:-http://localhost}"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-atms}"
+      DB_USERNAME: "${DB_USERNAME:-atms}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+      QUEUE_CONNECTION: database
+      ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-local}"
+      MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
+      MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  mock-erp:
+    build:
+      context: .
+      dockerfile: docker/mock-erp/Dockerfile
+    container_name: atms-mock-erp
+    profiles:
+      - mock-erp
+    environment:
+      MOCK_ERP_SERVICE_API_KEY: "${MOCK_ERP_API_KEY}"
+    networks:
+      - internal
+
+volumes:
+  pgdata:
+  attachments:
+
+networks:
+  internal:

@@ -1,0 +1,36 @@
+services:
+  app:
+    volumes:
+      - ./backend:/var/www/html
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+  web:
+    volumes:
+      - ./docker/backend/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./backend:/var/www/html
+
+  queue:
+    volumes:
+      - ./backend:/var/www/html
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+  scheduler:
+    volumes:
+      - ./backend:/var/www/html
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+  mock-erp:
+    volumes:
+      - ./mock-erp:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
