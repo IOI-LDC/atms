@@ -108,3 +108,14 @@ Offline working, offline synchronization, and conflict resolution are excluded f
 ## 21. Multi-Tenant SaaS Features
 
 The system is assumed to be deployed for a single client environment. Multi-tenant SaaS billing, tenant self-registration, subscription management, and tenant-level commercial controls are excluded.
+
+## 22. SharePoint Application Hosting And SSO
+
+ATMS will not be deployed into SharePoint SitePages, implemented as an SPFx web
+part, embedded in SharePoint, or deeply integrated with the SharePoint user
+interface. SharePoint or Microsoft Entra authentication and automatic access
+based on portal membership are excluded from MVP.
+
+SharePoint is limited to employee-directory import and a normal company-portal
+link to the separately hosted ATMS application. Power Automate remains the
+production transport for activation and password-reset emails.

@@ -17,6 +17,17 @@
 - Initial company display timezone: `Africa/Tripoli`
 - Redis and MinIO are optional future upgrades and are not part of the default MVP deployment
 
+## SharePoint Portal Boundary
+
+The company SharePoint portal provides only a normal hyperlink to the
+separately hosted ATMS web application. ATMS is not hosted in SharePoint
+SitePages, embedded in SharePoint, or implemented as an SPFx web part.
+
+Access to the internal SharePoint portal does not create an ATMS session or
+grant ATMS permissions. ATMS continues to authenticate through Laravel Sanctum
+SPA cookie/session authentication and authorize users through its six fixed
+roles. SharePoint or Microsoft Entra SSO is not part of MVP.
+
 ## Architectural Style
 
 The backend should be a conventional modular Laravel application. It should contain clear domain boundaries but avoid unnecessary over-engineering.

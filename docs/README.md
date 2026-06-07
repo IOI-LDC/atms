@@ -44,6 +44,7 @@ ERP remains the source of truth for fixed assets and parts. ATMS keeps a local o
 - **Attachments:** Laravel local storage on a persistent Docker volume
 - **Auth/RBAC:** Laravel Sanctum SPA cookie/session authentication with role-based permissions
 - **Production Account Email:** Microsoft Power Automate for activation and password-reset delivery
+- **Company Portal:** SharePoint contains a normal link to the separately hosted ATMS web application; ATMS is not embedded in or deployed to SharePoint
 
 Redis and MinIO are optional future upgrades and are not part of the default MVP deployment.
 

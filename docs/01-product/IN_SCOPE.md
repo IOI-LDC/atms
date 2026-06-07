@@ -101,3 +101,10 @@ The system will include settings for managing users, locations, asset usage read
 ## 19. Dropdown / Master Data Management
 
 Administrators will be able to manage configurable dropdown values used in the system, such as locations, asset statuses, maintenance priorities, usage reading types, work order statuses, maintenance categories, and other lookup values required for the workflow.
+
+## 20. SharePoint Portal Link
+
+The company's SharePoint portal may contain a normal link that opens the
+separately hosted ATMS web application. The SharePoint portal can remain
+available to all internal users, but portal access does not grant ATMS access.
+ATMS continues to require its own Laravel login and fixed-role authorization.

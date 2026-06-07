@@ -12,6 +12,10 @@
 
 - Use one Docker Compose service model for local OrbStack development and VPS production.
 - Use environment-specific Docker Compose overrides or configuration.
+- Host the Vue frontend and Laravel backend outside SharePoint as the ATMS web application.
+- Treat SharePoint only as a company portal containing a normal link to ATMS.
+- Do not deploy the frontend to SharePoint SitePages, build an SPFx web part, embed ATMS in SharePoint, or add SharePoint/Microsoft Entra SSO.
+- Do not treat access to the internal SharePoint portal as ATMS authorization; ATMS still requires its own activated user account, Laravel login, and fixed role.
 - Use PostgreSQL-backed Laravel database queues for MVP.
 - Store attachments on Laravel local storage backed by a persistent Docker volume.
 - Keep Redis and MinIO out of the default MVP deployment.

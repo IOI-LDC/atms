@@ -28,6 +28,17 @@ module/package overhead and without a thin CRUD-only architecture.
 - Attachments use Laravel local storage on a persistent Docker volume.
 - Redis and MinIO are optional future upgrades, excluded from the default MVP.
 
+### SharePoint Portal Boundary
+
+SharePoint acts only as the company's internal application portal. A normal
+link opens the separately hosted ATMS web application. ATMS is not deployed to
+SharePoint SitePages, embedded in SharePoint, or implemented through SPFx.
+
+The SharePoint portal may be open to all internal users, but that does not grant
+ATMS access. ATMS retains its own Laravel Sanctum login, account activation,
+session handling, and fixed-role authorization. SharePoint or Microsoft Entra
+SSO is excluded from MVP.
+
 ### Backend Organization
 
 The backend is organized around:

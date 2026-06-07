@@ -967,8 +967,10 @@ docker compose exec app php artisan route:list
 docker compose exec app php artisan schedule:list
 ```
 
-Check no mock ERP public port, no development bind mount, no debug mode, and no
-secret values in committed files.
+Check no mock ERP public port, no development bind mount, no debug mode, no
+SharePoint/SPFx hosting dependency, and no secret values in committed files.
+Document that SharePoint contains only a normal link to the separately hosted
+ATMS URL and that users authenticate through ATMS itself.
 
 **Step 5: Update delivery checklist**
 
@@ -985,7 +987,8 @@ git commit -m "docs: add deployment guide and verified backend checklist"
 
 Do not implement these until the client provides contracts:
 
-- Real SharePoint REST authentication, endpoint shape, and field mapping
+- Real SharePoint employee-directory REST authentication, endpoint shape, and
+  field mapping
 - Real ERP API authentication, endpoint shape, and field mapping
 - Redis, MinIO, external notifications beyond the Power Automate-backed
   activation/reset email
