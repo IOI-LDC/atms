@@ -88,7 +88,10 @@ The base workflow includes Maintenance Manager review and approval before a main
 
 ## 17. External Notifications
 
-Email, SMS, WhatsApp, push notifications, and escalation reminders are excluded unless agreed separately. Basic in-system status visibility can be provided.
+Workflow emails, SMS, WhatsApp, push notifications, and escalation reminders
+are excluded unless agreed separately. The only included external notifications
+are account activation and password-reset emails delivered through Microsoft
+Power Automate. Basic in-system status visibility can be provided.
 
 ## 18. Advanced Reporting and BI
 

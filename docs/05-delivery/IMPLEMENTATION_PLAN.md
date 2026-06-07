@@ -19,6 +19,7 @@
 - Local employee directory
 - Administrator employee-to-user provisioning
 - One-time activation and password-reset flow
+- Power Automate production transport for activation and password-reset email
 - Users and roles
 - Locations
 - Master data/dropdowns

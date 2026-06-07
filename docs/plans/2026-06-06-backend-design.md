@@ -65,8 +65,17 @@ employees become ATMS users, assign one fixed role, and send activation links.
 - Self-registration is disabled.
 - Activation tokens are hashed, one-time, and expire after 24 hours.
 - Password-reset tokens are hashed, one-time, and expire after 60 minutes.
+- Production activation and password-reset emails are delivered through
+  Microsoft Power Automate.
 - Users set their own passwords.
 - Users are activated/deactivated and never physically deleted.
+
+Laravel owns token generation, hashing, expiry, single-use enforcement,
+delivery retries, and audit records. A queued transport abstraction invokes an
+authenticated Power Automate flow in production and a fake transport in local
+development and tests. Tenant, application, flow, and mailbox details remain
+environment-specific deployment configuration. Secrets, plaintext tokens, and
+complete activation/reset URLs are not logged.
 
 ## Authorization
 
@@ -204,6 +213,10 @@ operational fields are never overwritten by sync.
 The SharePoint adapter imports employee directory records. Administrators
 explicitly provision selected employees as users. SharePoint is not queried
 during login.
+
+Power Automate is used separately as the production transport for account
+activation and password-reset email. It is not the source of employee data and
+does not own ATMS authentication tokens or account state.
 
 ## API
 

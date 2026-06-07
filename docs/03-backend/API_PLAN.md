@@ -255,6 +255,12 @@ tokens. No endpoint accepts an Administrator-supplied user password.
 Activation links expire after 24 hours. Password-reset links expire after 60
 minutes.
 
+Activation and password-reset endpoints queue email delivery through a
+transport abstraction. The production implementation invokes an authenticated
+Microsoft Power Automate flow; local development and tests use a fake
+implementation. Laravel owns token security, expiry, single-use enforcement,
+delivery retries, and audit records regardless of the configured transport.
+
 Provisioning copies the unique company `emp_id` from the imported employee into
 the local user and links the user to the employee record. `emp_id` is immutable
 after provisioning.

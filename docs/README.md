@@ -43,6 +43,7 @@ ERP remains the source of truth for fixed assets and parts. ATMS keeps a local o
 - **Mock ERP:** Separate lightweight container, enabled through an explicit Docker Compose profile and available only on the internal Docker network
 - **Attachments:** Laravel local storage on a persistent Docker volume
 - **Auth/RBAC:** Laravel Sanctum SPA cookie/session authentication with role-based permissions
+- **Production Account Email:** Microsoft Power Automate for activation and password-reset delivery
 
 Redis and MinIO are optional future upgrades and are not part of the default MVP deployment.
 

@@ -88,10 +88,16 @@ local employee directory. Importing an employee does not grant ATMS access.
 Administrators explicitly select which employees become ATMS users, assign one
 fixed role, and send an activation link so each user sets their own password.
 
-## 17. System Settings
+## 17. Account Email Delivery
+
+Production activation and password-reset emails will be delivered through
+Microsoft Power Automate. These security emails are the only external email
+notifications included in MVP.
+
+## 18. System Settings
 
 The system will include settings for managing users, locations, asset usage reading types, preventive maintenance rules, ERP sync configuration, and dropdown/master-data items used across the system.
 
-## 18. Dropdown / Master Data Management
+## 19. Dropdown / Master Data Management
 
 Administrators will be able to manage configurable dropdown values used in the system, such as locations, asset statuses, maintenance priorities, usage reading types, work order statuses, maintenance categories, and other lookup values required for the workflow.

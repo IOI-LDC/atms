@@ -100,7 +100,8 @@ The locked navigation is:
 - IoT/automatic meter reading
 - Advanced predictive maintenance
 - Multi-level approval workflow
-- External notifications
+- External workflow notifications, excluding the included activation and
+  password-reset emails delivered through Microsoft Power Automate
 - Advanced BI/reporting
 - ERP write-back
 - Offline mode

@@ -119,6 +119,24 @@ the linked ATMS user, and sends a one-time activation link. The employee sets
 their own password. The same secure one-time-link mechanism supports password
 resets. There is no self-registration.
 
+## Production Account Email Transport
+
+Microsoft Power Automate is the production transport for activation and
+password-reset emails. Laravel remains responsible for creating and hashing
+one-time tokens, enforcing expiry and single use, building the frontend link,
+queuing delivery, retrying failed delivery, and recording the audited outcome.
+
+The queued Laravel notification adapter sends only the minimum message payload
+required by an authenticated Power Automate flow. The flow sends the email
+through the client's approved Microsoft 365 mailbox or connection. Secrets,
+plaintext tokens, and complete reset URLs must not be written to application or
+flow logs.
+
+The Power Automate endpoint, tenant identifiers, application credentials,
+mailbox, and environment-specific flow details are deployment configuration.
+Local development and automated tests use a fake transport and do not require
+access to the client's Microsoft tenant.
+
 ## Recommended Laravel Structure
 
 A pragmatic Laravel structure:

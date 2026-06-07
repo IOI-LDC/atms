@@ -171,12 +171,20 @@ git commit -m "feat: configure backend foundation and health checks"
 - Modify: `backend/config/cors.php`
 - Create: `backend/app/Actions/Auth/ActivateUser.php`
 - Create: `backend/app/Actions/Auth/ResetUserPassword.php`
+- Create: `backend/app/Contracts/Notifications/AccountEmailTransport.php`
+- Create: `backend/app/Services/Notifications/FakeAccountEmailTransport.php`
+- Create: `backend/app/Services/Notifications/PowerAutomateAccountEmailTransport.php`
+- Create: `backend/app/Jobs/SendAccountEmail.php`
+- Create: `backend/app/Notifications/UserActivationNotification.php`
+- Create: `backend/app/Notifications/PasswordResetNotification.php`
+- Create: `backend/config/account-email.php`
 - Create: `backend/app/Http/Controllers/Auth/*`
 - Create: `backend/app/Http/Requests/Auth/*`
 - Create: `backend/app/Models/UserActivationToken.php`
 - Create: `backend/database/migrations/*_create_user_activation_tokens_table.php`
 - Modify: `backend/routes/api.php`
 - Test: `backend/tests/Feature/Auth/*`
+- Test: `backend/tests/Feature/Notifications/PowerAutomateAccountEmailTransportTest.php`
 
 **Step 1: Install API/Sanctum support**
 
@@ -196,10 +204,21 @@ Cover:
 - Password-reset token expires after 60 minutes.
 - Activation/reset invalidates prior sessions where required.
 - No bearer token is issued by main login.
+- Forgot-password queues account email without logging the token or complete
+  link.
+- Power Automate transport sends the minimum required payload and handles
+  non-success responses as retryable job failures.
+- Local and test environments use the fake account-email transport.
 
 **Step 3: Run tests and verify failure**
 
-Run: `docker compose run --rm app php artisan test tests/Feature/Auth`
+Run:
+
+```bash
+docker compose run --rm app php artisan test \
+  tests/Feature/Auth \
+  tests/Feature/Notifications/PowerAutomateAccountEmailTransportTest.php
+```
 
 **Step 4: Implement auth endpoints**
 
@@ -214,12 +233,21 @@ Add:
 
 Use rate limiting on login and reset requests. Never log tokens or passwords.
 
+Bind the fake account-email transport in local and test environments and the
+Power Automate transport in production. Laravel creates and protects tokens,
+queues delivery, retries failures, and audits outcomes. Power Automate receives
+only the minimum recipient and message data required to send through the
+approved Microsoft 365 mailbox. Keep endpoint, tenant, application credential,
+flow, and mailbox values in environment configuration.
+
 **Step 5: Verify**
 
 Run:
 
 ```bash
-docker compose run --rm app php artisan test tests/Feature/Auth
+docker compose run --rm app php artisan test \
+  tests/Feature/Auth \
+  tests/Feature/Notifications/PowerAutomateAccountEmailTransportTest.php
 docker compose run --rm app php artisan route:list --path=api/auth
 ```
 
@@ -296,7 +324,6 @@ git commit -m "feat: implement fixed roles and user lifecycle"
 - Create: `backend/app/Actions/Employees/ProvisionEmployeeUser.php`
 - Create: `backend/app/Services/Employees/FakeEmployeeDirectorySource.php`
 - Create: `backend/app/Http/Controllers/Admin/EmployeeController.php`
-- Create: `backend/app/Notifications/UserActivationNotification.php`
 - Test: `backend/tests/Feature/Employees/EmployeeImportTest.php`
 - Test: `backend/tests/Feature/Employees/EmployeeProvisioningTest.php`
 
@@ -310,6 +337,7 @@ Cover:
 - `emp_id` is copied to user and immutable.
 - Duplicate employee/user provisioning returns `409`.
 - Activation notification contains one-time link, not password.
+- Provisioning queues account email without logging the token or complete link.
 
 **Step 2: Run tests and verify failure**
 
@@ -317,8 +345,12 @@ Run: `docker compose run --rm app php artisan test tests/Feature/Employees`
 
 **Step 3: Implement adapter and fake**
 
-Bind fake source by default until SharePoint contract exists. Keep real
-SharePoint transport absent, with a clear configuration error if selected.
+Bind the fake employee source by default until the SharePoint contract exists.
+Keep the real SharePoint transport absent, with a clear configuration error if
+selected.
+
+Use the account-email transport implemented in Task 3 to queue the activation
+message after successful provisioning.
 
 **Step 4: Implement endpoints**
 
@@ -955,7 +987,8 @@ Do not implement these until the client provides contracts:
 
 - Real SharePoint REST authentication, endpoint shape, and field mapping
 - Real ERP API authentication, endpoint shape, and field mapping
-- Redis, MinIO, external notifications beyond required activation/reset email
+- Redis, MinIO, external notifications beyond the Power Automate-backed
+  activation/reset email
 - Advanced reporting, BI, native mobile, offline, IoT, or ERP write-back
 
 Labor tracking, grouped PM Rules, inventory/warehouse processing, parts costing,

@@ -107,6 +107,10 @@ The backend must enforce:
 - Import SharePoint employees into a local directory without granting access.
 - Only Administrator may select an imported employee, assign one fixed role, provision an ATMS account, and send activation/reset links.
 - Users set their own passwords through hashed, expiring, one-time activation/reset tokens.
+- Deliver activation and password-reset emails through a queued transport abstraction.
+- Use Microsoft Power Automate as the production account-email transport and a fake transport for local development and tests.
+- Keep token creation, hashing, expiry, single-use enforcement, retry handling, and audit ownership in Laravel.
+- Do not log secrets, plaintext tokens, or complete activation/reset URLs in Laravel or Power Automate.
 - Do not implement self-registration or Administrator-assigned plaintext passwords.
 - Store the unique immutable company `emp_id` on both imported employees and linked ATMS users.
 - Activation links expire after 24 hours; password-reset links expire after 60 minutes.
