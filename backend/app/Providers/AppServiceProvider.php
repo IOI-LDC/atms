@@ -23,6 +23,16 @@ class AppServiceProvider extends ServiceProvider
                 default => new FakeAccountEmailTransport,
             };
         });
+
+        $this->app->singleton(\App\Contracts\Employees\EmployeeDirectorySource::class, function () {
+            $source = config('employees.directory_source', 'fake');
+
+            if ($source === 'sharepoint') {
+                throw new \RuntimeException('Real SharePoint transport is not yet implemented. Please use "fake" source.');
+            }
+
+            return new \App\Services\Employees\FakeEmployeeDirectorySource;
+        });
     }
 
     public function boot(): void

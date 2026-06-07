@@ -27,5 +27,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/{user}/reactivate', [\App\Http\Controllers\Admin\UserController::class, 'reactivate']);
         
         Route::get('/roles', [\App\Http\Controllers\Admin\RoleController::class, 'index']);
+        
+        Route::get('/employees', [\App\Http\Controllers\Admin\EmployeeController::class, 'index']);
+        Route::post('/employees/import', [\App\Http\Controllers\Admin\EmployeeController::class, 'import']);
+        Route::post('/employees/{employee}/provision-user', [\App\Http\Controllers\Admin\EmployeeController::class, 'provisionUser']);
     });
 });

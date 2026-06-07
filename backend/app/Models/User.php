@@ -12,7 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'is_active', 'activated_at', 'role_id'])]
+#[Fillable(['name', 'email', 'password', 'is_active', 'activated_at', 'role_id', 'emp_id', 'employee_id'])]
 #[Hidden(['password', 'remember_token', 'role_id'])]
 class User extends Authenticatable
 {
@@ -32,6 +32,11 @@ class User extends Authenticatable
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
     }
 
     public function hasRole(\App\Enums\RoleCode $role): bool
