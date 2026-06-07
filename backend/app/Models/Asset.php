@@ -15,6 +15,7 @@ class Asset extends Model
         'serial_number',
         'model',
         'manufacturer',
+        'current_location_id',
         'operational_status',
         'erp_status',
         'erp_raw_data',
@@ -27,4 +28,19 @@ class Asset extends Model
         'erp_last_synced_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+    public function currentLocation(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'current_location_id');
+    }
+
+    public function locationHistories(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AssetLocationHistory::class);
+    }
+
+    public function meterReadings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AssetMeterReading::class);
+    }
 }

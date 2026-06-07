@@ -35,5 +35,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/erp/sync-jobs', [\App\Http\Controllers\Admin\ErpSyncController::class, 'index']);
         Route::post('/erp/sync-assets', [\App\Http\Controllers\Admin\ErpSyncController::class, 'syncAssets']);
         Route::post('/erp/sync-parts', [\App\Http\Controllers\Admin\ErpSyncController::class, 'syncParts']);
+        
+        Route::post('/master-data/locations', [\App\Http\Controllers\Admin\MasterDataController::class, 'storeLocation']);
+        Route::post('/master-data/items', [\App\Http\Controllers\Admin\MasterDataController::class, 'storeMasterDataItem']);
+        Route::post('/master-data/usage-reading-types', [\App\Http\Controllers\Admin\MasterDataController::class, 'storeUsageReadingType']);
     });
+
+    Route::post('/assets/{asset}/location', [\App\Http\Controllers\AssetLocationController::class, 'update']);
+    Route::post('/assets/{asset}/meter-readings', [\App\Http\Controllers\AssetMeterReadingController::class, 'store']);
+    Route::post('/assets/{asset}/meter-readings/{reading}/confirm', [\App\Http\Controllers\AssetMeterReadingController::class, 'confirm']);
 });

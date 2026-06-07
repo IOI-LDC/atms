@@ -16,4 +16,11 @@ class AssetPolicy
     {
         return $user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
     }
+
+    public function updateLocation(User $user): bool
+    {
+        return $user->hasRole(RoleCode::ADMINISTRATOR) 
+            || $user->hasRole(RoleCode::MAINTENANCE_MANAGER) 
+            || $user->hasRole(RoleCode::LOGISTICS);
+    }
 }
