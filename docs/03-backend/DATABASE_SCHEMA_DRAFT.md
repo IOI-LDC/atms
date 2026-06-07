@@ -230,6 +230,9 @@ Key fields:
 - created_at
 - updated_at
 
+Each PM Rule belongs to exactly one ERP-linked `asset_id`. Do not add category,
+asset-type, unit/package, group, or reusable-template targeting fields in MVP.
+
 PM Rules are never physically deleted through the application. Deletion means
 setting `is_active` to false. Inactive rules remain available for historical
 references and may be reactivated by an authorized user.
@@ -378,6 +381,15 @@ Key fields:
 - created_at
 
 No financial cost fields are included in MVP.
+
+This table records operational usage only. Do not add stock-on-hand balances,
+inventory reservations, issue/return transactions, warehouse movements,
+valuation, procurement, or costing fields.
+
+## Labor Tracking Exclusion
+
+Do not create technician-hour, labor-rate, labor-cost, timesheet, utilization,
+or productivity-reporting tables for MVP.
 
 ## attachments
 

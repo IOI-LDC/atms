@@ -163,6 +163,9 @@ and reading type. MVP has no edit, delete, or decreasing-reading override.
 PM Rules apply to specific assets. They support `date`, `reading`, and
 `date_or_reading` triggers.
 
+Each rule targets exactly one ERP-linked asset. Category, asset-type,
+unit/package, group, and reusable-template targeting are excluded from MVP.
+
 Only one active maintenance chain may exist per rule. An active chain is a
 pending request or a converted Work Order in `open`, `in_progress`, or
 `completed`.
@@ -233,6 +236,16 @@ Attachments support Assets, Parts, Maintenance Requests, and Work Orders.
 - Deletion is soft deletion with actor and timestamp
 - Metadata and physical files are retained indefinitely
 - No restore UI or purge policy exists in MVP
+
+## Explicit MVP Exclusions
+
+- No technician hour logs, labor rates, labor costs, timesheets, utilization,
+  or productivity reporting
+- No grouped PM rules; PM Rules target one ERP-linked asset
+- No stock balances, inventory valuation, procurement, warehouse transactions,
+  or parts costing
+- No gate passes, shipments, transport documents, delivery notes, handovers,
+  custody approvals, or chain-of-custody workflows
 
 ## Jobs And Reliability
 

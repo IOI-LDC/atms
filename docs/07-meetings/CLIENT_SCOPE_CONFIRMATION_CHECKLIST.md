@@ -23,7 +23,7 @@ Use this checklist before finalizing proposal or implementation scope.
 - [ ] Parts are sourced from ERP.
 - [ ] Parts can be selected on Work Orders.
 - [ ] Parts attachments are required.
-- [ ] Confirm whether Logistics users require Parts Reference access because of warehouse-team overlap; default MVP access is No.
+- [ ] Parts used are operational records only and do not change stock.
 - [ ] Parts costing is out of scope.
 - [ ] Full inventory management is out of scope.
 

@@ -121,6 +121,10 @@ The backend must enforce:
 - Do not expose asset maintenance history, location history, attachments, or ERP raw/reference details to Requesters.
 - Raw ERP payloads are Administrator-only and must be excluded from normal API resources.
 - Logistics has no Parts Reference access in MVP.
+- Do not add technician hours, labor rates/costs, timesheets, utilization, or productivity reporting.
+- PM Rules must target one individual ERP-linked asset only; do not add category, asset-type, unit/package, group, or template targeting.
+- Work Order parts are operational usage records only; do not add stock balances, warehouse transactions, procurement, valuation, or costing.
+- Keep Logistics limited to asset location updates/history; do not add gate passes, shipments, transport documents, delivery notes, handovers, custody approvals, or chain-of-custody workflows.
 
 ## Testing Priority
 

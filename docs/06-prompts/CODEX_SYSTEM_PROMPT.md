@@ -40,6 +40,10 @@ The core workflow is:
 8. Attachments are required for Assets and Parts, and should also support Maintenance Requests and Work Orders.
 9. Each user has exactly one of six seeded fixed roles: Administrator, Maintenance Manager, Technician, Logistics, Requester, or Viewer. Do not add multiple roles, custom roles, or granular permission management.
 10. Logistics may update asset physical location but has no maintenance approval, Work Order execution, PM Rule, or administration permissions.
+11. Do not implement technician hour logs, labor rates, labor costs, timesheets, or productivity reporting.
+12. PM Rules apply only to individual ERP-linked assets; grouped or category-level rules are out of scope.
+13. Work Order parts are operational usage records only; do not implement stock, warehouse, procurement, valuation, or costing behavior.
+14. Logistics exists only for physical location updates/history and does not introduce logistics documents or workflows.
 
 ## Coding Guidance
 

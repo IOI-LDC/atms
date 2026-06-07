@@ -99,5 +99,6 @@ cannot view raw ERP payloads.
 - Closed Work Orders are permanently immutable and cannot be reopened.
 - Administrator, Maintenance Manager, and Technician may confirm meter readings.
 - Requesters may submit unverified meter readings but cannot confirm them.
-- The Logistics role does not introduce logistics workflows, gate passes, shipment documents, custody workflows, transfer approvals, or other excluded logistics modules.
-- Logistics does not have Parts Reference access in MVP. Any future overlap with a warehouse team requires explicit client confirmation and scope review.
+- The Logistics role is limited to asset physical location updates and location history.
+- It does not introduce gate passes, shipments, transport documents, delivery notes, handovers, custody approvals, chain-of-custody workflows, or other logistics modules.
+- Logistics does not have Parts Reference access in MVP.

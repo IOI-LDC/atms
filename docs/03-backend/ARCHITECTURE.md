@@ -62,6 +62,13 @@ The backend owns all business rules:
 - Append-only technical audit logging
 - SharePoint employee import and explicit ATMS user provisioning
 
+The MVP architecture must not introduce:
+
+- Labor-hour, labor-rate, labor-cost, timesheet, or productivity domains
+- Category, asset-type, unit/package, group, or template PM targeting
+- Inventory balances, warehouse transactions, procurement, valuation, or parts costing
+- Logistics documents, approvals, handovers, or custody workflows
+
 ## Maintenance History
 
 Asset maintenance history must be assembled from authoritative source records:

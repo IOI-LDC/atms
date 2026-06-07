@@ -12,6 +12,10 @@ The system will maintain a local operational copy of ERP fixed assets. Additiona
 
 Parts will be linked from the ERP parts master. The system will allow users to select ERP-linked parts when recording parts used on a work order. The system will not manage procurement or full warehouse operations.
 
+Parts used on Work Orders are operational usage records only. The MVP does not
+maintain stock-on-hand quantities, stock valuation, procurement, warehouse
+transactions, or parts costs.
+
 ## 4. Asset Usage Tracking
 
 Each asset can have usage readings such as operating hours, kilometers, or other usage/meter values. These readings will be used to support preventive maintenance triggering and asset maintenance history.
@@ -29,6 +33,9 @@ The system will track the current physical location of each asset, such as wareh
 ## 6. Preventive Maintenance Rules
 
 The system will allow preventive maintenance rules to be configured for assets. These rules may be based on time intervals, operating hours, kilometers, or other usage readings.
+
+Each MVP PM Rule belongs to one individual ERP-linked asset. Category-level,
+asset-type-level, unit/package-level, group, and template rules are excluded.
 
 ## 7. Automatic Preventive Maintenance Requests
 

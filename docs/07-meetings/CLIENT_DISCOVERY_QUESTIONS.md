@@ -52,8 +52,6 @@ Follow-up:
 
 - Who is allowed to update asset location?
 - Is location history required for all changes?
-- Is the Logistics team also the warehouse team?
-- If yes, do Logistics users require Parts Reference access, without adding inventory or warehouse-management scope?
 
 ## 5. Preventive Maintenance Rules
 

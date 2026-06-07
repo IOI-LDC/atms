@@ -18,9 +18,17 @@ The system will not replace the ERP or warehouse system for full stock control. 
 
 The system will not calculate maintenance financial cost, asset cost, stock value, or accounting cost. Parts usage may be recorded operationally against a work order, but financial costing will remain outside the system.
 
+The system will not maintain stock-on-hand quantities or create warehouse,
+issue, return, reservation, procurement, or valuation transactions from Work
+Order parts usage.
+
 ## 5. Labor Tracking
 
 The system will not track technician labor hours, labor cost, timesheets, technician productivity, or labor-based maintenance costing.
+
+This exclusion includes hour logs, labor rates, labor costs, timesheets,
+attendance-derived maintenance effort, utilization metrics, and productivity
+reporting.
 
 ## 6. Technician Wallet / Personal Stock
 
@@ -29,6 +37,9 @@ The system will not track parts personally held by technicians as individual wal
 ## 7. Logistics, Gate Passes, and Asset Transfer Documents
 
 The system will not include logistics workflows, gate passes, shipment manifests, delivery notes, bulk transfers, transport approvals, or movement documents. Only physical location history of assets is included.
+
+The Logistics role does not alter this boundary. It exists only to update asset
+physical location and view location history.
 
 ## 8. Handover Management
 
@@ -66,6 +77,10 @@ The system will not automatically read operating hours, kilometers, or sensor va
 ## 15. Advanced Preventive Maintenance Optimization
 
 The system will support simple preventive maintenance triggering based on date, operating hours, kilometers, or other readings. Advanced predictive maintenance, AI-based failure prediction, condition-based monitoring, and optimization algorithms are excluded.
+
+MVP PM Rules apply only to individual ERP-linked assets. Category-level,
+asset-type-level, unit/package-level, group, and reusable template rules are
+excluded unless approved as later scope.
 
 ## 16. Multi-Level Approval Workflow
 

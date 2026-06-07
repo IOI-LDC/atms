@@ -86,7 +86,8 @@ implementation.
 - Logistics, Maintenance Manager, and Administrator may update asset physical location.
 - Logistics has no maintenance approval, Work Order execution, PM Rule, or administration permissions.
 - Logistics has no Parts Reference access in MVP.
-- Logistics authority is limited to physical location tracking and does not include gate passes, shipments, custody workflows, transfer approvals, or other logistics modules.
+- Logistics authority is limited to asset physical location updates and location history.
+- It does not include gate passes, shipments, transport documents, delivery notes, handovers, custody workflows, transfer approvals, chain-of-custody workflows, or other logistics modules.
 - Requester-submitted meter readings remain unverified.
 - Only Administrator, Maintenance Manager, or Technician may confirm a meter reading.
 - Only confirmed meter readings update current meter values or participate in PM calculations.

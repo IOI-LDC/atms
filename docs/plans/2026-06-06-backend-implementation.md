@@ -16,6 +16,7 @@
 - Use test-driven development for workflow and policy behavior.
 - Do not implement the real SharePoint or client ERP transport until their contracts and credentials exist.
 - Use fake adapters and the mock ERP contract for current development.
+- Do not add labor tracking, grouped PM targeting, inventory/warehouse behavior, parts costing, or logistics workflows.
 - Run focused tests after each change and the full suite before each phase commit.
 - Never commit secrets, generated attachment files, SQLite runtime files, or local environment files.
 
@@ -544,6 +545,8 @@ Verify:
 - Manager/Admin closes completed Work Order.
 - Closed Work Order rejects every mutation.
 - Manager/Admin cancels non-closed Work Order with reason.
+- No labor-hour, labor-rate, timesheet, labor-cost, or productivity fields/routes exist.
+- Parts used remain operational quantities without stock or costing side effects.
 
 **Step 2: Run tests and verify failure**
 
@@ -591,6 +594,8 @@ Cover date, reading, date-or-reading, and simultaneous trigger dimensions.
 
 Cover:
 
+- Every PM Rule targets exactly one ERP-linked asset.
+- Category, asset-type, unit/package, group, and template targeting are rejected.
 - Only one active chain per rule.
 - Concurrent evaluation creates one preventive request.
 - Only confirmed readings are considered.
@@ -940,7 +945,9 @@ Do not implement these until the client provides contracts:
 
 - Real SharePoint REST authentication, endpoint shape, and field mapping
 - Real ERP API authentication, endpoint shape, and field mapping
-- Logistics Parts Reference access if Logistics and warehouse teams overlap
 - Redis, MinIO, external notifications beyond required activation/reset email
 - Advanced reporting, BI, native mobile, offline, IoT, or ERP write-back
 
+Labor tracking, grouped PM Rules, inventory/warehouse processing, parts costing,
+and logistics workflows are not deferred implementation tasks. They require a
+separately approved scope change.
