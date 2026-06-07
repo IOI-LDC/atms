@@ -93,4 +93,20 @@ class UserManagementTest extends TestCase
 
         $this->assertDatabaseMissing('sessions', ['user_id' => $user->id]);
     }
+
+    public function test_deactivated_user_cannot_login(): void
+    {
+        $admin = $this->createAdmin();
+        $user = User::factory()->create([
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->postJson("/api/admin/users/{$user->id}/deactivate")->assertOk();
+
+        $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ])->assertStatus(401);
+    }
 }

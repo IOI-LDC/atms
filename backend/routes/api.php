@@ -26,6 +26,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/{user}/deactivate', [\App\Http\Controllers\Admin\UserController::class, 'deactivate']);
         Route::post('/users/{user}/reactivate', [\App\Http\Controllers\Admin\UserController::class, 'reactivate']);
         
-        Route::get('/roles', [\App\Http\Controllers\Admin\UserController::class, 'roles']);
+        Route::get('/roles', [\App\Http\Controllers\Admin\RoleController::class, 'index']);
     });
 });

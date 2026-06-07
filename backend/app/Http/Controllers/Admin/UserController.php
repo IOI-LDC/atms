@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RoleCode;
+use App\Actions\Users\DeactivateUser;
+use App\Actions\Users\ReactivateUser;
 use App\Http\Controllers\Controller;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class UserController extends Controller
@@ -29,7 +27,7 @@ class UserController extends Controller
         return response()->json(['data' => $user->load('role')]);
     }
 
-    public function deactivate(User $user): JsonResponse
+    public function deactivate(User $user, DeactivateUser $action): JsonResponse
     {
         Gate::authorize('manage', User::class);
 
@@ -37,28 +35,17 @@ class UserController extends Controller
             return response()->json(['message' => 'Cannot deactivate yourself.'], 422);
         }
 
-        $user->update(['is_active' => false]);
-        
-        // Invalidate sessions
-        DB::table('sessions')->where('user_id', $user->id)->delete();
-        $user->tokens()->delete(); // Remove API tokens if any exist (though Sanctum is mostly SPA here)
+        $user = $action->execute($user);
 
         return response()->json(['message' => 'User deactivated.', 'data' => $user]);
     }
 
-    public function reactivate(User $user): JsonResponse
+    public function reactivate(User $user, ReactivateUser $action): JsonResponse
     {
         Gate::authorize('manage', User::class);
 
-        $user->update(['is_active' => true]);
+        $user = $action->execute($user);
 
         return response()->json(['message' => 'User reactivated.', 'data' => $user]);
-    }
-    
-    public function roles(): JsonResponse
-    {
-        Gate::authorize('viewAny', Role::class);
-        
-        return response()->json(['data' => Role::all()]);
     }
 }
