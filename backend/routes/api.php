@@ -20,5 +20,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/company-settings', [CompanySettingController::class, 'show']);
         Route::patch('/company-settings', [CompanySettingController::class, 'update']);
+        
+        Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
+        Route::get('/users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'show']);
+        Route::post('/users/{user}/deactivate', [\App\Http\Controllers\Admin\UserController::class, 'deactivate']);
+        Route::post('/users/{user}/reactivate', [\App\Http\Controllers\Admin\UserController::class, 'reactivate']);
+        
+        Route::get('/roles', [\App\Http\Controllers\Admin\UserController::class, 'roles']);
     });
 });
