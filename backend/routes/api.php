@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/employees/import', [\App\Http\Controllers\Admin\EmployeeController::class, 'import']);
         Route::post('/employees/{employee}/provision-user', [\App\Http\Controllers\Admin\EmployeeController::class, 'provisionUser']);
         
+        Route::get('/erp/sync-jobs', [\App\Http\Controllers\Admin\ErpSyncController::class, 'index']);
         Route::post('/erp/sync-assets', [\App\Http\Controllers\Admin\ErpSyncController::class, 'syncAssets']);
         Route::post('/erp/sync-parts', [\App\Http\Controllers\Admin\ErpSyncController::class, 'syncParts']);
     });

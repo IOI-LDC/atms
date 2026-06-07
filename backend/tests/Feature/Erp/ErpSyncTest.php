@@ -184,4 +184,70 @@ class ErpSyncTest extends TestCase
         $this->assertEquals('out_of_service', $asset->operational_status); // Local field untouched
         $this->assertNotNull($asset->erp_raw_data);
     }
+
+    public function test_sync_parts_action_upserts_and_paginates(): void
+    {
+        Http::fake([
+            '*/api/parts*' => Http::sequence()
+                ->push([
+                    'data' => [
+                        [
+                            'id' => 1,
+                            'code' => 'PRT-001',
+                            'name' => 'Belt',
+                            'unit_of_measure' => 'EA',
+                            'status' => 'active',
+                            'updated_at' => now()->toIso8601String(),
+                        ]
+                    ],
+                    'next_cursor' => 'cursor-123'
+                ])
+                ->push([
+                    'data' => [
+                        [
+                            'id' => 2,
+                            'code' => 'PRT-002',
+                            'name' => 'Filter',
+                            'unit_of_measure' => 'EA',
+                            'status' => 'inactive',
+                            'updated_at' => now()->toIso8601String(),
+                        ]
+                    ],
+                    'next_cursor' => null
+                ])
+        ]);
+
+        $action = app(\App\Actions\Erp\SyncParts::class);
+        $job = $action->execute();
+
+        $this->assertEquals('success', $job->status);
+        $this->assertEquals(2, $job->total_records);
+        $this->assertEquals(2, $job->created_count);
+
+        $this->assertDatabaseHas('parts', [
+            'erp_part_code' => 'PRT-001',
+            'is_active' => true,
+        ]);
+
+        $this->assertDatabaseHas('parts', [
+            'erp_part_code' => 'PRT-002',
+            'is_active' => false,
+        ]);
+    }
+
+    public function test_can_retrieve_sync_job_history(): void
+    {
+        ErpSyncJob::create([
+            'sync_type' => 'assets',
+            'status' => 'success',
+            'started_at' => now(),
+        ]);
+
+        $admin = $this->createAdmin();
+
+        $response = $this->actingAs($admin)->getJson('/api/admin/erp/sync-jobs');
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('data'));
+    }
 }

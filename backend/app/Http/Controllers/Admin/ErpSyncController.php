@@ -10,6 +10,15 @@ use Illuminate\Support\Facades\Gate;
 
 class ErpSyncController extends Controller
 {
+    public function index(): JsonResponse
+    {
+        Gate::authorize('viewAny', \App\Models\Asset::class); // Reusing Asset policy for view access
+
+        $jobs = \App\Models\ErpSyncJob::latest()->get();
+
+        return response()->json(['data' => $jobs]);
+    }
+
     public function syncAssets(): JsonResponse
     {
         // Only Admin or Maintenance Manager

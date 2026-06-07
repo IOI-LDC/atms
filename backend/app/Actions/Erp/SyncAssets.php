@@ -26,16 +26,22 @@ class SyncAssets
             $cursor = null;
             $hasMore = true;
 
-            $lastSync = Asset::max('erp_last_synced_at');
+            $lastSyncRaw = Asset::max('erp_last_synced_at');
+            $lastSync = $lastSyncRaw ? \Carbon\Carbon::parse($lastSyncRaw)->toIso8601String() : null;
+
+            $totalRecords = 0;
+            $createdCount = 0;
+            $updatedCount = 0;
+            $failedCount = 0;
 
             while ($hasMore) {
                 $result = $this->source->getAssets($lastSync, $cursor);
                 
                 foreach ($result['data'] as $external) {
-                    $job->increment('total_records');
+                    $totalRecords++;
 
                     try {
-                        DB::transaction(function () use ($external, $job) {
+                        DB::transaction(function () use ($external, &$createdCount, &$updatedCount) {
                             $asset = Asset::firstOrNew(['erp_asset_code' => $external->code]);
                             
                             $isNew = ! $asset->exists;
@@ -53,20 +59,18 @@ class SyncAssets
                                 'erp_last_synced_at' => $external->updatedAt,
                             ]);
 
-                            if ($external->status !== 'active') {
-                                $asset->is_active = false;
-                            }
+                            $asset->is_active = $external->status === 'active';
 
                             $asset->save();
 
                             if ($isNew) {
-                                $job->increment('created_count');
+                                $createdCount++;
                             } else {
-                                $job->increment('updated_count');
+                                $updatedCount++;
                             }
                         });
                     } catch (\Exception $e) {
-                        $job->increment('failed_count');
+                        $failedCount++;
                         $job->errors()->create([
                             'external_id' => $external->code,
                             'error_type' => 'row_error',
@@ -81,7 +85,11 @@ class SyncAssets
             }
 
             $job->update([
-                'status' => $job->failed_count > 0 ? 'partial' : 'success',
+                'status' => $failedCount > 0 ? 'partial' : 'success',
+                'total_records' => $totalRecords,
+                'created_count' => $createdCount,
+                'updated_count' => $updatedCount,
+                'failed_count' => $failedCount,
                 'completed_at' => now(),
             ]);
 

@@ -26,16 +26,22 @@ class SyncParts
             $cursor = null;
             $hasMore = true;
 
-            $lastSync = Part::max('erp_last_synced_at');
+            $lastSyncRaw = Part::max('erp_last_synced_at');
+            $lastSync = $lastSyncRaw ? \Carbon\Carbon::parse($lastSyncRaw)->toIso8601String() : null;
+
+            $totalRecords = 0;
+            $createdCount = 0;
+            $updatedCount = 0;
+            $failedCount = 0;
 
             while ($hasMore) {
                 $result = $this->source->getParts($lastSync, $cursor);
                 
                 foreach ($result['data'] as $external) {
-                    $job->increment('total_records');
+                    $totalRecords++;
 
                     try {
-                        DB::transaction(function () use ($external, $job) {
+                        DB::transaction(function () use ($external, &$createdCount, &$updatedCount) {
                             $part = Part::firstOrNew(['erp_part_code' => $external->code]);
                             
                             $isNew = ! $part->exists;
@@ -51,20 +57,18 @@ class SyncParts
                                 'erp_last_synced_at' => $external->updatedAt,
                             ]);
 
-                            if ($external->status !== 'active') {
-                                $part->is_active = false;
-                            }
+                            $part->is_active = $external->status === 'active';
 
                             $part->save();
 
                             if ($isNew) {
-                                $job->increment('created_count');
+                                $createdCount++;
                             } else {
-                                $job->increment('updated_count');
+                                $updatedCount++;
                             }
                         });
                     } catch (\Exception $e) {
-                        $job->increment('failed_count');
+                        $failedCount++;
                         $job->errors()->create([
                             'external_id' => $external->code,
                             'error_type' => 'row_error',
@@ -79,7 +83,11 @@ class SyncParts
             }
 
             $job->update([
-                'status' => $job->failed_count > 0 ? 'partial' : 'success',
+                'status' => $failedCount > 0 ? 'partial' : 'success',
+                'total_records' => $totalRecords,
+                'created_count' => $createdCount,
+                'updated_count' => $updatedCount,
+                'failed_count' => $failedCount,
                 'completed_at' => now(),
             ]);
 

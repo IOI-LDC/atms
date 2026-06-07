@@ -82,4 +82,19 @@ class PartApiTest extends TestCase
         $this->assertCount(1, $response->json('data'));
         $this->assertEquals('NEW', $response->json('data.0.code'));
     }
+
+    public function test_cursor_pagination(): void
+    {
+        for ($i = 0; $i < 15; $i++) {
+            Part::create(['code' => "P{$i}", 'name' => "Part {$i}"]);
+        }
+
+        $response = $this->withHeader('X-Service-API-Key', 'test-secret')
+                         ->getJson('/api/parts?limit=10');
+        
+        $response->assertOk();
+        $this->assertCount(10, $response->json('data'));
+        $this->assertNotNull($response->json('next_cursor'));
+        $this->assertNotNull($response->json('next_page_url'));
+    }
 }
