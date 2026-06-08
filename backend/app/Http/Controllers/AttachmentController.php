@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Attachments\SoftDeleteAttachment;
 use App\Actions\Attachments\UploadAttachment;
+use App\Http\Resources\AttachmentResource;
 use App\Models\Asset;
 use App\Models\Attachment;
 use App\Models\MaintenanceRequest;
@@ -16,13 +17,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
-    public function indexForAsset(Asset $asset): JsonResponse
+    public function indexForAsset(Request $request, Asset $asset): JsonResponse
     {
         Gate::authorize('viewForAsset', Attachment::class);
 
-        return response()->json([
-            'data' => $asset->attachments()->get(),
-        ]);
+        return AttachmentResource::collection($asset->attachments()->with('uploadedBy')->get())->toResponse($request);
     }
 
     public function uploadForAsset(Request $request, Asset $asset, UploadAttachment $action): JsonResponse
@@ -49,13 +48,11 @@ class AttachmentController extends Controller
         }
     }
 
-    public function indexForPart(Part $part): JsonResponse
+    public function indexForPart(Request $request, Part $part): JsonResponse
     {
         Gate::authorize('viewForPart', Attachment::class);
 
-        return response()->json([
-            'data' => $part->attachments()->get(),
-        ]);
+        return AttachmentResource::collection($part->attachments()->with('uploadedBy')->get())->toResponse($request);
     }
 
     public function uploadForPart(Request $request, Part $part, UploadAttachment $action): JsonResponse
@@ -82,13 +79,11 @@ class AttachmentController extends Controller
         }
     }
 
-    public function indexForMaintenanceRequest(MaintenanceRequest $maintenanceRequest): JsonResponse
+    public function indexForMaintenanceRequest(Request $request, MaintenanceRequest $maintenanceRequest): JsonResponse
     {
         Gate::authorize('viewForMaintenanceRequest', [Attachment::class, $maintenanceRequest]);
 
-        return response()->json([
-            'data' => $maintenanceRequest->attachments()->get(),
-        ]);
+        return AttachmentResource::collection($maintenanceRequest->attachments()->with('uploadedBy')->get())->toResponse($request);
     }
 
     public function uploadForMaintenanceRequest(Request $request, MaintenanceRequest $maintenanceRequest, UploadAttachment $action): JsonResponse
@@ -115,13 +110,11 @@ class AttachmentController extends Controller
         }
     }
 
-    public function indexForWorkOrder(WorkOrder $workOrder): JsonResponse
+    public function indexForWorkOrder(Request $request, WorkOrder $workOrder): JsonResponse
     {
         Gate::authorize('viewForWorkOrder', Attachment::class);
 
-        return response()->json([
-            'data' => $workOrder->attachments()->get(),
-        ]);
+        return AttachmentResource::collection($workOrder->attachments()->with('uploadedBy')->get())->toResponse($request);
     }
 
     public function uploadForWorkOrder(Request $request, WorkOrder $workOrder, UploadAttachment $action): JsonResponse

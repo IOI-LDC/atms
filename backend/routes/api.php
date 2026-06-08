@@ -13,6 +13,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MaintenanceRequestController;
+use App\Http\Controllers\PartController;
 use App\Http\Controllers\PmRuleController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
@@ -74,6 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/assets/{asset}/meter-readings', [AssetMeterReadingController::class, 'store']);
     Route::post('/assets/{asset}/meter-readings/{reading}/confirm', [AssetMeterReadingController::class, 'confirm']);
 
+    Route::get('/parts', [PartController::class, 'index']);
+    Route::get('/parts/{part}', [PartController::class, 'show']);
     Route::get('/parts/{part}/attachments', [AttachmentController::class, 'indexForPart']);
     Route::post('/parts/{part}/attachments', [AttachmentController::class, 'uploadForPart']);
 

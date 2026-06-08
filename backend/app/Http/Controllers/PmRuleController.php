@@ -6,6 +6,7 @@ use App\Actions\Pm\DeactivatePmRule;
 use App\Actions\Pm\EvaluatePmRule;
 use App\Actions\Pm\ReactivatePmRule;
 use App\Enums\PmTriggerType;
+use App\Http\Resources\PmRuleResource;
 use App\Models\Asset;
 use App\Models\PmRule;
 use App\Services\Audit\AuditLogger;
@@ -15,11 +16,16 @@ use Illuminate\Support\Facades\Gate;
 
 class PmRuleController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', PmRule::class);
 
-        return response()->json(['data' => PmRule::with(['asset', 'usageReadingType', 'createdBy'])->orderByDesc('created_at')->get()]);
+        $perPage = min((int) $request->input('per_page', 25), 100);
+        $results = PmRule::with(['asset', 'usageReadingType', 'createdBy'])
+            ->orderByDesc('created_at')
+            ->cursorPaginate($perPage);
+
+        return PmRuleResource::collection($results)->toResponse($request);
     }
 
     public function store(Request $request): JsonResponse
@@ -58,11 +64,13 @@ class PmRuleController extends Controller
         return response()->json(['data' => $rule], 201);
     }
 
-    public function show(PmRule $pmRule): JsonResponse
+    public function show(Request $request, PmRule $pmRule): JsonResponse
     {
         Gate::authorize('view', $pmRule);
 
-        return response()->json(['data' => $pmRule->load(['asset', 'usageReadingType', 'createdBy', 'suppressions'])]);
+        $pmRule->load(['asset', 'usageReadingType', 'createdBy', 'suppressions']);
+
+        return (new PmRuleResource($pmRule))->toResponse($request);
     }
 
     public function update(Request $request, PmRule $pmRule): JsonResponse
