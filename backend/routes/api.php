@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetLocationController;
 use App\Http\Controllers\AssetMeterReadingController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MaintenanceRequestController;
@@ -64,10 +65,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/assets/{asset}', [AssetController::class, 'show']);
     Route::get('/assets/{asset}/meter-readings', [AssetController::class, 'meterReadings']);
     Route::get('/assets/{asset}/location-history', [AssetController::class, 'locationHistory']);
+    Route::get('/assets/{asset}/attachments', [AttachmentController::class, 'indexForAsset']);
+    Route::post('/assets/{asset}/attachments', [AttachmentController::class, 'uploadForAsset']);
 
     Route::post('/assets/{asset}/location', [AssetLocationController::class, 'update']);
     Route::post('/assets/{asset}/meter-readings', [AssetMeterReadingController::class, 'store']);
     Route::post('/assets/{asset}/meter-readings/{reading}/confirm', [AssetMeterReadingController::class, 'confirm']);
+
+    Route::get('/parts/{part}/attachments', [AttachmentController::class, 'indexForPart']);
+    Route::post('/parts/{part}/attachments', [AttachmentController::class, 'uploadForPart']);
 
     Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index']);
     Route::post('/maintenance-requests/corrective', [MaintenanceRequestController::class, 'storeCorrective']);
@@ -75,6 +81,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/maintenance-requests/{maintenanceRequest}/approve', [MaintenanceRequestController::class, 'approve']);
     Route::post('/maintenance-requests/{maintenanceRequest}/reject', [MaintenanceRequestController::class, 'reject']);
     Route::post('/maintenance-requests/{maintenanceRequest}/cancel', [MaintenanceRequestController::class, 'cancel']);
+    Route::get('/maintenance-requests/{maintenanceRequest}/attachments', [AttachmentController::class, 'indexForMaintenanceRequest']);
+    Route::post('/maintenance-requests/{maintenanceRequest}/attachments', [AttachmentController::class, 'uploadForMaintenanceRequest']);
 
     Route::get('/work-orders', [WorkOrderController::class, 'index']);
     Route::get('/work-orders/{workOrder}', [WorkOrderController::class, 'show']);
@@ -86,6 +94,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/work-orders/{workOrder}/cancel', [WorkOrderController::class, 'cancel']);
     Route::post('/work-orders/{workOrder}/parts', [WorkOrderController::class, 'addPart']);
     Route::delete('/work-orders/{workOrder}/parts/{partLine}', [WorkOrderController::class, 'removePart']);
+    Route::get('/work-orders/{workOrder}/attachments', [AttachmentController::class, 'indexForWorkOrder']);
+    Route::post('/work-orders/{workOrder}/attachments', [AttachmentController::class, 'uploadForWorkOrder']);
 
     Route::get('/pm-rules', [PmRuleController::class, 'index']);
     Route::post('/pm-rules', [PmRuleController::class, 'store']);
@@ -95,4 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/pm-rules/{pmRule}/reactivate', [PmRuleController::class, 'reactivate']);
     Route::post('/pm-rules/{pmRule}/evaluate', [PmRuleController::class, 'evaluate']);
     Route::post('/pm-rules/evaluate', [PmRuleController::class, 'evaluateAll']);
+
+    Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download']);
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'softDelete']);
 });

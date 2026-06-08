@@ -6,6 +6,7 @@ use App\Enums\WorkOrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class WorkOrder extends Model
 {
@@ -62,5 +63,10 @@ class WorkOrder extends Model
     public function parts(): HasMany
     {
         return $this->hasMany(WorkOrderPart::class);
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 }

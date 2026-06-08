@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Part extends Model
 {
@@ -28,4 +29,9 @@ class Part extends Model
         'erp_last_synced_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
 }

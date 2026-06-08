@@ -6,6 +6,7 @@ use App\Enums\MaintenanceRequestStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class MaintenanceRequest extends Model
 {
@@ -76,5 +77,10 @@ class MaintenanceRequest extends Model
     public function triggerReadingType(): BelongsTo
     {
         return $this->belongsTo(UsageReadingType::class, 'trigger_reading_type_id');
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 }

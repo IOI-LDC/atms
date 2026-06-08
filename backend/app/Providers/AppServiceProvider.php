@@ -5,13 +5,15 @@ namespace App\Providers;
 use App\Contracts\Employees\EmployeeDirectorySource;
 use App\Contracts\Erp\ErpSource;
 use App\Contracts\Notifications\AccountEmailTransport;
+use App\Models\Attachment;
 use App\Notifications\Channels\AccountEmailChannel;
 use App\Services\Employees\FakeEmployeeDirectorySource;
 use App\Services\Erp\MockErpHttpSource;
 use App\Services\Notifications\FakeAccountEmailTransport;
 use App\Services\Notifications\PowerAutomateAccountEmailTransport;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\ChannelManager;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -43,11 +45,13 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Relation::morphMap(Attachment::getMorphMap());
+
         Password::defaults(function () {
             return Password::min(8);
         });
 
-        Notification::resolved(function (ChannelManager $service) {
+        NotificationFacade::resolved(function (ChannelManager $service) {
             $service->extend('account_email', function ($app) {
                 return new AccountEmailChannel($app->make(AccountEmailTransport::class));
             });
