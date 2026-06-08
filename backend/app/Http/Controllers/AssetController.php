@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RoleCode;
 use App\Http\Resources\AssetResource;
+use App\Http\Resources\MaintenanceHistoryResource;
 use App\Models\Asset;
 use App\Queries\Assets\AssetIndexQuery;
+use App\Queries\MaintenanceHistory\BuildAssetMaintenanceHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -41,5 +44,19 @@ class AssetController extends Controller
         Gate::authorize('view', $asset);
 
         return response()->json(['data' => $asset->locationHistories()->orderByDesc('effective_at')->get()]);
+    }
+
+    public function maintenanceHistory(Request $request, Asset $asset)
+    {
+        Gate::authorize('view', $asset);
+
+        $user = $request->user();
+        if ($user->hasRole(RoleCode::LOGISTICS)) {
+            abort(403);
+        }
+
+        $results = app(BuildAssetMaintenanceHistory::class)->build($asset, $request);
+
+        return MaintenanceHistoryResource::collection($results)->toResponse($request);
     }
 }

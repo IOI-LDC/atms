@@ -68,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/assets/{asset}', [AssetController::class, 'show']);
     Route::get('/assets/{asset}/meter-readings', [AssetController::class, 'meterReadings']);
     Route::get('/assets/{asset}/location-history', [AssetController::class, 'locationHistory']);
+    Route::get('/assets/{asset}/maintenance-history', [AssetController::class, 'maintenanceHistory']);
     Route::get('/assets/{asset}/attachments', [AttachmentController::class, 'indexForAsset']);
     Route::post('/assets/{asset}/attachments', [AttachmentController::class, 'uploadForAsset']);
 
