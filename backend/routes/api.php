@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CompanySettingController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\ErpSyncController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\AssetLocationController;
 use App\Http\Controllers\AssetMeterReadingController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\PartController;
@@ -29,6 +31,8 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->m
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
     Route::prefix('admin')->group(function () {
         Route::get('/company-settings', [CompanySettingController::class, 'show']);
@@ -49,7 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/erp/sync-assets', [ErpSyncController::class, 'syncAssets']);
         Route::post('/erp/sync-parts', [ErpSyncController::class, 'syncParts']);
 
-        Route::get('/audit-logs', [\App\Http\Controllers\Admin\AuditLogController::class, 'index']);
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
 
         Route::get('/locations', [MasterDataController::class, 'indexLocations']);
         Route::post('/locations', [MasterDataController::class, 'storeLocation']);
