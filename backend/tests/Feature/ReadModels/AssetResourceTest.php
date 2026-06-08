@@ -80,7 +80,7 @@ class AssetResourceTest extends TestCase
         $this->assertArrayHasKey('is_active', $data);
     }
 
-    public function test_technician_sees_basic_fields_only(): void
+    public function test_technician_sees_erp_reference_fields_but_not_raw_data(): void
     {
         $tech = $this->createUser(RoleCode::TECHNICIAN);
         $asset = $this->createAsset();
@@ -90,15 +90,15 @@ class AssetResourceTest extends TestCase
         $response->assertStatus(200);
         $data = $response->json('data.0');
         $this->assertArrayNotHasKey('erp_raw_data', $data);
-        $this->assertArrayNotHasKey('erp_status', $data);
-        $this->assertArrayNotHasKey('erp_last_synced_at', $data);
         $this->assertArrayNotHasKey('is_active', $data);
+        $this->assertArrayHasKey('erp_status', $data);
+        $this->assertArrayHasKey('erp_last_synced_at', $data);
         $this->assertArrayHasKey('name', $data);
         $this->assertArrayHasKey('erp_asset_code', $data);
         $this->assertArrayHasKey('operational_status', $data);
     }
 
-    public function test_logistics_sees_basic_fields_only(): void
+    public function test_logistics_sees_erp_reference_fields_but_not_raw_data(): void
     {
         $logistics = $this->createUser(RoleCode::LOGISTICS);
         $asset = $this->createAsset();
@@ -108,9 +108,9 @@ class AssetResourceTest extends TestCase
         $response->assertStatus(200);
         $data = $response->json('data.0');
         $this->assertArrayNotHasKey('erp_raw_data', $data);
-        $this->assertArrayNotHasKey('erp_status', $data);
-        $this->assertArrayNotHasKey('erp_last_synced_at', $data);
         $this->assertArrayNotHasKey('is_active', $data);
+        $this->assertArrayHasKey('erp_status', $data);
+        $this->assertArrayHasKey('erp_last_synced_at', $data);
     }
 
     public function test_requester_sees_basic_fields_only(): void
@@ -128,7 +128,7 @@ class AssetResourceTest extends TestCase
         $this->assertArrayNotHasKey('is_active', $data);
     }
 
-    public function test_viewer_sees_basic_fields_only(): void
+    public function test_viewer_sees_erp_reference_fields_but_not_raw_data(): void
     {
         $viewer = $this->createUser(RoleCode::VIEWER);
         $asset = $this->createAsset();
@@ -138,9 +138,9 @@ class AssetResourceTest extends TestCase
         $response->assertStatus(200);
         $data = $response->json('data.0');
         $this->assertArrayNotHasKey('erp_raw_data', $data);
-        $this->assertArrayNotHasKey('erp_status', $data);
-        $this->assertArrayNotHasKey('erp_last_synced_at', $data);
         $this->assertArrayNotHasKey('is_active', $data);
+        $this->assertArrayHasKey('erp_status', $data);
+        $this->assertArrayHasKey('erp_last_synced_at', $data);
     }
 
     public function test_non_admin_non_manager_only_sees_active_assets(): void

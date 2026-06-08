@@ -13,6 +13,7 @@ class AssetResource extends JsonResource
         $user = $request->user();
         $isAdmin = $user->hasRole(RoleCode::ADMINISTRATOR);
         $isManager = $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
+        $isRequester = $user->hasRole(RoleCode::REQUESTER);
 
         $data = [
             'id' => $this->id,
@@ -32,10 +33,13 @@ class AssetResource extends JsonResource
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
 
-        if ($isAdmin || $isManager) {
-            $data['is_active'] = $this->is_active;
+        if (! $isRequester) {
             $data['erp_status'] = $this->erp_status;
             $data['erp_last_synced_at'] = $this->erp_last_synced_at?->toIso8601String();
+        }
+
+        if ($isAdmin || $isManager) {
+            $data['is_active'] = $this->is_active;
         }
 
         if ($isAdmin) {
