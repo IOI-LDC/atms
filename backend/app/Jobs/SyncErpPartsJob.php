@@ -11,7 +11,11 @@ class SyncErpPartsJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    public $timeout = 3600;
+    public int $tries = 3;
+
+    public array $backoff = [60, 300, 900];
+
+    public int $timeout = 3600;
 
     public int $uniqueFor = 3600;
 

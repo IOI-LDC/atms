@@ -5,18 +5,20 @@ namespace App\Jobs;
 use App\Actions\Pm\EvaluatePmRule;
 use App\Models\PmRule;
 use App\Models\User;
-use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
+use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class EvaluatePmRulesJob implements ShouldQueue
+class EvaluatePmRulesJob implements ShouldBeUnique, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Queueable;
 
-    public $tries = 1;
+    public int $tries = 3;
+
+    public array $backoff = [60, 300, 900];
+
+    public int $timeout = 300;
 
     public function handle(EvaluatePmRule $action): void
     {

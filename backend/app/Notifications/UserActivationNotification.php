@@ -10,6 +10,10 @@ class UserActivationNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public int $tries = 3;
+
+    public array $backoff = [30, 120, 300];
+
     public function __construct(
         public string $activationUrl
     ) {}
