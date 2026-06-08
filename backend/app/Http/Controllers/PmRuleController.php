@@ -9,6 +9,7 @@ use App\Enums\PmTriggerType;
 use App\Http\Resources\PmRuleResource;
 use App\Models\Asset;
 use App\Models\PmRule;
+use App\Queries\PmRules\PmRuleIndexQuery;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,10 +21,7 @@ class PmRuleController extends Controller
     {
         Gate::authorize('viewAny', PmRule::class);
 
-        $perPage = min((int) $request->input('per_page', 25), 100);
-        $results = PmRule::with(['asset', 'usageReadingType', 'createdBy'])
-            ->orderByDesc('created_at')
-            ->cursorPaginate($perPage);
+        $results = app(PmRuleIndexQuery::class)->build($request);
 
         return PmRuleResource::collection($results)->toResponse($request);
     }

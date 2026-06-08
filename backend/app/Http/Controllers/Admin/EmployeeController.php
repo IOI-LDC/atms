@@ -7,17 +7,20 @@ use App\Actions\Employees\ProvisionEmployeeUser;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Role;
+use App\Queries\Employees\EmployeeIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class EmployeeController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', Employee::class);
 
-        return response()->json(['data' => Employee::all()]);
+        $results = app(EmployeeIndexQuery::class)->build($request);
+
+        return response()->json($results);
     }
 
     public function import(ImportEmployees $action): JsonResponse

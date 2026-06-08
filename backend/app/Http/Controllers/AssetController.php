@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\RoleCode;
 use App\Http\Resources\AssetResource;
 use App\Models\Asset;
+use App\Queries\Assets\AssetIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -15,15 +15,7 @@ class AssetController extends Controller
     {
         Gate::authorize('viewAny', Asset::class);
 
-        $user = $request->user();
-        $query = Asset::query()->with('currentLocation');
-
-        if (! $user->hasRole(RoleCode::ADMINISTRATOR) && ! $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
-            $query->where('is_active', true);
-        }
-
-        $perPage = min((int) $request->input('per_page', 25), 100);
-        $results = $query->cursorPaginate($perPage);
+        $results = app(AssetIndexQuery::class)->build($request);
 
         return AssetResource::collection($results)->toResponse($request);
     }

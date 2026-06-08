@@ -13,6 +13,7 @@ use App\Actions\WorkOrders\UpdateWorkOrderExecution;
 use App\Http\Resources\WorkOrderResource;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Queries\WorkOrders\WorkOrderIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -23,10 +24,7 @@ class WorkOrderController extends Controller
     {
         Gate::authorize('viewAny', WorkOrder::class);
 
-        $perPage = min((int) $request->input('per_page', 25), 100);
-        $results = WorkOrder::with(['asset', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments'])
-            ->orderByDesc('created_at')
-            ->cursorPaginate($perPage);
+        $results = app(WorkOrderIndexQuery::class)->build($request);
 
         return WorkOrderResource::collection($results)->toResponse($request);
     }

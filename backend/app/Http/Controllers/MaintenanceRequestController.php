@@ -6,10 +6,10 @@ use App\Actions\MaintenanceRequests\ApproveMaintenanceRequestAndCreateWorkOrder;
 use App\Actions\MaintenanceRequests\CancelMaintenanceRequest;
 use App\Actions\MaintenanceRequests\CreateCorrectiveMaintenanceRequest;
 use App\Actions\MaintenanceRequests\RejectMaintenanceRequest;
-use App\Enums\RoleCode;
 use App\Http\Resources\MaintenanceRequestResource;
 use App\Models\Asset;
 use App\Models\MaintenanceRequest;
+use App\Queries\MaintenanceRequests\MaintenanceRequestIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -20,16 +20,7 @@ class MaintenanceRequestController extends Controller
     {
         Gate::authorize('viewAny', MaintenanceRequest::class);
 
-        $user = $request->user();
-
-        $query = MaintenanceRequest::with(['asset', 'createdBy', 'workOrder', 'attachments']);
-
-        if ($user->hasRole(RoleCode::REQUESTER)) {
-            $query->where('created_by', $user->id);
-        }
-
-        $perPage = min((int) $request->input('per_page', 25), 100);
-        $results = $query->orderByDesc('created_at')->cursorPaginate($perPage);
+        $results = app(MaintenanceRequestIndexQuery::class)->build($request);
 
         return MaintenanceRequestResource::collection($results)->toResponse($request);
     }
