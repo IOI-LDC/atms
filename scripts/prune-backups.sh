@@ -14,14 +14,12 @@ for SUBDIR in db attachments; do
     WEEKLY_DIR="$BACKUP_DIR/$SUBDIR/weekly"
 
     if [ -d "$DAILY_DIR" ]; then
-        DELETED=$(find "$DAILY_DIR" -type f -mtime +$DAILY_AGE -print -delete 2>&1)
-        COUNT=$(printf '%s\n' "$DELETED" | grep -c . || true)
+        COUNT=$(find "$DAILY_DIR" -type f -mtime +$DAILY_AGE -print -delete 2>/dev/null | wc -l | tr -d ' ')
         PRUNED=$((PRUNED + COUNT))
     fi
 
     if [ -d "$WEEKLY_DIR" ]; then
-        DELETED=$(find "$WEEKLY_DIR" -type f -mtime +$WEEKLY_AGE -print -delete 2>&1)
-        COUNT=$(printf '%s\n' "$DELETED" | grep -c . || true)
+        COUNT=$(find "$WEEKLY_DIR" -type f -mtime +$WEEKLY_AGE -print -delete 2>/dev/null | wc -l | tr -d ' ')
         PRUNED=$((PRUNED + COUNT))
     fi
 done

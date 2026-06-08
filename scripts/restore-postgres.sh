@@ -34,7 +34,11 @@ echo "Dropping existing database..."
 docker compose exec -T postgres dropdb -U "$DB_USER" --if-exists "$DB_NAME"
 
 echo "Creating fresh database..."
-docker compose exec -T postgres createdb -U "$DB_USER" "$DB_NAME"
+if ! docker compose exec -T postgres createdb -U "$DB_USER" "$DB_NAME"; then
+    echo "FATAL: could not create database '$DB_NAME'." >&2
+    echo "The old database has been dropped. Manual intervention required." >&2
+    exit 1
+fi
 
 echo "Restoring from dump..."
 docker compose exec -T postgres pg_restore -U "$DB_USER" -d "$DB_NAME" < "$DUMP_FILE"
