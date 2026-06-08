@@ -3,8 +3,9 @@
 namespace App\Actions\Erp;
 
 use App\Contracts\Erp\ErpSource;
-use App\Models\Part;
 use App\Models\ErpSyncJob;
+use App\Models\Part;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SyncParts
@@ -26,8 +27,10 @@ class SyncParts
             $cursor = null;
             $hasMore = true;
 
-            $lastSyncRaw = Part::max('erp_last_synced_at');
-            $lastSync = $lastSyncRaw ? \Carbon\Carbon::parse($lastSyncRaw)->toIso8601String() : null;
+            $lastSyncRaw = Part::whereNotNull('erp_last_synced_at')
+                ->orderByRaw('erp_last_synced_at ASC')
+                ->value('erp_last_synced_at');
+            $lastSync = $lastSyncRaw ? Carbon::parse($lastSyncRaw)->toIso8601String() : null;
 
             $totalRecords = 0;
             $createdCount = 0;
@@ -36,18 +39,18 @@ class SyncParts
 
             while ($hasMore) {
                 $result = $this->source->getParts($lastSync, $cursor);
-                
+
                 foreach ($result['data'] as $external) {
                     $totalRecords++;
 
                     try {
                         DB::transaction(function () use ($external, &$createdCount, &$updatedCount) {
-                            $part = Part::firstOrNew(['erp_part_code' => $external->code]);
-                            
+                            $part = Part::firstOrNew(['erp_part_id' => (string) $external->id]);
+
                             $isNew = ! $part->exists;
 
                             $part->fill([
-                                'erp_part_id' => (string) $external->id,
+                                'erp_part_code' => $external->code,
                                 'name' => $external->name,
                                 'description' => $external->description,
                                 'unit_of_measure' => $external->unitOfMeasure,
@@ -97,6 +100,8 @@ class SyncParts
                 'completed_at' => now(),
                 'error_message' => $e->getMessage(),
             ]);
+
+            throw $e;
         }
 
         return $job;

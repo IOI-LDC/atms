@@ -3,11 +3,11 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use App\Notifications\UserActivationNotification;
+use App\Notifications\PasswordResetNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -127,7 +127,7 @@ class AuthTest extends TestCase
 
         $response->assertOk();
 
-        Notification::assertSentTo($user, \App\Notifications\PasswordResetNotification::class);
+        Notification::assertSentTo($user, PasswordResetNotification::class);
     }
 
     public function test_forgot_password_does_not_reveal_nonexistent_email(): void
@@ -146,10 +146,11 @@ class AuthTest extends TestCase
             'email_verified_at' => null,
         ]);
 
-        $token = \Illuminate\Support\Str::random(64);
+        $token = Str::random(64);
         \DB::table('user_activation_tokens')->insert([
             'user_id' => $user->id,
-            'token' => \Illuminate\Support\Facades\Hash::make($token),
+            'token' => Hash::make($token),
+            'token_lookup' => hash('sha256', $token),
             'type' => 'activation',
             'created_at' => now(),
         ]);
@@ -170,10 +171,11 @@ class AuthTest extends TestCase
     {
         $user = User::factory()->create(['is_active' => false]);
 
-        $token = \Illuminate\Support\Str::random(64);
+        $token = Str::random(64);
         \DB::table('user_activation_tokens')->insert([
             'user_id' => $user->id,
-            'token' => \Illuminate\Support\Facades\Hash::make($token),
+            'token' => Hash::make($token),
+            'token_lookup' => hash('sha256', $token),
             'type' => 'activation',
             'created_at' => now()->subHours(25),
         ]);
@@ -191,10 +193,11 @@ class AuthTest extends TestCase
     {
         $user = User::factory()->create(['is_active' => false]);
 
-        $token = \Illuminate\Support\Str::random(64);
+        $token = Str::random(64);
         \DB::table('user_activation_tokens')->insert([
             'user_id' => $user->id,
-            'token' => \Illuminate\Support\Facades\Hash::make($token),
+            'token' => Hash::make($token),
+            'token_lookup' => hash('sha256', $token),
             'type' => 'activation',
             'created_at' => now(),
         ]);
@@ -216,10 +219,11 @@ class AuthTest extends TestCase
     {
         $user = $this->createActiveUser();
 
-        $token = \Illuminate\Support\Str::random(64);
+        $token = Str::random(64);
         \DB::table('user_activation_tokens')->insert([
             'user_id' => $user->id,
-            'token' => \Illuminate\Support\Facades\Hash::make($token),
+            'token' => Hash::make($token),
+            'token_lookup' => hash('sha256', $token),
             'type' => 'reset',
             'created_at' => now()->subMinutes(61),
         ]);
@@ -237,10 +241,11 @@ class AuthTest extends TestCase
     {
         $user = $this->createActiveUser();
 
-        $token = \Illuminate\Support\Str::random(64);
+        $token = Str::random(64);
         \DB::table('user_activation_tokens')->insert([
             'user_id' => $user->id,
-            'token' => \Illuminate\Support\Facades\Hash::make($token),
+            'token' => Hash::make($token),
+            'token_lookup' => hash('sha256', $token),
             'type' => 'reset',
             'created_at' => now(),
         ]);
@@ -253,5 +258,35 @@ class AuthTest extends TestCase
 
         $response->assertOk();
         $this->assertTrue(Hash::check('brand-new-password', $user->fresh()->password));
+    }
+
+    public function test_reset_password_invalidates_sessions(): void
+    {
+        $user = $this->createActiveUser();
+
+        \DB::table('sessions')->insert([
+            'id' => 'test-session-id',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'payload' => 'test',
+            'last_activity' => now()->timestamp,
+        ]);
+
+        $token = Str::random(64);
+        \DB::table('user_activation_tokens')->insert([
+            'user_id' => $user->id,
+            'token' => Hash::make($token),
+            'token_lookup' => hash('sha256', $token),
+            'type' => 'reset',
+            'created_at' => now(),
+        ]);
+
+        $this->postJson('/api/auth/reset-password', [
+            'token' => $token,
+            'password' => 'brand-new-password',
+            'password_confirmation' => 'brand-new-password',
+        ])->assertOk();
+
+        $this->assertEquals(0, \DB::table('sessions')->where('user_id', $user->id)->count());
     }
 }

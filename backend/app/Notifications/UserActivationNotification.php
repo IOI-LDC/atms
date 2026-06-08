@@ -2,7 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Contracts\Notifications\AccountEmailTransport;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;

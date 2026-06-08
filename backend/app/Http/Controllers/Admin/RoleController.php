@@ -12,7 +12,7 @@ class RoleController extends Controller
     public function index(): JsonResponse
     {
         Gate::authorize('viewAny', Role::class);
-        
+
         return response()->json(['data' => Role::all()]);
     }
 }

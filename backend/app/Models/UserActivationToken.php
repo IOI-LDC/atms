@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserActivationToken extends Model
 {
@@ -13,6 +14,7 @@ class UserActivationToken extends Model
     protected $fillable = [
         'user_id',
         'token',
+        'token_lookup',
         'type',
         'created_at',
     ];
@@ -28,16 +30,24 @@ class UserActivationToken extends Model
 
     public static function createForUser(User $user, string $type = 'activation'): string
     {
-        $plain = \Illuminate\Support\Str::random(64);
+        $plain = Str::random(64);
 
         static::create([
             'user_id' => $user->id,
             'token' => Hash::make($plain),
+            'token_lookup' => hash('sha256', $plain),
             'type' => $type,
             'created_at' => now(),
         ]);
 
         return $plain;
+    }
+
+    public static function findByPlainToken(string $plain, string $type): ?self
+    {
+        return static::where('type', $type)
+            ->where('token_lookup', hash('sha256', $plain))
+            ->first();
     }
 
     public function isExpired(int $hours): bool

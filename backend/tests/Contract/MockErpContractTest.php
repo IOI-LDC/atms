@@ -3,7 +3,7 @@
 namespace Tests\Contract;
 
 use App\Contracts\Erp\ErpSource;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Data\Erp\ExternalPartData;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -23,10 +23,10 @@ class MockErpContractTest extends TestCase
                         'category' => 'Consumables',
                         'status' => 'active',
                         'updated_at' => '2026-06-07T10:00:00Z',
-                    ]
+                    ],
                 ],
-                'next_cursor' => 'next-page'
-            ])
+                'next_cursor' => 'next-page',
+            ]),
         ]);
 
         $source = app(ErpSource::class);
@@ -34,9 +34,9 @@ class MockErpContractTest extends TestCase
 
         $this->assertCount(1, $result['data']);
         $this->assertEquals('next-page', $result['next_cursor']);
-        
+
         $part = $result['data'][0];
-        $this->assertInstanceOf(\App\Data\Erp\ExternalPartData::class, $part);
+        $this->assertInstanceOf(ExternalPartData::class, $part);
         $this->assertEquals('PRT-100', $part->code);
         $this->assertEquals('EA', $part->unitOfMeasure);
     }

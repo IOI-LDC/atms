@@ -24,14 +24,17 @@ class HealthController extends Controller
         }
 
         try {
-            $disk = Storage::disk(config('atms.attachment_disk', 'attachments'))->exists('.');
+            $diskName = config('atms.attachment_disk', 'attachments');
+            $disk = Storage::disk($diskName)->put('.health-check', 'ok') && Storage::disk($diskName)->delete('.health-check');
         } catch (\Throwable) {
         }
 
+        $healthy = $db && $disk;
+
         return response()->json([
-            'status' => ($db && $disk) ? 'ready' : 'degraded',
+            'status' => $healthy ? 'ready' : 'degraded',
             'database' => $db ? 'ok' : 'unreachable',
             'attachments' => $disk ? 'ok' : 'unreachable',
-        ]);
+        ], $healthy ? 200 : 503);
     }
 }

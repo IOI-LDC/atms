@@ -15,14 +15,14 @@ class EmployeeController extends Controller
 {
     public function index(): JsonResponse
     {
-        Gate::authorize('viewAny', \App\Models\Employee::class);
+        Gate::authorize('viewAny', Employee::class);
 
         return response()->json(['data' => Employee::all()]);
     }
 
     public function import(ImportEmployees $action): JsonResponse
     {
-        Gate::authorize('manage', \App\Models\Employee::class);
+        Gate::authorize('manage', Employee::class);
 
         $count = $action->execute();
 
@@ -31,7 +31,7 @@ class EmployeeController extends Controller
 
     public function provisionUser(Request $request, Employee $employee, ProvisionEmployeeUser $action): JsonResponse
     {
-        Gate::authorize('manage', \App\Models\Employee::class);
+        Gate::authorize('manage', Employee::class);
 
         $validated = $request->validate([
             'role_id' => ['required', 'exists:roles,id'],
@@ -41,9 +41,10 @@ class EmployeeController extends Controller
 
         try {
             $user = $action->execute($employee, $role);
+
             return response()->json([
                 'message' => 'User provisioned and activation email queued.',
-                'data' => $user
+                'data' => $user,
             ]);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 409);

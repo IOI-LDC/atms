@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Contracts\Employees\EmployeeDirectorySource;
+use App\Contracts\Erp\ErpSource;
 use App\Contracts\Notifications\AccountEmailTransport;
 use App\Notifications\Channels\AccountEmailChannel;
+use App\Services\Employees\FakeEmployeeDirectorySource;
+use App\Services\Erp\MockErpHttpSource;
 use App\Services\Notifications\FakeAccountEmailTransport;
 use App\Services\Notifications\PowerAutomateAccountEmailTransport;
 use Illuminate\Notifications\ChannelManager;
@@ -24,17 +28,17 @@ class AppServiceProvider extends ServiceProvider
             };
         });
 
-        $this->app->singleton(\App\Contracts\Employees\EmployeeDirectorySource::class, function () {
+        $this->app->singleton(EmployeeDirectorySource::class, function () {
             $source = config('employees.directory_source', 'fake');
 
             if ($source === 'sharepoint') {
                 throw new \RuntimeException('Real SharePoint transport is not yet implemented. Please use "fake" source.');
             }
 
-            return new \App\Services\Employees\FakeEmployeeDirectorySource;
+            return new FakeEmployeeDirectorySource;
         });
 
-        $this->app->singleton(\App\Contracts\Erp\ErpSource::class, \App\Services\Erp\MockErpHttpSource::class);
+        $this->app->singleton(ErpSource::class, MockErpHttpSource::class);
     }
 
     public function boot(): void

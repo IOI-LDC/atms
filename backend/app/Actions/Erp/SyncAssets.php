@@ -5,6 +5,7 @@ namespace App\Actions\Erp;
 use App\Contracts\Erp\ErpSource;
 use App\Models\Asset;
 use App\Models\ErpSyncJob;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SyncAssets
@@ -26,8 +27,10 @@ class SyncAssets
             $cursor = null;
             $hasMore = true;
 
-            $lastSyncRaw = Asset::max('erp_last_synced_at');
-            $lastSync = $lastSyncRaw ? \Carbon\Carbon::parse($lastSyncRaw)->toIso8601String() : null;
+            $lastSyncRaw = Asset::whereNotNull('erp_last_synced_at')
+                ->orderByRaw('erp_last_synced_at ASC')
+                ->value('erp_last_synced_at');
+            $lastSync = $lastSyncRaw ? Carbon::parse($lastSyncRaw)->toIso8601String() : null;
 
             $totalRecords = 0;
             $createdCount = 0;
@@ -36,18 +39,18 @@ class SyncAssets
 
             while ($hasMore) {
                 $result = $this->source->getAssets($lastSync, $cursor);
-                
+
                 foreach ($result['data'] as $external) {
                     $totalRecords++;
 
                     try {
                         DB::transaction(function () use ($external, &$createdCount, &$updatedCount) {
-                            $asset = Asset::firstOrNew(['erp_asset_code' => $external->code]);
-                            
+                            $asset = Asset::firstOrNew(['erp_asset_id' => (string) $external->id]);
+
                             $isNew = ! $asset->exists;
 
                             $asset->fill([
-                                'erp_asset_id' => (string) $external->id,
+                                'erp_asset_code' => $external->code,
                                 'name' => $external->name,
                                 'description' => $external->description,
                                 'category' => $external->category,
@@ -99,6 +102,8 @@ class SyncAssets
                 'completed_at' => now(),
                 'error_message' => $e->getMessage(),
             ]);
+
+            throw $e;
         }
 
         return $job;

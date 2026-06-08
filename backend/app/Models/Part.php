@@ -19,6 +19,10 @@ class Part extends Model
         'is_active',
     ];
 
+    protected $hidden = [
+        'erp_raw_data',
+    ];
+
     protected $casts = [
         'erp_raw_data' => 'array',
         'erp_last_synced_at' => 'datetime',

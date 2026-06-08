@@ -5,11 +5,13 @@ namespace App\Services\Erp;
 use App\Contracts\Erp\ErpSource;
 use App\Data\Erp\ExternalAssetData;
 use App\Data\Erp\ExternalPartData;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 class MockErpHttpSource implements ErpSource
 {
     private string $baseUrl;
+
     private string $apiKey;
 
     public function __construct()
@@ -84,10 +86,10 @@ class MockErpHttpSource implements ErpSource
         ];
     }
 
-    private function client(): \Illuminate\Http\Client\PendingRequest
+    private function client(): PendingRequest
     {
         return Http::withHeaders([
             'X-Service-API-Key' => $this->apiKey,
-        ])->timeout(30)->retry(3, 1000);
+        ])->timeout(30)->retry(3, 1000, fn (\Exception $e) => ($e->getCode() >= 500 && $e->getCode() < 600) || $e->getCode() === 429);
     }
 }

@@ -4,9 +4,8 @@ namespace App\Actions\Auth;
 
 use App\Models\User;
 use App\Models\UserActivationToken;
-use App\Notifications\UserActivationNotification;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ActivateUser
 {
@@ -14,19 +13,19 @@ class ActivateUser
     {
         return DB::transaction(function () use ($token, $password) {
             $activationToken = UserActivationToken::where('type', 'activation')
+                ->where('token_lookup', hash('sha256', $token))
                 ->lockForUpdate()
-                ->get()
-                ->first(fn ($t) => $t->matches($token));
+                ->first();
 
             if (! $activationToken) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'token' => 'Invalid activation token.',
                 ]);
             }
 
             if ($activationToken->isExpired(24)) {
                 $activationToken->delete();
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'token' => 'Activation token has expired.',
                 ]);
             }
@@ -48,6 +47,7 @@ class ActivateUser
     public function issueToken(User $user): string
     {
         $user->activationTokens()->delete();
+
         return UserActivationToken::createForUser($user, 'activation');
     }
 }

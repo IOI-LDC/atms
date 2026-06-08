@@ -5,6 +5,7 @@ namespace Tests\Feature\Authorization;
 use App\Enums\RoleCode;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,14 +16,14 @@ class FixedRolePolicyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     public function test_six_immutable_roles_are_seeded(): void
     {
         $rolesCount = Role::count();
         $this->assertEquals(6, $rolesCount);
-        
+
         $expectedRoles = [
             RoleCode::ADMINISTRATOR->value,
             RoleCode::MAINTENANCE_MANAGER->value,

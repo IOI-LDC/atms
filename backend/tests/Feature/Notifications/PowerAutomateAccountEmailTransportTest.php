@@ -46,6 +46,7 @@ class PowerAutomateAccountEmailTransportTest extends TestCase
             }
 
             $body = $request->data();
+
             return isset($body['recipient']) &&
                 isset($body['subject']) &&
                 isset($body['actionUrl']);

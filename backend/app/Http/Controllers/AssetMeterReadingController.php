@@ -7,6 +7,7 @@ use App\Actions\Assets\RecordMeterReading;
 use App\Models\Asset;
 use App\Models\AssetMeterReading;
 use App\Models\UsageReadingType;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -21,17 +22,25 @@ class AssetMeterReadingController extends Controller
             'usage_reading_type_id' => ['required', 'exists:usage_reading_types,id'],
             'reading_value' => ['required', 'numeric'],
             'reading_at' => ['required', 'date'],
-            'source' => ['required', 'string'],
+            'source' => ['required', 'string', 'in:user,manual'],
             'notes' => ['nullable', 'string'],
         ]);
 
+        if (! $asset->is_active) {
+            return response()->json(['message' => 'Cannot record readings for an inactive asset.'], 422);
+        }
+
         $readingType = UsageReadingType::findOrFail($validated['usage_reading_type_id']);
+
+        if (! $readingType->is_active) {
+            return response()->json(['message' => 'Cannot use an inactive reading type.'], 422);
+        }
 
         $reading = $action->execute(
             $asset,
             $readingType,
             (float) $validated['reading_value'],
-            \Carbon\Carbon::parse($validated['reading_at']),
+            Carbon::parse($validated['reading_at']),
             $validated['source'],
             auth()->id(),
             null,
@@ -51,9 +60,10 @@ class AssetMeterReadingController extends Controller
 
         try {
             $reading = $action->execute($reading, auth()->id());
+
             return response()->json(['message' => 'Meter reading confirmed.', 'data' => $reading]);
         } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return response()->json(['message' => $e->getMessage()], 409);
         }
     }
 }

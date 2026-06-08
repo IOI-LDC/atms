@@ -16,10 +16,10 @@ return new class extends Migration
             $table->timestamp('reading_at');
             $table->string('source'); // e.g., user, system, erp
             $table->foreignId('entered_by_user_id')->nullable()->constrained('users')->nullOnDelete();
-            
+
             // maintenance_request_id will be constrained later or handled carefully since we haven't created the table yet.
-            // Actually, we can add the column now without foreign key constraint to avoid circular deps or we can skip FK. 
-            $table->unsignedBigInteger('maintenance_request_id')->nullable(); 
+            // Actually, we can add the column now without foreign key constraint to avoid circular deps or we can skip FK.
+            $table->unsignedBigInteger('maintenance_request_id')->nullable();
 
             $table->foreignId('confirmed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('confirmed_at')->nullable();

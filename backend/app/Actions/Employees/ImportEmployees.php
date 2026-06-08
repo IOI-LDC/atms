@@ -19,15 +19,19 @@ class ImportEmployees
             $importedCount = 0;
 
             foreach ($externalEmployees as $external) {
-                $employee = Employee::firstOrNew(
-                    ['sharepoint_item_id' => $external->sharepointItemId]
-                );
-                
-                // Only set emp_id on creation, as it is immutable post-provisioning.
-                if (! $employee->exists) {
+                $employee = Employee::where('sharepoint_item_id', $external->sharepointItemId)
+                    ->first();
+
+                if (! $employee) {
+                    $employee = Employee::where('emp_id', $external->empId)->first();
+                }
+
+                if (! $employee) {
+                    $employee = new Employee;
                     $employee->emp_id = $external->empId;
                 }
 
+                $employee->sharepoint_item_id = $external->sharepointItemId;
                 $employee->fill([
                     'name' => $external->name,
                     'email' => $external->email,

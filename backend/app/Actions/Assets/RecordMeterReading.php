@@ -9,11 +9,11 @@ use App\Models\UsageReadingType;
 class RecordMeterReading
 {
     public function execute(
-        Asset $asset, 
-        UsageReadingType $readingType, 
-        float $readingValue, 
-        \DateTimeInterface $readingAt, 
-        string $source, 
+        Asset $asset,
+        UsageReadingType $readingType,
+        float $readingValue,
+        \DateTimeInterface $readingAt,
+        string $source,
         ?int $enteredByUserId = null,
         ?int $maintenanceRequestId = null,
         ?string $notes = null

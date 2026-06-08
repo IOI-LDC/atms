@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Enums\RoleCode;
 use App\Models\CompanySetting;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -43,23 +45,23 @@ class CompanySettingTest extends TestCase
         $this->assertEquals('Europe/Berlin', $setting->fresh()->timezone);
     }
 
-    public function test_authenticated_user_can_read_company_settings(): void
+    public function test_administrator_can_read_company_settings(): void
     {
         $this->seed();
-        $user = User::factory()->create();
+        $admin = $this->createAdmin();
 
-        $this->actingAs($user)
+        $this->actingAs($admin)
             ->getJson('/api/admin/company-settings')
             ->assertOk()
             ->assertJsonStructure(['timezone']);
     }
 
-    public function test_authenticated_user_can_update_valid_timezone(): void
+    public function test_administrator_can_update_valid_timezone(): void
     {
         $this->seed();
-        $user = User::factory()->create();
+        $admin = $this->createAdmin();
 
-        $this->actingAs($user)
+        $this->actingAs($admin)
             ->patchJson('/api/admin/company-settings', [
                 'timezone' => 'Europe/Berlin',
             ])
@@ -67,15 +69,49 @@ class CompanySettingTest extends TestCase
             ->assertJson(['timezone' => 'Europe/Berlin']);
     }
 
+    public function test_non_admin_cannot_read_company_settings(): void
+    {
+        $this->seed();
+        $user = User::factory()->create([
+            'role_id' => Role::where('code', RoleCode::REQUESTER)->first()->id,
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/api/admin/company-settings')
+            ->assertStatus(403);
+    }
+
+    public function test_non_admin_cannot_update_company_settings(): void
+    {
+        $this->seed();
+        $user = User::factory()->create([
+            'role_id' => Role::where('code', RoleCode::REQUESTER)->first()->id,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/admin/company-settings', [
+                'timezone' => 'Europe/Berlin',
+            ])
+            ->assertStatus(403);
+    }
+
     public function test_update_rejects_invalid_timezone_with_422(): void
     {
         $this->seed();
-        $user = User::factory()->create();
+        $admin = $this->createAdmin();
 
-        $this->actingAs($user)
+        $this->actingAs($admin)
             ->patchJson('/api/admin/company-settings', [
                 'timezone' => 'Invalid/Timezone',
             ])
             ->assertStatus(422);
+    }
+
+    private function createAdmin(): User
+    {
+        return User::factory()->create([
+            'role_id' => Role::where('code', RoleCode::ADMINISTRATOR)->first()->id,
+            'is_active' => true,
+        ]);
     }
 }

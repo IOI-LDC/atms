@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncErpAssetsJob;
 use App\Jobs\SyncErpPartsJob;
+use App\Models\Asset;
+use App\Models\ErpSyncJob;
+use App\Models\Part;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 
@@ -12,17 +15,16 @@ class ErpSyncController extends Controller
 {
     public function index(): JsonResponse
     {
-        Gate::authorize('viewAny', \App\Models\Asset::class); // Reusing Asset policy for view access
+        Gate::authorize('viewAny', Asset::class); // Reusing Asset policy for view access
 
-        $jobs = \App\Models\ErpSyncJob::latest()->get();
+        $jobs = ErpSyncJob::latest()->get();
 
         return response()->json(['data' => $jobs]);
     }
 
     public function syncAssets(): JsonResponse
     {
-        // Only Admin or Maintenance Manager
-        Gate::authorize('manage', \App\Models\Asset::class);
+        Gate::authorize('manage', Asset::class);
 
         SyncErpAssetsJob::dispatch(auth()->id());
 
@@ -31,7 +33,7 @@ class ErpSyncController extends Controller
 
     public function syncParts(): JsonResponse
     {
-        Gate::authorize('manage', \App\Models\Part::class);
+        Gate::authorize('manage', Part::class);
 
         SyncErpPartsJob::dispatch(auth()->id());
 

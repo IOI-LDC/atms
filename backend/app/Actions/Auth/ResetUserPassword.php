@@ -5,7 +5,6 @@ namespace App\Actions\Auth;
 use App\Models\User;
 use App\Models\UserActivationToken;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class ResetUserPassword
@@ -14,9 +13,9 @@ class ResetUserPassword
     {
         return DB::transaction(function () use ($token, $password) {
             $resetToken = UserActivationToken::where('type', 'reset')
+                ->where('token_lookup', hash('sha256', $token))
                 ->lockForUpdate()
-                ->get()
-                ->first(fn ($t) => $t->matches($token));
+                ->first();
 
             if (! $resetToken) {
                 throw ValidationException::withMessages([
@@ -36,6 +35,10 @@ class ResetUserPassword
 
             $resetToken->delete();
 
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+
+            $user->tokens()->delete();
+
             return $user;
         });
     }
@@ -43,6 +46,7 @@ class ResetUserPassword
     public function issueToken(User $user): string
     {
         $user->activationTokens()->where('type', 'reset')->delete();
+
         return UserActivationToken::createForUser($user, 'reset');
     }
 }

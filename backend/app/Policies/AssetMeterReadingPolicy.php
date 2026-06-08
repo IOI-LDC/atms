@@ -9,7 +9,7 @@ class AssetMeterReadingPolicy
 {
     public function create(User $user): bool
     {
-        return $user->hasRole(RoleCode::ADMINISTRATOR) 
+        return $user->hasRole(RoleCode::ADMINISTRATOR)
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $user->hasRole(RoleCode::TECHNICIAN)
             || $user->hasRole(RoleCode::REQUESTER);
@@ -17,7 +17,7 @@ class AssetMeterReadingPolicy
 
     public function confirm(User $user): bool
     {
-        return $user->hasRole(RoleCode::ADMINISTRATOR) 
+        return $user->hasRole(RoleCode::ADMINISTRATOR)
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $user->hasRole(RoleCode::TECHNICIAN);
     }

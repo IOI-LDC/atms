@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\UserActivationNotification;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -23,18 +24,25 @@ class ProvisionEmployeeUser
                 throw new \DomainException('Employee is already provisioned as a user.');
             }
 
-            $user = User::create([
-                'emp_id' => $employee->emp_id,
-                'employee_id' => $employee->id,
-                'name' => $employee->name,
-                'email' => $employee->email,
-                'password' => Str::random(32),
-                'role_id' => $role->id,
-                'is_active' => false,
-            ]);
+            try {
+                $user = User::create([
+                    'emp_id' => $employee->emp_id,
+                    'employee_id' => $employee->id,
+                    'name' => $employee->name,
+                    'email' => $employee->email,
+                    'password' => Str::random(32),
+                    'role_id' => $role->id,
+                    'is_active' => false,
+                ]);
+            } catch (QueryException $e) {
+                if (str_contains($e->getMessage(), 'unique') || str_contains($e->getMessage(), 'Unique')) {
+                    throw new \DomainException('Employee is already provisioned as a user.');
+                }
+                throw $e;
+            }
 
             $token = $this->activateUserAction->issueToken($user);
-            $url = url('/activate?token=' . $token);
+            $url = url('/activate?token='.$token);
             $user->notify(new UserActivationNotification($url));
 
             return $user;

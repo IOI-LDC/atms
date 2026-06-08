@@ -10,7 +10,7 @@ class DeactivateUser
     public function execute(User $user): User
     {
         $user->update(['is_active' => false]);
-        
+
         DB::table('sessions')->where('user_id', $user->id)->delete();
         $user->tokens()->delete();
 

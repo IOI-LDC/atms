@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\UserActivationNotification;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -18,7 +19,7 @@ class EmployeeProvisioningTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     private function createAdmin(): User
@@ -124,13 +125,13 @@ class EmployeeProvisioningTest extends TestCase
         ])->assertOk();
 
         $user = User::where('emp_id', 'EMP700')->first();
-        
+
         Notification::assertSentTo($user, UserActivationNotification::class, function ($notification, $channels) {
             // The notification only constructs an action URL (link). It does not send or hold a password.
             $reflection = new \ReflectionClass($notification);
             $property = $reflection->getProperty('activationUrl');
             $url = $property->getValue($notification);
-            
+
             return str_contains($url, '/activate?token=');
         });
     }

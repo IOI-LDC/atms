@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Erp;
 
+use App\Actions\Erp\SyncAssets;
+use App\Actions\Erp\SyncParts;
 use App\Enums\RoleCode;
 use App\Jobs\SyncErpAssetsJob;
 use App\Models\Asset;
 use App\Models\ErpSyncJob;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -20,7 +23,7 @@ class ErpSyncTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     private function createAdmin(): User
@@ -47,19 +50,28 @@ class ErpSyncTest extends TestCase
         ]);
     }
 
-    public function test_admin_and_manager_can_dispatch_sync_jobs(): void
+    public function test_admin_can_dispatch_sync_assets_job(): void
     {
         Queue::fake();
 
         $admin = $this->createAdmin();
-        $manager = $this->createManager();
         $tech = $this->createTechnician();
 
         $this->actingAs($admin)->postJson('/api/admin/erp/sync-assets')->assertOk();
-        $this->actingAs($manager)->postJson('/api/admin/erp/sync-assets')->assertOk();
         $this->actingAs($tech)->postJson('/api/admin/erp/sync-assets')->assertForbidden();
 
-        Queue::assertPushed(SyncErpAssetsJob::class, 2);
+        Queue::assertPushed(SyncErpAssetsJob::class, 1);
+    }
+
+    public function test_manager_can_dispatch_sync_assets_job(): void
+    {
+        Queue::fake();
+
+        $manager = $this->createManager();
+
+        $this->actingAs($manager)->postJson('/api/admin/erp/sync-assets')->assertOk();
+
+        Queue::assertPushed(SyncErpAssetsJob::class, 1);
     }
 
     public function test_sync_assets_action_upserts_and_paginates(): void
@@ -74,9 +86,9 @@ class ErpSyncTest extends TestCase
                             'name' => 'Generator',
                             'status' => 'active',
                             'updated_at' => now()->toIso8601String(),
-                        ]
+                        ],
                     ],
-                    'next_cursor' => 'cursor-123'
+                    'next_cursor' => 'cursor-123',
                 ])
                 ->push([
                     'data' => [
@@ -86,13 +98,13 @@ class ErpSyncTest extends TestCase
                             'name' => 'HVAC',
                             'status' => 'inactive',
                             'updated_at' => now()->toIso8601String(),
-                        ]
+                        ],
                     ],
-                    'next_cursor' => null
-                ])
+                    'next_cursor' => null,
+                ]),
         ]);
 
-        $action = app(\App\Actions\Erp\SyncAssets::class);
+        $action = app(SyncAssets::class);
         $job = $action->execute();
 
         $this->assertEquals('success', $job->status);
@@ -126,19 +138,18 @@ class ErpSyncTest extends TestCase
                         'updated_at' => now()->toIso8601String(),
                     ],
                     [
-                        // Same ID, different code will cause unique constraint failure on erp_asset_id
-                        'id' => 1,
-                        'code' => 'AST-002',
+                        'id' => 2,
+                        'code' => 'AST-001',
                         'name' => 'HVAC',
                         'status' => 'inactive',
                         'updated_at' => now()->toIso8601String(),
-                    ]
+                    ],
                 ],
-                'next_cursor' => null
-            ])
+                'next_cursor' => null,
+            ]),
         ]);
 
-        $action = app(\App\Actions\Erp\SyncAssets::class);
+        $action = app(SyncAssets::class);
         $job = $action->execute();
 
         $this->assertEquals('partial', $job->status);
@@ -155,9 +166,10 @@ class ErpSyncTest extends TestCase
     public function test_local_operational_fields_remain_untouched_on_update(): void
     {
         Asset::create([
+            'erp_asset_id' => '99',
             'erp_asset_code' => 'AST-UPDATE',
             'name' => 'Old Name',
-            'operational_status' => 'out_of_service', // Local field
+            'operational_status' => 'out_of_service',
             'is_active' => true,
         ]);
 
@@ -170,18 +182,18 @@ class ErpSyncTest extends TestCase
                         'name' => 'New Name From ERP',
                         'status' => 'active',
                         'updated_at' => now()->toIso8601String(),
-                    ]
+                    ],
                 ],
-                'next_cursor' => null
-            ])
+                'next_cursor' => null,
+            ]),
         ]);
 
-        $action = app(\App\Actions\Erp\SyncAssets::class);
+        $action = app(SyncAssets::class);
         $action->execute();
 
-        $asset = Asset::where('erp_asset_code', 'AST-UPDATE')->first();
-        $this->assertEquals('New Name From ERP', $asset->name); // ERP field updated
-        $this->assertEquals('out_of_service', $asset->operational_status); // Local field untouched
+        $asset = Asset::where('erp_asset_id', '99')->first();
+        $this->assertEquals('New Name From ERP', $asset->name);
+        $this->assertEquals('out_of_service', $asset->operational_status);
         $this->assertNotNull($asset->erp_raw_data);
     }
 
@@ -198,9 +210,9 @@ class ErpSyncTest extends TestCase
                             'unit_of_measure' => 'EA',
                             'status' => 'active',
                             'updated_at' => now()->toIso8601String(),
-                        ]
+                        ],
                     ],
-                    'next_cursor' => 'cursor-123'
+                    'next_cursor' => 'cursor-123',
                 ])
                 ->push([
                     'data' => [
@@ -211,13 +223,13 @@ class ErpSyncTest extends TestCase
                             'unit_of_measure' => 'EA',
                             'status' => 'inactive',
                             'updated_at' => now()->toIso8601String(),
-                        ]
+                        ],
                     ],
-                    'next_cursor' => null
-                ])
+                    'next_cursor' => null,
+                ]),
         ]);
 
-        $action = app(\App\Actions\Erp\SyncParts::class);
+        $action = app(SyncParts::class);
         $job = $action->execute();
 
         $this->assertEquals('success', $job->status);

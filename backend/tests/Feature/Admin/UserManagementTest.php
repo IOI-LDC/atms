@@ -5,8 +5,10 @@ namespace Tests\Feature\Admin;
 use App\Enums\RoleCode;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class UserManagementTest extends TestCase
@@ -16,7 +18,7 @@ class UserManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     private function createAdmin(): User
@@ -43,8 +45,8 @@ class UserManagementTest extends TestCase
         $response = $this->actingAs($admin)->getJson('/api/admin/users');
 
         $response->assertOk()
-                 ->assertJsonCount(2, 'data')
-                 ->assertJsonPath('data.0.role.code', RoleCode::ADMINISTRATOR->value);
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.role.code', RoleCode::ADMINISTRATOR->value);
     }
 
     public function test_non_administrator_cannot_list_users(): void
@@ -52,8 +54,8 @@ class UserManagementTest extends TestCase
         $user = $this->createNonAdmin();
 
         $this->actingAs($user)
-             ->getJson('/api/admin/users')
-             ->assertForbidden();
+            ->getJson('/api/admin/users')
+            ->assertForbidden();
     }
 
     public function test_administrator_can_deactivate_user(): void
@@ -98,7 +100,7 @@ class UserManagementTest extends TestCase
     {
         $admin = $this->createAdmin();
         $user = User::factory()->create([
-            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'password' => Hash::make('password123'),
             'is_active' => true,
         ]);
 

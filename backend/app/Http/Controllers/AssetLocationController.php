@@ -21,13 +21,21 @@ class AssetLocationController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        if (! $asset->is_active) {
+            return response()->json(['message' => 'Cannot update location for an inactive asset.'], 422);
+        }
+
         $location = Location::findOrFail($validated['location_id']);
-        
+
+        if (! $location->is_active) {
+            return response()->json(['message' => 'Cannot assign an inactive location.'], 422);
+        }
+
         $asset = $action->execute(
-            $asset, 
-            $location, 
-            $validated['reason'] ?? null, 
-            $validated['notes'] ?? null, 
+            $asset,
+            $location,
+            $validated['reason'] ?? null,
+            $validated['notes'] ?? null,
             auth()->id()
         );
 

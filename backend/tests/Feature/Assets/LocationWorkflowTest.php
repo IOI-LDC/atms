@@ -7,6 +7,7 @@ use App\Models\Asset;
 use App\Models\Location;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,7 +18,7 @@ class LocationWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     private function createUser(RoleCode $roleCode): User
@@ -49,12 +50,12 @@ class LocationWorkflowTest extends TestCase
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $logistics = $this->createUser(RoleCode::LOGISTICS);
         $tech = $this->createUser(RoleCode::TECHNICIAN);
-        
+
         $asset = Asset::create([
             'erp_asset_code' => 'AST-LOC-TEST',
             'name' => 'Location Test Asset',
         ]);
-        
+
         $location = Location::create([
             'name' => 'Site A',
             'type' => 'site',
@@ -67,14 +68,14 @@ class LocationWorkflowTest extends TestCase
 
         // Logistics can update
         $this->actingAs($logistics)->postJson("/api/assets/{$asset->id}/location", $payload)->assertOk();
-        
+
         // Admin and Manager can also update (implicit from AssetPolicy)
     }
 
     public function test_location_update_creates_history_record(): void
     {
         $logistics = $this->createUser(RoleCode::LOGISTICS);
-        
+
         $loc1 = Location::create(['name' => 'Site 1', 'type' => 'site']);
         $loc2 = Location::create(['name' => 'Site 2', 'type' => 'site']);
 
@@ -90,7 +91,7 @@ class LocationWorkflowTest extends TestCase
         ])->assertOk();
 
         $this->assertEquals($loc2->id, $asset->fresh()->current_location_id);
-        
+
         $this->assertDatabaseHas('asset_location_histories', [
             'asset_id' => $asset->id,
             'from_location_id' => $loc1->id,

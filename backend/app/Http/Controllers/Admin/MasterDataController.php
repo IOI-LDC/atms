@@ -15,6 +15,7 @@ class MasterDataController extends Controller
     public function indexLocations(): JsonResponse
     {
         Gate::authorize('manage', Location::class);
+
         return response()->json(['data' => Location::all()]);
     }
 
@@ -58,6 +59,7 @@ class MasterDataController extends Controller
     {
         Gate::authorize('manage', MasterDataItem::class);
         $items = MasterDataItem::where('group_key', $groupKey)->orderBy('sort_order')->get();
+
         return response()->json(['data' => $items]);
     }
 
@@ -98,6 +100,7 @@ class MasterDataController extends Controller
     public function indexUsageReadingTypes(): JsonResponse
     {
         Gate::authorize('manage', MasterDataItem::class);
+
         return response()->json(['data' => UsageReadingType::all()]);
     }
 
@@ -115,7 +118,7 @@ class MasterDataController extends Controller
 
         return response()->json(['data' => $type], 201);
     }
-    
+
     public function updateUsageReadingType(Request $request, UsageReadingType $type): JsonResponse
     {
         Gate::authorize('manage', MasterDataItem::class);

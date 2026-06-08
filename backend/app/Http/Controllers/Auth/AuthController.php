@@ -21,7 +21,7 @@ class AuthController extends Controller
 {
     public function login(LoginRequest $request): JsonResponse
     {
-        $key = 'login:' . $request->ip() . ':' . $request->input('email');
+        $key = 'login:'.$request->ip().':'.$request->input('email');
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return response()->json(['message' => 'Too many login attempts.'], 429);
@@ -31,6 +31,7 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($request->input('password'), $user->password)) {
             RateLimiter::hit($key, 60);
+
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
@@ -73,7 +74,7 @@ class AuthController extends Controller
 
         if ($user) {
             $token = $action->issueToken($user);
-            $url = url('/reset-password?token=' . $token);
+            $url = url('/reset-password?token='.$token);
             $user->notify(new PasswordResetNotification($url));
         }
 

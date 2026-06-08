@@ -8,6 +8,7 @@ use App\Models\AssetMeterReading;
 use App\Models\Role;
 use App\Models\UsageReadingType;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +19,7 @@ class MeterReadingWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     private function createUser(RoleCode $roleCode): User
@@ -49,7 +50,7 @@ class MeterReadingWorkflowTest extends TestCase
 
         // Cannot confirm
         $this->actingAs($requester)->postJson("/api/assets/{$asset->id}/meter-readings/{$readingId}/confirm")
-             ->assertForbidden();
+            ->assertForbidden();
     }
 
     public function test_technician_can_confirm_reading(): void
@@ -66,7 +67,7 @@ class MeterReadingWorkflowTest extends TestCase
         ]);
 
         $this->actingAs($tech)->postJson("/api/assets/{$asset->id}/meter-readings/{$reading->id}/confirm")
-             ->assertOk();
+            ->assertOk();
 
         $this->assertNotNull($reading->fresh()->confirmed_at);
         $this->assertEquals($tech->id, $reading->fresh()->confirmed_by_user_id);
@@ -77,7 +78,7 @@ class MeterReadingWorkflowTest extends TestCase
         $tech = $this->createUser(RoleCode::TECHNICIAN);
         $asset = Asset::create(['erp_asset_code' => 'AST-RD-3', 'name' => 'Gen']);
         $type = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
-        
+
         // Existing confirmed reading
         AssetMeterReading::create([
             'asset_id' => $asset->id,
@@ -100,9 +101,9 @@ class MeterReadingWorkflowTest extends TestCase
 
         // Attempt to confirm
         $this->actingAs($tech)->postJson("/api/assets/{$asset->id}/meter-readings/{$lowerReading->id}/confirm")
-             ->assertStatus(422) // Domain Exception translated to 422
-             ->assertJsonPath('message', 'Confirmed readings must not be lower than the latest confirmed reading.');
-             
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Confirmed readings must not be lower than the latest confirmed reading.');
+
         $this->assertNull($lowerReading->fresh()->confirmed_at);
     }
 
@@ -111,7 +112,7 @@ class MeterReadingWorkflowTest extends TestCase
         $tech = $this->createUser(RoleCode::TECHNICIAN);
         $asset = Asset::create(['erp_asset_code' => 'AST-RD-4', 'name' => 'Gen']);
         $type = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
-        
+
         // Existing confirmed reading
         AssetMeterReading::create([
             'asset_id' => $asset->id,
@@ -133,9 +134,9 @@ class MeterReadingWorkflowTest extends TestCase
         ]);
 
         $this->actingAs($tech)->postJson("/api/assets/{$asset->id}/meter-readings/{$earlierReading->id}/confirm")
-             ->assertStatus(422)
-             ->assertJsonPath('message', 'Reading date cannot be earlier than the latest confirmed reading date.');
-             
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Reading date cannot be earlier than the latest confirmed reading date.');
+
         $this->assertNull($earlierReading->fresh()->confirmed_at);
     }
 }

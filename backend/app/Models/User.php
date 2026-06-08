@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RoleCode;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -17,7 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected function casts(): array
     {
@@ -39,7 +40,7 @@ class User extends Authenticatable
         return $this->belongsTo(Employee::class);
     }
 
-    public function hasRole(\App\Enums\RoleCode $role): bool
+    public function hasRole(RoleCode $role): bool
     {
         return $this->role?->code === $role;
     }
