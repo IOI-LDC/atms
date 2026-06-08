@@ -30,8 +30,8 @@
 
 ## Assets
 
-- [x] Asset list API (Task 14 - Preliminary implementation exists via Task 7)
-- [x] Asset detail API (Task 14 - Preliminary implementation exists via Task 7)
+- [x] Asset list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
+- [x] Asset detail API (Task 14 — role-scoped Resource)
 - [ ] Asset list UI
 - [ ] Asset detail UI
 - [x] Meter reading API (Task 8)
@@ -39,12 +39,13 @@
 - [x] Location update API (Task 8)
 - [ ] Location history UI
 - [x] Asset attachments API (Task 12)
+- [x] Asset maintenance history API (Task 14 — derived from closed WOs)
 - [ ] Asset maintenance history UI
 
 ## Parts
 
-- [x] Parts list API (Task 14 - Preliminary implementation exists via Task 7)
-- [x] Part detail API (Task 14 - Preliminary implementation exists via Task 7)
+- [x] Parts list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
+- [x] Part detail API (Task 14 — role-scoped Resource)
 - [ ] Parts list UI
 - [ ] Part detail UI
 - [x] Part attachments API (Task 12)
@@ -53,7 +54,7 @@
 
 - [x] Corrective MR create API (Task 9)
 - [ ] Corrective MR form UI
-- [x] MR list API (Task 9)
+- [x] MR list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
 - [ ] MR list UI
 - [x] Review MR API (Task 9)
 - [ ] Review MR UI
@@ -62,8 +63,8 @@
 
 ## Work Orders
 
-- [x] WO list API (Task 10)
-- [x] WO detail API (Task 10)
+- [x] WO list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
+- [x] WO detail API (Task 14 — role-scoped Resource)
 - [ ] WO list UI
 - [ ] WO detail UI
 - [x] Parts used API (Task 10)
@@ -75,7 +76,7 @@
 
 ## PM Rules
 
-- [x] PM rule CRUD API (Task 11)
+- [x] PM rule CRUD API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
 - [ ] PM rule UI
 - [x] PM evaluation service (Task 11)
 - [x] PM scheduler job (Task 11)
@@ -88,12 +89,12 @@
 
 ## Dashboard
 
-- [ ] Dashboard summary API
+- [x] Dashboard summary API (Task 14 — role-adaptive widgets)
 - [ ] Dashboard UI cards
-- [ ] Pending MR widget
-- [ ] Open WO widget
-- [ ] Overdue PM widget
-- [ ] Recently closed WO widget
+- [x] Pending MR widget (Task 14)
+- [x] Open WO widget (Task 14)
+- [x] Overdue PM widget (Task 14 — uses PmDueCalculator)
+- [x] Recently closed WO widget (Task 14)
 
 ## Quality
 
@@ -101,4 +102,7 @@
 - [x] Permission tests
 - [x] ERP sync tests
 - [x] Validation tests
+- [x] Role-scoped Resource tests (Task 14)
+- [x] Dashboard tests (Task 14)
+- [x] Maintenance history tests (Task 14)
 - [ ] UAT issue tracking
