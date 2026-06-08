@@ -7,6 +7,7 @@ use App\Actions\MaintenanceRequests\CancelMaintenanceRequest;
 use App\Actions\MaintenanceRequests\CreateCorrectiveMaintenanceRequest;
 use App\Actions\MaintenanceRequests\RejectMaintenanceRequest;
 use App\Enums\RoleCode;
+use App\Http\Resources\MaintenanceRequestResource;
 use App\Models\Asset;
 use App\Models\MaintenanceRequest;
 use Illuminate\Http\JsonResponse;
@@ -21,20 +22,25 @@ class MaintenanceRequestController extends Controller
 
         $user = $request->user();
 
-        $query = MaintenanceRequest::with(['asset', 'createdBy']);
+        $query = MaintenanceRequest::with(['asset', 'createdBy', 'workOrder', 'attachments']);
 
         if ($user->hasRole(RoleCode::REQUESTER)) {
             $query->where('created_by', $user->id);
         }
 
-        return response()->json(['data' => $query->orderByDesc('created_at')->get()]);
+        $perPage = min((int) $request->input('per_page', 25), 100);
+        $results = $query->orderByDesc('created_at')->cursorPaginate($perPage);
+
+        return MaintenanceRequestResource::collection($results)->toResponse($request);
     }
 
-    public function show(MaintenanceRequest $maintenanceRequest): JsonResponse
+    public function show(Request $request, MaintenanceRequest $maintenanceRequest): JsonResponse
     {
         Gate::authorize('view', $maintenanceRequest);
 
-        return response()->json(['data' => $maintenanceRequest->load(['asset', 'createdBy', 'reviewedBy', 'workOrder'])]);
+        $maintenanceRequest->load(['asset', 'createdBy', 'reviewedBy', 'workOrder', 'attachments']);
+
+        return (new MaintenanceRequestResource($maintenanceRequest))->toResponse($request);
     }
 
     public function storeCorrective(Request $request, CreateCorrectiveMaintenanceRequest $action): JsonResponse
