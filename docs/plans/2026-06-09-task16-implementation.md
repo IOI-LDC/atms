@@ -40,6 +40,11 @@ echo "Backing up PostgreSQL database '$DB_NAME'..."
 
 docker compose exec -T postgres pg_dump -Fc -U "$DB_USER" -d "$DB_NAME" > "$FILEPATH"
 
+if [ ! -s "$FILEPATH" ]; then
+    echo "Error: pg_dump produced empty or missing file" >&2
+    exit 1
+fi
+
 SIZE=$(wc -c < "$FILEPATH" | tr -d ' ')
 SHA256=$(sha256sum "$FILEPATH" | cut -d' ' -f1)
 
@@ -87,6 +92,9 @@ umask 077
 
 : "${BACKUP_DIR:?BACKUP_DIR is required}"
 
+ATTACHMENTS_VOL=$(docker volume ls --format '{{.Name}}' | grep 'attachments$' | head -1)
+: "${ATTACHMENTS_VOL:?Could not find attachments Docker volume}"
+
 DIR="$BACKUP_DIR/attachments/daily"
 TIMESTAMP=$(date -u +%Y-%m-%dT%H-%M-%S)
 FILENAME="atms-attachments-${TIMESTAMP}.tar.gz"
@@ -97,7 +105,7 @@ mkdir -p "$DIR"
 echo "Backing up attachments volume..."
 
 docker run --rm \
-    -v atms_attachments:/data:ro \
+    -v "$ATTACHMENTS_VOL":/data:ro \
     -v "$DIR":/out \
     alpine tar -czf "/out/$FILENAME" -C /data .
 
@@ -234,6 +242,9 @@ fi
 ARCHIVE_FILE="$1"
 SKIP_CONFIRM="${2:-}"
 
+ATTACHMENTS_VOL=$(docker volume ls --format '{{.Name}}' | grep 'attachments$' | head -1)
+: "${ATTACHMENTS_VOL:?Could not find attachments Docker volume}"
+
 if [ ! -f "$ARCHIVE_FILE" ]; then
     echo "Error: file not found: $ARCHIVE_FILE" >&2
     exit 1
@@ -260,19 +271,19 @@ echo "Restoring attachments from: $ARCHIVE_FILE"
 
 echo "Clearing existing attachments..."
 docker run --rm \
-    -v atms_attachments:/data \
-    alpine sh -c "rm -rf /data/* /data/.* 2>/dev/null || true"
+    -v "$ATTACHMENTS_VOL":/data \
+    alpine sh -c "find /data -mindepth 1 -delete"
 
 echo "Extracting archive..."
 ARCHIVE_DIR=$(cd "$(dirname "$ARCHIVE_FILE")" && pwd)
 ARCHIVE_BASE=$(basename "$ARCHIVE_FILE")
 
 docker run --rm \
-    -v atms_attachments:/data \
+    -v "$ATTACHMENTS_VOL":/data \
     -v "$ARCHIVE_DIR":/out \
     alpine tar -xzf "/out/$ARCHIVE_BASE" -C /data
 
-FILE_COUNT=$(docker run --rm -v atms_attachments:/data alpine sh -c "find /data -type f | wc -l" | tr -d ' ')
+FILE_COUNT=$(docker run --rm -v "$ATTACHMENTS_VOL":/data alpine sh -c "find /data -type f | wc -l" | tr -d ' ')
 
 echo ""
 echo "Attachments restore complete."
@@ -319,14 +330,14 @@ for SUBDIR in db attachments; do
     WEEKLY_DIR="$BACKUP_DIR/$SUBDIR/weekly"
 
     if [ -d "$DAILY_DIR" ]; then
-        COUNT=$(find "$DAILY_DIR" -type f -mtime +$DAILY_AGE -print | tee /dev/stderr | wc -l | tr -d ' ')
-        find "$DAILY_DIR" -type f -mtime +$DAILY_AGE -delete
+        DELETED=$(find "$DAILY_DIR" -type f -mtime +$DAILY_AGE -print -delete 2>&1)
+        COUNT=$(printf '%s\n' "$DELETED" | grep -c . || true)
         PRUNED=$((PRUNED + COUNT))
     fi
 
     if [ -d "$WEEKLY_DIR" ]; then
-        COUNT=$(find "$WEEKLY_DIR" -type f -mtime +$WEEKLY_AGE -print | tee /dev/stderr | wc -l | tr -d ' ')
-        find "$WEEKLY_DIR" -type f -mtime +$WEEKLY_AGE -delete
+        DELETED=$(find "$WEEKLY_DIR" -type f -mtime +$WEEKLY_AGE -print -delete 2>&1)
+        COUNT=$(printf '%s\n' "$DELETED" | grep -c . || true)
         PRUNED=$((PRUNED + COUNT))
     fi
 done
@@ -354,7 +365,11 @@ for SUBDIR in db attachments; do
 
     mkdir -p "$WEEKLY_DIR"
 
-    LATEST=$(ls -t "$DAILY_DIR"/*.dump "$DAILY_DIR"/*.tar.gz 2>/dev/null | head -1 || true)
+    LATEST=""
+    for pattern in "$DAILY_DIR"/*.dump "$DAILY_DIR"/*.tar.gz; do
+        [ -f "$pattern" ] || continue
+        [ -z "$LATEST" ] || [ "$pattern" -nt "$LATEST" ] && LATEST="$pattern"
+    done
 
     if [ -n "$LATEST" ]; then
         cp "$LATEST" "$WEEKLY_DIR/"
@@ -448,7 +463,8 @@ ORDER BY 1;
 fi
 
 if [ "$TYPE" = "attachments" ]; then
-    FILE_COUNT=$(docker run --rm -v atms_attachments:/data alpine sh -c "find /data -type f | wc -l" 2>/dev/null | tr -d ' ' || echo "?")
+    ATTACHMENTS_VOL=$(docker volume ls --format '{{.Name}}' | grep 'attachments$' | head -1)
+    FILE_COUNT=$(docker run --rm -v "$ATTACHMENTS_VOL":/data alpine sh -c "find /data -type f | wc -l" 2>/dev/null | tr -d ' ' || echo "?")
     echo "  Attachment files in volume: ${FILE_COUNT}"
 fi
 
@@ -493,6 +509,9 @@ TEST_DB="atms_test_restore_$$"
 TEST_VOL="atms_test_attachments_$$"
 BACKUP_DIR=$(mktemp -d)
 FAILED=0
+
+ATTACHMENTS_VOL=$(docker volume ls --format '{{.Name}}' | grep 'attachments$' | head -1)
+: "${ATTACHMENTS_VOL:?Could not find attachments Docker volume}"
 
 cleanup() {
     echo ""
@@ -584,7 +603,7 @@ docker run --rm \
     -v "$ARCHIVE_DIR":/out \
     alpine tar -xzf "/out/$ARCHIVE_BASE" -C /data
 
-PROD_FILE_COUNT=$(docker run --rm -v atms_attachments:/data alpine sh -c "find /data -type f | wc -l" | tr -d '[:space:]')
+PROD_FILE_COUNT=$(docker run --rm -v "$ATTACHMENTS_VOL":/data alpine sh -c "find /data -type f | wc -l" | tr -d '[:space:]')
 TEST_FILE_COUNT=$(docker run --rm -v "$TEST_VOL":/data alpine sh -c "find /data -type f | wc -l" | tr -d '[:space:]')
 
 echo "  Production attachment files: ${PROD_FILE_COUNT}"
@@ -771,6 +790,8 @@ Run: `ls -la scripts/`
 **Step 2: Run the integration test**
 
 Requires Docker Compose running with seeded data. The stack must be up.
+
+**WARNING: DESTRUCTIVE — `migrate:fresh` drops all tables. For dev/staging only.**
 
 Run: `docker compose up -d && docker compose run --rm api php artisan migrate:fresh --seed`
 Then: `BACKUP_DIR=$(mktemp -d) sh scripts/test-backup-restore.sh`
