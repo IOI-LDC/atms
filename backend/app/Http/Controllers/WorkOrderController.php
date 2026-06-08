@@ -10,6 +10,7 @@ use App\Actions\WorkOrders\DeleteWorkOrderPart;
 use App\Actions\WorkOrders\RecordWorkOrderPart;
 use App\Actions\WorkOrders\StartWorkOrder;
 use App\Actions\WorkOrders\UpdateWorkOrderExecution;
+use App\Http\Resources\WorkOrderResource;
 use App\Models\User;
 use App\Models\WorkOrder;
 use Illuminate\Http\JsonResponse;
@@ -18,18 +19,25 @@ use Illuminate\Support\Facades\Gate;
 
 class WorkOrderController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', WorkOrder::class);
 
-        return response()->json(['data' => WorkOrder::with(['asset', 'assignedTo', 'maintenanceRequest'])->orderByDesc('created_at')->get()]);
+        $perPage = min((int) $request->input('per_page', 25), 100);
+        $results = WorkOrder::with(['asset', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments'])
+            ->orderByDesc('created_at')
+            ->cursorPaginate($perPage);
+
+        return WorkOrderResource::collection($results)->toResponse($request);
     }
 
-    public function show(WorkOrder $workOrder): JsonResponse
+    public function show(Request $request, WorkOrder $workOrder): JsonResponse
     {
         Gate::authorize('view', $workOrder);
 
-        return response()->json(['data' => $workOrder->load(['asset', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part'])]);
+        $workOrder->load(['asset', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments']);
+
+        return (new WorkOrderResource($workOrder))->toResponse($request);
     }
 
     public function assign(Request $request, WorkOrder $workOrder, AssignWorkOrder $action): JsonResponse
