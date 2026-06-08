@@ -5,6 +5,7 @@ namespace App\Actions\Pm;
 use App\Models\MaintenanceRequest;
 use App\Models\PmOccurrenceSuppression;
 use App\Models\PmRule;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -22,6 +23,7 @@ class CreatePmSuppression
         $this->validate($maintenanceRequest, $suppressedUntilDate, $suppressedUntilReading);
 
         return DB::transaction(function () use ($maintenanceRequest, $rule, $decidedByUserId, $decisionType, $suppressedUntilDate, $suppressedUntilReading, $reason) {
+            $logger = app(AuditLogger::class);
             $triggeredByDate = (bool) $maintenanceRequest->triggered_by_date;
             $triggeredByReading = (bool) $maintenanceRequest->triggered_by_reading;
 
@@ -43,7 +45,12 @@ class CreatePmSuppression
                 'reason' => $reason,
             ];
 
-            return PmOccurrenceSuppression::create($data);
+            $before = [];
+            $suppression = PmOccurrenceSuppression::create($data);
+            $after = $suppression->toArray();
+            $logger->log('create_pm_suppression', $suppression, $before, $after);
+
+            return $suppression;
         });
     }
 

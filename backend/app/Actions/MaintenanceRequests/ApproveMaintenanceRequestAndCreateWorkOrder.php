@@ -7,6 +7,7 @@ use App\Enums\WorkOrderStatus;
 use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
 use App\Models\WorkOrder;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +16,10 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
     public function execute(MaintenanceRequest $maintenanceRequest, int $approvedByUserId): MaintenanceRequest
     {
         return DB::transaction(function () use ($maintenanceRequest, $approvedByUserId) {
+            $logger = app(AuditLogger::class);
             $locked = MaintenanceRequest::where('id', $maintenanceRequest->id)->lockForUpdate()->first();
+
+            $before = $locked->toArray();
 
             if ($locked->status !== MaintenanceRequestStatus::PENDING_REVIEW) {
                 throw new DomainException('Only pending review requests can be approved.');
@@ -37,6 +41,9 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
                 'priority' => $locked->priority,
                 'description' => $locked->description,
             ]);
+
+            $after = $locked->fresh()->toArray();
+            $logger->log('maintenance_request.approved', $locked, $before, $after);
 
             return $locked->fresh();
         });

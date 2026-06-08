@@ -5,6 +5,7 @@ namespace App\Actions\Assets;
 use App\Models\Asset;
 use App\Models\AssetMeterReading;
 use App\Models\UsageReadingType;
+use App\Services\Audit\AuditLogger;
 
 class RecordMeterReading
 {
@@ -18,8 +19,11 @@ class RecordMeterReading
         ?int $maintenanceRequestId = null,
         ?string $notes = null
     ): AssetMeterReading {
+        $logger = app(AuditLogger::class);
+        $before = [];
+
         // Just records it, does not confirm it. Confirmation is separate.
-        return AssetMeterReading::create([
+        $reading = AssetMeterReading::create([
             'asset_id' => $asset->id,
             'usage_reading_type_id' => $readingType->id,
             'reading_value' => $readingValue,
@@ -29,5 +33,10 @@ class RecordMeterReading
             'maintenance_request_id' => $maintenanceRequestId,
             'notes' => $notes,
         ]);
+
+        $after = $reading->toArray();
+        $logger->log('meter_reading.recorded', $reading, $before, $after);
+
+        return $reading;
     }
 }

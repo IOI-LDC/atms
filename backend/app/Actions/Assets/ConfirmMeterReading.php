@@ -3,6 +3,7 @@
 namespace App\Actions\Assets;
 
 use App\Models\AssetMeterReading;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -11,6 +12,8 @@ class ConfirmMeterReading
     public function execute(AssetMeterReading $reading, int $confirmedByUserId): AssetMeterReading
     {
         return DB::transaction(function () use ($reading, $confirmedByUserId) {
+            $logger = app(AuditLogger::class);
+
             AssetMeterReading::where('asset_id', $reading->asset_id)
                 ->where('usage_reading_type_id', $reading->usage_reading_type_id)
                 ->orderBy('id')
@@ -24,6 +27,7 @@ class ConfirmMeterReading
                 ->first();
 
             $lockedReading = AssetMeterReading::where('id', $reading->id)->lockForUpdate()->first();
+            $before = $lockedReading->toArray();
 
             if ($lockedReading->confirmed_at !== null) {
                 return $lockedReading;
@@ -40,6 +44,9 @@ class ConfirmMeterReading
             $lockedReading->confirmed_by_user_id = $confirmedByUserId;
             $lockedReading->confirmed_at = now();
             $lockedReading->save();
+
+            $after = $lockedReading->fresh()->toArray();
+            $logger->log('meter_reading.confirmed', $lockedReading, $before, $after);
 
             return $lockedReading;
         });

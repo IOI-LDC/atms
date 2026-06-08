@@ -4,6 +4,7 @@ namespace App\Actions\Auth;
 
 use App\Models\User;
 use App\Models\UserActivationToken;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -12,6 +13,7 @@ class ActivateUser
     public function execute(string $token, string $password): User
     {
         return DB::transaction(function () use ($token, $password) {
+            $logger = app(AuditLogger::class);
             $activationToken = UserActivationToken::where('type', 'activation')
                 ->where('token_lookup', hash('sha256', $token))
                 ->lockForUpdate()
@@ -31,6 +33,7 @@ class ActivateUser
             }
 
             $user = $activationToken->user;
+            $before = $user->toArray();
             $user->update([
                 'password' => $password,
                 'is_active' => true,
@@ -39,6 +42,9 @@ class ActivateUser
             ]);
 
             $activationToken->delete();
+
+            $after = $user->fresh()->toArray();
+            $logger->log('user.activated', $user, $before, $after);
 
             return $user;
         });

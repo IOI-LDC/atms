@@ -5,6 +5,7 @@ namespace App\Actions\MaintenanceRequests;
 use App\Actions\Pm\CreatePmSuppression;
 use App\Enums\MaintenanceRequestStatus;
 use App\Models\MaintenanceRequest;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +19,9 @@ class CancelMaintenanceRequest
         ?string $suppressedUntilReading = null
     ): MaintenanceRequest {
         return DB::transaction(function () use ($maintenanceRequest, $cancelledByUserId, $reason, $suppressedUntilDate, $suppressedUntilReading) {
+            $logger = app(AuditLogger::class);
             $locked = MaintenanceRequest::where('id', $maintenanceRequest->id)->lockForUpdate()->first();
+            $before = $locked->toArray();
 
             if ($locked->status !== MaintenanceRequestStatus::PENDING_REVIEW) {
                 throw new DomainException('Only pending review requests can be cancelled.');
@@ -42,6 +45,9 @@ class CancelMaintenanceRequest
                     $reason
                 );
             }
+
+            $after = $locked->fresh()->toArray();
+            $logger->log('maintenance_request.cancelled', $locked, $before, $after);
 
             return $locked->fresh();
         });

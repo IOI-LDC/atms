@@ -8,6 +8,7 @@ use App\Actions\Pm\ReactivatePmRule;
 use App\Enums\PmTriggerType;
 use App\Models\Asset;
 use App\Models\PmRule;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -52,6 +53,8 @@ class PmRuleController extends Controller
             'created_by' => auth()->id(),
         ]);
 
+        app(AuditLogger::class)->log('pm_rule.created', $rule, [], $rule->toArray());
+
         return response()->json(['data' => $rule], 201);
     }
 
@@ -87,7 +90,11 @@ class PmRuleController extends Controller
             }
         }
 
+        $before = $pmRule->toArray();
         $pmRule->update($validated);
+        $after = $pmRule->fresh()->toArray();
+
+        app(AuditLogger::class)->log('pm_rule.updated', $pmRule, $before, $after);
 
         return response()->json(['data' => $pmRule->fresh()]);
     }

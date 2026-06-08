@@ -2,85 +2,89 @@
 
 ## Foundation
 
-- [ ] Create Laravel backend project
+- [x] Create Laravel backend project (Task 1)
 - [ ] Create Vue frontend project
-- [ ] Configure Docker Compose
-- [ ] Configure PostgreSQL
-- [ ] Configure environment files
-- [ ] Implement authentication
-- [ ] Implement base RBAC
+- [x] Configure Docker Compose (Task 1)
+- [x] Configure PostgreSQL (Task 1)
+- [x] Configure environment files (Task 1)
+- [x] Implement authentication (Task 3)
+- [x] Implement base RBAC (Task 4)
 
 ## Administration
 
 - [ ] Users list
 - [ ] User create/edit
-- [ ] Roles setup
-- [ ] Locations CRUD
-- [ ] Master data CRUD
+- [x] Roles setup (Task 4)
+- [x] Locations CRUD (Task 8)
+- [x] Master data CRUD (Task 8)
 - [ ] ERP sync settings
 
 ## ERP Sync
 
-- [ ] Create ERP sync job tables
-- [ ] Implement asset sync job
-- [ ] Implement parts sync job
-- [ ] Implement manual sync endpoint
+- [x] Create ERP sync job tables (Task 7)
+- [x] Implement asset sync job (Task 7)
+- [x] Implement parts sync job (Task 7)
+- [x] Implement manual sync endpoint (Task 7)
 - [ ] Implement sync history UI
 - [ ] Implement sync error UI
 
 ## Assets
 
-- [ ] Asset list API
-- [ ] Asset detail API
+- [x] Asset list API (Task 14 - Preliminary implementation exists via Task 7)
+- [x] Asset detail API (Task 14 - Preliminary implementation exists via Task 7)
 - [ ] Asset list UI
 - [ ] Asset detail UI
-- [ ] Meter reading API
+- [x] Meter reading API (Task 8)
 - [ ] Meter reading UI
-- [ ] Location update API
+- [x] Location update API (Task 8)
 - [ ] Location history UI
-- [ ] Asset attachments API/UI
+- [x] Asset attachments API (Task 12)
 - [ ] Asset maintenance history UI
 
 ## Parts
 
-- [ ] Parts list API
-- [ ] Part detail API
+- [x] Parts list API (Task 14 - Preliminary implementation exists via Task 7)
+- [x] Part detail API (Task 14 - Preliminary implementation exists via Task 7)
 - [ ] Parts list UI
 - [ ] Part detail UI
-- [ ] Part attachments API/UI
+- [x] Part attachments API (Task 12)
 
 ## Maintenance Requests
 
-- [ ] Corrective MR create API
+- [x] Corrective MR create API (Task 9)
 - [ ] Corrective MR form UI
-- [ ] MR list API
+- [x] MR list API (Task 9)
 - [ ] MR list UI
-- [ ] Review MR API
+- [x] Review MR API (Task 9)
 - [ ] Review MR UI
-- [ ] Approve & create WO action
-- [ ] Reject MR action
+- [x] Approve & create WO action (Task 9)
+- [x] Reject MR action (Task 9)
 
 ## Work Orders
 
-- [ ] WO list API
-- [ ] WO detail API
+- [x] WO list API (Task 10)
+- [x] WO detail API (Task 10)
 - [ ] WO list UI
 - [ ] WO detail UI
-- [ ] Parts used API
+- [x] Parts used API (Task 10)
 - [ ] Parts used UI
-- [ ] WO attachments API/UI
-- [ ] Close WO API
+- [x] WO attachments API (Task 12)
+- [x] Close WO API (Task 10)
 - [ ] Close WO UI
 - [ ] Closed WO history UI
 
 ## PM Rules
 
-- [ ] PM rule CRUD API
+- [x] PM rule CRUD API (Task 11)
 - [ ] PM rule UI
-- [ ] PM evaluation service
-- [ ] PM scheduler job
-- [ ] Preventive MR generation
-- [ ] PM baseline update after WO closure
+- [x] PM evaluation service (Task 11)
+- [x] PM scheduler job (Task 11)
+- [x] Preventive MR generation (Task 11)
+- [x] PM baseline update after WO closure (Task 11)
+
+## Audit System
+
+- [x] Append-Only Technical Audit (Task 13)
 
 ## Dashboard
 
@@ -93,8 +97,8 @@
 
 ## Quality
 
-- [ ] Workflow tests
-- [ ] Permission tests
-- [ ] ERP sync tests
-- [ ] Validation tests
+- [x] Workflow tests
+- [x] Permission tests
+- [x] ERP sync tests
+- [x] Validation tests
 - [ ] UAT issue tracking

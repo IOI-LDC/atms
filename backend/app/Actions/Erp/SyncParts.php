@@ -5,6 +5,7 @@ namespace App\Actions\Erp;
 use App\Contracts\Erp\ErpSource;
 use App\Models\ErpSyncJob;
 use App\Models\Part;
+use App\Services\Audit\AuditLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -16,12 +17,15 @@ class SyncParts
 
     public function execute(?int $triggeredByUserId = null): ErpSyncJob
     {
+        $logger = app(AuditLogger::class);
+        $beforeJob = [];
         $job = ErpSyncJob::create([
             'sync_type' => 'parts',
             'status' => 'running',
             'started_at' => now(),
             'triggered_by_user_id' => $triggeredByUserId,
         ]);
+        $logger->log('sync_parts_started', $job, $beforeJob, $job->toArray());
 
         try {
             $cursor = null;
@@ -85,6 +89,7 @@ class SyncParts
                 $hasMore = $cursor !== null;
             }
 
+            $beforeEnd = $job->toArray();
             $job->update([
                 'status' => $failedCount > 0 ? 'partial' : 'success',
                 'total_records' => $totalRecords,
@@ -93,13 +98,16 @@ class SyncParts
                 'failed_count' => $failedCount,
                 'completed_at' => now(),
             ]);
+            $logger->log('sync_parts_completed', $job, $beforeEnd, $job->fresh()->toArray());
 
         } catch (\Exception $e) {
+            $beforeEnd = $job->toArray();
             $job->update([
                 'status' => 'failed',
                 'completed_at' => now(),
                 'error_message' => $e->getMessage(),
             ]);
+            $logger->log('sync_parts_failed', $job, $beforeEnd, $job->fresh()->toArray());
 
             throw $e;
         }

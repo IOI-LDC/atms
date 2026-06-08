@@ -11,6 +11,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\User;
 use App\Notifications\PasswordResetNotification;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -32,10 +33,14 @@ class AuthController extends Controller
         if (! $user || ! Hash::check($request->input('password'), $user->password)) {
             RateLimiter::hit($key, 60);
 
+            app(AuditLogger::class)->log('auth.login_failed', null, [], [], ['attempted_email' => $request->input('email')]);
+
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
         if (! $user->is_active) {
+            app(AuditLogger::class)->log('auth.login_failed', $user, [], [], ['reason' => 'inactive']);
+
             return response()->json(['message' => 'Account is not active.'], 401);
         }
 
@@ -44,14 +49,22 @@ class AuthController extends Controller
         auth()->login($user);
         $request->session()->regenerate();
 
+        app(AuditLogger::class)->log('auth.login', $user);
+
         return response()->json(['user' => $user]);
     }
 
     public function logout(Request $request): Response
     {
+        $user = auth()->user();
+        
         auth()->guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        if ($user) {
+            app(AuditLogger::class)->log('auth.logout', $user);
+        }
 
         return response()->noContent();
     }

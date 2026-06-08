@@ -6,6 +6,7 @@ use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +15,7 @@ class StartWorkOrder
     public function execute(WorkOrder $workOrder): WorkOrder
     {
         return DB::transaction(function () use ($workOrder) {
+            $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();
 
             if ($locked->status !== WorkOrderStatus::OPEN) {
@@ -29,10 +31,13 @@ class StartWorkOrder
                 throw new DomainException('Assigned user is no longer an active Technician. Reassign before starting.');
             }
 
+            $before = $workOrder->toArray();
             $locked->update([
                 'status' => WorkOrderStatus::IN_PROGRESS,
                 'started_at' => now(),
             ]);
+            $after = $workOrder->fresh()->toArray();
+            $logger->log('work_order.started', $locked, $before, $after);
 
             return $locked->fresh();
         });

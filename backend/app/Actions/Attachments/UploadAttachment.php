@@ -3,6 +3,7 @@
 namespace App\Actions\Attachments;
 
 use App\Models\Attachment;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,9 @@ class UploadAttachment
         int $uploadedByUserId,
         ?string $description = null,
     ): Attachment {
+        $logger = app(AuditLogger::class);
+        $before = [];
+
         $this->validateFile($file);
 
         $morphAlias = array_search($attachableType, Attachment::getMorphMap()) ?: $attachableType;
@@ -47,7 +51,7 @@ class UploadAttachment
 
         $fileHash = hash_file('sha256', $fullPath);
 
-        return Attachment::create([
+        $attachment = Attachment::create([
             'attachable_type' => $morphAlias,
             'attachable_id' => $attachableId,
             'original_name' => $file->getClientOriginalName(),
@@ -58,6 +62,11 @@ class UploadAttachment
             'description' => $description,
             'uploaded_by_user_id' => $uploadedByUserId,
         ]);
+
+        $after = $attachment->toArray();
+        $logger->log('attachment.uploaded', $attachment, $before, $after);
+
+        return $attachment;
     }
 
     private function validateFile(UploadedFile $file): void

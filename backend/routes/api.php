@@ -48,6 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/erp/sync-assets', [ErpSyncController::class, 'syncAssets']);
         Route::post('/erp/sync-parts', [ErpSyncController::class, 'syncParts']);
 
+        Route::get('/audit-logs', [\App\Http\Controllers\Admin\AuditLogController::class, 'index']);
+
         Route::get('/locations', [MasterDataController::class, 'indexLocations']);
         Route::post('/locations', [MasterDataController::class, 'storeLocation']);
         Route::patch('/locations/{location}', [MasterDataController::class, 'updateLocation']);

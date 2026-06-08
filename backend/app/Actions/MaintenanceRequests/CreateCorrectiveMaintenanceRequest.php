@@ -7,6 +7,7 @@ use App\Models\Asset;
 use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
 use App\Models\UsageReadingType;
+use App\Services\Audit\AuditLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +21,10 @@ class CreateCorrectiveMaintenanceRequest
         ?array $meterReading = null
     ): MaintenanceRequest {
         return DB::transaction(function () use ($asset, $createdByUserId, $priority, $description, $meterReading) {
+            $logger = app(AuditLogger::class);
             $number = BusinessNumberSequence::next('MR', 'MR-');
+
+            $before = [];
 
             $mr = MaintenanceRequest::create([
                 'number' => $number,
@@ -47,6 +51,9 @@ class CreateCorrectiveMaintenanceRequest
                     null
                 );
             }
+
+            $after = $mr->fresh()->toArray();
+            $logger->log('maintenance_request.created', $mr, $before, $after);
 
             return $mr;
         });

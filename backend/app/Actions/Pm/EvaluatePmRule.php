@@ -6,6 +6,7 @@ use App\Models\AssetMeterReading;
 use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
 use App\Models\PmRule;
+use App\Services\Audit\AuditLogger;
 use App\Services\Pm\PmDueCalculator;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ class EvaluatePmRule
     public function execute(PmRule $rule, int $triggeredByUserId): ?MaintenanceRequest
     {
         return DB::transaction(function () use ($rule, $triggeredByUserId) {
+            $logger = app(AuditLogger::class);
             $locked = PmRule::where('id', $rule->id)->lockForUpdate()->first();
 
             if (! $locked->is_active) {
@@ -50,6 +52,8 @@ class EvaluatePmRule
 
             $number = BusinessNumberSequence::next('MR', 'MR-');
 
+            $before = [];
+
             $mr = MaintenanceRequest::create([
                 'number' => $number,
                 'asset_id' => $locked->asset_id,
@@ -66,6 +70,9 @@ class EvaluatePmRule
                 'trigger_reading_value' => $triggerReadingValue,
                 'trigger_reading_type_id' => $triggerReadingTypeId,
             ]);
+
+            $after = $mr->toArray();
+            $logger->log('evaluate_pm_rule', $mr, $before, $after);
 
             return $mr;
         });

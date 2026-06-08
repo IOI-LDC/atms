@@ -5,6 +5,7 @@ namespace App\Actions\Erp;
 use App\Contracts\Erp\ErpSource;
 use App\Models\Asset;
 use App\Models\ErpSyncJob;
+use App\Services\Audit\AuditLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -16,12 +17,15 @@ class SyncAssets
 
     public function execute(?int $triggeredByUserId = null): ErpSyncJob
     {
+        $logger = app(AuditLogger::class);
+        $beforeJob = [];
         $job = ErpSyncJob::create([
             'sync_type' => 'assets',
             'status' => 'running',
             'started_at' => now(),
             'triggered_by_user_id' => $triggeredByUserId,
         ]);
+        $logger->log('sync_assets_started', $job, $beforeJob, $job->toArray());
 
         try {
             $cursor = null;
@@ -87,6 +91,7 @@ class SyncAssets
                 $hasMore = $cursor !== null;
             }
 
+            $beforeEnd = $job->toArray();
             $job->update([
                 'status' => $failedCount > 0 ? 'partial' : 'success',
                 'total_records' => $totalRecords,
@@ -95,13 +100,16 @@ class SyncAssets
                 'failed_count' => $failedCount,
                 'completed_at' => now(),
             ]);
+            $logger->log('sync_assets_completed', $job, $beforeEnd, $job->fresh()->toArray());
 
         } catch (\Exception $e) {
+            $beforeEnd = $job->toArray();
             $job->update([
                 'status' => 'failed',
                 'completed_at' => now(),
                 'error_message' => $e->getMessage(),
             ]);
+            $logger->log('sync_assets_failed', $job, $beforeEnd, $job->fresh()->toArray());
 
             throw $e;
         }

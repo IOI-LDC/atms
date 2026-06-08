@@ -5,6 +5,7 @@ namespace App\Actions\MaintenanceRequests;
 use App\Actions\Pm\CreatePmSuppression;
 use App\Enums\MaintenanceRequestStatus;
 use App\Models\MaintenanceRequest;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +19,9 @@ class RejectMaintenanceRequest
         ?string $suppressedUntilReading = null
     ): MaintenanceRequest {
         return DB::transaction(function () use ($maintenanceRequest, $rejectedByUserId, $reason, $suppressedUntilDate, $suppressedUntilReading) {
+            $logger = app(AuditLogger::class);
             $locked = MaintenanceRequest::where('id', $maintenanceRequest->id)->lockForUpdate()->first();
+            $before = $locked->toArray();
 
             if ($locked->status !== MaintenanceRequestStatus::PENDING_REVIEW) {
                 throw new DomainException('Only pending review requests can be rejected.');
@@ -42,6 +45,9 @@ class RejectMaintenanceRequest
                     $reason
                 );
             }
+
+            $after = $locked->fresh()->toArray();
+            $logger->log('maintenance_request.rejected', $locked, $before, $after);
 
             return $locked->fresh();
         });

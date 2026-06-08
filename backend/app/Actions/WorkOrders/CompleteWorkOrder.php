@@ -6,6 +6,7 @@ use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +15,7 @@ class CompleteWorkOrder
     public function execute(WorkOrder $workOrder, int $completedByUserId, ?string $completionNotes = null): WorkOrder
     {
         return DB::transaction(function () use ($workOrder, $completedByUserId, $completionNotes) {
+            $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();
 
             if ($locked->status !== WorkOrderStatus::IN_PROGRESS) {
@@ -27,12 +29,15 @@ class CompleteWorkOrder
                 }
             }
 
+            $before = $workOrder->toArray();
             $locked->update([
                 'status' => WorkOrderStatus::COMPLETED,
                 'completed_by_user_id' => $completedByUserId,
                 'completed_at' => now(),
                 'completion_notes' => $completionNotes,
             ]);
+            $after = $workOrder->fresh()->toArray();
+            $logger->log('work_order.completed', $locked, $before, $after);
 
             return $locked->fresh();
         });
