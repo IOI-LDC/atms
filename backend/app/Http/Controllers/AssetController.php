@@ -3,31 +3,38 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RoleCode;
+use App\Http\Resources\AssetResource;
 use App\Models\Asset;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class AssetController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', Asset::class);
 
-        $user = auth()->user();
-        $query = Asset::query();
+        $user = $request->user();
+        $query = Asset::query()->with('currentLocation');
 
         if (! $user->hasRole(RoleCode::ADMINISTRATOR) && ! $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
             $query->where('is_active', true);
         }
 
-        return response()->json(['data' => $query->get()]);
+        $perPage = min((int) $request->input('per_page', 25), 100);
+        $results = $query->cursorPaginate($perPage);
+
+        return AssetResource::collection($results)->toResponse($request);
     }
 
-    public function show(Asset $asset): JsonResponse
+    public function show(Request $request, Asset $asset): JsonResponse
     {
         Gate::authorize('view', $asset);
 
-        return response()->json(['data' => $asset]);
+        $asset->load('currentLocation');
+
+        return (new AssetResource($asset))->toResponse($request);
     }
 
     public function meterReadings(Asset $asset): JsonResponse

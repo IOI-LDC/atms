@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Http\Resources;
+
+use App\Enums\RoleCode;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class AssetResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        $user = $request->user();
+        $isAdmin = $user->hasRole(RoleCode::ADMINISTRATOR);
+        $isManager = $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
+
+        $data = [
+            'id' => $this->id,
+            'erp_asset_code' => $this->erp_asset_code,
+            'name' => $this->name,
+            'description' => $this->description,
+            'category' => $this->category,
+            'serial_number' => $this->serial_number,
+            'model' => $this->model,
+            'manufacturer' => $this->manufacturer,
+            'operational_status' => $this->operational_status,
+            'current_location' => $this->whenLoaded('currentLocation', fn () => [
+                'id' => $this->currentLocation?->id,
+                'name' => $this->currentLocation?->name,
+            ]),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+
+        if ($isAdmin || $isManager) {
+            $data['is_active'] = $this->is_active;
+            $data['erp_status'] = $this->erp_status;
+            $data['erp_last_synced_at'] = $this->erp_last_synced_at?->toIso8601String();
+        }
+
+        if ($isAdmin) {
+            $data['erp_raw_data'] = $this->erp_raw_data;
+        }
+
+        return $data;
+    }
+}
