@@ -5,6 +5,7 @@ namespace App\Services\Erp;
 use App\Contracts\Erp\ErpSource;
 use App\Data\Erp\ExternalAssetData;
 use App\Data\Erp\ExternalPartData;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -90,6 +91,12 @@ class MockErpHttpSource implements ErpSource
     {
         return Http::withHeaders([
             'X-Service-API-Key' => $this->apiKey,
-        ])->timeout(30)->retry(3, 1000, fn (\Exception $e) => ($e->getCode() >= 500 && $e->getCode() < 600) || $e->getCode() === 429);
+        ])->timeout(30)->retry(3, 1000, function (\Exception $e) {
+            if ($e instanceof ConnectionException) {
+                return true;
+            }
+
+            return ($e->getCode() >= 500 && $e->getCode() < 600) || $e->getCode() === 429;
+        });
     }
 }

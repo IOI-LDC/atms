@@ -2,10 +2,10 @@
 
 namespace App\Actions\Pm;
 
-use App\Enums\PmTriggerType;
 use App\Models\MaintenanceRequest;
 use App\Models\PmOccurrenceSuppression;
 use App\Models\PmRule;
+use DomainException;
 use Illuminate\Support\Facades\DB;
 
 class CreatePmSuppression
@@ -19,42 +19,45 @@ class CreatePmSuppression
         ?string $suppressedUntilReading = null,
         ?string $reason = null
     ): PmOccurrenceSuppression {
+        $this->validate($maintenanceRequest, $suppressedUntilDate, $suppressedUntilReading);
+
         return DB::transaction(function () use ($maintenanceRequest, $rule, $decidedByUserId, $decisionType, $suppressedUntilDate, $suppressedUntilReading, $reason) {
-            $suppressions = [];
+            $triggeredByDate = (bool) $maintenanceRequest->triggered_by_date;
+            $triggeredByReading = (bool) $maintenanceRequest->triggered_by_reading;
 
-            if ($maintenanceRequest->triggered_by_date) {
-                $suppressions[] = PmOccurrenceSuppression::create([
-                    'pm_rule_id' => $rule->id,
-                    'asset_id' => $rule->asset_id,
-                    'maintenance_request_id' => $maintenanceRequest->id,
-                    'trigger_type' => PmTriggerType::DATE->value,
-                    'decision_type' => $decisionType,
-                    'triggered_by_date' => true,
-                    'triggered_by_reading' => false,
-                    'suppressed_until_date' => $suppressedUntilDate ?? now()->addDays($rule->interval_days ?? 30)->toDateString(),
-                    'decided_by' => $decidedByUserId,
-                    'decided_at' => now(),
-                    'reason' => $reason,
-                ]);
-            }
+            $data = [
+                'pm_rule_id' => $rule->id,
+                'asset_id' => $rule->asset_id,
+                'maintenance_request_id' => $maintenanceRequest->id,
+                'trigger_type' => $rule->trigger_type->value,
+                'decision_type' => $decisionType,
+                'triggered_by_date' => $triggeredByDate,
+                'triggered_by_reading' => $triggeredByReading,
+                'trigger_date' => $triggeredByDate ? $maintenanceRequest->trigger_date?->toDateString() : null,
+                'trigger_reading_value' => $triggeredByReading ? $maintenanceRequest->trigger_reading_value : null,
+                'trigger_reading_type_id' => $triggeredByReading ? $maintenanceRequest->trigger_reading_type_id : null,
+                'suppressed_until_date' => $triggeredByDate ? $suppressedUntilDate : null,
+                'suppressed_until_reading' => $triggeredByReading ? $suppressedUntilReading : null,
+                'decided_by' => $decidedByUserId,
+                'decided_at' => now(),
+                'reason' => $reason,
+            ];
 
-            if ($maintenanceRequest->triggered_by_reading) {
-                $suppressions[] = PmOccurrenceSuppression::create([
-                    'pm_rule_id' => $rule->id,
-                    'asset_id' => $rule->asset_id,
-                    'maintenance_request_id' => $maintenanceRequest->id,
-                    'trigger_type' => PmTriggerType::READING->value,
-                    'decision_type' => $decisionType,
-                    'triggered_by_date' => false,
-                    'triggered_by_reading' => true,
-                    'suppressed_until_reading' => $suppressedUntilReading ?? ($rule->last_triggered_reading + $rule->interval_reading),
-                    'decided_by' => $decidedByUserId,
-                    'decided_at' => now(),
-                    'reason' => $reason,
-                ]);
-            }
-
-            return $suppressions[0] ?? $maintenanceRequest;
+            return PmOccurrenceSuppression::create($data);
         });
+    }
+
+    private function validate(
+        MaintenanceRequest $maintenanceRequest,
+        ?string $suppressedUntilDate,
+        ?string $suppressedUntilReading
+    ): void {
+        if ($maintenanceRequest->triggered_by_date && $suppressedUntilDate === null) {
+            throw new DomainException('suppressed_until_date is required for date-triggered occurrences.');
+        }
+
+        if ($maintenanceRequest->triggered_by_reading && $suppressedUntilReading === null) {
+            throw new DomainException('suppressed_until_reading is required for reading-triggered occurrences.');
+        }
     }
 }

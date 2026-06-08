@@ -82,11 +82,21 @@ class MaintenanceRequestController extends Controller
     {
         Gate::authorize('reject', $maintenanceRequest);
 
-        $validated = $request->validate([
+        $rules = [
             'reason' => ['required', 'string'],
             'suppressed_until_date' => ['nullable', 'date'],
             'suppressed_until_reading' => ['nullable', 'numeric'],
-        ]);
+        ];
+
+        if ($maintenanceRequest->is_preventive && $maintenanceRequest->triggered_by_date) {
+            $rules['suppressed_until_date'] = ['required', 'date'];
+        }
+
+        if ($maintenanceRequest->is_preventive && $maintenanceRequest->triggered_by_reading) {
+            $rules['suppressed_until_reading'] = ['required', 'numeric'];
+        }
+
+        $validated = $request->validate($rules);
 
         try {
             $mr = $action->execute(
@@ -107,11 +117,21 @@ class MaintenanceRequestController extends Controller
     {
         Gate::authorize('cancel', $maintenanceRequest);
 
-        $validated = $request->validate([
+        $rules = [
             'reason' => ['required', 'string'],
             'suppressed_until_date' => ['nullable', 'date'],
             'suppressed_until_reading' => ['nullable', 'numeric'],
-        ]);
+        ];
+
+        if ($maintenanceRequest->is_preventive && $maintenanceRequest->triggered_by_date) {
+            $rules['suppressed_until_date'] = ['required', 'date'];
+        }
+
+        if ($maintenanceRequest->is_preventive && $maintenanceRequest->triggered_by_reading) {
+            $rules['suppressed_until_reading'] = ['required', 'numeric'];
+        }
+
+        $validated = $request->validate($rules);
 
         try {
             $mr = $action->execute(

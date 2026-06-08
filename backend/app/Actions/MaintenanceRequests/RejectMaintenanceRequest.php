@@ -36,7 +36,7 @@ class RejectMaintenanceRequest
                     $locked,
                     $locked->pmRule,
                     $rejectedByUserId,
-                    'rejection',
+                    'rejected',
                     $suppressedUntilDate,
                     $suppressedUntilReading,
                     $reason

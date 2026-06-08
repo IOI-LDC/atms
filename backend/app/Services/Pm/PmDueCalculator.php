@@ -68,7 +68,7 @@ class PmDueCalculator
     private function isSuppressedByDate(PmRule $rule): bool
     {
         return PmOccurrenceSuppression::where('pm_rule_id', $rule->id)
-            ->where('trigger_type', PmTriggerType::DATE)
+            ->where('triggered_by_date', true)
             ->where('suppressed_until_date', '>=', now()->toDateString())
             ->exists();
     }
@@ -86,7 +86,7 @@ class PmDueCalculator
         }
 
         return PmOccurrenceSuppression::where('pm_rule_id', $rule->id)
-            ->where('trigger_type', PmTriggerType::READING)
+            ->where('triggered_by_reading', true)
             ->whereRaw('suppressed_until_reading >= ?', [(float) $latestConfirmed])
             ->exists();
     }

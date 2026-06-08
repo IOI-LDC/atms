@@ -36,7 +36,7 @@ class CancelMaintenanceRequest
                     $locked,
                     $locked->pmRule,
                     $cancelledByUserId,
-                    'cancellation',
+                    'cancelled',
                     $suppressedUntilDate,
                     $suppressedUntilReading,
                     $reason

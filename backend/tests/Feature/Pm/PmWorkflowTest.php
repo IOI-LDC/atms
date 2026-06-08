@@ -6,8 +6,10 @@ use App\Enums\PmTriggerType;
 use App\Enums\RoleCode;
 use App\Models\Asset;
 use App\Models\MaintenanceRequest;
+use App\Models\PmOccurrenceSuppression;
 use App\Models\PmRule;
 use App\Models\Role;
+use App\Models\UsageReadingType;
 use App\Models\User;
 use App\Models\WorkOrder;
 use Database\Seeders\RoleSeeder;
@@ -167,6 +169,7 @@ class PmWorkflowTest extends TestCase
             'is_preventive' => true,
             'pm_rule_id' => $rule->id,
             'triggered_by_date' => true,
+            'trigger_date' => now()->toDateString(),
         ]);
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/reject", [
@@ -177,8 +180,16 @@ class PmWorkflowTest extends TestCase
         $this->assertDatabaseHas('pm_occurrence_suppressions', [
             'pm_rule_id' => $rule->id,
             'maintenance_request_id' => $mr->id,
-            'trigger_type' => PmTriggerType::DATE->value,
+            'triggered_by_date' => true,
+            'triggered_by_reading' => false,
+            'decision_type' => 'rejected',
         ]);
+
+        $suppression = PmOccurrenceSuppression::where('pm_rule_id', $rule->id)
+            ->where('maintenance_request_id', $mr->id)
+            ->first();
+        $this->assertNotNull($suppression);
+        $this->assertTrue($suppression->trigger_date->isToday());
     }
 
     public function test_cancellation_creates_suppression(): void
@@ -206,6 +217,7 @@ class PmWorkflowTest extends TestCase
             'is_preventive' => true,
             'pm_rule_id' => $rule->id,
             'triggered_by_date' => true,
+            'trigger_date' => now()->toDateString(),
         ]);
 
         $this->actingAs($admin)->postJson("/api/maintenance-requests/{$mr->id}/cancel", [
@@ -215,6 +227,9 @@ class PmWorkflowTest extends TestCase
 
         $this->assertDatabaseHas('pm_occurrence_suppressions', [
             'pm_rule_id' => $rule->id,
+            'decision_type' => 'cancelled',
+            'triggered_by_date' => true,
+            'triggered_by_reading' => false,
         ]);
     }
 
@@ -311,5 +326,85 @@ class PmWorkflowTest extends TestCase
             'trigger_type' => 'date',
             'interval_days' => 30,
         ])->assertForbidden();
+    }
+
+    public function test_rejection_requires_suppressed_until_date_for_date_triggered(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Monthly PM',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'last_triggered_date' => now()->subDays(31),
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $mr = MaintenanceRequest::create([
+            'number' => 'MR-000001',
+            'asset_id' => $asset->id,
+            'type' => 'preventive',
+            'status' => 'pending_review',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+            'is_preventive' => true,
+            'pm_rule_id' => $rule->id,
+            'triggered_by_date' => true,
+            'trigger_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/reject", [
+            'reason' => 'Not needed now',
+        ])->assertStatus(422);
+    }
+
+    public function test_suppression_copies_trigger_snapshot_from_mr(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+        $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Reading PM',
+            'trigger_type' => PmTriggerType::READING,
+            'interval_reading' => 1000,
+            'usage_reading_type_id' => $readingType->id,
+            'last_triggered_reading' => 5000,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $snapshotDate = now()->subDays(2)->toDateString();
+        $snapshotReading = 6100.00;
+
+        $mr = MaintenanceRequest::create([
+            'number' => 'MR-000002',
+            'asset_id' => $asset->id,
+            'type' => 'preventive',
+            'status' => 'pending_review',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+            'is_preventive' => true,
+            'pm_rule_id' => $rule->id,
+            'triggered_by_reading' => true,
+            'trigger_reading_value' => $snapshotReading,
+            'trigger_reading_type_id' => $readingType->id,
+        ]);
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/reject", [
+            'reason' => 'Deferred',
+            'suppressed_until_reading' => 7000,
+        ])->assertOk();
+
+        $suppression = PmOccurrenceSuppression::where('maintenance_request_id', $mr->id)->first();
+        $this->assertNotNull($suppression);
+        $this->assertEquals($snapshotReading, (float) $suppression->trigger_reading_value);
+        $this->assertEquals($readingType->id, $suppression->trigger_reading_type_id);
     }
 }

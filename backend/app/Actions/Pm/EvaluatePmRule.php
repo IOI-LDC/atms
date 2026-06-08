@@ -2,6 +2,7 @@
 
 namespace App\Actions\Pm;
 
+use App\Models\AssetMeterReading;
 use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
 use App\Models\PmRule;
@@ -33,6 +34,20 @@ class EvaluatePmRule
             $triggeredByDate = $this->calculator->isTriggeredByDate($locked);
             $triggeredByReading = $this->calculator->isTriggeredByReading($locked);
 
+            $triggerDate = $triggeredByDate ? now()->toDateString() : null;
+            $triggerReadingValue = null;
+            $triggerReadingTypeId = null;
+
+            if ($triggeredByReading) {
+                $latestReading = AssetMeterReading::where('asset_id', $locked->asset_id)
+                    ->where('usage_reading_type_id', $locked->usage_reading_type_id)
+                    ->whereNotNull('confirmed_at')
+                    ->orderByDesc('reading_at')
+                    ->first();
+                $triggerReadingValue = $latestReading?->reading_value;
+                $triggerReadingTypeId = $locked->usage_reading_type_id;
+            }
+
             $number = BusinessNumberSequence::next('MR', 'MR-');
 
             $mr = MaintenanceRequest::create([
@@ -47,6 +62,9 @@ class EvaluatePmRule
                 'pm_rule_id' => $locked->id,
                 'triggered_by_date' => $triggeredByDate,
                 'triggered_by_reading' => $triggeredByReading,
+                'trigger_date' => $triggerDate,
+                'trigger_reading_value' => $triggerReadingValue,
+                'trigger_reading_type_id' => $triggerReadingTypeId,
             ]);
 
             return $mr;

@@ -27,6 +27,9 @@ class MaintenanceRequest extends Model
         'pm_rule_id',
         'triggered_by_date',
         'triggered_by_reading',
+        'trigger_date',
+        'trigger_reading_value',
+        'trigger_reading_type_id',
     ];
 
     protected $casts = [
@@ -36,6 +39,8 @@ class MaintenanceRequest extends Model
         'is_preventive' => 'boolean',
         'triggered_by_date' => 'boolean',
         'triggered_by_reading' => 'boolean',
+        'trigger_date' => 'date',
+        'trigger_reading_value' => 'decimal:2',
     ];
 
     public function asset(): BelongsTo
@@ -66,5 +71,10 @@ class MaintenanceRequest extends Model
     public function pmRule(): BelongsTo
     {
         return $this->belongsTo(PmRule::class);
+    }
+
+    public function triggerReadingType(): BelongsTo
+    {
+        return $this->belongsTo(UsageReadingType::class, 'trigger_reading_type_id');
     }
 }
