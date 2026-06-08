@@ -11,6 +11,20 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::job(new SyncErpAssetsJob)->weekly()->timezone('Africa/Tripoli')->withoutOverlapping();
-Schedule::job(new SyncErpPartsJob)->weekly()->timezone('Africa/Tripoli')->withoutOverlapping();
-Schedule::job(new EvaluatePmRulesJob)->daily()->timezone('Africa/Tripoli')->withoutOverlapping();
+Schedule::job(new SyncErpAssetsJob)
+    ->weekly()->mondays()->at('02:00')
+    ->timezone('Africa/Tripoli')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::job(new SyncErpPartsJob)
+    ->weekly()->mondays()->at('03:00')
+    ->timezone('Africa/Tripoli')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::job(new EvaluatePmRulesJob)
+    ->daily()->at('06:00')
+    ->timezone('Africa/Tripoli')
+    ->withoutOverlapping()
+    ->onOneServer();
