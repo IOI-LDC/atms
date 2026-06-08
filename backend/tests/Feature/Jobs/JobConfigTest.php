@@ -33,6 +33,22 @@ class JobConfigTest extends TestCase
         $this->assertEquals($timeout, $job->timeout);
     }
 
+    public function test_erp_sync_jobs_have_unique_for_configured(): void
+    {
+        $assetsJob = new SyncErpAssetsJob;
+        $partsJob = new SyncErpPartsJob;
+
+        $this->assertEquals(3600, $assetsJob->uniqueFor);
+        $this->assertEquals(3600, $partsJob->uniqueFor);
+    }
+
+    public function test_evaluate_pm_rules_has_unique_for(): void
+    {
+        $job = new EvaluatePmRulesJob;
+
+        $this->assertEquals(300, $job->uniqueFor);
+    }
+
     public function test_erp_sync_jobs_are_unique(): void
     {
         $this->assertContains(ShouldBeUnique::class, class_implements(SyncErpAssetsJob::class));

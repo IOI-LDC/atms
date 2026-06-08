@@ -20,6 +20,8 @@ class EvaluatePmRulesJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 300;
 
+    public int $uniqueFor = 300;
+
     public function handle(EvaluatePmRule $action): void
     {
         $systemUser = User::where('email', 'system@atms.internal')->first();
