@@ -1,0 +1,1707 @@
+# ATMS Backend API Reference
+
+> **For the frontend team.** This document covers every endpoint, request body, response shape, role-based access, status codes, and conventions.
+
+---
+
+## Table of Contents
+
+- [Authentication](#authentication)
+- [Conventions](#conventions)
+- [Roles & Permissions](#roles-and-permissions)
+- [Health](#health)
+- [Dashboard](#dashboard)
+- [Assets](#assets)
+- [Parts](#parts)
+- [Meter Readings](#meter-readings)
+- [Asset Location](#asset-location)
+- [Maintenance Requests](#maintenance-requests)
+- [Work Orders](#work-orders)
+- [PM Rules](#pm-rules)
+- [Attachments](#attachments)
+- [Admin: Users](#admin-users)
+- [Admin: Roles](#admin-roles)
+- [Admin: Employees](#admin-employees)
+- [Admin: ERP Sync](#admin-erp-sync)
+- [Admin: Audit Logs](#admin-audit-logs)
+- [Admin: Company Settings](#admin-company-settings)
+- [Admin: Locations](#admin-locations)
+- [Admin: Master Data](#admin-master-data)
+- [Admin: Usage Reading Types](#admin-usage-reading-types)
+- [Enums Reference](#enums-reference)
+- [Error Responses](#error-responses)
+
+---
+
+## Authentication
+
+ATMS uses **Sanctum SPA cookie authentication**. The frontend and backend must share the same top-level domain. The frontend sends credentials, Laravel sets a session cookie, and subsequent requests include the cookie automatically.
+
+### POST `/api/auth/login`
+
+Log in. Sets a session cookie.
+
+**Auth:** None (public)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `email` | string | required, valid email |
+| `password` | string | required |
+
+**Response `200`:**
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "Admin",
+    "email": "admin@example.com",
+    "is_active": true,
+    "activated_at": "2026-06-07T12:00:00Z",
+    "emp_id": null,
+    "employee_id": null,
+    "role": { "id": 1, "code": "administrator", "name": "Administrator" }
+  }
+}
+```
+
+**Error `401`:** `{"message": "Invalid credentials."}` or `{"message": "Account is not active."}`
+**Error `429`:** `{"message": "Too many login attempts."}` — 5 attempts per minute per IP+email.
+
+---
+
+### POST `/api/auth/logout`
+
+Invalidate the current session.
+
+**Auth:** Required
+
+**Response `204`:** No content.
+
+---
+
+### GET `/api/auth/me`
+
+Get the currently authenticated user.
+
+**Auth:** Required
+
+**Response `200`:** User object (same shape as login response).
+
+**Error `401`:** Unauthenticated.
+
+---
+
+### POST `/api/auth/activate`
+
+Activate a new account using a one-time token (sent via email during provisioning).
+
+**Auth:** None (public)
+**Rate limit:** 5 requests per minute.
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `token` | string | required |
+| `password` | string | required, confirmed, min 8 chars (Laravel Password defaults) |
+| `password_confirmation` | string | required with `password` |
+
+**Response `200`:** `{"message": "Account activated."}`
+**Error `422`:** Validation error (expired/invalid token).
+
+---
+
+### POST `/api/auth/forgot-password`
+
+Request a password reset link.
+
+**Auth:** None (public)
+**Rate limit:** 5 requests per minute.
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `email` | string | required, valid email |
+
+**Response `200`:** `{"message": "If the email exists, a reset link has been sent."}`
+
+Always returns 200 to prevent email enumeration.
+
+---
+
+### POST `/api/auth/reset-password`
+
+Reset password using a token from the reset email.
+
+**Auth:** None (public)
+**Rate limit:** 5 requests per minute.
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `token` | string | required |
+| `password` | string | required, confirmed, min 8 chars |
+| `password_confirmation` | string | required with `password` |
+
+**Response `200`:** `{"message": "Password reset successful."}`
+**Error `422`:** Invalid/expired token.
+
+---
+
+## Conventions
+
+### Base URL
+
+All endpoints are prefixed with `/api/`.
+
+### Authentication
+
+All endpoints except auth and health require an authenticated session (Sanctum SPA cookie). The frontend must call `GET /sanctum/csrf-cookie` before the first POST to get a CSRF token.
+
+### Pagination
+
+List endpoints use **cursor pagination**. The response includes:
+
+```json
+{
+  "data": [...],
+  "links": {
+    "first": "?cursor=...",
+    "last": null,
+    "prev": null,
+    "next": "?cursor=..."
+  },
+  "meta": {
+    "path": "/api/assets",
+    "per_page": 25,
+    "next_cursor": "eyJpZCI6MjUsIl9wb2ludHNUb05leHRJdGVtcyI6dHJ1ZX0",
+    "prev_cursor": null
+  }
+}
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Max | Description |
+|-----------|------|---------|-----|-------------|
+| `per_page` | int | 25 | 100 | Items per page |
+| `cursor` | string | null | — | Cursor from `meta.next_cursor` or `meta.prev_cursor` |
+
+### Sorting
+
+List endpoints accept a `sort` query parameter in `field:direction` format:
+
+| Parameter | Example | Description |
+|-----------|---------|-------------|
+| `sort` | `created_at:desc` | Sort field and direction (`asc` or `desc`) |
+
+Each endpoint documents its sortable fields.
+
+### Filtering
+
+List endpoints accept filter query parameters. Each endpoint documents its available filters.
+
+### Timestamps
+
+All timestamps are **ISO 8601** strings (e.g., `"2026-06-09T14:30:00Z"`). Date-only fields use `"2026-06-09"` format.
+
+### CSRF
+
+Sanctum requires a CSRF cookie for all POST/PUT/PATCH/DELETE requests. Fetch it with:
+
+```
+GET /sanctum/csrf-cookie
+```
+
+This sets the `XSRF-TOKEN` cookie. Include it as `X-XSRF-TOKEN` header in subsequent requests (most HTTP clients handle this automatically with `withCredentials: true`).
+
+---
+
+## Roles and Permissions
+
+### Role Codes
+
+| Code | Label | Description |
+|------|-------|-------------|
+| `administrator` | Administrator | Full access to everything |
+| `maintenance_manager` | Maintenance Manager | Manage work orders, MRs, PM rules, assign technicians |
+| `technician` | Technician | Assigned work orders only, upload attachments to WOs |
+| `logistics` | Logistics | View assets/parts (basic fields), no maintenance access |
+| `requester` | Requester | Create/view own maintenance requests only |
+| `viewer` | Viewer | Read-only access to most resources |
+
+### Role-Based Field Visibility
+
+API responses vary by role. Each endpoint section documents what fields each role sees. Key rules:
+
+- **ERP fields** (`erp_status`, `erp_last_synced_at`): visible to all except Requester
+- **ERP raw data** (`erp_raw_data`): Administrator only
+- **`is_active`** on assets/parts: Administrator and Maintenance Manager only
+- **Inactive records**: Only Administrator and Maintenance Manager see inactive assets/parts in lists
+- **Created-by email**: Administrator and Maintenance Manager only
+- **Assignee email**: Administrator and Maintenance Manager only
+
+---
+
+## Health
+
+### GET `/api/health/live`
+
+Liveness probe. No auth required.
+
+**Response `200`:**
+```json
+{ "status": "alive" }
+```
+
+### GET `/api/health/ready`
+
+Readiness probe. No auth required. Checks database and attachment storage.
+
+**Response `200`:**
+```json
+{ "status": "ready", "database": "ok", "attachments": "ok" }
+```
+
+**Response `503`:**
+```json
+{ "status": "degraded", "database": "ok", "attachments": "unreachable" }
+```
+
+---
+
+## Dashboard
+
+### GET `/api/dashboard`
+
+Role-adaptive dashboard with summary counts and widget previews.
+
+**Auth:** Required (any role)
+
+**Widgets by Role:**
+
+| Widget | Admin | Manager | Technician | Requester | Viewer | Logistics |
+|--------|-------|---------|------------|-----------|--------|-----------|
+| `pending_maintenance_requests` | All | All | — | Own only | All | — |
+| `open_work_orders` | All | All | Assigned only | — | All | — |
+| `overdue_pm_rules` | All | All | — | — | All | — |
+| `recently_closed_work_orders` | All | All | — | — | All | — |
+
+**Response `200`:**
+```json
+{
+  "summary": {
+    "pending_maintenance_requests": 12,
+    "open_work_orders": 5,
+    "overdue_pm_rules": 2,
+    "recently_closed_work_orders": 8
+  },
+  "pending_maintenance_requests": [ /* max 5 MaintenanceRequestResource items */ ],
+  "open_work_orders": [ /* max 5 WorkOrderResource items */ ],
+  "overdue_pm_rules": [ /* max 5 PmRuleResource items */ ],
+  "recently_closed_work_orders": [ /* max 5 WorkOrderResource items */ ]
+}
+```
+
+Only widgets the user can see are included. Widgets are arrays of the same resource shapes documented below.
+
+---
+
+## Assets
+
+### GET `/api/assets`
+
+List assets with cursor pagination, filtering, and sorting.
+
+**Auth:** Required (any role)
+**Role scoping:** Non-admin/manager only see active assets.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Search by name or ERP asset code |
+| `is_active` | boolean | Filter by active status (admin/manager only) |
+| `operational_status` | string | Filter by operational status |
+| `category` | string | Filter by category |
+| `location_id` | int | Filter by current location ID |
+| `sort` | string | `name`, `erp_asset_code`, `category`, `operational_status`, `created_at` (default: `created_at:desc`) |
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+**Response `200`:** Cursor-paginated list of `AssetResource`.
+
+### AssetResource
+
+Fields vary by role:
+
+| Field | Type | Admin | Manager | Technician | Logistics | Requester | Viewer |
+|-------|------|-------|---------|------------|-----------|-----------|--------|
+| `id` | int | Y | Y | Y | Y | Y | Y |
+| `erp_asset_code` | string | Y | Y | Y | Y | Y | Y |
+| `name` | string | Y | Y | Y | Y | Y | Y |
+| `description` | string? | Y | Y | Y | Y | Y | Y |
+| `category` | string? | Y | Y | Y | Y | Y | Y |
+| `serial_number` | string? | Y | Y | Y | Y | Y | Y |
+| `model` | string? | Y | Y | Y | Y | Y | Y |
+| `manufacturer` | string? | Y | Y | Y | Y | Y | Y |
+| `operational_status` | string? | Y | Y | Y | Y | Y | Y |
+| `current_location` | object? | Y | Y | Y | Y | Y | Y |
+| `current_location.id` | int | Y | Y | Y | Y | Y | Y |
+| `current_location.name` | string | Y | Y | Y | Y | Y | Y |
+| `erp_status` | string? | Y | Y | Y | Y | — | Y |
+| `erp_last_synced_at` | string? | Y | Y | Y | Y | — | Y |
+| `is_active` | bool | Y | Y | — | — | — | — |
+| `erp_raw_data` | object? | Y | — | — | — | — | — |
+| `created_at` | string | Y | Y | Y | Y | Y | Y |
+| `updated_at` | string | Y | Y | Y | Y | Y | Y |
+
+---
+
+### GET `/api/assets/{asset}`
+
+Show a single asset.
+
+**Auth:** Required (any role)
+
+**Response `200`:** `AssetResource` (same field rules as above, includes `current_location`).
+
+---
+
+### GET `/api/assets/{asset}/meter-readings`
+
+List meter readings for an asset.
+
+**Auth:** Required (any role)
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "usage_reading_type_id": 1,
+      "reading_value": "1500.00",
+      "reading_at": "2026-06-09T10:00:00Z",
+      "source": "user",
+      "entered_by_user_id": 2,
+      "confirmed_by_user_id": 1,
+      "confirmed_at": "2026-06-09T11:00:00Z",
+      "notes": null
+    }
+  ]
+}
+```
+
+Ordered by `reading_at` descending.
+
+---
+
+### GET `/api/assets/{asset}/location-history`
+
+List location change history for an asset.
+
+**Auth:** Required (any role)
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "asset_id": 1,
+      "from_location_id": null,
+      "to_location_id": 2,
+      "effective_at": "2026-06-07T10:00:00Z",
+      "reason": "Initial placement",
+      "notes": null,
+      "changed_by_user_id": 1
+    }
+  ]
+}
+```
+
+Ordered by `effective_at` descending.
+
+---
+
+### GET `/api/assets/{asset}/maintenance-history`
+
+List closed work orders for an asset (maintenance history). Cursor-paginated.
+
+**Auth:** Required (any role except Logistics, who gets 403)
+**Role scoping:** Requester only sees WOs from their own MRs.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+**Response `200`:** Cursor-paginated list of `MaintenanceHistoryResource`:
+
+```json
+{
+  "data": [
+    {
+      "date": "2026-06-07",
+      "type": "corrective",
+      "work_order_number": "WO-0001",
+      "maintenance_request_number": "MR-0001",
+      "description": "Fix generator",
+      "priority": "high",
+      "parts_used": [
+        { "part_name": "Air Filter", "quantity": 2.0 }
+      ],
+      "closed_at": "2026-06-07T14:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Parts
+
+### GET `/api/parts`
+
+List parts with cursor pagination, filtering, and sorting.
+
+**Auth:** Required (any role)
+**Role scoping:** Non-admin/manager only see active parts.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Search by name or ERP part code |
+| `sort` | string | `name`, `erp_part_code` (default: `name:asc`) |
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+### PartResource
+
+| Field | Type | Admin | Manager | Other roles |
+|-------|------|-------|---------|-------------|
+| `id` | int | Y | Y | Y |
+| `erp_part_code` | string | Y | Y | Y |
+| `name` | string | Y | Y | Y |
+| `description` | string? | Y | Y | Y |
+| `unit_of_measure` | string? | Y | Y | Y |
+| `category` | string? | Y | Y | Y |
+| `is_active` | bool | Y | Y | Y |
+| `erp_status` | string? | Y | Y | — |
+| `erp_last_synced_at` | string? | Y | Y | — |
+| `erp_raw_data` | object? | Y | — | — |
+| `created_at` | string | Y | Y | Y |
+
+---
+
+### GET `/api/parts/{part}`
+
+Show a single part.
+
+**Auth:** Required (any role)
+
+**Response `200`:** `PartResource`.
+
+---
+
+## Meter Readings
+
+### POST `/api/assets/{asset}/meter-readings`
+
+Record a new meter reading.
+
+**Auth:** Required (any role)
+**Validation:** Asset must be active. Reading type must be active.
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `usage_reading_type_id` | int | required, exists in `usage_reading_types` |
+| `reading_value` | numeric | required |
+| `reading_at` | datetime string | required, valid date |
+| `source` | string | required, one of: `user`, `manual` |
+| `notes` | string? | nullable |
+
+**Response `201`:**
+```json
+{
+  "message": "Meter reading recorded.",
+  "data": {
+    "id": 1,
+    "asset_id": 1,
+    "usage_reading_type_id": 1,
+    "reading_value": "1500.00",
+    "reading_at": "2026-06-09T10:00:00Z",
+    "source": "user",
+    "entered_by_user_id": 2,
+    "confirmed_by_user_id": null,
+    "confirmed_at": null,
+    "notes": null
+  }
+}
+```
+
+---
+
+### POST `/api/assets/{asset}/meter-readings/{reading}/confirm`
+
+Confirm an unverified meter reading. Idempotent — confirming an already-confirmed reading returns it unchanged.
+
+**Auth:** Required (Maintenance Manager or Administrator)
+
+**Response `200`:**
+```json
+{
+  "message": "Meter reading confirmed.",
+  "data": { /* reading with confirmed_by_user_id and confirmed_at set */ }
+}
+```
+
+**Error `409`:** Domain error (e.g., reading value decreased).
+
+---
+
+## Asset Location
+
+### POST `/api/assets/{asset}/location`
+
+Update an asset's current location. Creates a location history record.
+
+**Auth:** Required (Administrator, Maintenance Manager, Technician, or Logistics)
+**Validation:** Asset must be active. Target location must be active.
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `location_id` | int | required, exists in `locations` |
+| `reason` | string? | nullable |
+| `notes` | string? | nullable |
+
+**Response `200`:**
+```json
+{
+  "message": "Asset location updated.",
+  "data": { /* updated asset */ }
+}
+```
+
+---
+
+## Maintenance Requests
+
+### GET `/api/maintenance-requests`
+
+List maintenance requests with cursor pagination.
+
+**Auth:** Required (any role)
+**Role scoping:** Requester sees only their own (`created_by = user.id`).
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | `pending_review`, `rejected`, `converted`, `cancelled` |
+| `asset_id` | int | Filter by asset |
+| `priority` | string | `low`, `medium`, `high`, `critical` |
+| `type` | string | `corrective`, `preventive` |
+| `created_by` | int | Filter by creator user ID |
+| `sort` | string | `created_at`, `priority`, `status` (default: `created_at:desc`) |
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+### MaintenanceRequestResource
+
+| Field | Type | Visible to |
+|-------|------|------------|
+| `id` | int | All |
+| `number` | string | All (e.g., `"MR-0001"`) |
+| `type` | string | All (`corrective` or `preventive`) |
+| `status` | string | All (`pending_review`, `rejected`, `converted`, `cancelled`) |
+| `priority` | string | All (`low`, `medium`, `high`, `critical`) |
+| `description` | string? | All |
+| `created_at` | string | All |
+| `asset` | object | All (includes `id`, `name`, `erp_asset_code`) |
+| `created_by` | object? | Admin, Manager, Technician, Viewer, Requester (own only). Includes `id`, `name`. `email` for Admin/Manager only. |
+| `reviewed_by` | object? | Admin, Manager, Viewer (includes `id`, `name`) |
+| `rejection_reason` | string? | All except Logistics |
+| `cancellation_reason` | string? | All except Logistics |
+| `is_preventive` | bool? | Admin, Manager, Viewer |
+| `triggered_by_date` | bool? | Admin, Manager, Viewer |
+| `triggered_by_reading` | bool? | Admin, Manager, Viewer |
+| `trigger_date` | string? | Admin, Manager, Viewer |
+| `trigger_reading_value` | string? | Admin, Manager, Viewer |
+| `work_order` | object? | Admin, Manager, Technician, Viewer, Requester (own only). Includes `id`, `number`, `status`. |
+| `has_attachments` | int | Admin, Manager, Technician, Requester (own only). Count of attachments. |
+
+---
+
+### GET `/api/maintenance-requests/{maintenanceRequest}`
+
+Show a single maintenance request with all relations loaded.
+
+**Auth:** Required (view policy applies)
+
+**Response `200`:** `MaintenanceRequestResource` with all visible fields populated.
+
+---
+
+### POST `/api/maintenance-requests/corrective`
+
+Create a corrective maintenance request.
+
+**Auth:** Required (Administrator, Maintenance Manager, Technician, or Requester — not Viewer)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `asset_id` | int | required, exists in `assets` |
+| `description` | string? | nullable |
+| `priority` | string | required, one of: `low`, `medium`, `high`, `critical` |
+| `meter_reading` | object? | nullable, if present must include all 3 fields below |
+| `meter_reading.usage_reading_type_id` | int | required with `meter_reading`, exists in `usage_reading_types` |
+| `meter_reading.reading_value` | numeric | required with `meter_reading` |
+| `meter_reading.reading_at` | datetime | required with `meter_reading` |
+
+**Response `201`:**
+```json
+{
+  "data": {
+    "id": 1,
+    "number": "MR-0001",
+    "type": "corrective",
+    "status": "pending_review",
+    ...
+  }
+}
+```
+
+---
+
+### POST `/api/maintenance-requests/{maintenanceRequest}/approve`
+
+Approve a pending review MR. Atomically creates a Work Order and sets MR status to `converted`.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+**Precondition:** MR must be in `pending_review` status.
+
+**Response `200`:**
+```json
+{
+  "message": "Maintenance request approved and work order created.",
+  "data": {
+    /* MaintenanceRequest with work_order relation loaded */
+  }
+}
+```
+
+**Error `409`:** MR is not in `pending_review` status.
+
+---
+
+### POST `/api/maintenance-requests/{maintenanceRequest}/reject`
+
+Reject a pending review MR.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+**Precondition:** MR must be in `pending_review` status.
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `reason` | string | required |
+| `suppressed_until_date` | string? | nullable, date. **Required** if MR is preventive and triggered by date. |
+| `suppressed_until_reading` | numeric? | nullable. **Required** if MR is preventive and triggered by reading. |
+
+**Response `200`:**
+```json
+{
+  "message": "Maintenance request rejected.",
+  "data": { /* updated MR */ }
+}
+```
+
+**Error `409`:** MR is not in `pending_review` status.
+
+---
+
+### POST `/api/maintenance-requests/{maintenanceRequest}/cancel`
+
+Cancel a pending review MR. Requester can cancel their own; Manager/Admin can cancel any.
+
+**Auth:** Required (Requester owns it, or Admin/Manager)
+**Precondition:** MR must be in `pending_review` status.
+
+**Request Body:** Same as reject (reason is required, suppression fields required for preventive MRs).
+
+**Response `200`:**
+```json
+{
+  "message": "Maintenance request cancelled.",
+  "data": { /* updated MR */ }
+}
+```
+
+---
+
+## Work Orders
+
+### Work Order Status Lifecycle
+
+```
+open → in_progress → completed → closed
+open → cancelled
+in_progress → cancelled
+```
+
+- `open`: Created (from MR approval). Can assign, cancel.
+- `in_progress`: Started. Can edit execution details, add/remove parts, complete, cancel.
+- `completed`: Technician finished. Manager can close. No more edits by technician.
+- `closed`: Terminal. No mutations allowed.
+- `cancelled`: Terminal. Requires reason.
+
+---
+
+### GET `/api/work-orders`
+
+List work orders with cursor pagination.
+
+**Auth:** Required (any role)
+**Role scoping:** Technician sees only assigned WOs.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | `open`, `in_progress`, `completed`, `closed`, `cancelled` |
+| `assigned_to` | int | Filter by assigned user ID |
+| `asset_id` | int | Filter by asset |
+| `priority` | string | `low`, `medium`, `high`, `critical` |
+| `from` | datetime | Filter created_at >= |
+| `to` | datetime | Filter created_at <= |
+| `sort` | string | `created_at`, `priority`, `status`, `started_at`, `closed_at` (default: `created_at:desc`) |
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+### WorkOrderResource
+
+| Field | Type | Admin | Manager | Technician | Viewer | Logistics | Requester |
+|-------|------|-------|---------|------------|--------|-----------|-----------|
+| `id` | int | Y | Y | Y | Y | Y | Y |
+| `number` | string | Y | Y | Y | Y | Y | Y |
+| `status` | string | Y | Y | Y | Y | Y | Y |
+| `priority` | string | Y | Y | Y | Y | Y | Y |
+| `description` | string? | Y | Y | Y | Y | Y | Y |
+| `asset` | object | Y | Y | Y | Y | Y | Y |
+| `created_at` | string | Y | Y | Y | Y | Y | Y |
+| `assigned_to` | object? | Y | Y | Y | Y | — | — |
+| `assigned_to.id` | int | Y | Y | Y | Y | — | — |
+| `assigned_to.name` | string | Y | Y | Y | Y | — | — |
+| `assigned_to.email` | string | Y | Y | — | — | — | — |
+| `assigned_by` | object? | Y | Y | — | — | — | — |
+| `parts` | array? | Y | Y | Y | Y | — | — |
+| `started_at` | string? | Y | Y | Y | Y | — | — |
+| `completed_at` | string? | Y | Y | Y | Y | — | — |
+| `completion_notes` | string? | Y | Y | Y | Y | — | — |
+| `closed_at` | string? | Y | Y | Y | Y | — | — |
+| `cancelled_at` | string? | Y | Y | Y | Y | — | — |
+| `cancellation_reason` | string? | Y | Y | Y | Y | — | — |
+| `has_attachments` | int | Y | Y | Y | — | — | — |
+
+**Parts array** (each item is `WorkOrderPartResource`):
+
+```json
+{
+  "id": 1,
+  "part": {
+    "id": 1,
+    "name": "Air Filter",
+    "erp_part_code": "PRT-001",
+    "unit_of_measure": "EA"
+  },
+  "quantity": 2.0,
+  "notes": null
+}
+```
+
+---
+
+### GET `/api/work-orders/{workOrder}`
+
+Show a single work order with all relations loaded (asset, assignedTo, maintenanceRequest, assignedBy, parts.part, attachments).
+
+**Auth:** Required (view policy)
+
+**Response `200`:** `WorkOrderResource` with all visible fields.
+
+---
+
+### PATCH `/api/work-orders/{workOrder}`
+
+Update execution details (description).
+
+**Auth:** Required (assigned Technician, or Manager/Admin on non-terminal WOs)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `description` | string? | nullable |
+
+**Response `200`:**
+```json
+{ "message": "Work order updated.", "data": { /* WO */ } }
+```
+
+**Error `409`:** WO is in a terminal state (completed/closed/cancelled).
+
+---
+
+### POST `/api/work-orders/{workOrder}/assign`
+
+Assign a technician to the work order. Requires WO in `open` status.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `user_id` | int | required, exists in `users`. Must be an active technician. |
+
+**Response `200`:**
+```json
+{ "message": "Work order assigned.", "data": { /* WO */ } }
+```
+
+**Error `409`:** WO is not in `open` status, or user is not an active technician.
+
+---
+
+### POST `/api/work-orders/{workOrder}/start`
+
+Start the work order. Transitions from `open` to `in_progress`. Requires assignment first.
+
+**Auth:** Required (assigned Technician, Administrator, or Maintenance Manager)
+
+**Response `200`:**
+```json
+{ "message": "Work order started.", "data": { /* WO */ } }
+```
+
+**Error `409`:** WO is not `open`, or no technician assigned.
+
+---
+
+### POST `/api/work-orders/{workOrder}/complete`
+
+Mark the work order as completed by the technician.
+
+**Auth:** Required (assigned Technician)
+**Precondition:** WO must be `in_progress`.
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `completion_notes` | string? | nullable |
+
+**Response `200`:**
+```json
+{ "message": "Work order completed.", "data": { /* WO */ } }
+```
+
+---
+
+### POST `/api/work-orders/{workOrder}/close`
+
+Close a completed work order. Manager action only.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+**Precondition:** WO must be `completed`.
+
+**Response `200`:**
+```json
+{ "message": "Work order closed.", "data": { /* WO */ } }
+```
+
+---
+
+### POST `/api/work-orders/{workOrder}/cancel`
+
+Cancel a work order (open or in_progress).
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `reason` | string | required |
+
+**Response `200`:**
+```json
+{ "message": "Work order cancelled.", "data": { /* WO */ } }
+```
+
+---
+
+### POST `/api/work-orders/{workOrder}/parts`
+
+Add a part to a non-terminal work order.
+
+**Auth:** Required (assigned Technician, Administrator, or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `part_id` | int | required, exists in `parts` |
+| `quantity` | numeric | required, min 0.01 |
+| `notes` | string? | nullable |
+
+**Response `201`:**
+```json
+{
+  "message": "Part added to work order.",
+  "data": { /* WorkOrderPart with part relation loaded */ }
+}
+```
+
+---
+
+### DELETE `/api/work-orders/{workOrder}/parts/{partLine}`
+
+Remove a part from a non-terminal work order.
+
+**Auth:** Required (assigned Technician, Administrator, or Maintenance Manager)
+
+**Response `200`:**
+```json
+{ "message": "Part removed from work order." }
+```
+
+---
+
+## PM Rules
+
+### GET `/api/pm-rules`
+
+List PM rules with cursor pagination.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `is_active` | boolean | Filter by active status |
+| `asset_id` | int | Filter by asset |
+| `trigger_type` | string | `date`, `reading`, `date_or_reading` |
+| `sort` | string | `name`, `created_at`, `is_active` (default: `created_at:desc`) |
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+### PmRuleResource
+
+| Field | Type | Admin/Manager | Other roles |
+|-------|------|---------------|-------------|
+| `id` | int | Y | Y (if they have access) |
+| `name` | string | Y | Y |
+| `description` | string? | Y | Y |
+| `trigger_type` | string | Y | Y |
+| `is_active` | bool | Y | Y |
+| `interval_days` | int? | Y | Y |
+| `interval_reading` | float? | Y | Y |
+| `last_triggered_date` | string? | Y | Y |
+| `last_triggered_reading` | float? | Y | Y |
+| `created_at` | string | Y | Y |
+| `asset` | object | Y | Y (id, name, erp_asset_code) |
+| `created_by` | object? | Y (Admin/Manager only) | — |
+
+---
+
+### POST `/api/pm-rules`
+
+Create a PM rule.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+**Validation:** Target asset must be ERP-linked (has `erp_asset_id`).
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `asset_id` | int | required, exists in `assets` |
+| `name` | string | required, max 255 |
+| `description` | string? | nullable |
+| `trigger_type` | string | required, one of: `date`, `reading`, `date_or_reading` |
+| `interval_days` | int? | nullable, min 1. Required if trigger_type is `date` or `date_or_reading`. |
+| `interval_reading` | numeric? | nullable, min 0.01. Required if trigger_type is `reading` or `date_or_reading`. |
+| `usage_reading_type_id` | int? | nullable, exists in `usage_reading_types`. Required if trigger_type is `reading` or `date_or_reading`. |
+
+**Response `201`:**
+```json
+{ "data": { /* PmRule */ } }
+```
+
+**Error `422`:** Asset is not ERP-linked.
+
+---
+
+### GET `/api/pm-rules/{pmRule}`
+
+Show a single PM rule with relations.
+
+**Auth:** Required
+
+**Response `200`:** `PmRuleResource`.
+
+---
+
+### PATCH `/api/pm-rules/{pmRule}`
+
+Update a PM rule.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | string? | nullable, max 255 |
+| `description` | string? | nullable |
+| `interval_days` | int? | nullable, min 1. Cannot nullify if trigger_type requires it. |
+| `interval_reading` | numeric? | nullable, min 0.01. Cannot nullify if trigger_type requires it. |
+
+**Response `200`:** `{ "data": { /* PmRule */ } }`
+
+---
+
+### POST `/api/pm-rules/{pmRule}/deactivate`
+
+Deactivate a PM rule. Blocked if there's an active chain (pending MR or open/in-progress/completed WO from this rule).
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `{ "message": "PM rule deactivated.", "data": { /* PmRule */ } }`
+**Error `409`:** Active chain exists.
+
+---
+
+### POST `/api/pm-rules/{pmRule}/reactivate`
+
+Reactivate an inactive PM rule.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `{ "message": "PM rule reactivated.", "data": { /* PmRule */ } }`
+
+---
+
+### POST `/api/pm-rules/{pmRule}/evaluate`
+
+Evaluate a single PM rule. If due, generates a preventive maintenance request.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `{ "message": "PM rule is not due." }`
+**Response `201`:** `{ "message": "PM request generated.", "data": { /* MaintenanceRequest */ } }`
+
+---
+
+### POST `/api/pm-rules/evaluate`
+
+Evaluate all active PM rules.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:**
+```json
+{ "message": "Evaluated 5 rules, generated 2 requests." }
+```
+
+---
+
+## Attachments
+
+### Allowed File Types
+
+| Extension | MIME Type |
+|-----------|-----------|
+| `pdf` | `application/pdf` |
+| `jpg`, `jpeg` | `image/jpeg` |
+| `png` | `image/png` |
+| `gif` | `image/gif` |
+| `webp` | `image/webp` |
+| `doc` | `application/msword` |
+| `docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `xls` | `application/vnd.ms-excel` |
+| `xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+
+**Max size:** 20 MB
+**MIME validation:** Server detects actual MIME type using `finfo` and rejects mismatches.
+
+### Upload Endpoints
+
+All follow the same pattern. Replace `{parent}` with `assets`, `parts`, `maintenance-requests`, or `work-orders`.
+
+**POST `/api/{parent}/{id}/attachments`**
+
+**Auth:** Varies by parent (see Access Control section below)
+**Content-Type:** `multipart/form-data`
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `file` | file | required, max 20 MB, allowed extensions/MIME types only |
+| `description` | string? | nullable |
+
+**Response `201`:**
+```json
+{ "data": { /* AttachmentResource */ } }
+```
+
+**Error `422`:** File type not allowed, MIME mismatch, or file too large.
+
+### Upload Access Control
+
+| Parent | Can Upload |
+|--------|-----------|
+| Asset | Admin, Manager, Technician, Logistics |
+| Part | Admin, Manager, Technician, Logistics |
+| Maintenance Request | Requester (own only), Admin, Manager |
+| Work Order | Assigned Technician, Admin, Manager |
+
+### List Endpoints
+
+**GET `/api/{parent}/{id}/attachments`**
+
+**Auth:** Varies by parent.
+
+| Parent | Can List |
+|--------|----------|
+| Asset | Admin, Manager, Technician, Viewer |
+| Part | Admin, Manager, Technician, Logistics |
+| Maintenance Request | Requester (own only), Admin, Manager, Technician |
+| Work Order | Admin, Manager, Technician, Viewer |
+
+### AttachmentResource
+
+| Field | Type | Admin/Manager | Technician/Logistics/Requester | Viewer |
+|-------|------|---------------|-------------------------------|--------|
+| `id` | int | Y | Y | Y |
+| `file_name` | string | Y | Y | Y |
+| `mime_type` | string | Y | Y | Y |
+| `size_bytes` | int | Y | Y | Y |
+| `description` | string? | Y | Y | Y |
+| `created_at` | string | Y | Y | Y |
+| `download_url` | string | Y | Y | — |
+| `uploaded_by` | object? | Y (id, name) | — | — |
+
+---
+
+### GET `/api/attachments/{attachment}/download`
+
+Download an attachment as a binary stream.
+
+**Auth:** Required (download policy applies — same as list access for the parent entity)
+**Response `200`:** Binary stream with `Content-Disposition: attachment; filename="original_name.ext"`.
+**Error `404`:** Attachment was soft-deleted or doesn't exist.
+
+**Note:** Use a regular `GET` request (not JSON). The response is a file download, not JSON.
+
+---
+
+### DELETE `/api/attachments/{attachment}`
+
+Soft-delete an attachment. File remains on disk; attachment is hidden.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+**Error `404`:** Already deleted.
+**Error `409`:** Domain error.
+
+**Response `200`:** `{ "message": "Attachment deleted." }`
+
+---
+
+## Admin: Users
+
+### GET `/api/admin/users`
+
+List all users with their role.
+
+**Auth:** Administrator only
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Admin",
+      "email": "admin@example.com",
+      "is_active": true,
+      "activated_at": "2026-06-07T12:00:00Z",
+      "emp_id": null,
+      "employee_id": null,
+      "role": { "id": 1, "code": "administrator", "name": "Administrator" }
+    }
+  ]
+}
+```
+
+### GET `/api/admin/users/{user}`
+
+Show a single user with role.
+
+**Auth:** Administrator only
+
+### POST `/api/admin/users/{user}/deactivate`
+
+Deactivate a user. Deletes sessions and API tokens. Cannot deactivate self.
+
+**Auth:** Administrator only
+
+**Response `200`:** `{ "message": "User deactivated.", "data": { /* user */ } }`
+**Error `422`:** Trying to deactivate yourself.
+
+### POST `/api/admin/users/{user}/reactivate`
+
+Reactivate a previously deactivated user.
+
+**Auth:** Administrator only
+
+**Response `200`:** `{ "message": "User reactivated.", "data": { /* user */ } }`
+
+---
+
+## Admin: Roles
+
+### GET `/api/admin/roles`
+
+List all roles. Roles are immutable (fixed set).
+
+**Auth:** Administrator only
+
+**Response `200`:**
+```json
+{
+  "data": [
+    { "id": 1, "code": "administrator", "name": "Administrator" },
+    { "id": 2, "code": "maintenance_manager", "name": "Maintenance Manager" },
+    { "id": 3, "code": "technician", "name": "Technician" },
+    { "id": 4, "code": "logistics", "name": "Logistics" },
+    { "id": 5, "code": "requester", "name": "Requester" },
+    { "id": 6, "code": "viewer", "name": "Viewer" }
+  ]
+}
+```
+
+---
+
+## Admin: Employees
+
+### GET `/api/admin/employees`
+
+List employees from the SharePoint-synced directory. Cursor-paginated.
+
+**Auth:** Administrator only
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Search by name or emp_id |
+| `sort` | string | `name`, `emp_id` (default: `name:asc`) |
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+**Response `200`:** Cursor-paginated employee list.
+
+### POST `/api/admin/employees/import`
+
+Trigger employee import from SharePoint.
+
+**Auth:** Administrator only
+
+**Response `200`:** `{ "message": "Imported 42 employees." }`
+
+### POST `/api/admin/employees/{employee}/provision-user`
+
+Provision a user account for an employee. Sends an activation email.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `role_id` | int | required, exists in `roles` |
+
+**Response `200`:**
+```json
+{
+  "message": "User provisioned and activation email queued.",
+  "data": { /* new User */ }
+}
+```
+
+**Error `409`:** Employee already has a user account.
+
+---
+
+## Admin: ERP Sync
+
+### GET `/api/admin/erp/sync-jobs`
+
+List ERP sync job history.
+
+**Auth:** Administrator or Maintenance Manager
+
+**Response `200`:** `{ "data": [ /* ErpSyncJob records */ ] }`
+
+### POST `/api/admin/erp/sync-assets`
+
+Dispatch background job to sync assets from ERP.
+
+**Auth:** Administrator or Maintenance Manager
+
+**Response `200`:** `{ "message": "ERP Asset synchronization started." }`
+
+### POST `/api/admin/erp/sync-parts`
+
+Dispatch background job to sync parts from ERP.
+
+**Auth:** Administrator or Maintenance Manager
+
+**Response `200`:** `{ "message": "ERP Part synchronization started." }`
+
+---
+
+## Admin: Audit Logs
+
+### GET `/api/admin/audit-logs`
+
+List audit log entries. Cursor-paginated (50 per page).
+
+**Auth:** Administrator only
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `event` | string | Filter by event name (e.g., `auth.login`, `attachment.uploaded`) |
+| `user_id` | int | Filter by actor user ID |
+| `subject_type` | string | Filter by subject type (e.g., `Asset`, `WorkOrder`) |
+| `subject_id` | int | Filter by subject ID |
+
+**Response `200`:** Cursor-paginated list with `actor` relation loaded.
+
+---
+
+## Admin: Company Settings
+
+### GET `/api/admin/company-settings`
+
+Get company settings.
+
+**Auth:** Administrator only
+
+**Response `200`:**
+```json
+{ "timezone": "Africa/Tripoli" }
+```
+
+### PATCH `/api/admin/company-settings`
+
+Update company settings.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `timezone` | string | required, valid PHP timezone identifier |
+
+**Response `200`:** `{ "timezone": "Africa/Tripoli" }`
+
+---
+
+## Admin: Locations
+
+### GET `/api/admin/locations`
+
+List all locations.
+
+**Auth:** Administrator only
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "parent_id": null,
+      "name": "Main Building",
+      "type": "building",
+      "code": "BLD-01",
+      "description": null,
+      "is_active": true
+    }
+  ]
+}
+```
+
+### POST `/api/admin/locations`
+
+Create a location.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `parent_id` | int? | nullable, exists in `locations` |
+| `name` | string | required |
+| `type` | string | required |
+| `code` | string? | nullable |
+| `description` | string? | nullable |
+| `is_active` | bool? | defaults to true |
+
+**Response `201`:** `{ "data": { /* Location */ } }`
+
+### PATCH `/api/admin/locations/{location}`
+
+Update a location.
+
+**Auth:** Administrator only
+
+**Request Body:** Same fields as create, all optional.
+
+**Response `200`:** `{ "data": { /* Location */ } }`
+
+---
+
+## Admin: Master Data
+
+Master data items are generic key-value pairs grouped by a `group_key`. Used for dropdowns like categories, priorities, etc.
+
+### GET `/api/admin/master-data/{groupKey}`
+
+List master data items for a group.
+
+**Auth:** Administrator only
+
+**Response `200`:**
+```json
+{
+  "data": [
+    { "id": 1, "group_key": "asset_categories", "value": "electrical", "label": "Electrical", "sort_order": 1, "is_active": true }
+  ]
+}
+```
+
+### POST `/api/admin/master-data/{groupKey}`
+
+Create a master data item.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `value` | string | required |
+| `label` | string | required |
+| `sort_order` | int? | nullable |
+| `is_active` | bool? | defaults to true |
+
+**Response `201`:** `{ "data": { /* MasterDataItem */ } }`
+
+### PATCH `/api/admin/master-data/items/{item}`
+
+Update a master data item.
+
+**Auth:** Administrator only
+
+**Request Body:** Same as create, all optional.
+
+---
+
+## Admin: Usage Reading Types
+
+### GET `/api/admin/usage-reading-types`
+
+List all usage reading types (e.g., "Hours", "Kilometers").
+
+**Auth:** Administrator only
+
+**Response `200`:**
+```json
+{
+  "data": [
+    { "id": 1, "name": "Hours", "unit": "h", "is_active": true }
+  ]
+}
+```
+
+### POST `/api/admin/usage-reading-types`
+
+Create a reading type.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | string | required |
+| `unit` | string | required |
+| `is_active` | bool? | defaults to true |
+
+**Response `201`:** `{ "data": { /* UsageReadingType */ } }`
+
+### PATCH `/api/admin/usage-reading-types/{type}`
+
+Update a reading type.
+
+**Auth:** Administrator only
+
+**Request Body:** Same as create, all optional.
+
+---
+
+## Enums Reference
+
+### MaintenanceRequestStatus
+
+| Value | Description |
+|-------|-------------|
+| `pending_review` | Awaiting manager action |
+| `rejected` | Rejected by manager (terminal) |
+| `converted` | Approved and converted to work order (terminal) |
+| `cancelled` | Cancelled by requester or manager (terminal) |
+
+### WorkOrderStatus
+
+| Value | Description |
+|-------|-------------|
+| `open` | Created, awaiting assignment |
+| `in_progress` | Technician working |
+| `completed` | Technician finished, awaiting manager review |
+| `closed` | Manager verified (terminal) |
+| `cancelled` | Cancelled (terminal) |
+
+### PmTriggerType
+
+| Value | Description |
+|-------|-------------|
+| `date` | Triggers based on calendar interval |
+| `reading` | Triggers based on meter reading interval |
+| `date_or_reading` | Triggers when either interval is met |
+
+### Priority Values
+
+Used in maintenance requests and work orders: `low`, `medium`, `high`, `critical`.
+
+### Meter Reading Source Values
+
+`user`, `manual`
+
+---
+
+## Error Responses
+
+### Validation Error (422)
+
+```json
+{
+  "message": "The asset id field is required.",
+  "errors": {
+    "asset_id": ["The asset id field is required."]
+  }
+}
+```
+
+### Authentication Error (401)
+
+```json
+{ "message": "Unauthenticated." }
+```
+
+### Authorization Error (403)
+
+```json
+{ "message": "This action is unauthorized." }
+```
+
+### Not Found (404)
+
+```json
+{ "message": "No query results for model [App\\Models\\Asset]." }
+```
+
+### Conflict (409)
+
+Returned when a domain precondition fails (e.g., approving an already-approved MR, starting a WO with no assignee).
+
+```json
+{ "message": "Maintenance request is not in pending_review status." }
+```
+
+### Rate Limited (429)
+
+```json
+{ "message": "Too many login attempts." }
+```
+
+### Domain Validation (422)
+
+Returned by attachment upload and some actions:
+
+```json
+{ "message": "File content does not match any allowed MIME type." }
+```
+
+```json
+{ "message": "File exceeds the maximum allowed size of 20 MB." }
+```
+
+```json
+{ "message": "File extension is not allowed." }
+```
+
+```json
+{ "message": "PM rules can only target ERP-linked assets." }
+```
+
+```json
+{ "message": "Cannot update location for an inactive asset." }
+```
+
+```json
+{ "message": "Cannot assign an inactive location." }
+```
+
+```json
+{ "message": "Cannot record readings for an inactive asset." }
+```
+
+```json
+{ "message": "Cannot use an inactive reading type." }
+```
