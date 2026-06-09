@@ -1,5 +1,20 @@
 # UI State Rules
 
+## Persistent Changes
+
+Every user-initiated persistent change requires confirmation, including
+ordinary create/edit operations, profile and settings changes, uploads,
+assignments, status transitions, synchronization, and operational updates.
+
+Validate before opening confirmation. The dialog must summarize the intended
+change and use the exact action as its confirm label. Disable repeat submission
+while the request is running. On failure, preserve entered data and show
+actionable errors. On success, refresh affected data and show a concise toast.
+
+Read-only navigation, search, filters, pagination, tabs, and local draft state
+do not require confirmation. Automated jobs are recorded in status or activity
+history without a user prompt.
+
 ## Maintenance Request
 
 Show status badge for:

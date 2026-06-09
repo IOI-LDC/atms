@@ -1,5 +1,18 @@
 # Codex Frontend Prompts
 
+## Mandatory UI Rules
+
+Before frontend implementation, read:
+
+- `docs/00-project-rules/authoritative-sources.md`
+- `docs/02-design/UI_DESIGN_SYSTEM.md`
+- `docs/04-frontend/UI_STATES.md`
+
+Use the approved light-theme company palette, shadcn-vue interactive
+components, shared semantic CSS classes, and no Tailwind utility classes in
+feature Vue files. Require confirmation before every user-initiated persistent
+change, including profile and settings edits.
+
 ## Prompt: Create Vue Frontend Skeleton
 
 Create the Vue 3 + TypeScript frontend skeleton for ATMS using Tailwind and shadcn-style components.

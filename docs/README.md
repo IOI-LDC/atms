@@ -50,3 +50,9 @@ Redis and MinIO are optional future upgrades and are not part of the default MVP
 
 All timestamps are stored in UTC. The initial company display timezone is
 `Africa/Tripoli`.
+
+## Frontend Design Authority
+
+Use `02-design/UI_DESIGN_SYSTEM.md` for visual and interaction standards.
+Product behavior, workflows, roles, and permissions remain authoritative over
+visual references and component examples.

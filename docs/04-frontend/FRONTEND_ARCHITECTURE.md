@@ -16,6 +16,12 @@
 - Avoid ERP-like complexity.
 - Show status badges clearly.
 - Use consistent terminology across screens.
+- Use the light-theme company design tokens defined in
+  `docs/02-design/UI_DESIGN_SYSTEM.md`.
+- Use shared shadcn-vue components for interactive controls.
+- Do not use Tailwind utility classes in feature Vue files; use shared semantic
+  classes.
+- Require confirmation before every user-initiated persistent change.
 
 ## Suggested Structure
 
