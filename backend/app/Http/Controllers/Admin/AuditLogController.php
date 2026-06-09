@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 
 class AuditLogController extends Controller
 {
@@ -14,7 +15,7 @@ class AuditLogController extends Controller
      */
     public function index(Request $request)
     {
-        \Illuminate\Support\Facades\Gate::authorize('viewAny', AuditLog::class);
+        Gate::authorize('viewAny', AuditLog::class);
 
         $query = AuditLog::with('actor');
 

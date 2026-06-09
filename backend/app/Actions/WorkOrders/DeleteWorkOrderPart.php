@@ -27,7 +27,7 @@ class DeleteWorkOrderPart
 
             $before = $partLine->toArray();
             $partLine->delete();
-            
+
             $logger->log('delete_work_order_part', $partLine, $before, []);
         });
     }

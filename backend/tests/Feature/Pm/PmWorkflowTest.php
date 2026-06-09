@@ -5,6 +5,7 @@ namespace Tests\Feature\Pm;
 use App\Enums\PmTriggerType;
 use App\Enums\RoleCode;
 use App\Models\Asset;
+use App\Models\AssetMeterReading;
 use App\Models\MaintenanceRequest;
 use App\Models\PmOccurrenceSuppression;
 use App\Models\PmRule;
@@ -406,5 +407,195 @@ class PmWorkflowTest extends TestCase
         $this->assertNotNull($suppression);
         $this->assertEquals($snapshotReading, (float) $suppression->trigger_reading_value);
         $this->assertEquals($readingType->id, $suppression->trigger_reading_type_id);
+    }
+
+    public function test_reading_triggered_evaluate_sets_trigger_reading_value(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+        $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Reading PM',
+            'trigger_type' => PmTriggerType::READING,
+            'interval_reading' => 500,
+            'usage_reading_type_id' => $readingType->id,
+            'last_triggered_reading' => 1000,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        AssetMeterReading::create([
+            'asset_id' => $asset->id,
+            'usage_reading_type_id' => $readingType->id,
+            'reading_value' => 1600.00,
+            'reading_at' => now(),
+            'source' => 'manual',
+            'entered_by_user_id' => $admin->id,
+            'confirmed_by_user_id' => $admin->id,
+            'confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->postJson("/api/pm-rules/{$rule->id}/evaluate");
+        $response->assertCreated();
+
+        $mr = MaintenanceRequest::where('pm_rule_id', $rule->id)->first();
+        $this->assertNotNull($mr);
+        $this->assertEquals(1600.00, (float) $mr->trigger_reading_value);
+        $this->assertEquals($readingType->id, $mr->trigger_reading_type_id);
+        $this->assertTrue((bool) $mr->triggered_by_reading);
+        $this->assertFalse((bool) $mr->triggered_by_date);
+    }
+
+    public function test_reactivate_pm_rule_restores_active_state(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Monthly PM',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'is_active' => false,
+            'created_by' => $admin->id,
+            'deactivated_by' => $admin->id,
+            'deactivated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->postJson("/api/pm-rules/{$rule->id}/reactivate")
+            ->assertOk();
+
+        $rule->refresh();
+        $this->assertTrue($rule->is_active);
+        $this->assertEquals($admin->id, $rule->reactivated_by);
+        $this->assertNotNull($rule->reactivated_at);
+    }
+
+    public function test_reactivate_already_active_rule_fails(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Monthly PM',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->postJson("/api/pm-rules/{$rule->id}/reactivate")
+            ->assertStatus(409);
+    }
+
+    public function test_create_pm_suppression_action_stores_data(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+        $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Reading PM',
+            'trigger_type' => PmTriggerType::READING,
+            'interval_reading' => 1000,
+            'usage_reading_type_id' => $readingType->id,
+            'last_triggered_reading' => 5000,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $mr = MaintenanceRequest::create([
+            'number' => 'MR-SUP-001',
+            'asset_id' => $asset->id,
+            'type' => 'preventive',
+            'status' => 'pending_review',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+            'is_preventive' => true,
+            'pm_rule_id' => $rule->id,
+            'triggered_by_reading' => true,
+            'trigger_reading_value' => 6100,
+            'trigger_reading_type_id' => $readingType->id,
+        ]);
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/reject", [
+            'reason' => 'Deferred to next cycle',
+            'suppressed_until_reading' => 7000,
+        ])->assertOk();
+
+        $suppression = PmOccurrenceSuppression::where('pm_rule_id', $rule->id)->first();
+        $this->assertNotNull($suppression);
+        $this->assertEquals('rejected', $suppression->decision_type);
+        $this->assertEquals(7000, (float) $suppression->suppressed_until_reading);
+        $this->assertTrue((bool) $suppression->triggered_by_reading);
+        $this->assertFalse((bool) $suppression->triggered_by_date);
+    }
+
+    public function test_closing_wo_updates_reading_triggered_pm_baseline(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $asset = $this->createAsset();
+        $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Reading PM',
+            'trigger_type' => PmTriggerType::READING,
+            'interval_reading' => 500,
+            'usage_reading_type_id' => $readingType->id,
+            'last_triggered_reading' => 1000,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        AssetMeterReading::create([
+            'asset_id' => $asset->id,
+            'usage_reading_type_id' => $readingType->id,
+            'reading_value' => 1600,
+            'reading_at' => now(),
+            'source' => 'manual',
+            'entered_by_user_id' => $tech->id,
+            'confirmed_by_user_id' => $manager->id,
+            'confirmed_at' => now(),
+        ]);
+
+        $mr = MaintenanceRequest::create([
+            'number' => 'MR-BL-001',
+            'asset_id' => $asset->id,
+            'type' => 'preventive',
+            'status' => 'converted',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+            'reviewed_by' => $manager->id,
+            'reviewed_at' => now(),
+            'is_preventive' => true,
+            'pm_rule_id' => $rule->id,
+        ]);
+
+        $wo = WorkOrder::create([
+            'number' => 'WO-BL-001',
+            'maintenance_request_id' => $mr->id,
+            'asset_id' => $asset->id,
+            'status' => 'open',
+            'priority' => 'medium',
+            'assigned_to_user_id' => $tech->id,
+            'assigned_by_user_id' => $manager->id,
+            'assigned_at' => now(),
+        ]);
+
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $rule->refresh();
+        $this->assertEquals(1600, (float) $rule->last_triggered_reading);
+        $this->assertNotNull($rule->last_triggered_date);
     }
 }

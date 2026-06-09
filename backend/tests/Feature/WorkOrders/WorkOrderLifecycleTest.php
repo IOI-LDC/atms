@@ -499,4 +499,34 @@ class WorkOrderLifecycleTest extends TestCase
         $response->assertOk();
         $this->assertCount(1, $response->json('data.parts'));
     }
+
+    public function test_double_complete_returns_conflict(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Again'])
+            ->assertStatus(409);
+    }
+
+    public function test_unassigned_technician_cannot_complete(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech1 = $this->createUser(RoleCode::TECHNICIAN);
+        $tech2 = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech1->id])->assertOk();
+        $this->actingAs($tech1)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+
+        $this->actingAs($tech2)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Hijack'])
+            ->assertForbidden();
+    }
 }

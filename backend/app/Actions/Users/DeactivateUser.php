@@ -10,16 +10,18 @@ class DeactivateUser
 {
     public function execute(User $user): User
     {
-        $logger = app(AuditLogger::class);
-        $before = $user->toArray();
-        $user->update(['is_active' => false]);
+        return DB::transaction(function () use ($user) {
+            $logger = app(AuditLogger::class);
+            $before = $user->toArray();
+            $user->update(['is_active' => false]);
 
-        DB::table('sessions')->where('user_id', $user->id)->delete();
-        $user->tokens()->delete();
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            $user->tokens()->delete();
 
-        $after = $user->fresh()->toArray();
-        $logger->log('user.deactivated', $user, $before, $after);
+            $after = $user->fresh()->toArray();
+            $logger->log('user.deactivated', $user, $before, $after);
 
-        return $user;
+            return $user;
+        });
     }
 }

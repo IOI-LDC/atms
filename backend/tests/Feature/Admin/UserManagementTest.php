@@ -111,4 +111,16 @@ class UserManagementTest extends TestCase
             'password' => 'password123',
         ])->assertStatus(401);
     }
+
+    public function test_administrator_can_reactivate_user(): void
+    {
+        $admin = $this->createAdmin();
+        $user = $this->createNonAdmin();
+
+        $this->actingAs($admin)->postJson("/api/admin/users/{$user->id}/deactivate")->assertOk();
+        $this->assertFalse($user->fresh()->is_active);
+
+        $this->actingAs($admin)->postJson("/api/admin/users/{$user->id}/reactivate")->assertOk();
+        $this->assertTrue($user->fresh()->is_active);
+    }
 }

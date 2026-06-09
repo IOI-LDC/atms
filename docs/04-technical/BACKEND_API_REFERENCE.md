@@ -260,7 +260,7 @@ Liveness probe. No auth required.
 
 ### GET `/api/health/ready`
 
-Readiness probe. No auth required. Checks database and attachment storage.
+Readiness probe. No auth required. Checks database and attachment storage. Failures are logged to the Laravel log channel for observability.
 
 **Response `200`:**
 ```json
@@ -504,11 +504,12 @@ List parts with cursor pagination, filtering, and sorting.
 
 ### GET `/api/parts/{part}`
 
-Show a single part.
+Show a single part. Non-admin/manager users receive `403 Forbidden` for inactive parts.
 
-**Auth:** Required (any role)
+**Auth:** Required (any authenticated user via PartPolicy)
 
 **Response `200`:** `PartResource`.
+**Error `403`:** Non-admin/manager attempting to view an inactive part.
 
 ---
 
@@ -906,10 +907,12 @@ Start the work order. Transitions from `open` to `in_progress`. Requires assignm
 
 ### POST `/api/work-orders/{workOrder}/complete`
 
-Mark the work order as completed by the technician.
+Mark the work order as completed. Only the assigned technician, a Maintenance Manager, or an Administrator can complete. Double-completing a `completed` WO returns `409`.
 
-**Auth:** Required (assigned Technician)
+**Auth:** Required (assigned Technician, Maintenance Manager, or Administrator)
 **Precondition:** WO must be `in_progress`.
+**Error `409`:** WO is not in `in_progress` status.
+**Error `403`:** Non-assigned technician attempting to complete (when no manager override applies).
 
 **Request Body:**
 
@@ -926,7 +929,7 @@ Mark the work order as completed by the technician.
 
 ### POST `/api/work-orders/{workOrder}/close`
 
-Close a completed work order. Manager action only.
+Close a completed work order. Manager action only. For PM-linked work orders, closing updates the PM rule's `last_triggered_date` (and `last_triggered_reading` for reading-triggered rules) to establish the new baseline.
 
 **Auth:** Required (Administrator or Maintenance Manager)
 **Precondition:** WO must be `completed`.
@@ -935,6 +938,7 @@ Close a completed work order. Manager action only.
 ```json
 { "message": "Work order closed.", "data": { /* WO */ } }
 ```
+**Error `409`:** WO is not in `completed` status.
 
 ---
 
@@ -1102,17 +1106,20 @@ Deactivate a PM rule. Blocked if there's an active chain (pending MR or open/in-
 
 ### POST `/api/pm-rules/{pmRule}/reactivate`
 
-Reactivate an inactive PM rule.
+Reactivate an inactive PM rule. Throws `409` if the rule is already active.
 
 **Auth:** Required (Administrator or Maintenance Manager)
 
 **Response `200`:** `{ "message": "PM rule reactivated.", "data": { /* PmRule */ } }`
+**Error `409`:** PM rule is already active.
 
 ---
 
 ### POST `/api/pm-rules/{pmRule}/evaluate`
 
 Evaluate a single PM rule. If due, generates a preventive maintenance request.
+
+For reading-triggered rules, the generated MR includes `trigger_reading_value` (from the latest confirmed reading) and `trigger_reading_type_id`. For date-triggered rules, the MR includes `trigger_date`.
 
 **Auth:** Required (Administrator or Maintenance Manager)
 
@@ -1271,7 +1278,7 @@ Show a single user with role.
 
 ### POST `/api/admin/users/{user}/deactivate`
 
-Deactivate a user. Deletes sessions and API tokens. Cannot deactivate self.
+Deactivate a user. Atomically (within a DB transaction) sets `is_active=false`, deletes all sessions, and revokes all API tokens. Cannot deactivate self.
 
 **Auth:** Administrator only
 
@@ -1371,11 +1378,31 @@ List ERP sync job history.
 
 **Auth:** Administrator or Maintenance Manager
 
-**Response `200`:** `{ "data": [ /* ErpSyncJob records */ ] }`
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "sync_type": "assets",
+      "status": "success",
+      "total_records": 42,
+      "created_count": 10,
+      "updated_count": 30,
+      "failed_count": 2,
+      "error_message": null,
+      "started_at": "2026-06-09T12:00:00Z",
+      "completed_at": "2026-06-09T12:00:05Z"
+    }
+  ]
+}
+```
+
+**ErpSyncJob statuses:** `running`, `success`, `partial`, `failed`.
 
 ### POST `/api/admin/erp/sync-assets`
 
-Dispatch background job to sync assets from ERP.
+Dispatch background job to sync assets from ERP. The job handles top-level ERP failures (e.g., HTTP 500) by marking the job as `failed` with an error message, and row-level errors by marking the job as `partial`. Empty results (0 records) produce a `success` status.
 
 **Auth:** Administrator or Maintenance Manager
 

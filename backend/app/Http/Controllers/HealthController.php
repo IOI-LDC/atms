@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class HealthController extends Controller
@@ -20,13 +21,15 @@ class HealthController extends Controller
         try {
             DB::connection()->getPdo();
             $db = true;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::error('Health check: database unreachable', ['error' => $e->getMessage()]);
         }
 
         try {
             $diskName = config('atms.attachment_disk', 'attachments');
             $disk = Storage::disk($diskName)->put('.health-check', 'ok') && Storage::disk($diskName)->delete('.health-check');
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::error('Health check: attachment disk unreachable', ['error' => $e->getMessage()]);
         }
 
         $healthy = $db && $disk;

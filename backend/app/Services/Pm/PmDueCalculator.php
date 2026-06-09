@@ -9,16 +9,16 @@ use App\Models\PmRule;
 
 class PmDueCalculator
 {
-    public function isDue(PmRule $rule): bool
+    public function isDue(PmRule $rule, ?Collection $readings = null, ?Collection $suppressions = null): bool
     {
         if (! $rule->is_active) {
             return false;
         }
 
         return match ($rule->trigger_type) {
-            PmTriggerType::DATE => $this->isDueByDate($rule) && ! $this->isSuppressedByDate($rule),
-            PmTriggerType::READING => $this->isDueByReading($rule) && ! $this->isSuppressedByReading($rule),
-            PmTriggerType::DATE_OR_READING => $this->isDueByDateOrReading($rule),
+            PmTriggerType::DATE => $this->isDueByDate($rule) && ! $this->isSuppressedByDate($rule, $suppressions),
+            PmTriggerType::READING => $this->isDueByReading($rule, $readings) && ! $this->isSuppressedByReading($rule, $readings, $suppressions),
+            PmTriggerType::DATE_OR_READING => $this->isDueByDateOrReading($rule, $readings, $suppressions),
         };
     }
 
@@ -31,13 +31,15 @@ class PmDueCalculator
         return $rule->last_triggered_date->addDays($rule->interval_days)->isPast();
     }
 
-    private function isDueByReading(PmRule $rule): bool
+    private function isDueByReading(PmRule $rule, ?Collection $readings = null): bool
     {
-        $latestConfirmed = AssetMeterReading::where('asset_id', $rule->asset_id)
-            ->where('usage_reading_type_id', $rule->usage_reading_type_id)
-            ->whereNotNull('confirmed_at')
-            ->orderByDesc('reading_at')
-            ->first();
+        $latestConfirmed = $readings
+            ? $readings->get("{$rule->asset_id}_{$rule->usage_reading_type_id}")
+            : AssetMeterReading::where('asset_id', $rule->asset_id)
+                ->where('usage_reading_type_id', $rule->usage_reading_type_id)
+                ->whereNotNull('confirmed_at')
+                ->orderByDesc('reading_at')
+                ->first();
 
         if (! $latestConfirmed) {
             return false;
@@ -49,45 +51,57 @@ class PmDueCalculator
         return (float) $latestConfirmed->reading_value >= $threshold;
     }
 
-    private function isDueByDateOrReading(PmRule $rule): bool
+    private function isDueByDateOrReading(PmRule $rule, ?Collection $readings = null, ?Collection $suppressions = null): bool
     {
         $dateDue = $this->isDueByDate($rule);
-        $readingDue = $this->isDueByReading($rule);
+        $readingDue = $this->isDueByReading($rule, $readings);
 
-        if ($dateDue && $this->isSuppressedByDate($rule)) {
+        if ($dateDue && $this->isSuppressedByDate($rule, $suppressions)) {
             $dateDue = false;
         }
 
-        if ($readingDue && $this->isSuppressedByReading($rule)) {
+        if ($readingDue && $this->isSuppressedByReading($rule, $readings, $suppressions)) {
             $readingDue = false;
         }
 
         return $dateDue || $readingDue;
     }
 
-    private function isSuppressedByDate(PmRule $rule): bool
+    private function isSuppressedByDate(PmRule $rule, ?Collection $suppressions = null): bool
     {
+        if ($suppressions !== null) {
+            return $suppressions->get($rule->id.'_date', collect())
+                ->contains(fn ($s) => $s['suppressed_until_date'] >= now()->toDateString());
+        }
+
         return PmOccurrenceSuppression::where('pm_rule_id', $rule->id)
             ->where('triggered_by_date', true)
             ->where('suppressed_until_date', '>=', now()->toDateString())
             ->exists();
     }
 
-    private function isSuppressedByReading(PmRule $rule): bool
+    private function isSuppressedByReading(PmRule $rule, ?Collection $readings = null, ?Collection $suppressions = null): bool
     {
-        $latestConfirmed = AssetMeterReading::where('asset_id', $rule->asset_id)
-            ->where('usage_reading_type_id', $rule->usage_reading_type_id)
-            ->whereNotNull('confirmed_at')
-            ->orderByDesc('reading_at')
-            ->value('reading_value');
+        $latestConfirmedValue = $readings
+            ? optional($readings->get("{$rule->asset_id}_{$rule->usage_reading_type_id}"))->reading_value
+            : AssetMeterReading::where('asset_id', $rule->asset_id)
+                ->where('usage_reading_type_id', $rule->usage_reading_type_id)
+                ->whereNotNull('confirmed_at')
+                ->orderByDesc('reading_at')
+                ->value('reading_value');
 
-        if ($latestConfirmed === null) {
+        if ($latestConfirmedValue === null) {
             return false;
+        }
+
+        if ($suppressions !== null) {
+            return $suppressions->get($rule->id.'_reading', collect())
+                ->contains(fn ($s) => (float) $s['suppressed_until_reading'] >= (float) $latestConfirmedValue);
         }
 
         return PmOccurrenceSuppression::where('pm_rule_id', $rule->id)
             ->where('triggered_by_reading', true)
-            ->whereRaw('suppressed_until_reading >= ?', [(float) $latestConfirmed])
+            ->whereRaw('suppressed_until_reading >= ?', [(float) $latestConfirmedValue])
             ->exists();
     }
 
@@ -96,7 +110,7 @@ class PmDueCalculator
         return match ($rule->trigger_type) {
             PmTriggerType::DATE => true,
             PmTriggerType::READING => false,
-            PmTriggerType::DATE_OR_READING => $this->isDueByDate($rule) && ! $this->isSuppressedByDate($rule),
+            PmTriggerType::DATE_OR_READING => $this->isDueByDate($rule) && ! $this->isSuppressedByDate($rule, null),
         };
     }
 
@@ -105,7 +119,7 @@ class PmDueCalculator
         return match ($rule->trigger_type) {
             PmTriggerType::DATE => false,
             PmTriggerType::READING => true,
-            PmTriggerType::DATE_OR_READING => $this->isDueByReading($rule) && ! $this->isSuppressedByReading($rule),
+            PmTriggerType::DATE_OR_READING => $this->isDueByReading($rule, null) && ! $this->isSuppressedByReading($rule, null, null),
         };
     }
 }

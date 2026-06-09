@@ -262,4 +262,39 @@ class ErpSyncTest extends TestCase
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));
     }
+
+    public function test_sync_assets_handles_erp_500_error(): void
+    {
+        Http::fake([
+            '*/api/assets*' => Http::response(null, 500),
+        ]);
+
+        $action = app(SyncAssets::class);
+
+        $this->expectException(\Exception::class);
+        $action->execute();
+
+        $job = ErpSyncJob::latest()->first();
+        $this->assertEquals('failed', $job->status);
+        $this->assertNotNull($job->error_message);
+    }
+
+    public function test_sync_assets_handles_empty_results(): void
+    {
+        Http::fake([
+            '*/api/assets*' => Http::response([
+                'data' => [],
+                'next_cursor' => null,
+            ]),
+        ]);
+
+        $action = app(SyncAssets::class);
+        $job = $action->execute();
+
+        $this->assertEquals('success', $job->status);
+        $this->assertEquals(0, $job->total_records);
+        $this->assertEquals(0, $job->created_count);
+        $this->assertEquals(0, $job->updated_count);
+        $this->assertEquals(0, $job->failed_count);
+    }
 }

@@ -26,13 +26,6 @@ class AuditLogger
 
     /**
      * Log an audit event.
-     *
-     * @param string $event
-     * @param Model|null $subject
-     * @param array $before
-     * @param array $after
-     * @param array $metadata
-     * @return AuditLog
      */
     public function log(string $event, ?Model $subject = null, array $before = [], array $after = [], array $metadata = []): AuditLog
     {
@@ -70,12 +63,14 @@ class AuditLogger
             // Apply Denylist
             if (is_string($key) && $this->shouldRedactKey($key)) {
                 $redacted[$key] = '[REDACTED]';
+
                 continue;
             }
 
             // Handle arrays recursively
             if (is_array($value)) {
                 $redacted[$key] = $this->redact($value);
+
                 continue;
             }
 
@@ -83,9 +78,10 @@ class AuditLogger
             // Do not store binary data, file objects, or unexpected closures
             if ($value instanceof UploadedFile) {
                 $redacted[$key] = '[FILE UPLOAD]';
+
                 continue;
             }
-            
+
             if (is_object($value)) {
                 if (method_exists($value, 'toArray')) {
                     $redacted[$key] = $this->redact($value->toArray());
@@ -94,11 +90,13 @@ class AuditLogger
                 } else {
                     $redacted[$key] = '[OBJECT]';
                 }
+
                 continue;
             }
 
             if (is_resource($value)) {
                 $redacted[$key] = '[RESOURCE]';
+
                 continue;
             }
 
@@ -114,7 +112,7 @@ class AuditLogger
     protected function shouldRedactKey(string $key): bool
     {
         $normalizedKey = strtolower($key);
-        
+
         foreach ($this->denylist as $deniedKey) {
             if (str_contains($normalizedKey, $deniedKey)) {
                 return true;
