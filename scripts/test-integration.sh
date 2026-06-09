@@ -25,7 +25,7 @@ check "queue worker is running" docker compose exec -T queue pgrep -f "queue:wor
 check "scheduler is running" docker compose exec -T scheduler pgrep -f "schedule:work"
 
 if docker compose ps --status running mock-erp 2>/dev/null | grep -q mock-erp; then
-    if curl -sf http://localhost:80/api/assets -H "X-API-Key: test-key" >/dev/null 2>&1; then
+    if docker compose exec -T api curl -sf -o /dev/null http://mock-erp/up; then
         printf "  PASS  mock-erp API responds\n"
         PASS=$((PASS + 1))
     else
