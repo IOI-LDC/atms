@@ -96,6 +96,13 @@
 - [x] Overdue PM widget (Task 14 — uses PmDueCalculator)
 - [x] Recently closed WO widget (Task 14)
 
+## Operations
+
+- [x] Queue, scheduler, and failure hardening (Task 15)
+- [x] Backup and restore scripts (Task 16)
+- [x] Backup and restore ops guide (Task 16)
+- [x] Deployment guide (Task 18)
+
 ## Quality
 
 - [x] Workflow tests
@@ -105,4 +112,9 @@
 - [x] Role-scoped Resource tests (Task 14)
 - [x] Dashboard tests (Task 14)
 - [x] Maintenance history tests (Task 14)
+- [x] Security and concurrency tests (Task 17)
+- [x] Integration smoke test (Task 18)
+- [x] Security smoke test (Task 17)
+- [x] Full regression: 268 PHPUnit tests passing (Task 18)
+- [x] Docker build and end-to-end verification (Task 18)
 - [ ] UAT issue tracking
