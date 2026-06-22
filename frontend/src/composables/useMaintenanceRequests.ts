@@ -3,157 +3,37 @@ import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
 import { useAssetSearch } from './useAssetSearch'
-import type { MaintenanceRequest, CursorPage } from '@/types'
-
-function mkList<T>() {
-  return {
-    items:       ref<T[]>([]),
-    loading:     ref(false),
-    loadingMore: ref(false),
-    error:       ref<string | null>(null),
-    nextCursor:  ref<string | null>(null),
-    fetched:     false,
-  }
-}
+import { createCursorSource } from '@/lib/dataTableSource'
+import type { MaintenanceRequest } from '@/types'
+import type { ServerDataOptions } from '@ioi-dev/vue-table'
 
 export function useMaintenanceRequests() {
   const auth = useAuthStore()
 
-  // ── All Requests (Admin/Manager) ──────────────────────────────────────────────
+  // ── List data sources (ioi-vue-table server mode) ─────────────────────────────
+  // Each tab renders its own <Table> with one of these as :server-options. The
+  // table owns rows + cursor + loading; this composable only describes the
+  // endpoint + fixed base params (tab semantics). See lib/dataTableSource.ts.
+  // Inline approve/reject/cancel were removed — all actions live on the detail
+  // page (useMaintenanceRequestDetail).
 
-  const allMr = mkList<MaintenanceRequest>()
+  const allMrSource: ServerDataOptions<MaintenanceRequest> =
+    createCursorSource<MaintenanceRequest>({
+      endpoint: '/maintenance-requests',
+      baseParams: { sort: 'created_at:desc' },
+    })
 
-  async function loadAllRequests(append = false, force = false) {
-    if (!append && !force && allMr.fetched) return
-    if (!append) { allMr.items.value = []; allMr.nextCursor.value = null }
-    const busy = append ? allMr.loadingMore : allMr.loading
-    busy.value = true; allMr.error.value = null
-    try {
-      const p: Record<string, unknown> = { sort: 'created_at:desc', per_page: 25 }
-      if (append && allMr.nextCursor.value) p.cursor = allMr.nextCursor.value
-      const res = await api.get<CursorPage<MaintenanceRequest>>('/maintenance-requests', p)
-      allMr.items.value = append ? [...allMr.items.value, ...res.data] : res.data
-      allMr.nextCursor.value = res.meta.next_cursor
-      allMr.fetched = true
-    } catch { allMr.error.value = 'Failed to load all requests.' }
-    finally { busy.value = false }
-  }
+  const awaitingSource: ServerDataOptions<MaintenanceRequest> =
+    createCursorSource<MaintenanceRequest>({
+      endpoint: '/maintenance-requests',
+      baseParams: { status: 'pending_review', sort: 'created_at:asc' },
+    })
 
-  // ── Awaiting Review (Pending Approval) ────────────────────────────────────────
-
-  const ar = mkList<MaintenanceRequest>()
-
-  async function loadAwaiting(append = false, force = false) {
-    if (!append && !force && ar.fetched) return
-    if (!append) { ar.items.value = []; ar.nextCursor.value = null }
-    const busy = append ? ar.loadingMore : ar.loading
-    busy.value = true; ar.error.value = null
-    try {
-      const p: Record<string, unknown> = { status: 'pending_review', sort: 'created_at:asc', per_page: 25 }
-      if (append && ar.nextCursor.value) p.cursor = ar.nextCursor.value
-      const res = await api.get<CursorPage<MaintenanceRequest>>('/maintenance-requests', p)
-      ar.items.value = append ? [...ar.items.value, ...res.data] : res.data
-      ar.nextCursor.value = res.meta.next_cursor
-      ar.fetched = true
-    } catch { ar.error.value = 'Failed to load requests.' }
-    finally { busy.value = false }
-  }
-
-  // ── My Requests ───────────────────────────────────────────────────────────────
-
-  const mr = mkList<MaintenanceRequest>()
-
-  async function loadMyRequests(append = false, force = false) {
-    if (!append && !force && mr.fetched) return
-    if (!append) { mr.items.value = []; mr.nextCursor.value = null }
-    const busy = append ? mr.loadingMore : mr.loading
-    busy.value = true; mr.error.value = null
-    try {
-      const p: Record<string, unknown> = { created_by: auth.user?.id, sort: 'created_at:desc', per_page: 25 }
-      if (append && mr.nextCursor.value) p.cursor = mr.nextCursor.value
-      const res = await api.get<CursorPage<MaintenanceRequest>>('/maintenance-requests', p)
-      mr.items.value = append ? [...mr.items.value, ...res.data] : res.data
-      mr.nextCursor.value = res.meta.next_cursor
-      mr.fetched = true
-    } catch { mr.error.value = 'Failed to load your requests.' }
-    finally { busy.value = false }
-  }
-
-  // ── Approve ───────────────────────────────────────────────────────────────────
-
-  const approveTarget  = ref<MaintenanceRequest | null>(null)
-  const approveOpen    = ref(false)
-  const approveLoading = ref(false)
-
-  function openApprove(item: MaintenanceRequest) {
-    approveTarget.value = item
-    approveOpen.value   = true
-  }
-
-  async function doApprove() {
-    if (!approveTarget.value) return
-    approveLoading.value = true
-    try {
-      await api.post(`/maintenance-requests/${approveTarget.value.id}/approve`)
-      toast.success('Request approved — work order created.')
-      approveOpen.value = false
-      loadAwaiting(false, true)
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : 'Failed to approve request.')
-    } finally { approveLoading.value = false }
-  }
-
-  // ── Reject ────────────────────────────────────────────────────────────────────
-
-  const rejectTarget  = ref<MaintenanceRequest | null>(null)
-  const rejectOpen    = ref(false)
-  const rejectLoading = ref(false)
-  const rejectReason  = ref('')
-
-  function openReject(item: MaintenanceRequest) {
-    rejectTarget.value = item
-    rejectReason.value = ''
-    rejectOpen.value   = true
-  }
-
-  async function doReject() {
-    if (!rejectTarget.value || !rejectReason.value.trim()) return
-    rejectLoading.value = true
-    try {
-      await api.post(`/maintenance-requests/${rejectTarget.value.id}/reject`, { reason: rejectReason.value.trim() })
-      toast.success('Request rejected.')
-      rejectOpen.value = false
-      loadAwaiting(false, true)
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : 'Failed to reject request.')
-    } finally { rejectLoading.value = false }
-  }
-
-  // ── Cancel ────────────────────────────────────────────────────────────────────
-
-  const cancelTarget  = ref<MaintenanceRequest | null>(null)
-  const cancelOpen    = ref(false)
-  const cancelLoading = ref(false)
-  const cancelReason  = ref('')
-
-  function openCancel(item: MaintenanceRequest) {
-    cancelTarget.value = item
-    cancelReason.value = ''
-    cancelOpen.value   = true
-  }
-
-  async function doCancel() {
-    if (!cancelTarget.value || !cancelReason.value.trim()) return
-    cancelLoading.value = true
-    try {
-      await api.post(`/maintenance-requests/${cancelTarget.value.id}/cancel`, { reason: cancelReason.value.trim() })
-      toast.success('Request cancelled.')
-      cancelOpen.value = false
-      loadMyRequests(false, true)
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : 'Failed to cancel request.')
-    } finally { cancelLoading.value = false }
-  }
+  const myRequestsSource: ServerDataOptions<MaintenanceRequest> =
+    createCursorSource<MaintenanceRequest>({
+      endpoint: '/maintenance-requests',
+      baseParams: { created_by: auth.user?.id ?? 0, sort: 'created_at:desc' },
+    })
 
   // ── Create ────────────────────────────────────────────────────────────────────
 
@@ -198,7 +78,7 @@ export function useMaintenanceRequests() {
       toast.success('Maintenance request submitted.')
       confirmCreateOpen.value = false
       closeCreate()
-      loadMyRequests(false, true)
+      // The caller refreshes its My Requests <Table> via tableRef.refresh().
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) {
         const first = Object.values(e.validationErrors)[0]?.[0]
@@ -219,12 +99,9 @@ export function useMaintenanceRequests() {
   }
 
   return {
-    allMr, loadAllRequests,
-    ar, loadAwaiting,
-    mr, loadMyRequests,
-    approveTarget, approveOpen, approveLoading, openApprove, doApprove,
-    rejectTarget, rejectOpen, rejectLoading, rejectReason, openReject, doReject,
-    cancelTarget, cancelOpen, cancelLoading, cancelReason, openCancel, doCancel,
+    allMrSource,
+    awaitingSource,
+    myRequestsSource,
     assetSearch,
     createOpen, confirmCreateOpen, createLoading, createPriority, createDescription,
     attachFiles, addFiles, removeFile,
