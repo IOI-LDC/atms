@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/app/AppLayout.vue'
-import MrListTable from '@/components/app/MrListTable.vue'
+import AppDataTable from '@/components/app/AppDataTable.vue'
 import { Button } from '@/components/ui/button'
 import { FileInput } from '@/components/ui/file-input'
 import {
@@ -18,14 +18,18 @@ import {
 } from '@/components/ui/select'
 import { useAuthStore } from '@/stores/auth.store'
 import { useMaintenanceRequests } from '@/composables/useMaintenanceRequests'
-import { formatBytes } from '@/lib/displayHelpers'
+import { mrColumns, mrFilterOptions } from '@/lib/mrColumns'
+import type { MaintenanceRequest } from '@/types'
+import {
+  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, mrTypeLabel, fmtDate, formatBytes,
+} from '@/lib/displayHelpers'
 
-const auth   = useAuthStore()
 const route  = useRoute()
 const router = useRouter()
+const auth   = useAuthStore()
 
 const {
-  allMrSource, awaitingSource, myRequestsSource,
+  myRequests, awaiting, allRequests,
   assetSearch,
   createOpen, confirmCreateOpen, createLoading, createPriority, createDescription,
   attachFiles, addFiles, removeFile,
@@ -34,7 +38,6 @@ const {
 } = useMaintenanceRequests()
 
 const fileInput = ref<InstanceType<typeof FileInput> | null>(null)
-const myRequestsTable = ref<InstanceType<typeof MrListTable> | null>(null)
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
@@ -51,9 +54,26 @@ const activeTab = computed(() => {
   return tabDefs.value.some(d => d.key === t) ? t! : (tabDefs.value[0]?.key ?? '')
 })
 
+// Active tab's data slice (rows + loading + loader + copy), derived per tab.
+const activeSlice = computed(() => {
+  if (activeTab.value === 'pending-approval') return {
+    rows: awaiting.rows.value, loading: awaiting.loading.value, load: awaiting.load,
+    emptyText: 'No requests awaiting approval.', label: 'Requests awaiting approval',
+  }
+  if (activeTab.value === 'all-requests') return {
+    rows: allRequests.rows.value, loading: allRequests.loading.value, load: allRequests.load,
+    emptyText: 'No maintenance requests found.', label: 'All maintenance requests',
+  }
+  return {
+    rows: myRequests.rows.value, loading: myRequests.loading.value, load: myRequests.load,
+    emptyText: "You haven't submitted any requests yet.", label: 'My maintenance requests',
+  }
+})
+
 watch(activeTab, (tab) => {
   if (tab && route.query.tab !== tab) router.replace({ path: route.path, query: { tab } })
 })
+watch(activeTab, () => { activeSlice.value.load() }, { immediate: true })
 
 // ── Handle ?action=new from sidebar "New Request" link ────────────────────────
 
@@ -64,11 +84,8 @@ watch(() => route.query.action, (action) => {
   }
 }, { immediate: true })
 
-// ── Create: refresh My Requests table after success ───────────────────────────
-
-async function submitCreate() {
-  await doCreate()
-  myRequestsTable.value?.refresh()
+function goDetail(payload: { row: MaintenanceRequest }) {
+  router.push(`/maintenance/requests/${payload.row.id}`)
 }
 </script>
 
@@ -97,25 +114,47 @@ async function submitCreate() {
         </RouterLink>
       </div>
 
-      <MrListTable
-        v-if="activeTab === 'my-requests'"
-        ref="myRequestsTable"
-        :source="myRequestsSource"
-        empty-text="You haven't submitted any requests yet."
-        label="My maintenance requests"
-      />
-      <MrListTable
-        v-else-if="activeTab === 'pending-approval'"
-        :source="awaitingSource"
-        empty-text="No requests awaiting approval."
-        label="Requests awaiting approval"
-      />
-      <MrListTable
-        v-else-if="activeTab === 'all-requests'"
-        :source="allMrSource"
-        empty-text="No maintenance requests found."
-        label="All maintenance requests"
-      />
+      <AppDataTable
+        :key="activeTab"
+        :rows="activeSlice.rows"
+        :columns="mrColumns"
+        :filter-options="mrFilterOptions"
+        :empty-text="activeSlice.emptyText"
+        :loading="activeSlice.loading"
+        :label="activeSlice.label"
+        @row-click="goDetail"
+      >
+        <template #cell="{ column, row, value }">
+          <RouterLink
+            v-if="column.field === 'number'"
+            :to="`/maintenance/requests/${row.id}`"
+            class="table-link"
+          >{{ row.number }}</RouterLink>
+
+          <span v-else-if="column.field === 'asset'" class="table-cell-stack">
+            <span class="table-cell-primary">{{ row.asset?.name }}</span>
+            <span class="table-cell-secondary">{{ row.asset?.erp_asset_code }}</span>
+          </span>
+
+          <span v-else-if="column.field === 'priority'" :class="priorityClass(row.priority)">
+            {{ priorityLabel(row.priority) }}
+          </span>
+
+          <span v-else-if="column.field === 'status'" :class="mrStatusClass(row.status)">
+            {{ mrStatusLabel(row.status) }}
+          </span>
+
+          <span v-else-if="column.field === 'type'">{{ mrTypeLabel(row.type) }}</span>
+
+          <span v-else-if="column.field === 'created_at'">{{ fmtDate(row.created_at) }}</span>
+
+          <span v-else-if="column.field === 'description'" class="table-cell-truncate">
+            {{ row.description ?? '—' }}
+          </span>
+
+          <template v-else>{{ value }}</template>
+        </template>
+      </AppDataTable>
 
     </div>
   </AppLayout>
@@ -197,7 +236,7 @@ async function submitCreate() {
       </DialogHeader>
       <DialogFooter>
         <Button variant="outline" :disabled="createLoading" @click="confirmCreateOpen = false">Back</Button>
-        <Button :disabled="createLoading" @click="submitCreate">
+        <Button :disabled="createLoading" @click="doCreate">
           {{ createLoading ? 'Submitting…' : 'Create Request' }}
         </Button>
       </DialogFooter>

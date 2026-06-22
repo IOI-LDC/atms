@@ -6,15 +6,17 @@ import type {
   Priority,
 } from '@/types'
 import { mrStatusLabel, mrTypeLabel, priorityLabel } from '@/lib/displayHelpers'
+import type { FilterOption } from '@/lib/dataTableSource'
+
+export type { FilterOption }
 
 /**
  * Column definitions shared by all Maintenance Request list tabs.
  *
  * Sortable fields are limited to the backend whitelist (created_at, priority,
  * status). Cell content is rendered in the view's `#cell` slot; this only
- * declares structure. Select filters use fixed option lists (see
- * `mrFilterOptions`) because, in server mode, the table's built-in select
- * derives options from loaded rows only — incomplete for small fixed enums.
+ * declares structure. Select filters use fixed option lists (`mrFilterOptions`)
+ * so the dropdowns show the full enum regardless of what's currently loaded.
  */
 export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
   { field: 'number', header: 'Request', sortable: false },
@@ -26,13 +28,8 @@ export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
   { field: 'description', header: 'Description', sortable: false },
 ]
 
-export interface FilterOption {
-  value: string
-  label: string
-}
-
 /**
- * Fixed option lists for the MR select filters, consumed by the view's
+ * Fixed option lists for the MR select filters, consumed by AppDataTable's
  * `#header-filter` slot. Labels reuse displayHelpers (single source of truth).
  */
 export const mrFilterOptions: Record<string, FilterOption[]> = {

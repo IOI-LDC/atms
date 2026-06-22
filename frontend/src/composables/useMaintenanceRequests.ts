@@ -1,39 +1,49 @@
 import { ref, computed } from 'vue'
+import type { Ref } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
 import { useAssetSearch } from './useAssetSearch'
-import { createCursorSource } from '@/lib/dataTableSource'
+import { fetchList } from '@/lib/dataTableSource'
 import type { MaintenanceRequest } from '@/types'
-import type { ServerDataOptions } from '@ioi-dev/vue-table'
+
+/** A client-mode list slice: rows + loading + a one-shot (cacheable) loader. */
+function useFetchList<T>(endpoint: string, baseParams: Record<string, string | number>) {
+  const rows = ref<T[]>([]) as Ref<T[]>
+  const loading = ref(false)
+  const loaded = ref(false)
+
+  async function load(force = false) {
+    if (loaded.value && !force) return
+    loading.value = true
+    try {
+      rows.value = await fetchList<T>(endpoint, baseParams)
+      loaded.value = true
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return { rows, loading, load }
+}
 
 export function useMaintenanceRequests() {
   const auth = useAuthStore()
+  const me = auth.user?.id ?? 0
 
-  // ── List data sources (ioi-vue-table server mode) ─────────────────────────────
-  // Each tab renders its own <Table> with one of these as :server-options. The
-  // table owns rows + cursor + loading; this composable only describes the
-  // endpoint + fixed base params (tab semantics). See lib/dataTableSource.ts.
-  // Inline approve/reject/cancel were removed — all actions live on the detail
-  // page (useMaintenanceRequestDetail).
-
-  const allMrSource: ServerDataOptions<MaintenanceRequest> =
-    createCursorSource<MaintenanceRequest>({
-      endpoint: '/maintenance-requests',
-      baseParams: { sort: 'created_at:desc' },
-    })
-
-  const awaitingSource: ServerDataOptions<MaintenanceRequest> =
-    createCursorSource<MaintenanceRequest>({
-      endpoint: '/maintenance-requests',
-      baseParams: { status: 'pending_review', sort: 'created_at:asc' },
-    })
-
-  const myRequestsSource: ServerDataOptions<MaintenanceRequest> =
-    createCursorSource<MaintenanceRequest>({
-      endpoint: '/maintenance-requests',
-      baseParams: { created_by: auth.user?.id ?? 0, sort: 'created_at:desc' },
-    })
+  // Each tab fetches its slice once (client mode); the table then sorts,
+  // filters and searches in memory. baseParams encode the tab's fixed semantics.
+  const myRequests = useFetchList<MaintenanceRequest>('/maintenance-requests', {
+    created_by: me,
+    sort: 'created_at:desc',
+  })
+  const awaiting = useFetchList<MaintenanceRequest>('/maintenance-requests', {
+    status: 'pending_review',
+    sort: 'created_at:asc',
+  })
+  const allRequests = useFetchList<MaintenanceRequest>('/maintenance-requests', {
+    sort: 'created_at:desc',
+  })
 
   // ── Create ────────────────────────────────────────────────────────────────────
 
@@ -78,7 +88,7 @@ export function useMaintenanceRequests() {
       toast.success('Maintenance request submitted.')
       confirmCreateOpen.value = false
       closeCreate()
-      // The caller refreshes its My Requests <Table> via tableRef.refresh().
+      await myRequests.load(true) // refresh My Requests so the new one appears
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) {
         const first = Object.values(e.validationErrors)[0]?.[0]
@@ -99,9 +109,7 @@ export function useMaintenanceRequests() {
   }
 
   return {
-    allMrSource,
-    awaitingSource,
-    myRequestsSource,
+    myRequests, awaiting, allRequests,
     assetSearch,
     createOpen, confirmCreateOpen, createLoading, createPriority, createDescription,
     attachFiles, addFiles, removeFile,

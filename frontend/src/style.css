@@ -724,6 +724,33 @@
   color: var(--muted-foreground);
 }
 
+.table-cell-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── DataTable shell (ioi-vue-table) ── */
+
+.app-data-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.data-table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.data-table-search {
+  max-width: 20rem;
+}
+
+.table-filter-trigger {
+  height: 1.75rem;
+  font-size: 0.8125rem;
+}
+
 .table-cell-actions {
   white-space: nowrap;
   text-align: right;

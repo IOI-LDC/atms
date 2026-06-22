@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/app/AppLayout.vue'
-import { Button } from '@/components/ui/button'
+import AppDataTable from '@/components/app/AppDataTable.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWorkOrders } from '@/composables/useWorkOrders'
+import { woColumns, woFilterOptions } from '@/lib/woColumns'
+import type { WorkOrder } from '@/types'
 import { woStatusClass, woStatusLabel, priorityClass, priorityLabel, fmtDate } from '@/lib/displayHelpers'
 
 const route  = useRoute()
 const router = useRouter()
 const auth   = useAuthStore()
 
-const { myWo, loadMyWorkOrders, all, loadAll, active, loadActive, completed, loadCompleted, closed, loadClosed } = useWorkOrders()
+const { myWorkOrders, all, open, inProgress, completed, closed } = useWorkOrders()
 
 // ── Tabs (role-based) ─────────────────────────────────────────────────────────
 
 const tabDefs = computed(() => {
   const tabs: { key: string; label: string }[] = []
-  if (auth.isTechnician) tabs.push({ key: 'my-work-orders', label: 'My Work Orders' })
-  if (auth.isAdminOrManager) tabs.push({ key: 'all', label: 'All' })
-  tabs.push({ key: 'active', label: 'Active' })
+  if (auth.isTechnician)      tabs.push({ key: 'my-work-orders', label: 'My Work Orders' })
+  if (auth.isAdminOrManager)  tabs.push({ key: 'all', label: 'All' })
+  tabs.push({ key: 'open', label: 'Open' })
+  tabs.push({ key: 'in-progress', label: 'In Progress' })
   tabs.push({ key: 'completed', label: 'Completed' })
   tabs.push({ key: 'closed', label: 'Closed' })
   return tabs
@@ -27,17 +30,29 @@ const tabDefs = computed(() => {
 
 const activeTab = computed(() => {
   const t = route.query.tab as string | undefined
-  return tabDefs.value.some(d => d.key === t) ? t! : (tabDefs.value[0]?.key ?? 'active')
+  return tabDefs.value.some(d => d.key === t) ? t! : (tabDefs.value[0]?.key ?? 'open')
+})
+
+const activeSlice = computed(() => {
+  switch (activeTab.value) {
+    case 'my-work-orders': return { rows: myWorkOrders.rows.value, loading: myWorkOrders.loading.value, load: myWorkOrders.load, emptyText: 'No work orders assigned to you.', label: 'My work orders' }
+    case 'all':            return { rows: all.rows.value, loading: all.loading.value, load: all.load, emptyText: 'No work orders found.', label: 'All work orders' }
+    case 'open':           return { rows: open.rows.value, loading: open.loading.value, load: open.load, emptyText: 'No open work orders.', label: 'Open work orders' }
+    case 'in-progress':    return { rows: inProgress.rows.value, loading: inProgress.loading.value, load: inProgress.load, emptyText: 'No work orders in progress.', label: 'Work orders in progress' }
+    case 'completed':      return { rows: completed.rows.value, loading: completed.loading.value, load: completed.load, emptyText: 'No work orders awaiting closure.', label: 'Completed work orders' }
+    case 'closed':         return { rows: closed.rows.value, loading: closed.loading.value, load: closed.load, emptyText: 'No closed work orders yet.', label: 'Closed work orders' }
+    default:               return { rows: open.rows.value, loading: open.loading.value, load: open.load, emptyText: 'No open work orders.', label: 'Open work orders' }
+  }
 })
 
 watch(activeTab, (tab) => {
   if (tab && route.query.tab !== tab) router.replace({ path: route.path, query: { tab } })
-  if (tab === 'my-work-orders') loadMyWorkOrders()
-  if (tab === 'all')            loadAll()
-  if (tab === 'active')         loadActive()
-  if (tab === 'completed')      loadCompleted()
-  if (tab === 'closed')         loadClosed()
-}, { immediate: true })
+})
+watch(activeTab, () => { activeSlice.value.load() }, { immediate: true })
+
+function goDetail(payload: { row: WorkOrder }) {
+  router.push(`/work-orders/${payload.row.id}`)
+}
 </script>
 
 <template>
@@ -59,220 +74,50 @@ watch(activeTab, (tab) => {
           :class="['view-tab', activeTab === tab.key ? 'view-tab-active' : 'view-tab-normal']"
         >
           {{ tab.label }}
-          <span v-if="tab.key === 'completed' && completed.items.value.length > 0" class="view-tab-count">
-            {{ completed.items.value.length }}
-          </span>
         </RouterLink>
       </div>
 
-      <!-- ── My Work Orders (Technician) ── -->
-      <template v-if="activeTab === 'my-work-orders'">
-        <div v-if="myWo.loading.value" class="loading-state">Loading…</div>
-        <div v-else-if="myWo.error.value" class="error-state">{{ myWo.error.value }}</div>
-        <template v-else>
-          <div v-if="myWo.items.value.length === 0" class="empty-state">No work orders assigned to you.</div>
-          <div v-else class="table-container">
-            <table class="dense-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Asset</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Started</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in myWo.items.value" :key="item.id" class="table-row-clickable" @click="router.push(`/work-orders/${item.id}`)">
-                  <td class="table-cell-mono">{{ item.number }}</td>
-                  <td>
-                    <div class="table-cell-primary">{{ item.asset.name }}</div>
-                    <div class="table-cell-secondary">{{ item.asset.erp_asset_code }}</div>
-                  </td>
-                  <td><span :class="priorityClass(item.priority)">{{ priorityLabel(item.priority) }}</span></td>
-                  <td><span :class="woStatusClass(item.status)">{{ woStatusLabel(item.status) }}</span></td>
-                  <td>{{ fmtDate(item.started_at) }}</td>
-                  <td>{{ fmtDate(item.created_at) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="myWo.nextCursor.value" class="load-more-row">
-            <Button variant="outline" size="sm" :disabled="myWo.loadingMore.value" @click="loadMyWorkOrders(true)">
-              {{ myWo.loadingMore.value ? 'Loading…' : 'Load more' }}
-            </Button>
-          </div>
-        </template>
-      </template>
+      <AppDataTable
+        :key="activeTab"
+        :rows="activeSlice.rows"
+        :columns="woColumns"
+        :filter-options="woFilterOptions"
+        :empty-text="activeSlice.emptyText"
+        :loading="activeSlice.loading"
+        :label="activeSlice.label"
+        @row-click="goDetail"
+      >
+        <template #cell="{ column, row, value }">
+          <RouterLink
+            v-if="column.field === 'number'"
+            :to="`/work-orders/${row.id}`"
+            class="table-link"
+          >{{ row.number }}</RouterLink>
 
-      <!-- ── All ── -->
-      <template v-else-if="activeTab === 'all'">
-        <div v-if="all.loading.value" class="loading-state">Loading…</div>
-        <div v-else-if="all.error.value" class="error-state">{{ all.error.value }}</div>
-        <template v-else>
-          <div v-if="all.items.value.length === 0" class="empty-state">No work orders found.</div>
-          <div v-else class="table-container">
-            <table class="dense-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Asset</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Assigned To</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in all.items.value" :key="item.id" class="table-row-clickable" @click="router.push(`/work-orders/${item.id}`)">
-                  <td class="table-cell-mono">{{ item.number }}</td>
-                  <td>
-                    <div class="table-cell-primary">{{ item.asset.name }}</div>
-                    <div class="table-cell-secondary">{{ item.asset.erp_asset_code }}</div>
-                  </td>
-                  <td><span :class="priorityClass(item.priority)">{{ priorityLabel(item.priority) }}</span></td>
-                  <td><span :class="woStatusClass(item.status)">{{ woStatusLabel(item.status) }}</span></td>
-                  <td>{{ item.assigned_to?.name ?? '—' }}</td>
-                  <td>{{ fmtDate(item.created_at) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="all.nextCursor.value" class="load-more-row">
-            <Button variant="outline" size="sm" :disabled="all.loadingMore.value" @click="loadAll(true)">
-              {{ all.loadingMore.value ? 'Loading…' : 'Load more' }}
-            </Button>
-          </div>
-        </template>
-      </template>
+          <span v-else-if="column.field === 'asset'" class="table-cell-stack">
+            <span class="table-cell-primary">{{ row.asset?.name }}</span>
+            <span class="table-cell-secondary">{{ row.asset?.erp_asset_code }}</span>
+          </span>
 
-      <!-- ── Active ── -->
-      <template v-else-if="activeTab === 'active'">
-        <div v-if="active.loading.value" class="loading-state">Loading…</div>
-        <div v-else-if="active.error.value" class="error-state">{{ active.error.value }}</div>
-        <template v-else>
-          <div v-if="active.items.value.length === 0" class="empty-state">No active work orders.</div>
-          <div v-else class="table-container">
-            <table class="dense-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Asset</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Assigned To</th>
-                  <th>Started</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in active.items.value" :key="item.id" class="table-row-clickable" @click="router.push(`/work-orders/${item.id}`)">
-                  <td class="table-cell-mono">{{ item.number }}</td>
-                  <td>
-                    <div class="table-cell-primary">{{ item.asset.name }}</div>
-                    <div class="table-cell-secondary">{{ item.asset.erp_asset_code }}</div>
-                  </td>
-                  <td><span :class="priorityClass(item.priority)">{{ priorityLabel(item.priority) }}</span></td>
-                  <td><span :class="woStatusClass(item.status)">{{ woStatusLabel(item.status) }}</span></td>
-                  <td>{{ item.assigned_to?.name ?? '—' }}</td>
-                  <td>{{ fmtDate(item.started_at) }}</td>
-                  <td>{{ fmtDate(item.created_at) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="active.nextCursor.value" class="load-more-row">
-            <Button variant="outline" size="sm" :disabled="active.loadingMore.value" @click="loadActive(true)">
-              {{ active.loadingMore.value ? 'Loading…' : 'Load more' }}
-            </Button>
-          </div>
-        </template>
-      </template>
+          <span v-else-if="column.field === 'priority'" :class="priorityClass(row.priority)">
+            {{ priorityLabel(row.priority) }}
+          </span>
 
-      <!-- ── Completed ── -->
-      <template v-else-if="activeTab === 'completed'">
-        <div v-if="completed.loading.value" class="loading-state">Loading…</div>
-        <div v-else-if="completed.error.value" class="error-state">{{ completed.error.value }}</div>
-        <template v-else>
-          <div v-if="completed.items.value.length === 0" class="empty-state">No work orders awaiting closure.</div>
-          <div v-else class="table-container">
-            <table class="dense-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Asset</th>
-                  <th>Priority</th>
-                  <th>Assigned To</th>
-                  <th>Completed</th>
-                  <th>Created</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in completed.items.value" :key="item.id" class="table-row-clickable" @click="router.push(`/work-orders/${item.id}`)">
-                  <td class="table-cell-mono">{{ item.number }}</td>
-                  <td>
-                    <div class="table-cell-primary">{{ item.asset.name }}</div>
-                    <div class="table-cell-secondary">{{ item.asset.erp_asset_code }}</div>
-                  </td>
-                  <td><span :class="priorityClass(item.priority)">{{ priorityLabel(item.priority) }}</span></td>
-                  <td>{{ item.assigned_to?.name ?? '—' }}</td>
-                  <td>{{ fmtDate(item.completed_at) }}</td>
-                  <td>{{ fmtDate(item.created_at) }}</td>
-                  <td class="table-cell-actions">
-                    <Button size="sm" @click.stop="router.push(`/work-orders/${item.id}`)">Review & Close</Button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="completed.nextCursor.value" class="load-more-row">
-            <Button variant="outline" size="sm" :disabled="completed.loadingMore.value" @click="loadCompleted(true)">
-              {{ completed.loadingMore.value ? 'Loading…' : 'Load more' }}
-            </Button>
-          </div>
-        </template>
-      </template>
+          <span v-else-if="column.field === 'status'" :class="woStatusClass(row.status)">
+            {{ woStatusLabel(row.status) }}
+          </span>
 
-      <!-- ── Closed ── -->
-      <template v-else-if="activeTab === 'closed'">
-        <div v-if="closed.loading.value" class="loading-state">Loading…</div>
-        <div v-else-if="closed.error.value" class="error-state">{{ closed.error.value }}</div>
-        <template v-else>
-          <div v-if="closed.items.value.length === 0" class="empty-state">No closed work orders yet.</div>
-          <div v-else class="table-container">
-            <table class="dense-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Asset</th>
-                  <th>Priority</th>
-                  <th>Assigned To</th>
-                  <th>Closed</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in closed.items.value" :key="item.id" class="table-row-clickable" @click="router.push(`/work-orders/${item.id}`)">
-                  <td class="table-cell-mono">{{ item.number }}</td>
-                  <td>
-                    <div class="table-cell-primary">{{ item.asset.name }}</div>
-                    <div class="table-cell-secondary">{{ item.asset.erp_asset_code }}</div>
-                  </td>
-                  <td><span :class="priorityClass(item.priority)">{{ priorityLabel(item.priority) }}</span></td>
-                  <td>{{ item.assigned_to?.name ?? '—' }}</td>
-                  <td>{{ fmtDate(item.closed_at) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="closed.nextCursor.value" class="load-more-row">
-            <Button variant="outline" size="sm" :disabled="closed.loadingMore.value" @click="loadClosed(true)">
-              {{ closed.loadingMore.value ? 'Loading…' : 'Load more' }}
-            </Button>
-          </div>
+          <span v-else-if="column.field === 'assigned_to'">
+            {{ row.assigned_to?.name ?? '—' }}
+          </span>
+
+          <span v-else-if="column.field === 'started_at'">{{ fmtDate(row.started_at) }}</span>
+
+          <span v-else-if="column.field === 'created_at'">{{ fmtDate(row.created_at) }}</span>
+
+          <template v-else>{{ value }}</template>
         </template>
-      </template>
+      </AppDataTable>
 
     </div>
   </AppLayout>
