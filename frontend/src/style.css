@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn-vue/tailwind.css";
@@ -66,6 +67,12 @@
   --shadow-lg:  0px 2px 3px 0px hsl(211.6316 106.8326% 78.5620% / 0.16), 0px 4px 6px -1px hsl(211.6316 106.8326% 78.5620% / 0.16);
   --shadow-xl:  0px 2px 3px 0px hsl(211.6316 106.8326% 78.5620% / 0.16), 0px 8px 10px -1px hsl(211.6316 106.8326% 78.5620% / 0.16);
   --shadow-2xl: 0px 2px 3px 0px hsl(211.6316 106.8326% 78.5620% / 0.40);
+
+  /* App chrome layout tokens (still consumed by pre-Task-4 selectors) */
+  --nav-height: 3.5rem;
+  --sidebar-width: 15rem;
+  --sidebar-width-collapsed: 3.75rem;
+  --atms-rose: oklch(0.370 0.088 12);
 }
 
 @theme inline {
