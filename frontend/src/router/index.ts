@@ -127,7 +127,7 @@ const router = createRouter({
       path: '/settings/system',
       name: 'settings-system',
       component: () => import('@/views/admin/SystemSettingsView.vue'),
-      meta: { requiresAdminOrManager: true },
+      meta: { requiresAdmin: true },
     },
     {
       path: '/settings/audit-logs',

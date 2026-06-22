@@ -54,8 +54,8 @@ watch(() => route.query.action, (action) => {
 
 const tabDefs = computed(() => {
   const t: { key: string; label: string }[] = []
-  if (auth.isAdminOrManager) t.push({ key: 'pending-approval', label: 'Pending Approval' })
   t.push({ key: 'my-requests', label: 'My Requests' })
+  if (auth.isAdminOrManager) t.push({ key: 'pending-approval', label: 'Pending Approval' })
   if (auth.isAdminOrManager) t.push({ key: 'all-requests', label: 'All Requests' })
   return t
 })

@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   LayoutDashboard, ClipboardList, Wrench, HardDrive, Package, Settings,
-  ChevronUp,
+  Zap, ChevronUp,
 } from '@lucide/vue'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -47,8 +47,8 @@ const navTree: NavNodeDef[] = [
     kind: 'group', label: 'Maintenance Requests', icon: ClipboardList, visibleTo: () => true,
     items: [
       { label: 'New Request', to: '/maintenance?action=new', action: true, visibleTo: () => true },
-      { label: 'Pending Approval', to: '/maintenance?tab=pending-approval', visibleTo: (r) => r.isAdminOrManager },
       { label: 'My Requests', to: '/maintenance?tab=my-requests', visibleTo: () => true },
+      { label: 'Pending Approval', to: '/maintenance?tab=pending-approval', visibleTo: (r) => r.isAdminOrManager },
       { label: 'All Requests', to: '/maintenance?tab=all-requests', visibleTo: (r) => r.isAdminOrManager },
     ],
   },
@@ -57,22 +57,22 @@ const navTree: NavNodeDef[] = [
     visibleTo: (r) => r.isAdminOrManager || r.isTechnician,
     items: [
       { label: 'My Work Orders', to: '/work-orders?tab=my-work-orders', visibleTo: (r) => r.isTechnician },
-      { label: 'All', to: '/work-orders?tab=all', visibleTo: (r) => r.isAdminOrManager },
+      { label: 'All Work Orders', to: '/work-orders?tab=all', visibleTo: (r) => r.isAdminOrManager },
       { label: 'Active', to: '/work-orders?tab=active', visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
       { label: 'Completed', to: '/work-orders?tab=completed', visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
       { label: 'Closed', to: '/work-orders?tab=closed', visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
     ],
   },
   { kind: 'link', label: 'Assets', to: '/assets', icon: HardDrive, visibleTo: (r) => r.isAdminOrManager || r.isTechnician || r.isLogistics },
-  { kind: 'link', label: 'Parts', to: '/parts', icon: Package, visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
+  { kind: 'link', label: 'Parts Reference', to: '/parts', icon: Package, visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
+  { kind: 'link', label: 'PM Rules', to: '/settings/pm-rules', icon: Zap, visibleTo: (r) => r.isAdminOrManager },
   {
-    kind: 'group', label: 'Settings', icon: Settings, visibleTo: (r) => r.isAdminOrManager,
+    kind: 'group', label: 'Settings', icon: Settings, visibleTo: (r) => r.isAdmin,
     items: [
-      { label: 'PM Rules', to: '/settings/pm-rules', visibleTo: (r) => r.isAdminOrManager },
+      { label: 'Users & Access', to: '/settings/users', visibleTo: (r) => r.isAdmin },
       { label: 'Lists & Dropdowns', to: '/settings/lists', visibleTo: (r) => r.isAdmin },
-      { label: 'Users', to: '/settings/users', visibleTo: (r) => r.isAdmin },
       { label: 'Locations', to: '/settings/locations', visibleTo: (r) => r.isAdmin },
-      { label: 'System', to: '/settings/system', visibleTo: (r) => r.isAdminOrManager },
+      { label: 'System & Integration', to: '/settings/system', visibleTo: (r) => r.isAdmin },
       { label: 'Activity Logs', to: '/settings/audit-logs', visibleTo: (r) => r.isAdmin },
     ],
   },
@@ -120,7 +120,7 @@ function isGroupActive(group: DisplayGroup): boolean {
   if (group.items.some((i) => isLinkActive(i.to))) return true
   if (group.label === 'Maintenance Requests' && route.path === '/maintenance') return true
   if (group.label === 'Work Orders' && route.path === '/work-orders') return true
-  if (group.label === 'Settings' && route.path.startsWith('/settings')) return true
+  if (group.label === 'Settings' && route.path.startsWith('/settings') && !route.path.startsWith('/settings/pm-rules')) return true
   return false
 }
 async function handleLogout() { await auth.logout() }
