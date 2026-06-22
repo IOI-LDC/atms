@@ -175,13 +175,13 @@ async function handleLogout() { await auth.logout() }
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <SidebarMenuButton size="lg" :aria-label="`User menu for ${auth.user?.name}`">
+              <SidebarMenuButton size="lg" :aria-label="`User menu for ${auth.user?.name ?? 'user'}`">
                 <Avatar><AvatarFallback>{{ auth.userInitials }}</AvatarFallback></Avatar>
                 <div class="sidebar-user-info">
                   <span class="sidebar-user-name">{{ auth.user?.name }}</span>
                   <span class="sidebar-user-role">{{ auth.user?.role?.name }}</span>
                 </div>
-                <ChevronUp class="ml-auto" />
+                <ChevronUp class="sidebar-user-chevron" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="end">
