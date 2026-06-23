@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CompanySettingController;
 use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Admin\ErpSyncController;
 use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
@@ -49,6 +50,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/employees', [EmployeeController::class, 'index']);
         Route::post('/employees/import', [EmployeeController::class, 'import']);
         Route::post('/employees/{employee}/provision-user', [EmployeeController::class, 'provisionUser']);
+
+        Route::get('/erp/sync-jobs', [ErpSyncController::class, 'index']);
+        Route::post('/erp/sync-assets', [ErpSyncController::class, 'syncAssets']);
+        Route::post('/erp/sync-parts', [ErpSyncController::class, 'syncParts']);
 
         Route::get('/audit-logs', [AuditLogController::class, 'index']);
 

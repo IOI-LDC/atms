@@ -196,12 +196,16 @@ Examples:
 - `CloseWorkOrder`
 - `RecordAssetMeterReading`
 - `UpdateAssetLocation`
+- `SyncErpAssets`
+- `SyncErpParts`
 ## Background Jobs
 
-PM rule evaluation should run as jobs.
+ERP sync and PM rule evaluation should run as jobs.
 
 Jobs:
 
+- `SyncErpAssetsJob`
+- `SyncErpPartsJob`
 - `EvaluatePmRulesJob`
 - `GeneratePmRequestsJob`
 - `CleanupTemporaryUploadsJob`
@@ -214,15 +218,19 @@ MVP.
 
 Laravel Scheduler should trigger:
 
+- ERP asset sync
+- ERP parts sync
 - PM rule evaluation
 - housekeeping jobs
 
 Default schedules in the `Africa/Tripoli` company timezone:
 
+- ERP asset sync: weekly
+- ERP parts sync: weekly
 - PM rule evaluation: daily
 
 Administrator may configure scheduled run times. Administrator and Maintenance
-Manager may trigger PM evaluation. Scheduled and manual jobs
+Manager may trigger manual ERP sync and PM evaluation. Scheduled and manual jobs
 must use overlap prevention.
 
 ## Deployment Pattern
