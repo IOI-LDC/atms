@@ -4,6 +4,7 @@
 .env
 backend/.env
 mock-erp/.env
+frontend--OLD
 
 backend/vendor/
 mock-erp/vendor/
@@ -12,3 +13,9 @@ backend/database/database.sqlite
 mock-erp/database/database.sqlite
 
 *.sqlite
+
+
+
+.kilo/plans
+CLAUDE.md
+session-*.md

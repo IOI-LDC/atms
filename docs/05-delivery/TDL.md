@@ -13,7 +13,8 @@
 ## Administration
 
 - [ ] Users list
-- [ ] User create/edit
+- [ ] User update PATCH API (name, email, role, active status)
+- [ ] Admin password reset API
 - [x] Roles setup (Task 4)
 - [x] Locations CRUD (Task 8)
 - [x] Master data CRUD (Task 8)
@@ -32,6 +33,8 @@
 
 - [x] Asset list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
 - [x] Asset detail API (Task 14 — role-scoped Resource)
+- [ ] Asset create POST API (manual creation — no ERP source)
+- [ ] Asset update PATCH API (operational fields + location with history)
 - [ ] Asset list UI
 - [ ] Asset detail UI
 - [x] Meter reading API (Task 8)
@@ -49,6 +52,7 @@
 - [ ] Parts list UI
 - [ ] Part detail UI
 - [x] Part attachments API (Task 12)
+- [ ] Part update PATCH API (local operational fields — ERP fields blocked)
 
 ## Maintenance Requests
 
@@ -60,6 +64,7 @@
 - [ ] Review MR UI
 - [x] Approve & create WO action (Task 9)
 - [x] Reject MR action (Task 9)
+- [ ] MR update PATCH API (description, priority, asset_id while pending_review)
 
 ## Work Orders
 

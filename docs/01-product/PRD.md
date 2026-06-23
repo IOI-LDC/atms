@@ -6,15 +6,14 @@ Asset Maintenance Tracking System (ATMS)
 
 ## Product Objective
 
-ATMS is a simple operational maintenance system that supports asset usage tracking, preventive maintenance, corrective maintenance, work order execution, and maintenance history. It integrates with the client ERP to read fixed assets and parts, while keeping a local operational copy for maintenance workflows.
+ATMS is a simple operational maintenance system that supports manual asset management, asset usage tracking, preventive maintenance, corrective maintenance, work order execution, and maintenance history. It integrates with the client ERP to read parts, while keeping a local operational copy for maintenance workflows. Assets are created and managed manually within ATMS — no ERP asset source exists for this client.
 
 ## Core Product Principle
-
-ERP remains the master system for official fixed assets and parts. ATMS is the operational maintenance layer.
+ERP remains the master system for parts. ATMS is the master system for assets
+and the operational maintenance layer.
 
 ERP owns:
 
-- Fixed asset master records
 - Parts master records
 - Capitalization
 - Disposal
@@ -24,6 +23,7 @@ ERP owns:
 
 ATMS owns:
 
+- Asset master records (fully managed in ATMS — no ERP asset source)
 - Asset usage readings
 - Asset physical location and location history
 - Preventive maintenance rules
@@ -63,8 +63,8 @@ The locked navigation is:
 
 ## In-Scope Summary
 
-- ERP fixed assets and parts integration
-- Local operational asset registry
+- ERP parts integration
+- Manual asset registry (create, update, manage locally)
 - Parts reference database
 - Asset usage tracking
 - Physical location tracking and history

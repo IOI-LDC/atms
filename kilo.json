@@ -1,0 +1,12 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "shadcn": {
+      "type": "local",
+      "command": ["npx", "-y", "shadcn@canary", "registry:mcp"],
+      "environment": {
+        "REGISTRY_URL": "https://tweakcn.com/r/themes/registry.json"
+      }
+    }
+  }
+}

@@ -372,6 +372,56 @@ Show a single asset.
 
 ---
 
+### POST `/api/assets`
+
+Create a new asset manually. Assets are not sourced from ERP for this client.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | string | required, max:255 |
+| `description` | string? | nullable |
+| `category` | string? | nullable, max:255 |
+| `serial_number` | string? | nullable, max:255 |
+| `model` | string? | nullable, max:255 |
+| `manufacturer` | string? | nullable, max:255 |
+| `operational_status` | string? | nullable, in:active,under_maintenance,down,inactive. Default: `active`. |
+| `current_location_id` | int? | nullable, exists:locations,id |
+
+**Response `201`:** `{ "data": { /* AssetResource */ } }`
+
+---
+
+### PATCH `/api/assets/{asset}`
+
+Update asset operational fields and location.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | string? | nullable, max:255 |
+| `description` | string? | nullable |
+| `category` | string? | nullable, max:255 |
+| `serial_number` | string? | nullable, max:255 |
+| `model` | string? | nullable, max:255 |
+| `manufacturer` | string? | nullable, max:255 |
+| `operational_status` | string? | nullable, in:active,under_maintenance,down,inactive |
+| `is_active` | boolean? | nullable |
+| `current_location_id` | int? | nullable, exists:locations,id |
+| `location_notes` | string? | nullable. Recorded in location history if location changes. |
+
+**Side effect:** If `current_location_id` differs from the current value, a location history record is created automatically (same as the dedicated location endpoint).
+
+**Response `200`:** `{ "data": { /* AssetResource */ } }`
+
+---
+
 ### GET `/api/assets/{asset}/meter-readings`
 
 List meter readings for an asset.
@@ -510,6 +560,28 @@ Show a single part. Non-admin/manager users receive `403 Forbidden` for inactive
 
 **Response `200`:** `PartResource`.
 **Error `403`:** Non-admin/manager attempting to view an inactive part.
+
+---
+
+### PATCH `/api/parts/{part}`
+
+Update local operational fields on a part. ERP-owned fields cannot be changed.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | string? | nullable, max:255 |
+| `description` | string? | nullable |
+| `unit_of_measure` | string? | nullable, max:50 |
+| `category` | string? | nullable, max:255 |
+| `is_active` | boolean? | nullable |
+
+**Blocked fields:** `erp_part_id`, `erp_part_code`, `erp_status`, `erp_raw_data`, `erp_last_synced_at` — returning 422 if any are present.
+
+**Response `200`:** `{ "data": { /* PartResource */ } }`
 
 ---
 
@@ -753,6 +825,28 @@ Cancel a pending review MR. Requester can cancel their own; Manager/Admin can ca
   "data": { /* updated MR */ }
 }
 ```
+
+---
+
+### PATCH `/api/maintenance-requests/{maintenanceRequest}`
+
+Update a pending maintenance request. Only the creator or Admin/Manager may update. Corrective MRs only — preventive MRs are system-generated and not editable.
+
+**Auth:** Required (creator of a corrective MR, or Admin/Manager)
+**Precondition:** MR must be `pending_review`
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `description` | string? | nullable |
+| `priority` | string? | nullable, in:low,medium,high,critical |
+| `asset_id` | int? | nullable, exists:assets,id |
+
+**Response `200`:** `{ "data": { /* MaintenanceRequestResource */ } }`
+
+**Error `409`:** MR is not in `pending_review` status.
+**Error `403`:** Unauthorized (not creator, not Admin/Manager, or MR is preventive).
 
 ---
 
@@ -1292,6 +1386,42 @@ Reactivate a previously deactivated user.
 **Auth:** Administrator only
 
 **Response `200`:** `{ "message": "User reactivated.", "data": { /* user */ } }`
+
+### PATCH `/api/admin/users/{user}`
+
+Update a user's details. Admin only. Cannot update own account through this endpoint.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | string? | nullable, max:255 |
+| `email` | string? | nullable, email, unique:users,email,{id} |
+| `role_id` | int? | nullable, exists:roles,id |
+| `is_active` | boolean? | nullable |
+
+**Response `200`:** `{ "data": { /* User object with role */ } }`
+**Error `422`:** Attempting to update yourself, or validation failure.
+
+---
+
+### POST `/api/admin/users/{user}/reset-password`
+
+Admin-initiated password reset. Destroys all sessions and tokens for the user in the same transaction. Admin cannot reset their own password.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `password` | string | required, min:8, confirmed |
+| `password_confirmation` | string | required with `password` |
+
+**Response `200`:** `{ "message": "Password reset successful." }`
+**Error `422`:** Attempting to reset your own password.
 
 ---
 

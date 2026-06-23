@@ -51,7 +51,7 @@ class AuthController extends Controller
 
         app(AuditLogger::class)->log('auth.login', $user);
 
-        return response()->json(['user' => $user]);
+        return response()->json(['user' => $user->load('role')]);
     }
 
     public function logout(Request $request): Response
@@ -71,7 +71,7 @@ class AuthController extends Controller
 
     public function me(): JsonResponse
     {
-        return response()->json(auth()->user());
+        return response()->json(['user' => auth()->user()->load('role')]);
     }
 
     public function activate(ActivateRequest $request, ActivateUser $action): JsonResponse

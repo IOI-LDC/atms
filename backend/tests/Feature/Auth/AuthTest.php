@@ -80,7 +80,7 @@ class AuthTest extends TestCase
         $this->actingAs($user)
             ->getJson('/api/auth/me')
             ->assertOk()
-            ->assertJsonPath('email', $user->email);
+            ->assertJsonPath('user.email', $user->email);
     }
 
     public function test_me_unauthenticated_returns_401(): void
