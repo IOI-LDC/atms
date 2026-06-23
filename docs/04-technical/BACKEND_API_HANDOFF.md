@@ -1112,7 +1112,7 @@ see [`BACKEND_API_REFERENCE.md`](./BACKEND_API_REFERENCE.md).
     to the log/fake transport — check the `api` container logs (or Laravel log)
     for the one-time links during development.
 
-15. **Assets are manually managed.** There is no ERP asset source for this client.
+15. **Assets are synced from LDC ERP.** Assets may also be created and managed within ATMS via `POST /api/assets` and `PATCH /api/assets/{asset}`.
     Admin/Manager create assets via `POST /api/assets` and update via
     `PATCH /api/assets/{asset}`. Updating `current_location_id` automatically
     records a location history entry.

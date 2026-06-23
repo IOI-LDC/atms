@@ -1,12 +1,15 @@
 # ERP Sync Design
 
+> **Status:** Replacing the former mock-erp development adapter with the real
+> LDC ERP integration. The mock-erp service and its Docker container have been
+> removed from the repository. The backend ERP sync pipeline (contract, actions,
+> jobs, routes, models, tests) remains and is being retargeted at LDC ERP.
+
 ## Principle
 
-ERP remains the source of truth for fixed assets and parts. ATMS maintains a local operational copy for workflow integrity, performance, search, attachments, history, and maintenance operations.
-
-The client ERP connection method is not yet confirmed. An HTTP API is currently
-the most likely integration method, but the final transport, authentication,
-credentials, and field mapping must not be assumed.
+LDC ERP remains the source of truth for fixed assets and parts. ATMS maintains a
+local operational copy for workflow integrity, performance, search, attachments,
+history, and maintenance operations.
 
 ## Sync Direction
 
@@ -16,76 +19,147 @@ Initial scope is read-only ERP integration:
 
 No ATMS write-back to ERP is included in MVP.
 
+## LDC ERP Connection
+
+LDC ERP exposes three HTTP endpoints that ATMS integrates with:
+
+| Endpoint | Purpose | Auth |
+|---|---|---|
+| **Token endpoint** | Acquire a bearer access token | Client credentials (sent in request body) |
+| **Assets endpoint** | List fixed-asset reference records | `Authorization: Bearer <token>` |
+| **Parts endpoint** | List parts reference records | `Authorization: Bearer <token>` |
+
+The token is **shared** — a single token acquired from the token endpoint
+authorises calls to both the assets and parts endpoints until it expires.
+
+### Token lifecycle
+
+1. ATMS POSTs client credentials to the token endpoint.
+2. LDC ERP returns an access token plus an expiry (e.g. `expires_in` seconds).
+3. ATMS caches the token (see [Token Management](#token-management)).
+4. ATMS uses the token as `Authorization: Bearer <token>` for assets/parts calls.
+5. When the token expires (or a 401 is received), ATMS re-acquires a fresh token.
+
+### Endpoint pagination
+
+The assets and parts endpoints must support cursor pagination with a
+configurable, server-limited page size, and an optional `updated_since`
+timestamp filter for incremental synchronization. The exact pagination shape
+(cursor field name, page-size parameter name) is confirmed in
+[Field Mapping](#field-mapping) once the endpoint contracts are finalised.
+
 ## ERP Adapter Boundary
 
-ATMS must access ERP data through an adapter contract. Sync jobs and local upsert
-logic must not depend directly on the mock ERP implementation or a specific
-client ERP transport.
+ATMS must access ERP data through an adapter contract. Sync jobs and local
+upsert logic depend only on the `App\Contracts\Erp\ErpSource` interface — never
+on a specific transport or vendor SDK.
 
-The adapter implementation must be selected through configuration. The initial
-implementations are:
+```
+config/erp.php  ──▶  LdcErpHttpSource implements ErpSource
+                              │
+                ┌─────────────┴─────────────┐
+                ▼                           ▼
+        SyncAssets (Action)         SyncParts (Action)
+                │                           │
+        SyncErpAssetsJob            SyncErpPartsJob
+        (weekly schedule)           (weekly schedule)
+                │                           │
+            Asset model                Part model
+            ErpSyncJob model           ErpSyncJob model
+```
 
-- Mock ERP HTTP API adapter for development and demos.
-- Real client ERP adapter after the connection method and field mapping are confirmed.
+### ErpSource contract
 
-The exact real ERP API contract remains unresolved.
+The contract is vendor-agnostic and stays stable regardless of backend:
 
-## Mock ERP Service
+```php
+interface ErpSource
+{
+    public function getAssets(?string $updatedSince = null, ?string $cursor = null, int $limit = 100): array;
+    public function getParts(?string $updatedSince = null, ?string $cursor = null, int $limit = 100): array;
+}
+```
 
-A separate lightweight mock ERP container will be shipped for local development
-and VPS demonstrations when the client ERP connection is unavailable.
+Both methods return `array{data: ExternalAssetData[]|ExternalPartData[], next_cursor: string|null}`.
 
-The mock ERP service will:
+### Implementation selection
 
-- Use a minimal Laravel 13 application running on PHP 8.4.
-- Use a dedicated, disposable SQLite database rebuilt from deterministic migrations and seed data.
-- Maintain mock asset and part source records in its own database tables.
-- Expose a small read-only HTTP API for listing and retrieving assets and parts.
-- Support deterministic seed data for repeatable demos and automated tests.
-- Expose only the basic ERP fields needed by the initial ATMS sync contract.
-- Be enabled through an explicit Docker Compose profile.
-- Be accessible only through the internal Docker network.
-- Have no management UI.
-- Provide no create, update, patch, or delete API endpoints.
-- Require a static service API key in an HTTP header configured through environment variables.
+The concrete implementation is bound in `AppServiceProvider`:
 
-Mock source records may be changed only through deterministic seed data or
-container initialization outside the API.
+```php
+$this->app->singleton(ErpSource::class, LdcErpHttpSource::class);
+```
 
-The service API key must not be committed to source control or written to logs.
+If a second ERP source is ever needed (e.g. a different division or a fallback),
+the binding can be made config-driven following the same pattern already used by
+`AccountEmailTransport` (config key selects the implementation).
 
-Mock ERP asset and part list endpoints use cursor pagination with a configurable,
-server-limited page size. They support an optional `updated_since` timestamp
-filter for incremental synchronization.
+## Token Management
 
-The final basic field contract must be confirmed separately before
-implementation.
+Token acquisition is the key difference from the former mock adapter (which used
+a static shared API-key header). LDC ERP requires a token-exchange step.
 
-## Synced Data
+### Acquisition
+
+`LdcErpHttpSource` POSTs the configured credentials to the token endpoint on
+first use (or after cache expiry / forced refresh) and stores the resulting
+bearer token in the Laravel cache.
+
+### Caching
+
+- The token is cached under a fixed cache key (e.g. `ldc-erp-token`).
+- Cache TTL is set slightly below the token's `expires_in` (e.g. `expires_in - 60s`)
+  to avoid using a token that is about to lapse mid-request.
+- The cache store is `database` (the same store already used by ATMS) so the
+  token is shared across the `api`, `queue`, and `scheduler` containers within
+  a single deployment.
+
+### Refresh on 401
+
+If LDC ERP returns `401 Unauthorized` for an assets/parts call, the adapter:
+
+1. Forgets the cached token.
+2. Re-acquires a fresh token.
+3. Retries the original request once.
+
+This handles the edge case where the cached token was revoked or expired early.
+
+### Secrets
+
+Client credentials (`client_id`, `client_secret`) must never be committed to
+source control or written to logs. They are supplied exclusively through
+environment variables and the `config/erp.php` file.
+
+## Field Mapping
+
+> **TODO — pending endpoint contracts.** The exact request/response field
+> names for the LDC ERP token, assets, and parts endpoints will be confirmed
+> when the endpoints are provided. The sections below describe the target shape
+> that the DTOs and sync actions already expect.
 
 ### Fixed Assets
 
-Initial mock ERP fields:
+ATMS expects the following mapped fields per asset record:
 
-- `id`
-- `code`
+- `id` — stable ERP asset identifier (used as the upsert key)
+- `code` — human-readable asset code
 - `name`
 - `description`
-- `serial_number`
 - `category`
-- `manufacturer`
+- `serial_number`
 - `model`
-- `status`
-- `updated_at`
+- `manufacturer`
+- `status` — maps to ATMS `erp_status`; `active` → `is_active = true`
+- `updated_at` — last-modified timestamp from ERP
 
-ATMS stores the full source record as the raw ERP payload in addition to mapping
-the required local fields.
+ATMS stores the full source record as the raw ERP payload (`erp_raw_data`) in
+addition to mapping the required local fields.
 
 ### Parts
 
-Initial mock ERP fields:
+ATMS expects the following mapped fields per part record:
 
-- `id`
+- `id` — stable ERP part identifier (used as the upsert key)
 - `code`
 - `name`
 - `description`
@@ -97,9 +171,16 @@ Initial mock ERP fields:
 ATMS stores the full source record as the raw ERP payload in addition to mapping
 the required local fields.
 
+### Mapping responsibility
+
+Field mapping (ERP JSON → `ExternalAssetData` / `ExternalPartData` DTO) lives
+entirely inside `LdcErpHttpSource`. The DTOs, actions, jobs, and models never see
+raw ERP JSON — only the normalised DTOs. This isolates vendor-specific shape
+changes to a single class.
+
 ## Local Operational Fields
 
-The following fields belong to ATMS and should not be overwritten by ERP sync:
+The following fields belong to ATMS and are never overwritten by ERP sync:
 
 - Current physical location
 - Location history
@@ -116,25 +197,28 @@ The following fields belong to ATMS and should not be overwritten by ERP sync:
 
 Frequency is configurable by Administrator. MVP defaults:
 
-- Assets: once per week in `Africa/Tripoli`
-- Parts: once per week in `Africa/Tripoli`
-- Manual sync: available to Administrator and Maintenance Manager
+- Assets: weekly, Monday 02:00 `Africa/Tripoli`
+- Parts: weekly, Monday 03:00 `Africa/Tripoli`
+- Manual sync: available to Administrator and Maintenance Manager via
+  `POST /api/admin/erp/sync-assets` and `POST /api/admin/erp/sync-parts`
 
-Scheduled and manual sync runs must use overlap prevention.
+Scheduled and manual sync runs must use overlap prevention
+(`withoutOverlapping()` + `onOneServer()`).
 
 ## Sync Job Behaviour
 
 Each sync job should:
 
-1. Start sync log.
-2. Fetch source data from ERP.
-3. Validate each record.
-4. Upsert local record using ERP ID/code as identity.
-5. Store raw ERP payload for debugging.
-6. Mark missing/inactive records according to ERP status rules.
-7. Record success, skipped, and failed counts.
-8. Store row-level errors.
-9. Complete sync log.
+1. Start sync log (`erp_sync_jobs` row, status `running`).
+2. Acquire a valid token (from cache or token endpoint).
+3. Fetch source data from ERP (cursor-paginated).
+4. Validate each record.
+5. Upsert local record using ERP ID as identity.
+6. Store raw ERP payload for debugging.
+7. Mark records inactive according to ERP status rules.
+8. Record success, skipped, and failed counts.
+9. Store row-level errors (`erp_sync_errors` rows).
+10. Complete sync log (status `success`, `partial`, or `failed`).
 
 Raw ERP payloads are diagnostic data and are visible only to Administrators.
 Normal asset and part responses expose mapped ERP reference fields instead.
@@ -143,11 +227,71 @@ Normal asset and part responses expose mapped ERP reference fields instead.
 
 Preferred identity keys:
 
-- Fixed Assets: ERP asset ID or ERP asset code
-- Parts: ERP part ID or ERP part code
+- Fixed Assets: ERP asset ID (`erp_asset_id`)
+- Parts: ERP part ID (`erp_part_id`)
 
-Serial numbers should not be used as the main identity key because they may be missing or inconsistent.
+Serial numbers are not used as the main identity key because they may be missing
+or inconsistent.
 
 ## Error Handling
 
-Sync errors should not stop the entire job unless the source connection fails. Row-level errors should be recorded and visible in ERP Sync History.
+Sync errors should not stop the entire job unless the source connection (token
+acquisition or initial fetch) fails. Row-level errors are recorded and visible
+in ERP Sync History.
+
+Connection-level failures (token endpoint unreachable, repeated 5xx) fail the
+job after the configured retry/backoff policy and are logged to the audit trail.
+
+## Configuration
+
+### Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `LDC_ERP_BASE_URL` | Base URL of the LDC ERP API |
+| `LDC_ERP_TOKEN_ENDPOINT` | Path/URL of the token endpoint (relative to base or absolute) |
+| `LDC_ERP_ASSETS_ENDPOINT` | Path/URL of the assets endpoint |
+| `LDC_ERP_PARTS_ENDPOINT` | Path/URL of the parts endpoint |
+| `LDC_ERP_CLIENT_ID` | Client credential ID for token acquisition |
+| `LDC_ERP_CLIENT_SECRET` | Client credential secret for token acquisition |
+
+> The exact token-request body shape (field names, grant type) will be confirmed
+> when the token endpoint contract is provided. Defaults are captured in
+> `config/erp.php`.
+
+### Config file
+
+`config/erp.php` (replaces the former `config/mock-erp.php`):
+
+```php
+return [
+    'base_url' => env('LDC_ERP_BASE_URL'),
+    'token_endpoint' => env('LDC_ERP_TOKEN_ENDPOINT'),
+    'assets_endpoint' => env('LDC_ERP_ASSETS_ENDPOINT'),
+    'parts_endpoint' => env('LDC_ERP_PARTS_ENDPOINT'),
+    'client_id' => env('LDC_ERP_CLIENT_ID'),
+    'client_secret' => env('LDC_ERP_CLIENT_SECRET'),
+    'token_cache_key' => 'ldc-erp-token',
+    'timeout' => 30,
+];
+```
+
+## Migration from mock-erp
+
+The mock-erp development service and its Docker container have been removed.
+The following renames are required to retarget the existing pipeline at LDC ERP
+(implementation tracked separately):
+
+| Current | Target |
+|---|---|
+| `config/mock-erp.php` | `config/erp.php` |
+| `MockErpHttpSource` | `LdcErpHttpSource` |
+| `MOCK_ERP_URL` / `MOCK_ERP_API_KEY` env vars | `LDC_ERP_*` env vars (see above) |
+| Static `X-Service-API-Key` header | Token-exchange + `Authorization: Bearer` |
+| `AppServiceProvider` binding to `MockErpHttpSource` | Binding to `LdcErpHttpSource` |
+| `tests/Contract/MockErpContractTest` | `tests/Contract/LdcErpContractTest` (token + pagination + mapping) |
+
+The `ErpSource` contract, the `ExternalAssetData`/`ExternalPartData` DTOs, the
+`SyncAssets`/`SyncParts` actions, the sync jobs, the `ErpSyncController`, the
+routes, the scheduler entries, the `ErpSyncJob`/`ErpSyncError` models, and their
+migrations all remain unchanged — only the concrete adapter and config change.
