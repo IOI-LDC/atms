@@ -73,4 +73,17 @@ class WorkOrderPolicy
         return $user->hasRole(RoleCode::ADMINISTRATOR)
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
     }
+
+    public function setAssetStatus(User $user, WorkOrder $workOrder): bool
+    {
+        if ($user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
+            return true;
+        }
+
+        if ($user->hasRole(RoleCode::TECHNICIAN)) {
+            return $workOrder->assigned_to_user_id === $user->id;
+        }
+
+        return false;
+    }
 }

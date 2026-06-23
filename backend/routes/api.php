@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/users', [UserController::class, 'index']);
         Route::get('/users/{user}', [UserController::class, 'show']);
+        Route::patch('/users/{user}', [UserController::class, 'update']);
+        Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
         Route::post('/users/{user}/deactivate', [UserController::class, 'deactivate']);
         Route::post('/users/{user}/reactivate', [UserController::class, 'reactivate']);
 
@@ -69,7 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('/assets', [AssetController::class, 'index']);
+    Route::post('/assets', [AssetController::class, 'store']);
     Route::get('/assets/{asset}', [AssetController::class, 'show']);
+    Route::patch('/assets/{asset}', [AssetController::class, 'update']);
     Route::get('/assets/{asset}/meter-readings', [AssetController::class, 'meterReadings']);
     Route::get('/assets/{asset}/location-history', [AssetController::class, 'locationHistory']);
     Route::get('/assets/{asset}/maintenance-history', [AssetController::class, 'maintenanceHistory']);
@@ -82,12 +86,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/parts', [PartController::class, 'index']);
     Route::get('/parts/{part}', [PartController::class, 'show']);
+    Route::patch('/parts/{part}', [PartController::class, 'update']);
     Route::get('/parts/{part}/attachments', [AttachmentController::class, 'indexForPart']);
     Route::post('/parts/{part}/attachments', [AttachmentController::class, 'uploadForPart']);
 
     Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index']);
     Route::post('/maintenance-requests/corrective', [MaintenanceRequestController::class, 'storeCorrective']);
     Route::get('/maintenance-requests/{maintenanceRequest}', [MaintenanceRequestController::class, 'show']);
+    Route::patch('/maintenance-requests/{maintenanceRequest}', [MaintenanceRequestController::class, 'update']);
     Route::post('/maintenance-requests/{maintenanceRequest}/approve', [MaintenanceRequestController::class, 'approve']);
     Route::post('/maintenance-requests/{maintenanceRequest}/reject', [MaintenanceRequestController::class, 'reject']);
     Route::post('/maintenance-requests/{maintenanceRequest}/cancel', [MaintenanceRequestController::class, 'cancel']);
@@ -104,6 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/work-orders/{workOrder}/cancel', [WorkOrderController::class, 'cancel']);
     Route::post('/work-orders/{workOrder}/parts', [WorkOrderController::class, 'addPart']);
     Route::delete('/work-orders/{workOrder}/parts/{partLine}', [WorkOrderController::class, 'removePart']);
+    Route::post('/work-orders/{workOrder}/asset-status', [WorkOrderController::class, 'setAssetStatus']);
     Route::get('/work-orders/{workOrder}/attachments', [AttachmentController::class, 'indexForWorkOrder']);
     Route::post('/work-orders/{workOrder}/attachments', [AttachmentController::class, 'uploadForWorkOrder']);
 

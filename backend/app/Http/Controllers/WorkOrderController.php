@@ -10,10 +10,13 @@ use App\Actions\WorkOrders\DeleteWorkOrderPart;
 use App\Actions\WorkOrders\RecordWorkOrderPart;
 use App\Actions\WorkOrders\StartWorkOrder;
 use App\Actions\WorkOrders\UpdateWorkOrderExecution;
+use App\Enums\WorkOrderStatus;
+use App\Http\Resources\AssetResource;
 use App\Http\Resources\WorkOrderResource;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Queries\WorkOrders\WorkOrderIndexQuery;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -170,5 +173,43 @@ class WorkOrderController extends Controller
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
+    }
+
+    public function setAssetStatus(Request $request, WorkOrder $workOrder): JsonResponse
+    {
+        Gate::authorize('setAssetStatus', $workOrder);
+
+        $validated = $request->validate([
+            'operational_status' => ['required', 'string', 'in:active,under_maintenance,down,inactive'],
+        ]);
+
+        if (in_array($workOrder->status, [WorkOrderStatus::CLOSED, WorkOrderStatus::CANCELLED], true)) {
+            return response()->json([
+                'message' => 'Cannot update asset status on a closed or cancelled work order.',
+            ], 409);
+        }
+
+        $asset = $workOrder->asset;
+
+        if (! $asset) {
+            return response()->json([
+                'message' => 'Work order has no associated asset.',
+            ], 422);
+        }
+
+        $logger = app(AuditLogger::class);
+        $before = $asset->toArray();
+        $asset->update(['operational_status' => $validated['operational_status']]);
+        $after = $asset->fresh()->toArray();
+        $logger->log('asset.status_updated', $asset, $before, $after, [
+            'work_order_id' => $workOrder->id,
+        ]);
+
+        $resource = new AssetResource($asset->fresh()->load('currentLocation'));
+
+        return response()->json([
+            'message' => 'Asset status updated.',
+            'data' => $resource->toArray($request),
+        ]);
     }
 }

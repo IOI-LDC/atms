@@ -6,6 +6,7 @@ use App\Actions\MaintenanceRequests\ApproveMaintenanceRequestAndCreateWorkOrder;
 use App\Actions\MaintenanceRequests\CancelMaintenanceRequest;
 use App\Actions\MaintenanceRequests\CreateCorrectiveMaintenanceRequest;
 use App\Actions\MaintenanceRequests\RejectMaintenanceRequest;
+use App\Actions\MaintenanceRequests\UpdateMaintenanceRequest;
 use App\Http\Resources\MaintenanceRequestResource;
 use App\Models\Asset;
 use App\Models\MaintenanceRequest;
@@ -32,6 +33,27 @@ class MaintenanceRequestController extends Controller
         $maintenanceRequest->load(['asset', 'createdBy', 'reviewedBy', 'workOrder', 'attachments']);
 
         return (new MaintenanceRequestResource($maintenanceRequest))->toResponse($request);
+    }
+
+    public function update(Request $request, MaintenanceRequest $maintenanceRequest, UpdateMaintenanceRequest $action): JsonResponse
+    {
+        Gate::authorize('update', $maintenanceRequest);
+
+        $validated = $request->validate([
+            'description' => ['nullable', 'string'],
+            'priority' => ['nullable', 'string', 'in:low,medium,high,critical'],
+            'asset_id' => ['nullable', 'exists:assets,id'],
+        ]);
+
+        try {
+            $mr = $action->execute($maintenanceRequest, $validated);
+
+            $mr->load(['asset', 'createdBy', 'workOrder']);
+
+            return (new MaintenanceRequestResource($mr))->toResponse($request);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
     }
 
     public function storeCorrective(Request $request, CreateCorrectiveMaintenanceRequest $action): JsonResponse

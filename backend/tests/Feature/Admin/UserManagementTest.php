@@ -9,6 +9,7 @@ use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class UserManagementTest extends TestCase
@@ -29,12 +30,23 @@ class UserManagementTest extends TestCase
         ]);
     }
 
-    private function createNonAdmin(): User
+    private function createNonAdmin(RoleCode $roleCode = RoleCode::VIEWER): User
     {
         return User::factory()->create([
-            'role_id' => Role::where('code', RoleCode::VIEWER)->first()->id,
+            'role_id' => Role::where('code', $roleCode)->first()->id,
             'is_active' => true,
         ]);
+    }
+
+    public static function nonAdminRoles(): array
+    {
+        return [
+            'maintenance manager' => [RoleCode::MAINTENANCE_MANAGER, 200],
+            'technician' => [RoleCode::TECHNICIAN, 403],
+            'logistics' => [RoleCode::LOGISTICS, 403],
+            'requester' => [RoleCode::REQUESTER, 403],
+            'viewer' => [RoleCode::VIEWER, 403],
+        ];
     }
 
     public function test_administrator_can_list_users(): void
@@ -49,13 +61,14 @@ class UserManagementTest extends TestCase
             ->assertJsonPath('data.0.role.code', RoleCode::ADMINISTRATOR->value);
     }
 
-    public function test_non_administrator_cannot_list_users(): void
+    #[DataProvider('nonAdminRoles')]
+    public function test_non_admin_role_access_to_user_list(RoleCode $roleCode, int $expectedStatus): void
     {
-        $user = $this->createNonAdmin();
+        $user = $this->createNonAdmin($roleCode);
 
         $this->actingAs($user)
             ->getJson('/api/admin/users')
-            ->assertForbidden();
+            ->assertStatus($expectedStatus);
     }
 
     public function test_administrator_can_deactivate_user(): void
