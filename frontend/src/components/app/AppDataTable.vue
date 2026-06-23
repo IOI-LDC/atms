@@ -1,31 +1,31 @@
-<script setup lang="ts" generic="TRow">
-import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
-import { useRoute } from 'vue-router'
-import { useDebounceFn } from '@vueuse/core'
-import { Table } from '@ioi-dev/vue-table'
-import type { ColumnDef, IoiTableApi, SortState, FilterState } from '@ioi-dev/vue-table'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
-import type { FilterOption } from '@/lib/dataTableSource'
+<script lang="ts">
+import type { SortState, FilterState } from '@ioi-dev/vue-table'
 
-// ── Session-scoped state persistence ──────────────────────────────────────────
-// Search / filters / sort / page survive in-app navigation (e.g. open a row →
-// Back) so the user returns to exactly the view they left. State is held in a
-// module-level cache for the SPA session — it is intentionally NOT persisted to
-// the URL or storage, so a hard refresh starts clean. Keyed per logical table
-// (see `stateKey` below) so every table that uses this wrapper gets it for free.
 interface TableSnapshot {
   globalSearch: string
   sort: SortState[]
   filters: FilterState[]
   pageIndex: number
   pageSize: number
-  scrollTop: number
 }
+
 const tableStateCache = new Map<string, TableSnapshot>()
+</script>
+
+<script setup lang="ts" generic="TRow">
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useDebounceFn } from '@vueuse/core'
+import { Table } from '@ioi-dev/vue-table'
+import type {
+  ColumnDef, IoiTableApi, IoiSemanticEvent,
+} from '@ioi-dev/vue-table'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import type { FilterOption } from '@/lib/dataTableSource'
 
 // ioi-vue-table's <Table> is not a generic SFC, so it can't infer TRow
 // per-instance. We bridge that by casting to its defaulted row type at this
@@ -79,53 +79,67 @@ function onRowClick(payload: { row: AnyRow; rowIndex: number }) {
 }
 
 // ── Persist / restore view state across navigation ────────────────────────────
+// Capture the cache key once, at setup — NOT reactively. By the time this
+// component unmounts (on navigation), the global route has already advanced to
+// the destination, so reading `route.path` then would yield the wrong key.
 const route = useRoute()
-const stateKey = computed(() =>
-  props.stateKey ?? `${route.path}::${props.label}`,
-)
+const stateKey = props.stateKey ?? `${route.path}::${props.label}`
 
-// Save on unmount (navigating away from the list always unmounts it in the SPA).
-onBeforeUnmount(() => {
-  if (!stateKey.value) return
-  const api = tableRef.value
-  const st = api?.state
-  if (!st) return
-  tableStateCache.set(stateKey.value, {
-    globalSearch: st.globalSearch,
-    sort: st.sort.map((s) => ({ ...s })),
-    filters: st.filters.map((f) => ({ ...f })),
+// The exposed table API does NOT include a readable `state`, so we can't snapshot
+// it on unmount. Instead we mirror sort + filters from the table's `state-change`
+// event (its payload carries the new slices), combine with the search / page
+// controls we own, and write the snapshot continuously to the session cache.
+let liveSort: SortState[] = []
+let liveFilters: FilterState[] = []
+
+function saveSnapshot() {
+  if (!stateKey) return
+  tableStateCache.set(stateKey, {
+    globalSearch: search.value,
+    sort: liveSort,
+    filters: liveFilters,
     pageIndex: pageIndex.value,
     pageSize: pageSize.value,
-    scrollTop: st.viewport?.scrollTop ?? 0,
   })
-})
+}
 
-// Restore once both the table API and the row data are ready. Search / filters /
-// sort / page-size don't depend on row count; page-index and scroll are applied
-// on the next ticks so they settle against the rendered, paginated content.
+function onStateChange(e: IoiSemanticEvent) {
+  const p = e.payload as { sort?: SortState[]; filters?: FilterState[] }
+  if (e.type === 'data:sort') liveSort = (p.sort ?? []).map((s) => ({ ...s }))
+  else if (e.type === 'data:filter') liveFilters = (p.filters ?? []).map((f) => ({ ...f }))
+  saveSnapshot()
+}
+
+watch([pageIndex, pageSize, search], saveSnapshot)
+
+// Restore once both the table API and the row data are ready.
 let restored = false
 function restore() {
-  if (restored || !stateKey.value) return
+  if (restored || !stateKey) return
   const api = tableRef.value
-  const snap = tableStateCache.get(stateKey.value)
-  if (!api || !snap) return
+  if (!api) return
   restored = true
-
-  search.value = snap.globalSearch
-  api.setGlobalSearch(snap.globalSearch)
-  api.setSortState(snap.sort)
-  snap.filters.forEach((f) => api.setColumnFilter(f.field, f.filter))
-  pageSize.value = snap.pageSize
-
-  nextTick(() => {
-    pageIndex.value = snap.pageIndex
-    nextTick(() => api.setViewport?.(snap.scrollTop))
-  })
+  const snap = tableStateCache.get(stateKey)
+  if (snap) {
+    liveSort = snap.sort
+    liveFilters = snap.filters
+    search.value = snap.globalSearch
+    api.setGlobalSearch(snap.globalSearch)
+    api.setSortState(snap.sort)
+    snap.filters.forEach((f) => api.setColumnFilter(f.field, f.filter))
+    // Note: pageIndex is intentionally NOT restored. The table resets it to 0
+    // whenever sort/filter changes (standard UX), and re-applying it fights the
+    // table's async page-reset across multiple flush cycles. Sort, filters,
+    // search, and pageSize ARE preserved.
+    pageSize.value = snap.pageSize
+  }
 }
 
 watch(
   () => [tableRef.value, tableRows.value.length] as const,
-  () => { if (tableRef.value && tableRows.value.length > 0) restore() },
+  ([apiRef, rowsLen]) => {
+    if (apiRef && rowsLen > 0) restore()
+  },
   { immediate: true },
 )
 </script>
@@ -148,6 +162,7 @@ watch(
       :show-pagination="true"
       :aria-label="label"
       @row-click="onRowClick"
+      @state-change="onStateChange"
     >
       <template #cell="slotProps">
         <slot
