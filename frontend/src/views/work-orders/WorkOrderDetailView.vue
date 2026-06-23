@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { ArrowLeftIcon } from '@lucide/vue'
+import { ArrowLeftIcon, PaperclipIcon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -108,7 +108,7 @@ watch(id, async (newId) => {
         <div class="page-header">
           <div class="page-heading">
             <h1 class="page-title">{{ record.number }}</h1>
-            <p class="page-subtitle">Work order · {{ record.asset.name }}</p>
+            <p class="page-subtitle">{{ mrTypeLabel(record.maintenance_request?.type ?? 'corrective') }} work order · {{ record.asset.name }}</p>
           </div>
           <div class="page-actions">
             <span :class="woStatusClass(record.status)">{{ woStatusLabel(record.status) }}</span>
@@ -155,7 +155,7 @@ watch(id, async (newId) => {
               </div>
               <div class="detail-field">
                 <span class="detail-field-label">Assigned to</span>
-                <p class="detail-field-value">{{ record.assigned_to?.name ?? '—' }}</p>
+                <p class="detail-field-value">{{ record.assigned_to?.name ?? (canAssign ? 'Unassigned' : '—') }}</p>
               </div>
               <div class="detail-field">
                 <span class="detail-field-label">Assigned by</span>
@@ -550,7 +550,7 @@ watch(id, async (newId) => {
         </DialogHeader>
         <div class="form-field">
           <Button type="button" variant="outline" class="file-pick-btn" @click="fileInputRef?.open()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            <PaperclipIcon class="detail-back-icon" />
             Choose files
           </Button>
           <FileInput ref="fileInputRef" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx" @change="addFiles" />
