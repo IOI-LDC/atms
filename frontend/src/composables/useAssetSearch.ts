@@ -2,39 +2,53 @@ import { ref } from 'vue'
 import api from '@/lib/api'
 import type { Asset, CursorPage } from '@/types'
 
+/**
+ * Debounced backend asset search. A pure "search engine": owns only the query
+ * string, the result set, and a busy flag. Selection lives in the caller
+ * (the AssetCombobox binds it via v-model), so this stays free of any
+ * form/persistence concerns.
+ */
 export function useAssetSearch() {
-  const query    = ref('')
-  const results  = ref<Asset[]>([])
-  const busy     = ref(false)
-  const selected = ref<{ id: number; label: string } | null>(null)
-  let   timer    = 0
+  const query   = ref('')
+  const results = ref<Asset[]>([])
+  const busy    = ref(false)
+  let   timer   = 0
 
-  function onInput() {
-    selected.value = null
+  /** Fetch the current page (uses `search` when set, else an unfiltered page). */
+  async function fetchAssets() {
+    busy.value = true
+    try {
+      const params = query.value.trim()
+        ? { search: query.value, per_page: 10 }
+        : { per_page: 10 }
+      const res = await api.get<CursorPage<Asset>>('/assets', params)
+      results.value = res.data
+    } catch {
+      results.value = []
+    } finally {
+      busy.value = false
+    }
+  }
+
+  /** Load a default (unfiltered) page immediately — call when the popover opens. */
+  function loadInitial() {
+    query.value = ''
     clearTimeout(timer)
-    if (!query.value.trim()) { results.value = []; return }
-    timer = window.setTimeout(async () => {
-      busy.value = true
-      try {
-        const res = await api.get<CursorPage<Asset>>('/assets', { search: query.value, per_page: 8 })
-        results.value = res.data
-      } catch { results.value = [] }
-      finally { busy.value = false }
-    }, 280)
+    fetchAssets()
   }
 
-  function select(a: Asset) {
-    selected.value = { id: a.id, label: a.name }
-    query.value    = `${a.name} (${a.erp_asset_code})`
-    results.value  = []
+  /** Debounced search driven by the current query. */
+  function search() {
+    clearTimeout(timer)
+    timer = window.setTimeout(fetchAssets, 250)
   }
 
+  /** Clear query + results (called when the popover closes or selection resets). */
   function reset() {
-    query.value    = ''
-    results.value  = []
-    selected.value = null
     clearTimeout(timer)
+    query.value = ''
+    results.value = []
   }
 
-  return { query, results, busy, selected, onInput, select, reset }
+  return { query, results, busy, search, loadInitial, reset }
 }

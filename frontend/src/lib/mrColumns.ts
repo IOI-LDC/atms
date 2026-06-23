@@ -19,8 +19,18 @@ export type { FilterOption }
  * so the dropdowns show the full enum regardless of what's currently loaded.
  */
 export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
-  { field: 'number', header: 'Request', sortable: false },
-  { field: 'asset', header: 'Asset', sortable: false },
+  { field: 'number', header: 'Request', sortable: true },
+  {
+    field: 'asset',
+    header: 'Asset',
+    sortable: true,
+    // `asset` is an object — sort by its name (value passed is the object).
+    comparator: (a, b) => {
+      const an = (a as { name?: string } | null | undefined)?.name ?? ''
+      const bn = (b as { name?: string } | null | undefined)?.name ?? ''
+      return an.localeCompare(bn)
+    },
+  },
   { field: 'priority', header: 'Priority', sortable: true, headerFilter: 'select' },
   { field: 'status', header: 'Status', sortable: true, headerFilter: 'select' },
   { field: 'type', header: 'Type', sortable: false, headerFilter: 'select' },

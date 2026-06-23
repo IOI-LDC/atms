@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/app/AppLayout.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
+import AssetCombobox from '@/components/app/AssetCombobox.vue'
 import { Button } from '@/components/ui/button'
 import { FileInput } from '@/components/ui/file-input'
 import {
@@ -11,7 +12,6 @@ import {
 } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -30,7 +30,7 @@ const auth   = useAuthStore()
 
 const {
   myRequests, awaiting, allRequests,
-  assetSearch,
+  selectedAsset,
   createOpen, confirmCreateOpen, createLoading, createPriority, createDescription,
   attachFiles, addFiles, removeFile,
   canCreate,
@@ -160,7 +160,13 @@ function goDetail(payload: { row: MaintenanceRequest }) {
   </AppLayout>
 
   <!-- ── Create MR sheet ── -->
-  <Sheet :open="createOpen" @update:open="(v) => { if (!v) closeCreate() }">
+  <!-- modal=false: a modal Sheet runs useHideOthers + a focus trap +
+       disableOutsidePointerEvents, which together break ANY portaled widget
+       opened inside it (the AssetCombobox popover AND the Priority Select) —
+       the popover gets aria-hidden by useHideOthers and can't receive focus.
+       Non-modal keeps the overlay/X/Esc close behavior while letting those
+       dropdowns work. See docs/04-frontend/Issues.md. -->
+  <Sheet :open="createOpen" :modal="false" @update:open="(v) => { if (!v) closeCreate() }">
     <SheetContent side="right" class="create-sheet">
       <SheetHeader class="create-sheet-header">
         <SheetTitle>New Maintenance Request</SheetTitle>
@@ -168,22 +174,8 @@ function goDetail(payload: { row: MaintenanceRequest }) {
       </SheetHeader>
       <div class="create-sheet-body">
         <div class="form-field">
-          <Label for="asset-search">Asset <span class="field-required">*</span></Label>
-          <div class="asset-search-wrap">
-            <Input id="asset-search" v-model="assetSearch.query.value" placeholder="Search by asset name or ERP code…" autocomplete="off" @input="assetSearch.onInput" />
-            <div v-if="assetSearch.results.value.length > 0" class="asset-search-results">
-              <div v-for="a in assetSearch.results.value" :key="a.id" class="asset-search-item" @click="assetSearch.select(a)">
-                <div class="asset-search-item-name">{{ a.name }}</div>
-                <div class="asset-search-item-code">{{ a.erp_asset_code }}</div>
-              </div>
-            </div>
-            <div v-else-if="assetSearch.busy.value" class="asset-search-results">
-              <div class="asset-search-item">Searching…</div>
-            </div>
-          </div>
-          <p v-if="assetSearch.selected.value" class="form-field-hint form-field-hint-selected">
-            ✓ {{ assetSearch.selected.value.label }}
-          </p>
+          <Label for="asset">Asset <span class="field-required">*</span></Label>
+          <AssetCombobox v-model="selectedAsset" />
         </div>
         <div class="form-field">
           <Label for="priority">Priority <span class="field-required">*</span></Label>
@@ -219,7 +211,7 @@ function goDetail(payload: { row: MaintenanceRequest }) {
       </div>
       <div class="create-sheet-footer">
         <Button variant="outline" :disabled="createLoading" @click="closeCreate">Cancel</Button>
-        <Button :disabled="createLoading || !assetSearch.selected.value" @click="requestCreate">Create Request</Button>
+        <Button :disabled="createLoading || !selectedAsset" @click="requestCreate">Create Request</Button>
       </div>
     </SheetContent>
   </Sheet>
@@ -230,7 +222,7 @@ function goDetail(payload: { row: MaintenanceRequest }) {
       <DialogHeader>
         <DialogTitle>Create Maintenance Request</DialogTitle>
         <DialogDescription>
-          Submit a corrective request for <strong>{{ assetSearch.selected.value?.label }}</strong> with <strong>{{ createPriority }}</strong> priority?
+          Submit a corrective request for <strong>{{ selectedAsset?.label }}</strong> with <strong>{{ createPriority }}</strong> priority?
           <template v-if="attachFiles.length > 0"> {{ attachFiles.length }} file{{ attachFiles.length !== 1 ? 's' : '' }} will be attached.</template>
         </DialogDescription>
       </DialogHeader>

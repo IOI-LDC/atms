@@ -1,0 +1,586 @@
+# Frontend UI Rules & Implementation Patterns
+
+A portable rulebook for **Vue 3.5 + shadcn-vue + reka-ui + `@ioi-dev/vue-table` +
+Tailwind v4 + semantic-CSS** apps. Derived from and tested on a production
+maintenance-management frontend.
+
+Bracketed items like **[project docs]** are per-project placeholders — define
+them once when adopting this for a new project.
+
+Before implementing or reviewing frontend work, also read:
+
+- **[project product / role / workflow docs]**
+- **[project screen inventory / design system]**
+- **[project UI state conventions]**
+- **[project backend API reference]**
+
+When sources conflict, this document should not be silently overridden by
+unreviewed visual assets.
+
+---
+
+## 1. Technology Stack & Conventions
+
+| Concern | Choice |
+|---|---|
+| Framework | Vue 3.5 (`<script setup>` + TypeScript) |
+| Build | Vite |
+| Routing | Vue Router |
+| State (shared only) | Pinia (auth, session, settings) |
+| UI primitives | shadcn-vue 2.x + reka-ui |
+| Data tables | `@ioi-dev/vue-table` ^0.3.x |
+| Icons | Lucide Vue |
+| Styling – primitives | Tailwind v4 (inside `src/components/ui/` **only**) |
+| Styling – feature code | Semantic CSS classes in one central stylesheet |
+| Tokens | CSS custom properties in `:root` |
+| Animations | `tw-animate-css` |
+| Toasts | vue-sonner |
+| Utilities | `@vueuse/core` |
+
+**Feature code** = views, layouts, `components/app/*`, and anything outside
+`components/ui/`. Feature code uses **only** semantic CSS classes and shadcn-vue
+primitives — never Tailwind utilities, raw `<button>`/`<input>`, inline styles,
+or hardcoded hex/px.
+
+---
+
+## 2. The Five Non-Negotiable Rules
+
+### Rule 1: Composable-First
+
+Components are **view + orchestration only**. `<script setup>` may declare
+props/emits/model, wire a composable's return to the template, hold trivial
+local UI flags, and call composable actions. It must NOT contain data fetching,
+business rules, non-trivial transforms, timers, direct DOM/window access, or
+duplicated logic → put it in `useXxx()`.
+
+### Rule 2: Semantic CSS Only in Feature Files
+
+In feature Vue files, `class=""` may contain **only** semantic class names
+defined in the central stylesheet. No Tailwind utilities, no inline `style=""`,
+and no invented one-off class names. Missing a class? **Add it to the central
+stylesheet** — do not reach for a utility.
+
+### Rule 3: shadcn-vue / reka-ui Primitives Only
+
+No raw `<button>`, `<input>`, `<select>`, `<textarea>`, or `<dialog>` in
+feature code. Use the shared primitives: `Button`, `Input`, `Label`, `Select`,
+`Checkbox`, `Sheet`, `Dialog`, `AlertDialog`, `Tabs`, `Tooltip`, `DropdownMenu`,
+`Popover` (reka-ui-based), `DatePicker`, `Pagination`, etc. Structural HTML
+(`main`, `section`, `nav`, `div`, `p`, `ul`, `li`, `span`) stays allowed.
+
+Missing a primitive? Add it under `components/ui/`, then use it from feature
+code. Tailwind utilities are **allowed only** inside `components/ui/`.
+
+### Rule 4: Design Tokens Only
+
+Colors, spacing, typography, radii, borders, shadows, and focus rings in feature
+code must reference CSS custom properties (`var(--…)`), never hardcoded values.
+Add new values as tokens in `:root` in the central stylesheet.
+
+### Rule 5: Confirmation Before Persistent Change
+
+Every user-initiated mutation (create, edit, approve, reject, cancel, assign,
+activate, deactivate, sync, location update, attachment upload/remove) must:
+- Validate client-side.
+- Open a confirmation dialog that summarises the action.
+- Label the confirm button with the exact action (e.g. `"Approve & Create Work
+  Order"`, never `"Yes"` or `"OK"`).
+- Disable duplicate submission while pending.
+- Preserve user input on failure.
+- On success, refresh affected data and show a concise toast.
+
+---
+
+## 3. Accessibility Baseline
+
+- Icon-only controls must have a meaningful `aria-label`.
+- Every form field must have a visible label.
+- Validation errors must be associated with their fields.
+- All controls must work by keyboard.
+- Focus indicators must remain visible (use `:focus-visible`, not raw `:focus`).
+- Dialogs, sheets, and popovers must manage focus correctly.
+- Status must never be communicated by colour alone.
+
+---
+
+## 4. Visual Direction & Design Tokens
+
+### Principles
+
+- Enterprise / operational; restrained use of colour; no emojis in UI.
+- Clear hierarchy with dense but readable information.
+- Consistent cards, forms, tables, and controls.
+- Explicit workflow actions; continuously visible record status.
+- No decorative complexity at the cost of task clarity.
+
+### Token Foundation
+
+Define all tokens in `:root` in the central stylesheet. Required groups:
+
+- Brand colours (primary, secondary, tertiary)
+- Background / surface colours
+- Foreground / muted text
+- Border / input colours
+- Focus ring
+- Success, warning, information, destructive states
+- Sidebar / navigation
+- Typography (font families, weights, sizes)
+- Spacing scale
+- Border radii (8px for cards, 6px for small controls)
+- Shadows / elevation
+- Responsive breakpoints
+
+---
+
+## 5. Semantic CSS Architecture
+
+### Central Stylesheet, Unlayered
+
+The project's central stylesheet (e.g. `src/style.css`) defines all semantic
+classes **outside** any `@layer`. Tailwind v4 utilities live in the `utilities`
+layer; **unlayered rules beat layered rules in the cascade**, so a semantic
+class like `.page-header { display: flex; }` automatically wins over any
+Tailwind utility on the same element. No `!important` needed for normal
+overrides.
+
+### Third-Party Table CSS Overrides
+
+When overriding the `@ioi-dev/vue-table` library's built-in CSS, **scope the
+override under the app's own wrapper class** for specificity:
+
+```css
+/* Target a lib class only within the app's table shell */
+.app-data-table .ioi-table__sort-button:focus {
+  outline: none;
+}
+.app-data-table .ioi-table__sort-button:focus-visible {
+  outline: var(--ioi-table-focus-outline);
+}
+```
+
+This guarantees your rule wins regardless of CSS import order, without resorting
+to `!important`.
+
+### Class Vocabulary
+
+Extend this vocabulary centrally; never invent one-off class names:
+
+| Purpose | Classes |
+|---|---|
+| Layout | `.app-layout`, `.app-sidebar`, `.app-main`, `.app-content` |
+| Page | `.page-section`, `.page-header`, `.page-heading`, `.page-title`, `.page-subtitle`, `.page-actions` |
+| Cards | `.card-grid`, `.data-card`, `.data-card-header`, `.data-card-title`, `.data-card-content`, `.data-card-actions` |
+| Detail | `.detail-back`, `.detail-meta`, `.detail-text`, `.detail-section`, `.detail-actions` |
+| Table shell | `.app-data-table`, `.data-table-toolbar`, `.data-table-search`, `.data-table-pagination`, `.data-table-pagination-info`, `.data-table-pagination-nav`, `.data-table-pagination-page`, `.data-table-pagination-btn`, `.data-table-pagination-size`, `.table-filter-trigger` |
+| Table cells | `.table-cell-stack`, `.table-cell-primary`, `.table-cell-secondary`, `.table-cell-truncate`, `.table-link` |
+| Combobox | `.asset-combobox-trigger`, `-value`, `-placeholder`, `-caret`, `-panel`, `-search`, `-search-icon`, `-search-input`, `-list`, `-option`, `-option-name`, `-option-code`, `-check`, `-empty` |
+| Forms | `.form-grid`, `.form-field`, `.form-field-full`, `.form-help`, `.form-error`, `.form-actions` |
+| Sheets | `.create-sheet`, `-header`, `-body`, `-footer` |
+| States | `.status-badge`, `.loading-state`, `.empty-state`, `.error-state`, `.permission-state`, `.read-only-state` |
+
+---
+
+## 6. Standard Page Pattern
+
+Every primary page contains:
+
+1. A clear page title (`.page-title`)
+2. A concise description (`.page-subtitle`)
+3. Actions permitted for the current role (`.page-actions`)
+4. Search / filters inside a `data-table-toolbar`
+5. An `AppDataTable` (see §7) or card/form content
+6. Loading, empty, error, and permission-aware states
+
+```vue
+<template>
+  <section class="page-section">
+    <header class="page-header">
+      <div class="page-heading">
+        <h1 class="page-title">Work Orders</h1>
+        <p class="page-subtitle">Review and manage active maintenance work.</p>
+      </div>
+      <div class="page-actions">
+        <Button v-if="canCreate" @click="createOpen = true">New Work Order</Button>
+      </div>
+    </header>
+
+    <div class="view-tabs">
+      <!-- RouterLink tabs -->
+    </div>
+
+    <AppDataTable :key="activeTab" :rows="rows" :columns="columns" … />
+  </section>
+</template>
+```
+
+---
+
+## 7. Data Table Pattern (AppDataTable)
+
+Use `@ioi-dev/vue-table` through a **single generic shared shell**
+(`AppDataTable`) — do not rebuild sorting, filtering, or pagination per-feature.
+
+### 7.1 Generic SFC + Typed `#cell` Slot
+
+The `AppDataTable` component is a generic SFC (`generic="TRow"`) so each view
+gets fully-typed cell rendering with zero consumer-side casts:
+
+```vue
+<!-- AppDataTable.vue -->
+<script setup lang="ts" generic="TRow">
+```
+
+The `@ioi-dev/vue-table` `<Table>` is **not** itself a generic SFC, so a
+boundary cast is needed inside the shell:
+
+```ts
+type AnyRow = Record<string, unknown>
+const tableColumns = props.columns as unknown as ColumnDef<AnyRow>[]
+const tableRows = computed(() => props.rows as unknown as AnyRow[])
+```
+
+The `#cell` slot re-asserts `TRow` so every consumer gets typed cells:
+
+```vue
+<template #cell="slotProps">
+  <slot name="cell" :column="slotProps.column as ColumnDef<TRow>"
+        :row="slotProps.row as TRow" … />
+</template>
+```
+
+Consumer (zero casts):
+
+```vue
+<template #cell="{ column, row }">
+  <span v-if="column.field === 'priority'" :class="priorityClass(row.priority)">
+    {{ priorityLabel(row.priority) }}
+  </span>
+</template>
+```
+
+### 7.2 Table Ref Type
+
+Expose the table API with the library's own type:
+
+```ts
+import type { IoiTableApi } from '@ioi-dev/vue-table'
+const tableRef = ref<IoiTableApi | null>(null)
+```
+
+### 7.3 Global Search (Debounced)
+
+```ts
+import { useDebounceFn } from '@vueuse/core'
+const debouncedSearch = useDebounceFn(
+  (v: string) => tableRef.value?.setGlobalSearch(v),
+  200,
+)
+watch(search, debouncedSearch)
+```
+
+### 7.4 Header Filters (Select + Text)
+
+The `#header-filter` slot receives `mode: 'text' | 'select'`. Handle both:
+
+```vue
+<template #header-filter="{ column, mode, value, setValue, clear }">
+  <Select v-if="mode === 'select'" … />
+  <Input  v-else-if="mode === 'text'"
+          :model-value="value" @update:model-value="(v) => setValue(String(v))" />
+</template>
+```
+
+### 7.5 Client-Side Sort with Comparator
+
+For object fields (e.g. `asset` which is `{ name, code }`), provide a
+`comparator` to sort by the nested value:
+
+```ts
+export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
+  { field: 'asset', header: 'Asset', sortable: true,
+    comparator: (a, b) => {
+      const an = (a as { name?: string } | null)?.name ?? ''
+      const bn = (b as { name?: string } | null)?.name ?? ''
+      return an.localeCompare(bn)
+    },
+  },
+]
+```
+
+### 7.6 Pagination — Correct API & the "All" Option
+
+#### The API (NOT `:pagination` — that's an object, ignored silently)
+
+```vue
+<Table
+  v-model:page-index="pageIndex"
+  v-model:page-size="pageSize"
+  :show-pagination="true"
+/>
+```
+
+- `v-model:page-index` / `v-model:page-size` — two-way-bind pagination state.
+- `:show-pagination="true"` — renders the pagination control.
+- The library **does** render a default pagination bar (info, size selector,
+  first/prev/next/last buttons), but the size selector labels are hardcoded as
+  `N / page` — it cannot label an "All" option.
+
+#### Why a custom `#pagination` slot is sometimes justified
+
+The built-in page-size selector renders `pageSizeOptions` (a `number[]`) as
+`N / page` — there is no way to label an "All" option cleanly. To offer "All":
+
+```vue
+<template #pagination="{ pageIndex, pageSize, pageCount, rowCount,
+                          canPreviousPage, canNextPage,
+                          previousPage, nextPage, setPageSize }">
+  <div class="data-table-pagination">
+    <span class="data-table-pagination-info">{{ rowCount }} item…</span>
+    <div class="data-table-pagination-nav">
+      <Button … @click="previousPage">Prev</Button>
+      <span>Page {{ pageIndex + 1 }} of {{ Math.max(pageCount, 1) }}</span>
+      <Button … @click="nextPage">Next</Button>
+      <Select
+        :model-value="pageSize >= ALL ? 'all' : String(pageSize)"
+        @update:model-value="(v) => setPageSize(v === 'all' ? ALL : Number(v))"
+      >
+        <SelectItem value="10">10 / page</SelectItem>
+        <SelectItem value="50">50 / page</SelectItem>
+        <SelectItem value="100">100 / page</SelectItem>
+        <SelectItem value="all">All</SelectItem>
+      </Select>
+    </div>
+  </div>
+</template>
+```
+
+Map "All" to a huge page size (`const ALL = 100_000`) so all rows render on one page.
+
+---
+
+## 8. Combobox / Searchable Selector Pattern
+
+### 8.1 Building Blocks
+
+shadcn-vue does not ship a monolithic `Combobox` — it's a composition of
+**reka-ui Popover + search Input + option list**.
+
+Required primitives (`components/ui/popover/` based on reka-ui):
+- `Popover` (wraps `PopoverRoot` + `useForwardPropsEmits`)
+- `PopoverTrigger` (with `as-child`)
+- `PopoverContent` (wraps `PopoverPortal` + positioning + animations)
+
+The trigger is a `Button` (`role="combobox"` + `aria-haspopup="listbox"`);
+the content contains an `Input` (search) + option `Button`s (`role="option"`).
+
+### 8.2 Asynchronous Backend Search
+
+Keep the debounced fetch in a composable (`useXxxSearch`), returning
+`{ query, results, busy, search, loadInitial, reset }`. The combobox
+component only owns popover open-state + `v-model` selection + keyboard nav
+(view orchestration).
+
+### 8.3 THE CRITICAL RULE — Popover Inside a Modal Sheet / Dialog
+
+A reka-ui **modal** `Dialog`/`Sheet` activates three mechanisms:
+
+1. **`useHideOthers`** — sets `aria-hidden="true"` on everything outside the
+   dialog content. If a `Popover` is portaled to `<body>` (outside the dialog),
+   it gets `aria-hidden`, making any focusable input inside it inaccessible
+   (browser warns: *"Blocked aria-hidden on an element because its descendant
+   retained focus"*).
+2. **Focus trap** (`FocusScope` with `trapped: true`) — bounces focus back
+   into the dialog. The portaled popover input is outside the dialog's DOM, so
+   focus never lands there.
+3. **`disableOutsidePointerEvents`** — sets `document.body.style.pointerEvents
+   = "none"`; the portaled popover (at `<body>` level) inherits this, becoming
+   click-dead.
+
+**The fix that works** (and the one that failed):
+
+| Approach | Verdict |
+|---|---|
+| Make the **Sheet non-modal** (`:modal="false"`) | ✅ Works — removes all three blocking mechanisms. The overlay/X/Esc still close it. Trade-off: loses focus trap (Tab escapes the sheet). Acceptable for form sheets. |
+| Make the **Popover modal** (`<Popover modal>`) | ❌ Fails — `useHideOthers` from the Sheet STILL hides the portaled popover (aria-hidden war), even with the FocusScope stack pause. The browser blocks the popover's input. |
+
+**Default to `:modal="false"` on any Sheet that contains a portaled widget**
+(Combobox, Select, DropdownMenu). For a popover that MUST live inside a modal
+Sheet, the only robust alternative is to render it **inline** (no `PopoverPortal`
+→ `position: absolute` within the sheet), but that loses reka-ui's built-in
+positioning.
+
+---
+
+## 9. Form & Overlay Patterns
+
+### Side Sheets
+
+Use for ordinary create/edit forms. Use the **non-modal** convention (see §8.3)
+if the sheet contains any portaled widget.
+
+### Dialogs
+
+Use for persistent-change confirmations, reject/cancel/deactivate actions,
+terminal workflow actions, and short actions requiring a reason.
+
+### Full Pages (Not Sheets)
+
+Use full pages when:
+- The user needs surrounding context while acting.
+- The record must be deep-linkable (e.g. a detail page with its own URL).
+- The workflow involves multiple steps or review-then-act.
+
+**Example:** a "Review + Edit + Approve" detail page that loads a record at
+`/[entity]/[id]`, showing read-only data with an inline Edit toggle, plus
+workflow action buttons (Approve, Reject, Cancel).
+
+Full pages should include a **Back button** that returns to the previous list
+(`router.back()`) and preserves the active tab (via `?tab=` URL query).
+
+### Form Layout
+
+- Two columns on larger screens for naturally-related fields; collapse to one
+  column on small screens.
+- Long text and complex controls stay full-width.
+- Show required state (`*`) and optional state (`— optional`).
+- Errors next to the affected field.
+- Preserve entered data on failed submission.
+- Disable duplicate submit while pending.
+
+---
+
+## 10. Confirmation Flow
+
+All mutations follow this sequence:
+
+1. User completes the form or selects an action.
+2. Client-side validation runs.
+3. On success, open a confirmation dialog summarising the intent.
+4. Confirmation button labels the **exact action** (e.g. `"Approve Request"`,
+   never `"Yes"` or `"OK"`).
+5. Explain consequences for terminal / hard-to-reverse actions.
+6. Disable repeated submission while pending.
+7. On success: refresh affected data + concise toast.
+8. On failure: preserve input + show actionable field/system errors.
+
+---
+
+## 11. Feedback & UI States
+
+Every data-driven view supports: initial loading, background refresh, empty
+result, filtered-empty, validation error, request failure, unauthorised /
+forbidden, and read-only terminal state.
+
+### Expected HTTP Status Handling (generic)
+
+| Code | Meaning | Action |
+|---|---|---|
+| 400 | Invalid request | Show field or system error |
+| 401 | Unauthenticated | Return to authentication flow |
+| 403 | Unauthorised | Show a permission-aware state |
+| 404 | Not found | Show "not found" state |
+| 409 | Domain conflict | Explain why the transition is unavailable |
+| 422 | Validation failed | Show errors next to relevant fields |
+| 5xx | Server error | Show recoverable error, retain user data |
+
+### Toast Status Colours
+
+vue-sonner toasts get a `data-type` attribute (`success`, `error`, `warning`,
+`info`). Target it from the central stylesheet with on-brand tokens:
+
+```css
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+  background: var(--success);
+  color: var(--success-foreground);
+  border-color: transparent;
+}
+/* … error → var(--destructive), warning → var(--warning), info → var(--info) */
+```
+
+---
+
+## 12. Domain Model & Statuses
+
+> **[Per-project: define your statuses, transitions, and display logic here.**
+> **Do not add undocumented statuses. Colour alone is not sufficient — every**
+> **status badge must show readable text.]**
+
+---
+
+## 13. Responsive Behaviour
+
+- Replace desktop nav with a mobile pattern (e.g. bottom nav or hamburger).
+- Collapse multi-column grids: 4→2→1.
+- Collapse two-column forms to one column.
+- Keep primary actions reachable; preserve critical workflow context.
+- Tables: responsive overflow or a shared small-screen representation.
+- Do not silently drop important columns or actions.
+- Sheets and dialogs must fit the viewport with their action area accessible.
+
+**Sheet size convention** (adopt per-project):
+
+```css
+/* Mobile-first: near full screen */
+.create-sheet { width: 100% !important; max-width: 100% !important; }
+/* Tablet */
+@media (min-width: 768px) { .create-sheet { width: 92vw !important; } }
+/* Desktop */
+@media (min-width: 1024px) { .create-sheet { width: 68rem !important; } }
+```
+
+---
+
+## 14. Banned Patterns
+
+| Pattern | Rule |
+|---|---|
+| Raw `<button>`/`<input>`/`<select>`/`<textarea>`/`<dialog>` in feature files | Use shadcn-vue primitives |
+| Tailwind utilities in feature Vue files | Use semantic classes |
+| Inline `style=""` in feature files | Use semantic classes or design tokens in the central stylesheet |
+| Hardcoded `#hex` / `oklch()` / `px` in feature files | Use design tokens (`var(--…)`) |
+| Business logic in `<script setup>` | Extract to `useXxx()` composable |
+| Fetch / `axios` / `window` / direct DOM access in `<script setup>` | Put in composable |
+| `any` in props, emits, or composable returns | Use explicit types |
+| Pinia store holding single-feature state | Store only for auth/session/settings/cross-component shared state |
+| `:focus` outlines that linger after clicks | Use `:focus-visible` |
+| "Just one Tailwind class for layout" | One becomes ten — add a semantic class |
+| Dark-mode toggles / `@media (prefers-color-scheme: dark)` | Light-theme only unless explicitly required by the project spec |
+
+---
+
+## 15. Review Checklist
+
+Before completing UI work, verify:
+
+- [ ] Feature Vue files contain no Tailwind utilities, inline `style`, or raw interactive elements.
+- [ ] Interactive controls use shared shadcn-vue / reka-ui components.
+- [ ] Data tables go through the shared `AppDataTable` shell.
+- [ ] All visual values reference design tokens.
+- [ ] Persistent changes require confirmation; button labels name the exact action.
+- [ ] Failed mutations preserve entered data.
+- [ ] Loading, empty, error, permission, and read-only states are implemented.
+- [ ] Icon-only actions have accessible labels.
+- [ ] Form fields have labels and associated errors.
+- [ ] Keyboard and `:focus-visible` behaviour works.
+- [ ] `:modal="false"` on any Sheet containing a portaled widget.
+- [ ] Mobile / narrow-screen behaviour has been checked.
+- [ ] No undocumented statuses, transitions, or features were added.
+- [ ] Backend authorisation remains authoritative.
+
+---
+
+## 16. Quick Reference
+
+```
+UI primitives:              components/ui/
+Global styles + tokens:     src/style.css
+Application views:          src/views/
+Shared app components:      components/app/
+Composables:                composables/
+Router:                     src/router/
+Stores (shared only):       src/stores/
+Test                    :     npm run type-check  /  npm run build
+Format                  :     npm run format
+Dev server              :     npm run dev
+```

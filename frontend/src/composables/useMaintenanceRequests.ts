@@ -3,7 +3,6 @@ import type { Ref } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
-import { useAssetSearch } from './useAssetSearch'
 import { fetchList } from '@/lib/dataTableSource'
 import type { MaintenanceRequest } from '@/types'
 
@@ -47,7 +46,8 @@ export function useMaintenanceRequests() {
 
   // ── Create ────────────────────────────────────────────────────────────────────
 
-  const assetSearch       = useAssetSearch()
+  // Bound to <AssetCombobox v-model>; selection shape { id, label }.
+  const selectedAsset     = ref<{ id: number; label: string } | null>(null)
   const createOpen        = ref(false)
   const confirmCreateOpen = ref(false)
   const createLoading     = ref(false)
@@ -58,7 +58,7 @@ export function useMaintenanceRequests() {
   const canCreate = computed(() => !!auth.user)
 
   function requestCreate() {
-    if (!assetSearch.selected.value) { toast.error('Please select an asset.'); return }
+    if (!selectedAsset.value) { toast.error('Please select an asset.'); return }
     confirmCreateOpen.value = true
   }
 
@@ -71,11 +71,11 @@ export function useMaintenanceRequests() {
   }
 
   async function doCreate() {
-    if (!assetSearch.selected.value) return
+    if (!selectedAsset.value) return
     createLoading.value = true
     try {
       const res = await api.post<{ data: MaintenanceRequest }>('/maintenance-requests/corrective', {
-        asset_id:    assetSearch.selected.value.id,
+        asset_id:    selectedAsset.value.id,
         priority:    createPriority.value,
         description: createDescription.value || null,
       })
@@ -105,12 +105,12 @@ export function useMaintenanceRequests() {
     createPriority.value    = 'medium'
     createDescription.value = ''
     attachFiles.value       = []
-    assetSearch.reset()
+    selectedAsset.value     = null
   }
 
   return {
     myRequests, awaiting, allRequests,
-    assetSearch,
+    selectedAsset,
     createOpen, confirmCreateOpen, createLoading, createPriority, createDescription,
     attachFiles, addFiles, removeFile,
     canCreate,
