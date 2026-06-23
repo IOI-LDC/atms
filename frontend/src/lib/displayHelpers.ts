@@ -60,6 +60,17 @@ export function mrTypeLabel(t: string): string {
   return t === 'preventive' ? 'Preventive' : 'Corrective'
 }
 
+export function operationalStatusLabel(s: string | null | undefined): string {
+  if (!s) return '—'
+  const m: Record<string, string> = {
+    active:            'Active',
+    under_maintenance: 'Under Maintenance',
+    down:              'Down',
+    inactive:          'Inactive',
+  }
+  return m[s] ?? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   return iso.slice(0, 10)

@@ -1568,6 +1568,40 @@
   color: var(--destructive-foreground) !important;
 }
 
+/* ── In-card detail table (compact, for parts-used etc.) ─────────────────── */
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.detail-table-head th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+
+.detail-table-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-table-row:last-child {
+  border-bottom: none;
+}
+
+.detail-table-cell {
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+}
+
+.detail-table-remove {
+  opacity: 0.5;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
