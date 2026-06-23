@@ -196,17 +196,12 @@ Examples:
 - `CloseWorkOrder`
 - `RecordAssetMeterReading`
 - `UpdateAssetLocation`
-- `SyncErpAssets`
-- `SyncErpParts`
-
 ## Background Jobs
 
-ERP sync and PM rule evaluation should run as jobs.
+PM rule evaluation should run as jobs.
 
 Jobs:
 
-- `SyncErpAssetsJob`
-- `SyncErpPartsJob`
 - `EvaluatePmRulesJob`
 - `GeneratePmRequestsJob`
 - `CleanupTemporaryUploadsJob`
@@ -219,19 +214,15 @@ MVP.
 
 Laravel Scheduler should trigger:
 
-- ERP asset sync
-- ERP parts sync
 - PM rule evaluation
 - housekeeping jobs
 
 Default schedules in the `Africa/Tripoli` company timezone:
 
-- ERP asset sync: weekly
-- ERP parts sync: weekly
 - PM rule evaluation: daily
 
 Administrator may configure scheduled run times. Administrator and Maintenance
-Manager may trigger manual ERP sync and PM evaluation. Scheduled and manual jobs
+Manager may trigger PM evaluation. Scheduled and manual jobs
 must use overlap prevention.
 
 ## Deployment Pattern
@@ -248,17 +239,6 @@ Default Docker Compose services:
 - `postgres` — PostgreSQL database
 - `queue` — Laravel queue worker using the PostgreSQL database queue
 - `scheduler` — Laravel scheduler runner
-
-Profile-based services:
-
-- `mock-erp` — separate lightweight mock ERP service for development and client demos
-
-The mock ERP service must:
-
-- Be enabled only through an explicit Docker Compose profile.
-- Be reachable by ATMS only through the internal Docker network.
-- Not be published directly to the public internet.
-- Be deployable on the VPS when the real ERP connection is unavailable for a demo.
 
 Optional future services:
 

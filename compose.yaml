@@ -22,8 +22,6 @@ services:
       SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-localhost}"
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
       ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
-      MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
-      MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
       ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
       POWER_AUTOMATE_URL: "${POWER_AUTOMATE_URL:-}"
       POWER_AUTOMATE_TENANT_ID: "${POWER_AUTOMATE_TENANT_ID:-}"
@@ -89,8 +87,6 @@ services:
       QUEUE_CONNECTION: database
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
       ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
-      MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
-      MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
       ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
       POWER_AUTOMATE_URL: "${POWER_AUTOMATE_URL:-}"
       POWER_AUTOMATE_TENANT_ID: "${POWER_AUTOMATE_TENANT_ID:-}"
@@ -125,8 +121,6 @@ services:
       QUEUE_CONNECTION: database
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
       ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
-      MOCK_ERP_URL: "${MOCK_ERP_URL:-http://mock-erp}"
-      MOCK_ERP_API_KEY: "${MOCK_ERP_API_KEY}"
       ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
       POWER_AUTOMATE_URL: "${POWER_AUTOMATE_URL:-}"
       POWER_AUTOMATE_TENANT_ID: "${POWER_AUTOMATE_TENANT_ID:-}"
@@ -136,18 +130,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - internal
-
-  mock-erp:
-    build:
-      context: .
-      dockerfile: docker/mock-erp/Dockerfile
-    container_name: atms-mock-erp
-    profiles:
-      - mock-erp
-    environment:
-      MOCK_ERP_SERVICE_API_KEY: "${MOCK_ERP_API_KEY}"
     networks:
       - internal
 

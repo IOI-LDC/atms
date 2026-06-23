@@ -27,9 +27,3 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
 
-  mock-erp:
-    volumes:
-      - ./mock-erp:/var/www/html
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"

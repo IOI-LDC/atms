@@ -4,14 +4,8 @@
 
 This document is the visual and interaction standard for the ATMS frontend.
 Product scope, workflows, roles, permissions, and data behavior remain defined
-by the product and backend documentation. Screenshots under
-`amts-screenshots/` are visual references only.
-
-When sources conflict, use this order:
-
-1. Product, workflow, role, and backend documentation
-2. This UI design system
-3. Screenshot visual references
+by the product and backend documentation. This UI design system serves as the
+visual and interaction standard for the ATMS frontend.
 
 ## Design Principles
 

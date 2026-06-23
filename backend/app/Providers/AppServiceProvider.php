@@ -3,12 +3,10 @@
 namespace App\Providers;
 
 use App\Contracts\Employees\EmployeeDirectorySource;
-use App\Contracts\Erp\ErpSource;
 use App\Contracts\Notifications\AccountEmailTransport;
 use App\Models\Attachment;
 use App\Notifications\Channels\AccountEmailChannel;
 use App\Services\Employees\FakeEmployeeDirectorySource;
-use App\Services\Erp\MockErpHttpSource;
 use App\Services\Notifications\FakeAccountEmailTransport;
 use App\Services\Notifications\PowerAutomateAccountEmailTransport;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -39,8 +37,6 @@ class AppServiceProvider extends ServiceProvider
 
             return new FakeEmployeeDirectorySource;
         });
-
-        $this->app->singleton(ErpSource::class, MockErpHttpSource::class);
     }
 
     public function boot(): void

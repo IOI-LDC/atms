@@ -61,7 +61,6 @@ Run the stack:
 
 ```bash
 docker compose up -d                              # api, nginx, postgres, queue, scheduler
-docker compose --profile mock-erp up -d           # also start the mock ERP (for sync tests)
 docker compose exec api php artisan migrate --seed # (re)initialize the database
 ```
 

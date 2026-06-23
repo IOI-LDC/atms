@@ -24,18 +24,6 @@ check "nginx proxies to api" test "$(curl -s -o /dev/null -w '%{http_code}' http
 check "queue worker is running" docker compose exec -T queue pgrep -f "queue:work"
 check "scheduler is running" docker compose exec -T scheduler pgrep -f "schedule:work"
 
-if docker compose ps --status running mock-erp 2>/dev/null | grep -q mock-erp; then
-    if docker compose exec -T api curl -sf -o /dev/null http://mock-erp/up; then
-        printf "  PASS  mock-erp API responds\n"
-        PASS=$((PASS + 1))
-    else
-        printf "  FAIL  mock-erp API not responding\n"
-        FAIL=$((FAIL + 1))
-    fi
-else
-    printf "  SKIP  mock-erp API (not started)\n"
-fi
-
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 
