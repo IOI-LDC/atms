@@ -2,10 +2,13 @@
 
 ## Corrective Maintenance Workflow
 
-Corrective Maintenance is user-initiated.
+Corrective Maintenance is user-initiated. Any authenticated user regardless of
+role may create a Corrective Maintenance Request.
 
 1. User identifies an asset fault or maintenance need.
 2. User creates a Corrective Maintenance Request.
+   While the request is pending_review, the creator (or Admin/Manager) may
+   update the description, priority, and asset before it is reviewed.
 3. Maintenance Manager reviews the request.
 4. Maintenance Manager approves or rejects the request.
 5. If approved, the system creates a Work Order.
@@ -80,6 +83,16 @@ For `date_or_reading` rules:
 This workflow records physical location only. It does not create logistics,
 gate pass, shipment, custody, or transfer-approval records.
 
+## Asset Management Workflow
+
+1. Administrator or Maintenance Manager opens the Asset Registry.
+2. User selects "Add Asset" and fills in name, description, category, serial
+   number, model, manufacturer, and operational status.
+3. System creates the asset record and logs the creation.
+4. At any time, Admin/Manager may edit asset details including current
+   location (which records location history on change).
+5. Assets are never deleted — they are soft-deactivated (is_active = false).
+
 ## Asset Usage Reading Workflow
 
 1. User opens the asset usage/meter screen or enters a supporting reading while creating a Corrective Maintenance Request.
@@ -87,7 +100,7 @@ gate pass, shipment, custody, or transfer-approval records.
 3. User enters reading value and reading date/time.
 4. System stores the reading with the submitting user and source.
 5. If submitted by an Administrator, Maintenance Manager, or Technician, the reading may be confirmed immediately.
-6. If submitted by a Requester, the reading remains unverified until an Administrator, Maintenance Manager, or Technician confirms it.
+6. If submitted by a Requester or Logistics user, the reading remains unverified until an Administrator, Maintenance Manager, or Technician confirms it.
 7. Confirmation rejects a reading lower than the latest confirmed reading for the same asset and reading type.
 8. Only confirmed readings update the asset's current meter value.
 9. PM rule evaluation uses only the latest confirmed readings.

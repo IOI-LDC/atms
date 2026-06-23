@@ -1,12 +1,14 @@
 # In Scope
 
-## 1. ERP Fixed Assets and Parts Integration
+## 1. ERP Parts Integration + Manual Asset Management
 
-The system will read fixed assets and parts from the existing ERP. ERP will remain the master source for fixed assets and parts. ATMS may keep a local synchronized copy to support maintenance workflows, history, search, and reporting.
+The system will read parts from the existing ERP. ERP remains the master source for parts. ATMS keeps a local synchronized copy of parts to support maintenance workflows, history, search, and reporting.
 
-## 2. Local Operational Asset Registry
+Assets are managed manually within ATMS. Administrators and Maintenance Managers may create, update, and manage asset records directly. There is no ERP asset source for this client deployment.
 
-The system will maintain a local operational copy of ERP fixed assets. Additional operational information can be stored against each asset, such as current physical location, usage readings, maintenance status, attachments, and maintenance history.
+## 2. Manual Asset Registry
+
+The system provides a full asset registry managed manually by Administrators and Maintenance Managers. Assets can be created, updated, and soft-deactivated. Operational information stored against each asset includes name, description, category, serial number, model, manufacturer, operational status, current physical location, usage readings, maintenance status, attachments, and maintenance history.
 
 ## 3. Parts Reference Database
 
@@ -34,8 +36,17 @@ The system will track the current physical location of each asset, such as wareh
 
 The system will allow preventive maintenance rules to be configured for assets. These rules may be based on time intervals, operating hours, kilometers, or other usage readings.
 
-Each MVP PM Rule belongs to one individual ERP-linked asset. Category-level,
+Each MVP PM Rule belongs to one individual asset. Category-level,
 asset-type-level, unit/package-level, group, and template rules are excluded.
+
+## 6a. Asset Creation and Management
+
+Administrators and Maintenance Managers may create asset records manually
+through the Asset Registry. Asset fields include name, description, category,
+serial number, model, manufacturer, and operational status. Assets may be
+updated at any time by Admin/Manager. The current location may be updated
+through the asset edit screen, which records location history on change. Assets
+are soft-deactivated (is_active = false) rather than deleted.
 
 ## 7. Automatic Preventive Maintenance Requests
 

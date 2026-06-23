@@ -4,7 +4,9 @@
 
 ### pending_review
 
-The request has been created and is awaiting Maintenance Manager review.
+The request has been created and is awaiting Maintenance Manager review. While
+pending_review, the creator (or an Admin/Manager) may update the description,
+priority, and asset. Once reviewed or cancelled, the request is immutable.
 
 ### rejected
 

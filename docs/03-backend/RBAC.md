@@ -34,35 +34,47 @@ rules.
 | Confirm meter readings | Yes | Yes | Yes | No | No | No |
 | View parts reference | Yes | Yes | Yes | No | Yes | Yes |
 | Create corrective MR | Yes | Yes | Yes | No | Yes | No |
+| Create asset | Yes | Yes | No | No | No | No |
+| Update asset | Yes | Yes | No | No | No | No |
+| Update part | Yes | Yes | No | No | No | No |
+| Update own pending MR | Yes | Yes | Yes | No | Yes | No |
+| Update any pending MR | Yes | Yes | No | No | No | No |
 | Review/approve MR | Yes | Yes | No | No | No | No |
 | Cancel own pending corrective MR | Yes | Yes | No | No | Yes | No |
 | Cancel any pending MR | Yes | Yes | No | No | No | No |
 | Create WO directly | No | No | No | No | No | No |
 | Update assigned WO | Yes | Yes | Yes | No | No | No |
 | Edit non-terminal WO execution details | Yes | Yes | Assigned only | No | No | No |
+| Set asset operational status via WO | Yes | Yes | Assigned only | No | No | No |
 | Assign/reassign WO | Yes | Yes | No | No | No | No |
 | Mark assigned WO completed | Yes | Yes | Assigned only | No | No | No |
 | Close completed WO | Yes | Yes | No | No | No | No |
 | Cancel non-closed WO | Yes | Yes | No | No | No | No |
 | Manage PM rules | Yes | Yes | No | No | No | No |
 | Manage users | Yes | No | No | No | No | No |
+| View user list (for WO assignment) | Yes | Yes | No | No | No | No |
 | Import SharePoint employees | Yes | No | No | No | No | No |
 | Provision employee as ATMS user | Yes | No | No | No | No | No |
 | Manage locations/master data | Yes | No | No | No | No | No |
 | Run ERP sync | Yes | Yes | No | No | No | No |
 | Manage ERP sync settings | Yes | No | No | No | No | No |
+| Update user details | Yes | No | No | No | No | No |
+| Reset user password (admin) | Yes | No | No | No | No | No |
 | View technical audit logs | Yes | No | No | No | No | No |
 
 ## Important Rules
 
 - Work Orders are created only from approved Maintenance Requests.
 - Maintenance Manager approval is required before WO creation.
-- ERP-sourced fixed asset and part fields should not be editable by normal users.
+- ERP-sourced part fields (`erp_part_id`, `erp_part_code`, `erp_status`, `erp_raw_data`, `erp_last_synced_at`) are read-only and managed by ERP sync. Local part fields (`name`, `description`, `unit_of_measure`, `category`, `is_active`) may be updated by Admin/Manager.
 - Local operational fields may be editable according to permissions.
 - Requesters may view their own submitted Maintenance Requests.
 - Requesters may cancel only their own user-created corrective Maintenance Requests while `pending_review`.
 - Maintenance Manager and Administrator may cancel any `pending_review` Maintenance Request.
 - System-generated preventive Maintenance Requests may be cancelled only by Maintenance Manager or Administrator.
+- A pending_review Maintenance Request may be updated by its creator or an Admin/Manager. Editable fields: description, priority, and asset_id. The update does not change the MR status.
+- Technicians may update their own pending corrective Maintenance Requests.
+- Admin/Manager may update any pending Maintenance Request.
 - Requesters may search active assets and view only the basic asset fields needed to create a Corrective Maintenance Request.
 - Requesters cannot view asset maintenance history, location history, attachments, or ERP raw/reference details.
 - Raw ERP payloads are Administrator-only.
@@ -81,6 +93,11 @@ rules.
 - Administrator and Maintenance Manager may cancel `open`, `in_progress`, or `completed` Work Orders with a required reason.
 - Technicians cannot cancel Work Orders.
 - Logistics, Maintenance Manager, and Administrator may update asset physical location.
+- Admin/Manager may create asset records manually and update asset operational fields at any time.
+- The assigned Technician (or Admin/Manager) may update an asset's `operational_status` through the Work Order-scoped endpoint while the Work Order is non-terminal; all other asset fields remain Admin/Manager-only.
+- Updating an asset's `current_location_id` records a location history entry automatically.
+- Admin may update user details (name, email, role, active status) and reset user passwords.
+- Admin cannot update or reset their own account through the admin endpoints.
 - Logistics has no maintenance approval, Work Order execution, PM Rule, or administration permissions.
 - Logistics has no Parts Reference access in MVP.
 - Logistics authority is limited to asset physical location updates and location history.
