@@ -21,7 +21,7 @@ export type ErpSyncStatus            = 'running' | 'success' | 'partial' | 'fail
 export interface Role { id: number; code: RoleCode; name: string }
 
 /** Minimal asset reference embedded in other resources. */
-export interface AssetRef { id: number; name: string; erp_asset_code: string }
+export interface AssetRef { id: number; name: string; erp_asset_code: string; operational_status?: string }
 
 /** Minimal user reference. `email` only visible to Admin/Manager. */
 export interface UserRef { id: number; name: string; email?: string }
