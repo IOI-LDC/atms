@@ -26,6 +26,8 @@ Required elements:
 - Latest usage reading
 - PM status
 - Link to asset detail
+- "Add Asset" action (Admin/Manager only)
+- "Edit Asset" action per row (Admin/Manager only)
 
 For Requesters, this screen is a limited active-asset lookup for creating
 Corrective Maintenance Requests. Hide maintenance history, location history,
@@ -97,10 +99,14 @@ Required elements:
 
 Used by Maintenance Manager.
 
+While the request is pending_review, the creator (or Admin/Manager) may edit
+the description, priority, and asset. Edits do not change the MR status.
+
 Required actions:
 
 - Approve & Create Work Order
 - Reject Request
+- Edit (description, priority, asset) — available to creator and Admin/Manager
 
 Required information:
 

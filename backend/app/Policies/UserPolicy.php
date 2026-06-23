@@ -21,4 +21,9 @@ class UserPolicy
     {
         return $user->hasRole(RoleCode::ADMINISTRATOR);
     }
+
+    public function update(User $user): bool
+    {
+        return $this->manage($user);
+    }
 }
