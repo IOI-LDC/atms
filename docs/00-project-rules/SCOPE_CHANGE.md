@@ -41,6 +41,12 @@
 | # | New Module | Description | Rationale |
 |---|---|---|---|
 | 19 | Store Management (SM) Subsystem | Parts catalogue, inventory balances, stock movement, Order → Approval → Dispatch → Goods Receipt workflow. ERP parts sync owned by SM. | Client needed operational store workflow beyond a passive parts list. |
+
+> ⚠️ **SM scope contingent on VJ's reply:** If BC's native Store Order module is
+> live and queryable by order number through OData, SM becomes a thin integration
+> layer instead of a full subsystem. ATMS reads from BC store orders directly.
+> Pending VJ (ERP Consultant) confirmation. See
+> [`sm/01-product/ERP_STORE_ORDER_QUESTION.md`](../sm/01-product/ERP_STORE_ORDER_QUESTION.md).
 | 20 | Asset Movement (AM) Subsystem | Movement request workflow, location history, arrival confirmation. Source of truth for asset location across all subsystems. | Client needed formal movement tracking with Logistics approval. |
 | 21 | Asset Assembly (Package / Component) | Assets composed of other assets with independent maintenance lifecycles. Parent-child relationships, install/remove/swap operations, `asset_assembly_history` audit table, component operating hours derivation. | Client has equipment like mud motors where rotor and stator are independently maintained assets that can be swapped between motors. |
 | 22 | Asset Maintenance Status | Active (standalone / Installed / Ready) and Inactive (LIH, DBR, Disposed, Scrapped, Other). Independent of ERP financial treatment. | Client needed clearer asset lifecycle states beyond simple active/inactive. |
@@ -61,7 +67,49 @@
 
 ---
 
-## 3. Architecture Impact
+## 2. Implementation Phases
+
+The system will be delivered in two phases to prioritise operational maintenance
+and defer store/inventory complexity.
+
+### Phase 1 — ATMS Core (Operational Maintenance)
+
+| Scope item | Detail |
+|---|---|
+| Asset registry | Full asset CRUD with maintenance status (Active/Inactive + sub-statuses), asset tags (`L-BBB-CCC-XXXX`), operational fields |
+| Maintenance workflows | Corrective + Preventive MRs, Manager approval → Work Order → execution → closure. Full status model. |
+| Preventive maintenance | PM rules (date / reading / date_or_reading) per asset. `EvaluatePmRulesJob` generates PM MRs when due. |
+| Parts reference | Parts catalogue seeded from ERP sync into SM tables. Read-only in Phase 1 — no ordering, no inventory, no stock movement. ATMS WOs reference parts by part ID for consumption recording. |
+| Asset location | Logistics role can update `asset.location_id` directly. No movement request workflow. No approval chain. Location history written by existing `UpdateAssetLocation` Action. |
+| RBAC | 5 roles: Administrator, Maintenance Manager, Technician, Logistics, Requester |
+| Dashboard & reporting | KPI cards, MR/WO status summaries, maintenance history |
+| Attachments | Laravel local storage on persistent Docker volume |
+
+**Out of Phase 1 (deferred to Phase 2):**
+Asset Assembly (parent/child), Component PM cross-check, SM Order workflow,
+SM inventory/stock movement, Virtual Store, AM movement approval workflow,
+ERP parts write-back, MinIO object storage.
+
+### Phase 2 — Store Management + Asset Movement + Assembly
+
+| Scope item | Detail |
+|---|---|
+| Asset Assembly | `parent_asset_id`, install/remove/swap Actions, `asset_assembly_history`, component hours derivation |
+| Component PM cross-check | 🟢🟡🔴 indicators on parent WO. Manual "Create MR for Component" for yellow/red items. |
+| SM subsystem | Full store management: Order → Approval → Dispatch → Goods Receipt workflow. Inventory balances, stock movement. Virtual Store (workshop stock). |
+| AM subsystem | Movement request workflow: Requester → Logistics approve → confirm arrival. Formal location history with audit trail. |
+| ERP write-back | Parts consumption (GR) pushed from SM to BC ERP (pending LDC confirmation) |
+| ERP parts sync | Full bidirectional awareness — ERP is source of truth for parts, SM owns consumption |
+
+**Phase 2 dependencies:** VJ's reply on BC Store Order determines SM architecture
+(full build vs. thin integration). Parts consumption write-back requires LDC
+meeting decision.
+
+---
+
+---
+
+## 4. Architecture Impact
 
 ### From single app to three subsystems
 
@@ -104,7 +152,7 @@ Current:   ┌──────┐  ┌────┐  ┌────┐
 
 ---
 
-## 4. Effort Impact — What Changes for Estimating
+## 5. Effort Impact — What Changes for Estimating
 
 ### Net-new backend work
 
@@ -143,7 +191,7 @@ re-estimate should separate ATMS core from SM and AM, which can be phased.
 
 ---
 
-## 5. Financial Impact Considerations
+## 6. Financial Impact Considerations
 
 > **For the consultant to complete.**
 
@@ -151,8 +199,9 @@ re-estimate should separate ATMS core from SM and AM, which can be phased.
   registry with assembly + tags + status, PM rules with component cross-check,
   5-role RBAC. Roughly equivalent to original 18-day estimate with scope
   adjustments.
-- **SM subsystem** (net new): Store management frontend + backend. Order
-  workflow, inventory, ERP sync. New estimate required.
+- **SM subsystem** (net new — scope TBD): If BC Store Order is live, SM is a
+  thin integration layer (read store orders via OData, no separate inventory).
+  If not, full store management build. Estimate depends on VJ's reply.
 - **AM subsystem** (net new): Asset movement frontend + backend. Movement
   workflow, location history. New estimate required.
 - **ERP write-back** (under discussion): If parts GR write-back to ERP is
@@ -162,7 +211,7 @@ re-estimate should separate ATMS core from SM and AM, which can be phased.
 
 ---
 
-## 6. Key Documents Referenced
+## 7. Key Documents Referenced
 
 | Document | Purpose |
 |---|---|

@@ -59,7 +59,23 @@ BC has `mainAssetComponent` and `componentOfMainAsset` fields that may support t
 
 ## Pending — Internal Decisions
 
-### 7. Parts consumption write-back mechanism
+### 7. Does BC have Store Order / Store Management live?
+
+Can we query BC store orders by number through the OData API? If yes, we
+integrate with BC's native store workflow instead of building SM.
+
+| Field | Value |
+|---|---|
+| **Blocked since** | 2026-06-24 |
+| **Depends on** | VJ (ERP Consultant) |
+| **What we need** | Confirmation whether BC Store Order is implemented and used at LDC. If yes: API endpoint, payload shape, and whether individual store orders can be queried by number to extract part line items. |
+| **Impact if yes** | SM subsystem may not need to be built. ATMS reads from BC store orders directly. Consumption is native in BC — no write-back needed. |
+| **Impact if no** | SM subsystem built as planned. |
+| **Message** | [`docs/sm/01-product/ERP_STORE_ORDER_QUESTION.md`](../sm/01-product/ERP_STORE_ORDER_QUESTION.md) |
+
+---
+
+### 8. Parts consumption write-back mechanism
 
 Can SM push a stock consumption/decrement transaction to ERP when a part is
 issued at Goods Receipt? What is the ERP endpoint and payload for such a

@@ -78,13 +78,12 @@ Creates Corrective Maintenance Requests and views their own submitted requests.
 May search active assets and view basic asset information needed to create a
 request. May view asset maintenance history, location history, attachments, and
 mapped ERP reference fields (merged-in Viewer capabilities). May submit
+unverified meter readings as supporting information but cannot confirm them. May
+cancel their own corrective requests while those requests are pending review.
 
 May view assembly history for components where they have view access to the
 asset. May view the parent asset reference and Installed/Ready status on
 component detail screens.
-
-unverified meter readings as supporting information but cannot confirm them. May
-cancel their own corrective requests while those requests are pending review.
 
 ## Permission Principles
 
