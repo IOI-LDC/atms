@@ -74,7 +74,20 @@ transaction?
 
 ---
 
-### 8. ✅ `asset_tag` field
+### 8. Virtual Store — open design questions
+
+| Field | Value |
+|---|---|
+| **Status** | Spec drafted. 4 open questions to resolve with client. |
+| **Q1** | Bin granularity — per-workshop or per-technician? |
+| **Q2** | Manager approval scope — per-part or per-bin? |
+| **Q3** | End-of-day return — system-enforced or storekeeper-confirmed? |
+| **Q4** | Auto-notification for unconsumed overnight stock? |
+| **Spec** | [`docs/sm/01-product/VIRTUAL_STORE.md`](../sm/01-product/VIRTUAL_STORE.md) |
+
+---
+
+### 9. ✅ `asset_tag` field
 
 | **Resolved** | 2026-06-24 — Format `L-BBB-CCC-XXXX`. Ownership (L/X), type code (3-char from faSubclassCode), size code (encoded inch measurement or 000), serial suffix (last 4 of serialNo). Manual generation, immutable after save, unique constraint. See [`ASSET_TAG.md`](../atms/01-product/ASSET_TAG.md). |
 

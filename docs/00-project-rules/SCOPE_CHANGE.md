@@ -46,7 +46,8 @@
 | 22 | Asset Maintenance Status | Active (standalone / Installed / Ready) and Inactive (LIH, DBR, Disposed, Scrapped, Other). Independent of ERP financial treatment. | Client needed clearer asset lifecycle states beyond simple active/inactive. |
 | 23 | Asset Tag | Physical label format `L-BBB-CCC-XXXX` (ownership, type code, size code, serial suffix). Database-unique, immutable after print, designed for QR code scanning. | Client needed a physical-world identifier that field staff, vendors, and the ERP can all reference. |
 | 24 | Parts Consumption Write-Back | When SM completes a Goods Receipt (item issued to requester, exits store), SM pushes the consumption transaction (stock decrement) to LDC ERP. ERP reflects updated inventory. | Client needs ERP to know when store stock is consumed so inventory records stay accurate across systems. |
-| 25 | Component PM Cross-Check | When a parent WO is open, child components show 🟢🟡🔴 PM status indicators. Manual "Create MR for Component" action for yellow/red items. | Improves workshop efficiency — catch component issues while the parent is already in for service. |
+| 25 | Virtual Store (Workshop Stock) | Workshop locations with bins for staging parts during a shift. Daily transfer-in → consumption → return cycle. End-of-day auto-flagging. Manager-approved overnight holds (must consume next day, else auto-return). | Technicians need parts at hand in the workshop without walking to the main store for every item. Accountability: stock cannot sit indefinitely in the workshop. |
+| 26 | Component PM Cross-Check | When a parent WO is open, child components show 🟢🟡🔴 PM status indicators. Manual "Create MR for Component" action for yellow/red items. | Improves workshop efficiency — catch component issues while the parent is already in for service. |
 
 ### 2.3 Removed / Changed Constraints
 

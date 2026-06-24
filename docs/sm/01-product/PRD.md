@@ -13,6 +13,10 @@ SM is responsible for:
 - **Parts catalogue** — the canonical parts table. Parts are synced from the LDC ERP into SM tables (`SyncErpPartsJob`). ERP-owned columns are never writable through the API; only local operational fields are editable.
 - **Inventory balances** — stock on hand per part/location.
 - **Stock movement** — issues, receipts, transfers, adjustments.
+- **Virtual Store** — workshop locations with bins/rooms for staging parts
+  during a shift. Daily transfer-in → consumption → return cycle. End-of-day
+  auto-flagging of unconsumed stock. Maintenance Manager can approve overnight
+  holds (must be consumed next day). See [`VIRTUAL_STORE.md`](./VIRTUAL_STORE.md).
 - **Order workflow** — Order → Approval → Dispatch → Goods Receipt (GR).
 - **ERP parts sync** — SM owns the ERP integration boundary for parts. ATMS reads parts from SM tables only.
 - **Consumption write-back** — When SM completes a Goods Receipt (item issued to
