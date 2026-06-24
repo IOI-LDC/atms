@@ -87,3 +87,44 @@ These should be configurable as master data. Suggested defaults:
 - Inactive
 
 Avoid financial lifecycle statuses such as capitalized/disposed unless shown as read-only ERP reference data.
+
+## Asset Maintenance Status
+
+Each ATMS-managed asset carries an Asset Maintenance Status independent of ERP
+disposal/financial treatment. See `atms/01-product/ASSET_STATUS.md` for the
+full specification.
+
+### States
+
+| State | Meaning |
+|---|---|
+| **Active** | Asset is in operational use. PM rules evaluate against active assets; CMs and WOs can be created. |
+| **Inactive** | Asset is not in maintenance service. PM evaluation, CM creation, and WO creation are blocked. |
+
+### Active Sub-statuses (component/package assets only)
+
+| Sub-status | Meaning |
+|---|---|
+| *(none)* | Default for standalone assets. Normal operation. |
+| **Installed** | Component is currently installed in a parent (`parent_asset_id` is set). In active service as part of an assembly. |
+| **Ready** | Component is fully maintained and available for installation. Spare/standby (`parent_asset_id IS NULL`). |
+
+### Inactive Sub-statuses (purely informational)
+
+| Sub-status | Meaning |
+|---|---|
+| **LIH** | Lost in Hole |
+| **DBR** | Damaged Beyond Repair |
+| **Disposed** | Formally disposed |
+| **Scrapped** | Sold for scrap or removed |
+| **Other** | Other reason, with free-text note |
+
+### Rules
+
+- Asset Maintenance Status is independent of ERP financial treatment.
+- Only Administrator or Maintenance Manager may change an asset's status.
+- No automatic transitions. All status changes are explicit.
+- All maintenance history remains visible regardless of status.
+- Inactive assets may be reactivated at any time by Admin/Manager.
+- `Installed` requires `parent_asset_id IS NOT NULL`; `Ready` requires `parent_asset_id IS NULL`. These sub-statuses only apply to `asset_kind = component` or `package`.
+- Swapping a component auto-updates sub-status: Ready → Installed on install; Installed → Ready on removal (or Inactive/DBR if decommissioned).

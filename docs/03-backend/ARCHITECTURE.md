@@ -1,5 +1,26 @@
 # Backend Architecture
 
+## Three Subsystems Sharing One Backend
+
+There is a single Laravel backend, one queue, one scheduler, and one PostgreSQL
+database shared by three product subsystems:
+
+- **ATMS** (Asset Maintenance Tracking) — Assets, Maintenance Requests, Work Orders, PM rules, dashboard, RBAC.
+- **SM** (Store Management) — Parts catalogue, inventory, stock movement, ERP parts sync, Order → Approval → Dispatch → GR.
+- **AM** (Asset Movement) — Asset movement form, location history, movement workflow.
+
+Subsystems live in separate frontend applications but share this backend and
+database. Source-of-truth boundaries:
+
+- **Assets** are owned by ATMS and managed fully within ATMS. There is **no ERP asset sync**.
+- **Parts** are owned by SM. ERP syncs parts into SM tables. ATMS reads parts only to populate Work Order part-request forms, which submit into SM's workflow. The SM parts tables are the source of truth for parts.
+- **Asset location** is owned by AM. ATMS reads the current location from AM tables for display only. The AM location tables are the source of truth for asset location and location history.
+
+> Note: the backend codebase still contains `SyncErpAssetsJob` and the
+> `erp_asset_id` columns from the pre-restructure design. These are scheduled
+> for removal by the backend team; the documented intent is that no ERP asset
+> sync exists.
+
 ## Locked Backend Stack
 
 - Backend framework: Laravel 13 API backend
@@ -20,13 +41,14 @@
 ## SharePoint Portal Boundary
 
 The company SharePoint portal provides only a normal hyperlink to the
-separately hosted ATMS web application. ATMS is not hosted in SharePoint
-SitePages, embedded in SharePoint, or implemented as an SPFx web part.
+separately hosted product web applications. They are not hosted in SharePoint
+SitePages, embedded in SharePoint, or implemented as SPFx web parts.
 
-Access to the internal SharePoint portal does not create an ATMS session or
-grant ATMS permissions. ATMS continues to authenticate through Laravel Sanctum
-SPA cookie/session authentication and authorize users through its six fixed
-roles. SharePoint or Microsoft Entra SSO is not part of MVP.
+Access to the internal SharePoint portal does not create an application session or
+grant any permissions. The backend continues to authenticate through Laravel Sanctum
+SPA cookie/session authentication and authorize users through its five fixed
+roles (Administrator, Maintenance Manager, Technician, Logistics, Requester).
+SharePoint or Microsoft Entra SSO is not part of MVP.
 
 ## Architectural Style
 
@@ -41,6 +63,7 @@ Recommended domains:
 - Auth & Access Control
 - Employee Directory / SharePoint Import
 - Assets
+- Asset Assembly (parent/child relationships, install/removal, swap)
 - Parts
 - Maintenance Requests
 - Work Orders
@@ -55,7 +78,8 @@ Recommended domains:
 
 The backend owns all business rules:
 
-- ERP sync and local upsert logic
+- ERP parts sync and local upsert logic (owned by SM)
+- Asset assembly management (install, remove, swap; cycle prevention; component hours derivation)
 - PM rule evaluation
 - Preventive Maintenance Request generation
 - Transaction-safe prevention of duplicate active maintenance chains per PM Rule
@@ -67,11 +91,11 @@ The backend owns all business rules:
 - Work Order closure rules
 - Asset location history
 - Asset reading history
-- Asset maintenance history read-model assembly from authoritative source records
+- Asset maintenance history read-model assembly from authoritative source records (reads current location from AM tables)
 - Attachment ownership and permissions
 - Role-based access control
 - Append-only technical audit logging
-- SharePoint employee import and explicit ATMS user provisioning
+- SharePoint employee import and explicit user provisioning
 
 The MVP architecture must not introduce:
 
@@ -88,7 +112,7 @@ Asset maintenance history must be assembled from authoritative source records:
 - Work Orders
 - Work Order parts
 - Confirmed and unverified meter readings, labeled appropriately
-- Asset location history
+- Asset location history (source of truth in AM tables)
 - Attachments
 
 Do not create a duplicate `maintenance_histories` table. The history endpoint
@@ -109,8 +133,10 @@ audit log. Minimum events include:
 - Asset location changes
 - Meter reading submission and confirmation
 - PM Rule create/update/deactivate/reactivate and suppression decisions
-- Manual ERP sync runs and ERP configuration changes
+- Manual ERP parts sync runs and ERP configuration changes
 - Attachment upload and soft deletion
+- Component installation, removal, and swap
+- Asset assembly history record creation
 
 Audit logging must not store passwords, session cookies, service API keys,
 attachment contents, or unredacted secrets. Audit entries cannot be edited or
@@ -195,17 +221,18 @@ Examples:
 - `RejectMaintenanceRequest`
 - `CloseWorkOrder`
 - `RecordAssetMeterReading`
-- `UpdateAssetLocation`
-- `SyncErpAssets`
-- `SyncErpParts`
+- `UpdateAssetLocation` (writes to AM location tables)
+- `SyncErpParts` (SM-owned; parts only)
+- `InstallComponent`
+- `RemoveComponent`
+- `SwapComponent`
 ## Background Jobs
 
-ERP sync and PM rule evaluation should run as jobs.
+ERP parts sync (SM-owned) and PM rule evaluation should run as jobs.
 
 Jobs:
 
-- `SyncErpAssetsJob`
-- `SyncErpPartsJob`
+- `SyncErpPartsJob` (SM-owned; no asset sync job exists in the documented design)
 - `EvaluatePmRulesJob`
 - `GeneratePmRequestsJob`
 - `CleanupTemporaryUploadsJob`
@@ -218,20 +245,18 @@ MVP.
 
 Laravel Scheduler should trigger:
 
-- ERP asset sync
-- ERP parts sync
+- ERP parts sync (SM-owned; no asset sync)
 - PM rule evaluation
 - housekeeping jobs
 
 Default schedules in the `Africa/Tripoli` company timezone:
 
-- ERP asset sync: weekly
-- ERP parts sync: weekly
+- ERP parts sync: weekly (no asset sync)
 - PM rule evaluation: daily
 
 Administrator may configure scheduled run times. Administrator and Maintenance
-Manager may trigger manual ERP sync and PM evaluation. Scheduled and manual jobs
-must use overlap prevention.
+Manager may trigger manual ERP parts sync and PM evaluation. Scheduled and
+manual jobs must use overlap prevention.
 
 ## Deployment Pattern
 

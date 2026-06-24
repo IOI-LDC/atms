@@ -1,125 +1,77 @@
 # Task Delivery List
 
-## Foundation
+> **Date:** 2026-06-24
+> **Purpose:** Track items blocked on external dependencies or pending decisions.
 
-- [x] Create Laravel backend project (Task 1)
-- [ ] Create Vue frontend project
-- [x] Configure Docker Compose (Task 1)
-- [x] Configure PostgreSQL (Task 1)
-- [x] Configure environment files (Task 1)
-- [x] Implement authentication (Task 3)
-- [x] Implement base RBAC (Task 4)
+## Blocked — ERP Team
 
-## Administration
+### 1. Parts API page name
 
-- [ ] Users list
-- [ ] User update PATCH API (name, email, role, active status)
-- [ ] Admin password reset API
-- [x] Roles setup (Task 4)
-- [x] Locations CRUD (Task 8)
-- [x] Master data CRUD (Task 8)
-- [ ] ERP sync settings
+Parts sync cannot proceed without the BC custom API page name for parts/items.
 
-## ERP Sync
+| Field | Value |
+|---|---|
+| **Blocked since** | 2026-06-24 |
+| **Depends on** | ERP team / LDC |
+| **What we need** | The OData V4 API page name — the equivalent of `fixedAssestAPI` but for parts (e.g. `itemsAPI`, `partsAPI`) |
+| **Impact if resolved** | `SyncErpPartsJob` can fetch parts; field mapping can be documented; parts catalogue populated in SM |
 
-- [x] Create ERP sync job tables (Task 7)
-- [x] Implement asset sync job (Task 7)
-- [x] Implement parts sync job (Task 7)
-- [x] Implement manual sync endpoint (Task 7)
-- [ ] Implement sync history UI
-- [ ] Implement sync error UI
+### 2. Parts field mapping
 
-## Assets
+Cannot map the parts schema until the endpoint returns data.
 
-- [x] Asset list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
-- [x] Asset detail API (Task 14 — role-scoped Resource)
-- [ ] Asset create POST API (manual creation — no ERP source)
-- [ ] Asset update PATCH API (operational fields + location with history)
-- [ ] Asset list UI
-- [ ] Asset detail UI
-- [x] Meter reading API (Task 8)
-- [ ] Meter reading UI
-- [x] Location update API (Task 8)
-- [ ] Location history UI
-- [x] Asset attachments API (Task 12)
-- [x] Asset maintenance history API (Task 14 — derived from closed WOs)
-- [ ] Asset maintenance history UI
+| Field | Value |
+|---|---|
+| **Blocked since** | 2026-06-24 |
+| **Depends on** | #1 (Parts API page name) |
+| **What we need** | Sample response rows showing field names and types for each part |
 
-## Parts
+### 3. `componentOfMainAsset` sample data
 
-- [x] Parts list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
-- [x] Part detail API (Task 14 — role-scoped Resource)
-- [ ] Parts list UI
-- [ ] Part detail UI
-- [x] Part attachments API (Task 12)
-- [ ] Part update PATCH API (local operational fields — ERP fields blocked)
+BC has `mainAssetComponent` and `componentOfMainAsset` fields that may support the Asset Assembly model natively. We need to see a real example of a component asset (where `componentOfMainAsset` is non-null).
 
-## Maintenance Requests
+| Field | Value |
+|---|---|
+| **Blocked since** | 2026-06-24 |
+| **Depends on** | ERP team |
+| **What we need** | An asset where `componentOfMainAsset` is set to a parent FA number, to confirm the ERP already models parent-child asset relationships |
+| **Impact if resolved** | Asset Assembly model can map directly to BC's existing structure |
 
-- [x] Corrective MR create API (Task 9)
-- [ ] Corrective MR form UI
-- [x] MR list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
-- [ ] MR list UI
-- [x] Review MR API (Task 9)
-- [ ] Review MR UI
-- [x] Approve & create WO action (Task 9)
-- [x] Reject MR action (Task 9)
-- [ ] MR update PATCH API (description, priority, asset_id while pending_review)
+### 4. ✅ OData pagination behaviour
 
-## Work Orders
+| Field | Value |
+|---|---|
+| **Resolved** | 2026-06-24 — No pagination. BC returns all records in one response. Full pull, no cursor logic needed. |
 
-- [x] WO list API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
-- [x] WO detail API (Task 14 — role-scoped Resource)
-- [ ] WO list UI
-- [ ] WO detail UI
-- [x] Parts used API (Task 10)
-- [ ] Parts used UI
-- [x] WO attachments API (Task 12)
-- [x] Close WO API (Task 10)
-- [ ] Close WO UI
-- [ ] Closed WO history UI
+### 5. ✅ Incremental sync support
 
-## PM Rules
+| Field | Value |
+|---|---|
+| **Resolved** | 2026-06-24 — Not needed. Pull all records and compare locally. No `$filter` required. |
 
-- [x] PM rule CRUD API (Task 14 — role-scoped Resource, cursor pagination, filtering, sorting)
-- [ ] PM rule UI
-- [x] PM evaluation service (Task 11)
-- [x] PM scheduler job (Task 11)
-- [x] Preventive MR generation (Task 11)
-- [x] PM baseline update after WO closure (Task 11)
+### 6. ✅ `inactive` / `blocked` semantics
 
-## Audit System
+| Field | Value |
+|---|---|
+| **Resolved** | 2026-06-24 — ERP `inactive`/`blocked` mapped to `erp_status` (informational only). Does **not** control `is_active`. Sync never overwrites ATMS local fields. Field ownership boundary documented in `ERP_SYNC.md`. |
 
-- [x] Append-Only Technical Audit (Task 13)
+---
 
-## Dashboard
+## Pending — Internal Decisions
 
-- [x] Dashboard summary API (Task 14 — role-adaptive widgets)
-- [ ] Dashboard UI cards
-- [x] Pending MR widget (Task 14)
-- [x] Open WO widget (Task 14)
-- [x] Overdue PM widget (Task 14 — uses PmDueCalculator)
-- [x] Recently closed WO widget (Task 14)
+### 7. ✅ `asset_tag` field
 
-## Operations
+| **Resolved** | 2026-06-24 — Format `L-BBB-CCC-XXXX`. Ownership (L/X), type code (3-char from faSubclassCode), size code (encoded inch measurement or 000), serial suffix (last 4 of serialNo). Manual generation, immutable after save, unique constraint. See [`ASSET_TAG.md`](../atms/01-product/ASSET_TAG.md). |
 
-- [x] Queue, scheduler, and failure hardening (Task 15)
-- [x] Backup and restore scripts (Task 16)
-- [x] Backup and restore ops guide (Task 16)
-- [x] Deployment guide (Task 18)
+---
 
-## Quality
+## Resolved
 
-- [x] Workflow tests
-- [x] Permission tests
-- [x] ERP sync tests
-- [x] Validation tests
-- [x] Role-scoped Resource tests (Task 14)
-- [x] Dashboard tests (Task 14)
-- [x] Maintenance history tests (Task 14)
-- [x] Security and concurrency tests (Task 17)
-- [x] Integration smoke test (Task 18)
-- [x] Security smoke test (Task 17)
-- [x] Full regression: 268 PHPUnit tests passing (Task 18)
-- [x] Docker build and end-to-end verification (Task 18)
-- [ ] UAT issue tracking
+| # | Item | Date |
+|---|---|---|
+| — | Token auth working (Entra ID → BC) | 2026-06-24 ✅ |
+| — | Fixed assets endpoint confirmed (`fixedAssestAPI`, 429 assets, 24 fields) | 2026-06-24 ✅ |
+| — | Asset Assembly model: Q1–Q5 all decided | 2026-06-24 ✅ |
+| — | Mock ERP deprecated, config/infra cleaned | 2026-06-24 ✅ |
+| — | Documentation restructure (3 subsystems, 5 roles) | 2026-06-24 ✅ |
+| — | LDC Meeting Parts Write-Back document | 2026-06-24 ✅ |

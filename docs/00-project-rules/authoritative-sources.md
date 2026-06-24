@@ -9,6 +9,6 @@ Known screenshot conflicts:
 
 Locked MVP boundaries:
 - Labor tracking is excluded. Do not add technician hour logs, labor rates, labor costs, timesheets, or productivity reporting.
-- PM Rules apply only to individual ERP-linked assets. Category, asset-type, unit, package, and template-level rules are excluded.
-- Work Order parts are operational usage records selected from ERP-linked reference data. Do not add stock quantities, valuation, procurement, warehouse transactions, or parts costing.
-- Logistics is a fixed role for asset physical location updates and location history only. It does not introduce logistics documents, approvals, handovers, or custody workflows.
+- PM Rules apply only to individual ATMS-managed assets. Category, asset-type, unit, package, and template-level rules are excluded.
+- Work Order parts are operational usage records selected from the SM parts catalogue (parts are owned by Store Management; ERP-synced parts live in SM tables). ATMS does not own parts, stock, valuation, procurement, warehouse transactions, or parts costing — those belong to SM.
+- Asset physical location and location history are owned by the AM (Asset Movement) subsystem. ATMS reads current location from AM tables for display only. AM handles movement requests: Requester submits → Logistics approves → Logistics confirms arrival → AM tables update. Logistics does not introduce gate passes, shipment documents, or custody workflows within ATMS.

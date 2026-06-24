@@ -55,3 +55,11 @@ Minimum tests:
 - Location update creates history record.
 - ERP asset sync upserts assets.
 - ERP parts sync upserts parts.
+
+- Component can be installed into a package.
+- Component can be removed from a package.
+- Component swap is atomic (remove + install in one transaction).
+- Cycle prevention rejects self-referencing parent assignment.
+- Component hours are derived correctly on removal (parent reading − install time).
+- Installed component has sub-status "Installed"; spare component has "Ready".
+- Assembly history records are created on install and closed on removal.
