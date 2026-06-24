@@ -7,8 +7,8 @@
   and working. Fixed assets endpoint confirmed (`fixedAssestAPI`). Parts
   endpoint will follow the identical auth + URL pattern once the API page name
   is provided by the ERP team.
-- ERP parts sync is **read-only** in MVP. Parts write-back (SM → ERP at Goods
-  Receipt) is under discussion with LDC — see
+- ERP parts sync is **read-only** in MVP. Parts consumption write-back (SM → ERP
+  when stock is issued at Goods Receipt) is under discussion with LDC — see
   [`sm/01-product/LDC_MEETING_PARTS_WRITEBACK.md`](../sm/01-product/LDC_MEETING_PARTS_WRITEBACK.md).
 - ERP integration is **parts only**. Assets are managed fully within ATMS; no
   ERP asset sync.

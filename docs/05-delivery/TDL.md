@@ -59,7 +59,22 @@ BC has `mainAssetComponent` and `componentOfMainAsset` fields that may support t
 
 ## Pending — Internal Decisions
 
-### 7. ✅ `asset_tag` field
+### 7. Parts consumption write-back mechanism
+
+Can SM push a stock consumption/decrement transaction to ERP when a part is
+issued at Goods Receipt? What is the ERP endpoint and payload for such a
+transaction?
+
+| Field | Value |
+|---|---|
+| **Blocked since** | 2026-06-24 |
+| **Depends on** | ERP team / LDC |
+| **What we need** | Confirmation that ERP can accept consumption/decrement transactions; API endpoint, payload shape, and auth mechanism. |
+| **Impact if resolved** | SM GR workflow gains ERP write-back; ERP inventory stays accurate. |
+
+---
+
+### 8. ✅ `asset_tag` field
 
 | **Resolved** | 2026-06-24 — Format `L-BBB-CCC-XXXX`. Ownership (L/X), type code (3-char from faSubclassCode), size code (encoded inch measurement or 000), serial suffix (last 4 of serialNo). Manual generation, immutable after save, unique constraint. See [`ASSET_TAG.md`](../atms/01-product/ASSET_TAG.md). |
 

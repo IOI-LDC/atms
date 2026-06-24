@@ -99,7 +99,17 @@ The system will include only basic operational dashboards and simple reports. Ad
 
 ## 19. ERP Write-Back
 
-The system will not update the ERP with asset changes, capitalization, disposal, financial data, parts transactions, or maintenance records unless agreed separately. ERP integration is read-only for parts (synced from ERP into SM tables). No ERP asset sync exists.
+The system will not update the ERP with financial data, capitalization, disposal,
+or maintenance records unless agreed separately. ERP integration for parts is
+currently read-only (synced from ERP into SM tables).
+
+> **Under discussion with LDC:** Parts consumption write-back — when SM issues
+> a part to a requester at Goods Receipt (stock exits store), SM may push a
+> consumption transaction to ERP so the ERP reflects the inventory decrement.
+> Mechanism and API contract are pending LDC ERP team input. See
+> [`sm/01-product/LDC_MEETING_PARTS_WRITEBACK.md`](../sm/01-product/LDC_MEETING_PARTS_WRITEBACK.md).
+
+No ERP asset sync exists — assets are managed fully within ATMS.
 
 ## 20. Offline Mode
 

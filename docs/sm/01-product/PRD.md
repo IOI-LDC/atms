@@ -15,6 +15,11 @@ SM is responsible for:
 - **Stock movement** — issues, receipts, transfers, adjustments.
 - **Order workflow** — Order → Approval → Dispatch → Goods Receipt (GR).
 - **ERP parts sync** — SM owns the ERP integration boundary for parts. ATMS reads parts from SM tables only.
+- **Consumption write-back** — When SM completes a Goods Receipt (item issued to
+  requester, stock exits store), SM pushes the consumption transaction to LDC
+  ERP so the ERP reflects the inventory decrement. This is a proposed write-back
+  — mechanism and API contract to be confirmed with LDC ERP team. See
+  [`LDC_MEETING_PARTS_WRITEBACK.md`](./LDC_MEETING_PARTS_WRITEBACK.md).
 
 ## Relationship to ATMS
 
