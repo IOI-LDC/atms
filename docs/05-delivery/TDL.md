@@ -74,15 +74,11 @@ transaction?
 
 ---
 
-### 8. Virtual Store — open design questions
+### 8. ✅ Virtual Store — design questions resolved
 
 | Field | Value |
 |---|---|
-| **Status** | Spec drafted. 4 open questions to resolve with client. |
-| **Q1** | Bin granularity — per-workshop or per-technician? |
-| **Q2** | Manager approval scope — per-part or per-bin? |
-| **Q3** | End-of-day return — system-enforced or storekeeper-confirmed? |
-| **Q4** | Auto-notification for unconsumed overnight stock? |
+| **Resolved** | 2026-06-24 — Q1: One Virtual Store per workshop (LDC has one). Q2: Manager approves per part/line item. Q3: System auto-flags at end of day. Q4: Covered by auto-flagging on SM dashboard. |
 | **Spec** | [`docs/sm/01-product/VIRTUAL_STORE.md`](../sm/01-product/VIRTUAL_STORE.md) |
 
 ---
