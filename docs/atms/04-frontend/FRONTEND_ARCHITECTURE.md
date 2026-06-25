@@ -41,6 +41,8 @@ src/
     assembly/
       (assembly-tree, assembly-history, install-component, etc.)
     parts/
+    locations/
+      (update-location-sheet, location-list, location-form)
     maintenance-requests/
     work-orders/
     admin/
@@ -69,6 +71,7 @@ Main routes. Tab state is driven by `?tab=` query parameters.
 /assets/:id                 Asset Detail (drill-down)
 /parts                      Parts Management (tabbed: all, part-request)
 /parts/:id                  Part Detail (drill-down)
+/locations                  Locations (tabbed: asset-location-update, manage-locations)
 /admin                      Admin (tabbed: users, lists, pm-rules)
 /settings                   Settings (tabbed: system, audit-logs)
 ```

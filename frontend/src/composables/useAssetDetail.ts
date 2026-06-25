@@ -138,7 +138,21 @@ export function useAssetDetail() {
     locationHistoryLoading.value = true
     try {
       const res = await api.get<{ data: AssetLocationHistoryItem[] }>(`/assets/${id}/location-history`)
-      locationHistory.value = res.data ?? []
+      const items = res.data ?? []
+
+      // Resolve location IDs to names using the admin endpoint.
+      // Silently ignored for non-Admin roles (403).
+      try {
+        const locRes = await api.get<{ data: Location[] }>('/admin/locations')
+        const locMap = new Map((locRes.data ?? []).map((l) => [l.id, l]))
+        locationHistory.value = items.map((h) => ({
+          ...h,
+          from_location: h.from_location_id != null ? (locMap.get(h.from_location_id) ?? null) : null,
+          to_location: locMap.get(h.to_location_id) ?? null,
+        }))
+      } catch {
+        locationHistory.value = items
+      }
     } catch {
       locationHistory.value = []
     } finally {

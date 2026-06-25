@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   LayoutDashboard, ClipboardList, Wrench, HardDrive, Package, Settings,
-  Shield, ChevronUp,
+  Shield, ChevronUp, MapPin,
 } from '@lucide/vue'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -75,6 +75,13 @@ const navItems: NavItemDef[] = [
     to: () => '/parts?tab=all-parts',
     isActiveFor: (p) => p === '/parts' || p.startsWith('/parts/'),
     visibleTo: (r) => r.isAdminOrManager || r.isTechnician,
+  },
+  {
+    label: 'Locations',
+    icon: MapPin,
+    to: () => '/locations?tab=asset-location-update',
+    isActiveFor: (p) => p === '/locations' || p.startsWith('/locations/'),
+    visibleTo: (r) => r.isAdminOrManager || r.isLogistics,
   },
   {
     label: 'Admin',

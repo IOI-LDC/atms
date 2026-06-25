@@ -539,7 +539,7 @@ Confirm an unverified meter reading. Idempotent — confirming an already-confir
 
 Update an asset's current location. Creates a location history record.
 
-**Auth:** Required (Administrator, Maintenance Manager, Technician, or Logistics)
+**Auth:** Required (Administrator, Maintenance Manager, or Logistics)
 **Validation:** Asset must be active. Target location must be active.
 
 **Request Body:**
@@ -553,6 +553,34 @@ Update an asset's current location. Creates a location history record.
   "data": { /* updated asset */ }
 }
 ```
+
+
+### GET `/api/locations`
+
+List active location definitions. Used by the "Asset Location Update" screen to
+populate the location picker dropdown for non-Admin roles (Manager, Logistics).
+
+**Auth:** Required (Administrator, Maintenance Manager, or Logistics)
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Workshop",
+      "type": "workshop",
+      "code": "WS",
+      "description": "Main workshop facility",
+      "is_active": true
+    }
+  ]
+}
+```
+
+**Note:** Returns only active locations (`is_active = true`). This is distinct from
+`GET /api/admin/locations` which is Admin-only and returns all locations regardless
+of active status.
 
 ---
 

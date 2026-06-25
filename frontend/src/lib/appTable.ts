@@ -25,6 +25,7 @@ export interface AppColumnDef<T = Record<string, unknown>> {
   headerFilter?: 'select' | 'text'
   type?: 'date' | 'number' | 'text'
   minWidth?: number
+  align?: 'center' | 'right'
   comparator?: (valueA: unknown, valueB: unknown, rowA: T, rowB: T) => number
 }
 

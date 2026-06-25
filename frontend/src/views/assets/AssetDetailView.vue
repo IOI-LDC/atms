@@ -274,9 +274,11 @@ watch(
                 <tr v-for="h in locationHistory" :key="h.id" class="detail-table-row">
                   <td class="detail-table-cell">{{ fmtDate(h.effective_at) }}</td>
                   <td class="detail-table-cell detail-field-muted">
-                    {{ h.from_location_id ? `#${h.from_location_id}` : '—' }}
+                    {{ h.from_location?.name ?? (h.from_location_id ? `Location #${h.from_location_id}` : '—') }}
                   </td>
-                  <td class="detail-table-cell">#{{ h.to_location_id }}</td>
+                  <td class="detail-table-cell">
+                    {{ h.to_location?.name ?? `Location #${h.to_location_id}` }}
+                  </td>
                   <td class="detail-table-cell">{{ h.reason ?? '—' }}</td>
                 </tr>
               </tbody>

@@ -17,7 +17,7 @@ clutter and cognitive load. There are no nested dropdown menus.
 
 ## Sidebar Structure
 
-Seven primary sidebar items.
+Eight primary sidebar items.
 
 | # | Label | Type | Visible To |
 |---|---|---|---|
@@ -26,8 +26,9 @@ Seven primary sidebar items.
 | 3 | **Work Orders** | Tabbed Group | Admin, Manager, Technician |
 | 4 | **Asset Management** | Tabbed Group | Admin, Manager, Technician, Logistics |
 | 5 | **Parts Management** | Tabbed Group | Admin, Manager, Technician |
-| 6 | **Admin** | Tabbed Group | Admin only |
-| 7 | **Settings** | Tabbed Group | Admin only |
+| 6 | **Locations** | Tabbed Group | Admin, Manager, Logistics |
+| 7 | **Admin** | Tabbed Group | Admin only |
+| 8 | **Settings** | Tabbed Group | Admin only |
 
 ## Tab Definitions
 
@@ -112,7 +113,31 @@ Seven primary sidebar items.
   order/stock workflow. Used for requesting parts for work orders or general
   maintenance needs.
 
-### 6. Admin
+### 6. Locations
+
+- **Type:** Tabbed group.
+- **Route:** `/locations`
+- **Tabs:**
+
+| Tab | Visible To |
+|---|---|
+| Asset Location Update | Admin, Manager, Logistics |
+| Manage Locations | Admin only |
+
+- **"Asset Location Update" tab** — Search and select an active asset, view its
+  current location and location history, and update the asset's physical
+  location. Uses a side-sheet form (`UpdateLocationSheet`) containing: target
+  location (select from active location list), effective date, optional reason,
+  and optional notes. Submitting creates a location history record via the
+  backend `UpdateAssetLocation` Action. No approval chain — a direct update
+  per the Phase 1 scope.
+- **"Manage Locations" tab** — CRUD for location definitions. Administrator
+  can create, edit, activate, and deactivate location records (name, type,
+  code, description, parent location for hierarchy). Uses `POST/PATCH
+  /api/admin/locations`. Deactivated locations are excluded from the "Asset
+  Location Update" location picker but remain in history records.
+
+### 7. Admin
 
 - **Type:** Tabbed group.
 - **Route:** `/admin`
@@ -130,13 +155,16 @@ Seven primary sidebar items.
 - **"Lists & Dropdowns" tab** — Manage all configurable dropdown values
   including locations, asset statuses, maintenance priorities, usage reading
   types, work order statuses, asset maintenance sub-statuses, and other
-  master-data items used across the system.
+  master-data items used across the system. **Note:** Locations formerly lived
+  exclusively here; they now also have a dedicated sidebar item (§6) with a
+  "Manage Locations" tab that provides the same CRUD capability in a
+  location-focused context.
 - **"PM Rules" tab** — Configure preventive maintenance rules per individual
   asset. Rule types: calendar interval, operating hours, kilometers, or other
   usage readings. Each rule belongs to one asset. Deactivation (not deletion)
   for retired rules.
 
-### 7. Settings
+### 8. Settings
 
 - **Type:** Tabbed group.
 - **Route:** `/settings`
@@ -174,6 +202,7 @@ Seven primary sidebar items.
 | Work Orders | — | ✓ | — | ✓ | ✓ |
 | Asset Management | — | ✓ | ✓ | ✓ | ✓ |
 | Parts Management | — | ✓ | — | ✓ | ✓ |
+| **Locations** | — | — | ✓ | ✓ | ✓ |
 | Admin | — | — | — | — | ✓ |
 | Settings | — | — | — | — | ✓ |
 

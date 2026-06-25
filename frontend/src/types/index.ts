@@ -31,7 +31,7 @@ export interface AssetRef { id: number; name: string; erp_asset_code: string; op
 /** Minimal user reference. `email` only visible to Admin/Manager. */
 export interface UserRef { id: number; name: string; email?: string }
 
-export interface LocationRef { id: number; name: string }
+export interface LocationRef { id: number; name: string; type?: string }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -93,6 +93,8 @@ export interface AssetLocationHistoryItem {
   asset_id: number
   from_location_id: number | null
   to_location_id: number
+  from_location?: LocationRef | null
+  to_location?: LocationRef | null
   effective_at: string
   reason: string | null
   notes: string | null

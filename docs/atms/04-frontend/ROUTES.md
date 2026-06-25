@@ -94,6 +94,32 @@ cross-subsystem link into the SM (Store Management) subsystem's ordering flow.
 
 ---
 
+## Locations
+
+```text
+/locations
+```
+
+| Tab (`?tab=`)              | Visible To                    |
+|-----------------------------|-------------------------------|
+| `asset-location-update`     | Admin, Manager, Logistics     |
+| `manage-locations`          | Admin only                    |
+
+- **`asset-location-update`** — Search and select an active asset, view its
+  current location and location history, and update its physical location.
+  Opens `UpdateLocationSheet` (side sheet) per asset row. Calls
+  `POST /api/assets/{asset}/location`. See
+  `SCREEN_INVENTORY.md` §6a for full workflow spec.
+- **`manage-locations`** — CRUD for location definitions (name, type, code,
+  description, parent location, active status). Uses existing
+  `GET/POST/PATCH /api/admin/locations` endpoints. Admin only.
+
+**Note:** Location history for a specific asset is still accessed via the
+existing drill-down route `/assets/:assetId/location-history`. The "Asset
+Location Update" tab links to this drill-down from each asset row.
+
+---
+
 ## Admin
 
 ```text

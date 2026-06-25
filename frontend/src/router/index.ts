@@ -92,6 +92,13 @@ const router = createRouter({
       component: () => import('@/views/parts/PartDetailView.vue'),
     },
 
+    // ── Locations ─────────────────────────────────────────────────────────────
+    {
+      path: '/locations',
+      name: 'locations',
+      component: () => import('@/views/locations/LocationsView.vue'),
+    },
+
     // ── Settings ──────────────────────────────────────────────────────────────
     {
       path: '/settings/pm-rules',
@@ -113,9 +120,7 @@ const router = createRouter({
     },
     {
       path: '/settings/locations',
-      name: 'settings-locations',
-      component: () => import('@/views/admin/LocationsView.vue'),
-      meta: { requiresAdmin: true },
+      redirect: { path: '/locations', query: { tab: 'manage-locations' } },
     },
     {
       path: '/settings/lists',

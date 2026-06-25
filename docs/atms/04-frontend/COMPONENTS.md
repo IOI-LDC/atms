@@ -32,7 +32,6 @@
 - MeterReadingList
 - AddMeterReadingSheet
 - LocationHistoryList
-- UpdateLocationSheet
 - AssetAttachmentsPanel
 - AssetMaintenanceHistory
 
@@ -52,6 +51,22 @@
 - PartDetailCard
 - PartAttachmentsPanel
 - PartRequestForm
+
+### Locations
+
+- **UpdateLocationSheet** — Side sheet for updating an asset's physical
+  location. Fields: asset (read-only, pre-populated), current location
+  (read-only), new location (select, required), effective date (datetime,
+  defaults to now, required), reason (text, optional), notes (textarea,
+  optional). Calls `POST /api/assets/{asset}/location`. Visible to Admin,
+  Manager, Logistics. Follows the standard confirm-then-submit pattern.
+- **LocationList** — Data table for the "Manage Locations" tab. Columns: name,
+  type, code, parent location, active status, created date. Row actions:
+  Edit, Activate/Deactivate. Admin only.
+- **LocationForm** — Side sheet for creating/editing a location definition.
+  Fields: name (required), type (required), code (optional), parent location
+  (optional select), description (optional). Calls `POST/PATCH
+  /api/admin/locations`. Admin only.
 
 ### Admin
 

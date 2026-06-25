@@ -117,19 +117,84 @@ reading statuses are shown.
 The UI must explain that confirmed values cannot decrease and cannot be edited
 or deleted. Corrections require a new valid reading.
 
-## Location Update Form
+## Asset Location Update Form (UpdateLocationSheet)
 
-Available to:
+**Available to:** Logistics, Maintenance Manager, Administrator.
 
-- Logistics
-- Maintenance Manager
-- Administrator
+**Accessible from:**
+- `Locations` sidebar → "Asset Location Update" tab (dedicated screen)
+- `Asset Detail` → "Location History" drill-down
 
-Fields:
+**Context:** In Phase 1, this is a direct location update — no movement
+request, no approval chain, no arrival confirmation. The backend
+`UpdateAssetLocation` Action writes a location history record automatically.
 
-- New location
-- Effective date
-- Reason/notes
+**Endpoint:** `POST /api/assets/{asset}/location`
+
+**Request Payload:**
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `location_id` | int | Yes | Must reference an active location |
+| `reason` | string | No | Brief reason for the location change |
+| `notes` | string | No | Additional context |
+
+**Frontend Form Fields:**
+
+| Field | Control | Required | Validation |
+|---|---|---|---|
+| Asset | Read-only display | N/A | Pre-populated from selected asset row (tag + name) |
+| Current Location | Read-only display | N/A | Shown for context; "No location assigned" if null |
+| New Location | Select dropdown | Yes | Active locations only. Exclude current location from options. |
+| Effective Date | DateTime picker | Yes | Defaults to now. Must be a valid date. |
+| Reason | Text input | No | Free text, max 255 characters |
+| Notes | Textarea | No | Free text |
+
+**Submission flow:**
+1. User selects an asset row and clicks "Update Location".
+2. `UpdateLocationSheet` opens (side sheet).
+3. Form validates → "Confirm Location Change" dialog opens summarising the
+   change (e.g., "Move asset T-001-ABC-1234 from Workshop to Rig A?").
+4. User confirms → `POST /api/assets/{asset}/location` is dispatched.
+5. Success → toast, sheet closes, asset list refreshes, location history
+   refreshes.
+6. Error → validation errors shown inline, domain errors (409) shown as
+   alert/toast. Form data preserved.
+
+**Validation rules (backend-enforced, mirrored in frontend):**
+- Asset must be active (`is_active = true`).
+- Target location must be active (`is_active = true`).
+- `location_id` must exist in the `locations` table.
+
+**Error examples:**
+- `422`: "Cannot update location for an inactive asset."
+- `422`: "Cannot assign an inactive location."
+- `422`: `location_id` validation errors (missing, non-existent).
+
+## Location Create / Edit Form (LocationForm)
+
+**Available to:** Administrator only.
+
+**Accessible from:** `Locations` sidebar → "Manage Locations" tab.
+
+**Endpoint:**
+- Create: `POST /api/admin/locations`
+- Update: `PATCH /api/admin/locations/{location}`
+
+**Request/Form Fields:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | Yes | Display name |
+| `type` | string | Yes | Free text (e.g., "workshop", "yard", "rig", "well_site", "building") |
+| `code` | string | No | Short code (e.g., "WS", "RA") |
+| `parent_id` | int | No | Self-referencing FK to `locations.id`, nullable |
+| `description` | text | No | Free text |
+| `is_active` | bool | No | Defaults to `true` on create |
+
+**Activate / Deactivate:**
+- Deactivating a location hides it from the "Asset Location Update" picker
+  but preserves it in location history records.
+- Uses `PATCH /api/admin/locations/{location}` with `is_active: false/true`.
 
 ## Install Component Form
 

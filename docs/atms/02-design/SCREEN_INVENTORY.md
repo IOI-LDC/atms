@@ -1,6 +1,6 @@
 # Screen Inventory
 
-Screens are organised by the seven sidebar navigation groups. Drill-down pages
+Screens are organised by the eight sidebar navigation groups. Drill-down pages
 (asset detail, part detail, work order detail, review MR) are accessed from
 their respective list screens and do not appear in the sidebar.
 
@@ -187,7 +187,62 @@ Tabs:
 
 ---
 
-## 6. Admin
+## 6. Locations
+
+**Sidebar:** Tabbed group — visible to Admin, Manager, Logistics.
+
+**Route:** `/locations`
+
+**Purpose:** Dedicated location management in Phase 1. Gives Logistics a primary
+workspace for their core function (asset location updates) and gives
+Administrator a focused view for location definition CRUD.
+
+Tabs:
+
+### 6a. Asset Location Update
+- **Visible to:** Admin, Manager, Logistics.
+- Searchable list of active assets showing current location.
+- Columns: asset tag, name, category, **current location**, latest usage
+  reading, maintenance status badge.
+- Row action: "Update Location" — opens `UpdateLocationSheet` (side sheet).
+- **UpdateLocationSheet fields:**
+  - **Asset** (pre-populated, read-only — shows asset tag + name)
+  - **Current Location** (read-only, shown for context)
+  - **New Location** (select from active locations list, required)
+  - **Effective Date** (datetime, defaults to now, required)
+  - **Reason** (text, optional)
+  - **Notes** (textarea, optional)
+- **Submission flow:** Validate → Confirm dialog → `POST /api/assets/{asset}/location`
+  → toast result → refresh list + location history.
+- A "View Location History" link per row navigates to
+  `/assets/:assetId/location-history` (drill-down).
+- **Note:** This screen uses `GET /api/assets` filtered by active status to
+  populate the asset list, and `GET /api/admin/locations` (Admin-only endpoint)
+  or `GET /api/locations` (new read-only endpoint for Manager/Logistics — see
+  §6b) to populate the location picker.
+
+### 6b. Manage Locations
+- **Visible to:** Admin only.
+- Full CRUD for location definitions.
+- **Location list:** Table with columns: name, type, code, parent location,
+  active status, created date.
+- **Create Location** (side sheet): name (required), type (required),
+  code (optional), parent location (optional, self-referencing hierarchy),
+  description (optional).
+- **Edit Location** (side sheet): same fields, all optional.
+- **Activate / Deactivate** (dialog): toggle `is_active`. Deactivated locations
+  remain in history but are excluded from the "Asset Location Update" picker.
+- Uses the existing `GET/POST/PATCH /api/admin/locations` endpoints.
+- **Read-only location list endpoint** for Manager/Logistics: A new
+  `GET /api/locations` endpoint returns active locations only for use in the
+  "Asset Location Update" location picker, so non-Admin roles can see the
+  location list without admin privileges. See
+  [`BACKEND_API_REFERENCE.md`](../04-technical/BACKEND_API_REFERENCE.md) for
+  the endpoint specification.
+
+---
+
+## 7. Admin
 
 **Sidebar:** Tabbed group — visible to Administrator only.
 
@@ -195,7 +250,7 @@ Tabs:
 
 Tabs:
 
-### 6a. Users & Access
+### 7a. Users & Access
 - **Visible to:** Admin only.
 - Employee Directory Import: shows locally imported SharePoint employees.
 - User provisioning: select imported employee → assign one fixed role → send
@@ -204,15 +259,17 @@ Tabs:
   reset.
 - Fixed role reference is shown for assignment; no custom role management.
 
-### 6b. Lists & Dropdowns
+### 7b. Lists & Dropdowns
 - **Visible to:** Admin only.
 - Manage all configurable dropdown values used across the system.
-- Includes: **Locations**, asset statuses, asset maintenance sub-statuses,
-  maintenance priorities, usage reading types, work order statuses, maintenance
-  categories, and other master-data / lookup values.
-- Location management is part of this tab (not a standalone screen).
+- Includes: asset statuses, asset maintenance sub-statuses, maintenance
+  priorities, usage reading types, work order statuses, maintenance categories,
+  and other master-data / lookup values.
+- **Note:** Locations are also managed here alongside the dedicated
+  "Manage Locations" tab in §6b. Both views operate on the same `locations`
+  table.
 
-### 6c. PM Rules
+### 7c. PM Rules
 - **Visible to:** Admin only. (Maintenance Managers may view and trigger manual
   evaluation but configuration is Admin-only.)
 - List of preventive maintenance rules per individual asset.
@@ -227,7 +284,7 @@ Tabs:
 
 ---
 
-## 7. Settings
+## 8. Settings
 
 **Sidebar:** Tabbed group — visible to Administrator only.
 
@@ -235,7 +292,7 @@ Tabs:
 
 Tabs:
 
-### 7a. System & Integration
+### 8a. System & Integration
 - **Visible to:** Admin only.
 - ERP sync settings (SM-owned parts sync configuration).
 - Sync history: list of past sync runs with timestamps and outcomes.
@@ -243,7 +300,7 @@ Tabs:
 - Company timezone and other system-level configuration.
 - Power Automate email integration settings.
 
-### 7b. Activity Logs
+### 8b. Activity Logs
 - **Visible to:** Admin only.
 - Read-only, append-only technical audit trail.
 - Filterable by event type, user, and date range.
@@ -264,9 +321,9 @@ These are accessed through drill-down navigation from the list screens above:
 
 | Screen | Accessed From |
 |---|---|
-| Asset Detail | All Assets list |
+| Asset Detail | All Assets list, Asset Location Update list |
 | Usage & Meter Readings | Asset Detail |
-| Location History | Asset Detail |
+| Location History | Asset Detail, Asset Location Update list |
 | Maintenance History | Asset Detail |
 | Attachments | Asset Detail, Part Detail |
 | Review Maintenance Request | Pending Approval / All Requests lists |
@@ -285,5 +342,6 @@ These are accessed through drill-down navigation from the list screens above:
 | Work Orders | — | ✓ | — | ✓ | ✓ |
 | Asset Management | — | ✓ | ✓ | ✓ | ✓ |
 | Parts Management | — | ✓ | — | ✓ | ✓ |
+| **Locations** | — | — | ✓ | ✓ | ✓ |
 | Admin | — | — | — | — | ✓ |
 | Settings | — | — | — | — | ✓ |

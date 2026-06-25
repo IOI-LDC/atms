@@ -355,7 +355,10 @@ watch(
               :key="c.field"
               scope="col"
               class="app-data-table-th"
-              :class="{ 'app-data-table-th-sortable': c.sortable }"
+              :class="{
+                'app-data-table-th-sortable': c.sortable,
+                'app-data-table-th-center': c.align === 'center',
+              }"
               :aria-sort="
                 sortDirOf(c.field) === 'asc'
                   ? 'ascending'
@@ -440,7 +443,12 @@ watch(
             @keydown.enter.prevent="onRowClick(row, i)"
             @keydown.space.prevent="onRowClick(row, i)"
           >
-            <td v-for="(c, ci) in cols" :key="c.field" class="app-data-table-cell">
+            <td
+              v-for="(c, ci) in cols"
+              :key="c.field"
+              class="app-data-table-cell"
+              :class="{ 'app-data-table-cell-center': c.align === 'center' }"
+            >
               <slot
                 name="cell"
                 :column="c as unknown as AppColumnDef<TRow>"

@@ -17,6 +17,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\PmRuleController;
@@ -38,6 +39,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureTokenAbilities::cl
     Route::get('/auth/me', [AuthController::class, 'me']);
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    Route::get('/locations', [LocationController::class, 'index']);
 
     Route::prefix('admin')->group(function () {
         Route::get('/company-settings', [CompanySettingController::class, 'show']);

@@ -147,3 +147,28 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+export function locationTypeClass(type: string | null | undefined): string {
+  const m: Record<string, string> = {
+    workshop:      'location-type-badge location-type-workshop',
+    workshop_yard: 'location-type-badge location-type-workshop_yard',
+    yard:          'location-type-badge location-type-yard',
+    well_site:     'location-type-badge location-type-well_site',
+    rig:           'location-type-badge location-type-rig',
+    building:      'location-type-badge location-type-building',
+  }
+  return m[type ?? ''] ?? 'location-type-badge location-type-building'
+}
+
+export function locationTypeLabel(type: string | null | undefined): string {
+  if (!type) return '—'
+  const m: Record<string, string> = {
+    workshop:      'Workshop',
+    workshop_yard: 'Workshop Yard',
+    yard:          'Yard',
+    well_site:     'Well Site',
+    rig:           'Rig',
+    building:      'Building',
+  }
+  return m[type] ?? type.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}

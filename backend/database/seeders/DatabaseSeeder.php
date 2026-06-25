@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RoleSeeder::class);
         $this->call(ServiceUserSeeder::class);
+        $this->call(LocationSeeder::class);
 
         CompanySetting::create([
             'timezone' => config('atms.company_timezone', 'Africa/Tripoli'),

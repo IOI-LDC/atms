@@ -807,15 +807,41 @@ POST /api/pm-rules/{rule}/reactivate     (409 if already active)
 
 ### 6.3 Asset location update
 
+#### Dedicated Locations screen (Phase 1)
+
 ```
-① Logistics / Manager / Admin opens the asset
-   GET /api/admin/locations              (pick an active target location)  [Admin list]
-   POST /api/assets/{asset}/location
+① Logistics / Manager / Admin navigates to Locations sidebar → Asset Location Update tab
+   GET /api/assets?is_active=true    (list active assets with current location)
+   Select asset row → UpdateLocationSheet opens (side sheet)
+   GET /api/locations                (pick an active target location — read-only,
+                                      available to Admin, Manager, Logistics)
+   POST /api/assets/{asset}/location 
         body: { location_id, reason?, notes? }
         → 200 { message, data: Asset }   (creates a location-history record)
+```
 
-② Anyone with access views the history
+#### Alternative: via Asset Edit (existing)
+
+```
+② Admin / Manager opens Asset Detail → Edit Asset
+   PATCH /api/assets/{asset}         (includes current_location_id + location_notes)
+   → 200 { data: AssetResource }     (calls UpdateAssetLocation Action internally)
+```
+
+#### View location history
+
+```
+③ Anyone with access views the history
    GET /api/assets/{asset}/location-history  → { data: AssetLocationHistoryItem[] }
+```
+
+#### Manage location definitions (Admin only)
+
+```
+④ Admin navigates to Locations sidebar → Manage Locations tab (or Admin → Lists)
+   GET    /api/admin/locations            → { data: Location[] }
+   POST   /api/admin/locations            → 201 { data: Location }
+   PATCH  /api/admin/locations/{location} → 200 { data: Location }
 ```
 
 ### 6.4 Meter readings (with confirmation)
@@ -1025,7 +1051,7 @@ see [`BACKEND_API_REFERENCE.md`](./BACKEND_API_REFERENCE.md).
 | GET | `/api/assets/{asset}/meter-readings` | Any | — | — |
 | GET | `/api/assets/{asset}/location-history` | Any | — | — |
 | GET | `/api/assets/{asset}/maintenance-history` | Any (not Logistics) | created_at | per_page, cursor |
-| POST | `/api/assets/{asset}/location` | Admin/Mgr/Tech/Logistics | — | body: location_id, reason?, notes? |
+| POST | `/api/assets/{asset}/location` | Admin/Mgr/Logistics | — | body: location_id, reason?, notes? |
 | POST | `/api/assets/{asset}/meter-readings` | Any | — | body: usage_reading_type_id, reading_value, reading_at, source, notes? |
 | POST | `/api/assets/{asset}/meter-readings/{reading}/confirm` | Admin/Mgr | — | idempotent |
 | POST | `/api/assets/{asset}/assembly/install` | Admin/Mgr/Tech(on WO) | body: parent_id |
@@ -1033,6 +1059,13 @@ see [`BACKEND_API_REFERENCE.md`](./BACKEND_API_REFERENCE.md).
 | POST | `/api/assets/{parent}/assembly/swap` | Admin/Mgr/Tech(on WO) | body: old_component_id, new_component_id, reason |
 | GET | `/api/assets/{asset}/assembly-history` | Any (with view access to component) | install/removal timeline |
 | GET | `/api/assets/{asset}/children` | Any (with view access to parent) | direct children with PM status |
+
+### Locations
+
+| Method | Endpoint | Role | Sort | Filters |
+|---|---|---|---|---|
+| GET | `/api/locations` | Admin/Mgr/Logistics | — | active only |
+| POST | `/api/assets/{asset}/location` | Admin/Mgr/Logistics | — | body: location_id, reason?, notes? |
 
 ### Parts
 

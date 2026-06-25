@@ -967,6 +967,24 @@
   padding: 0.625rem 0.85rem;
   vertical-align: middle;
 }
+.app-data-table-th-center {
+  text-align: center;
+}
+.app-data-table-th-center .app-data-table-sort-btn {
+  justify-content: center;
+  text-align: center;
+}
+.app-data-table-cell-center {
+  text-align: center;
+}
+
+/* Compact icon-button row for table cell actions */
+.table-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
 
 .app-data-table-empty {
   padding: 3rem 1rem;
@@ -1374,6 +1392,113 @@
   width: 14rem;
   height: 2rem;
   font-size: 0.8125rem;
+}
+
+/* ── Location type badges ─────────────────────────────────────────────────── */
+.location-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.location-type-workshop {
+  background: oklch(0.7 0.12 75 / 0.12);
+  color: oklch(0.45 0.1 75);
+  border-color: oklch(0.7 0.12 75 / 0.2);
+}
+.location-type-workshop_yard {
+  background: oklch(0.65 0.08 75 / 0.12);
+  color: oklch(0.42 0.07 75);
+  border-color: oklch(0.65 0.08 75 / 0.2);
+}
+.location-type-yard {
+  background: oklch(0.62 0.1 232 / 0.12);
+  color: oklch(0.4 0.08 232);
+  border-color: oklch(0.62 0.1 232 / 0.2);
+}
+.location-type-well_site {
+  background: oklch(0.55 0.12 155 / 0.12);
+  color: oklch(0.36 0.1 155);
+  border-color: oklch(0.55 0.12 155 / 0.2);
+}
+.location-type-rig {
+  background: oklch(0.52 0.14 275 / 0.12);
+  color: oklch(0.34 0.12 275);
+  border-color: oklch(0.52 0.14 275 / 0.2);
+}
+.location-type-building {
+  background: oklch(0.55 0.02 265 / 0.08);
+  color: oklch(0.36 0.02 265);
+  border-color: oklch(0.55 0.02 265 / 0.15);
+}
+
+/* Inline code hint inside a Select item (e.g. location code) */
+.select-code-hint {
+  font-size: 0.6875rem;
+  margin-left: 0.375rem;
+  color: var(--muted-foreground);
+}
+
+/* Spacer before the compact history timeline in UpdateLocationSheet */
+.location-history-section {
+  margin-top: 1.25rem;
+}
+
+/* ── Compact location history timeline (UpdateLocationSheet) ──────────────── */
+.compact-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.compact-timeline-title {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  margin-bottom: 0.125rem;
+}
+.compact-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border);
+  position: relative;
+}
+.compact-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -0.3125rem;
+  top: 0.375rem;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.compact-timeline-date {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  min-width: 4.5rem;
+}
+.compact-timeline-summary {
+  flex: 1;
+  line-height: 1.35;
+}
+.compact-timeline-empty {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 0.5rem 0;
 }
 
 /* Asset tag assign row — Input + Suggest button side by side */
