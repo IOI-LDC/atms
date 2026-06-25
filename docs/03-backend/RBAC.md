@@ -128,6 +128,22 @@ rules.
 - Only confirmed meter readings update current meter values or participate in PM calculations.
 - PM rule configuration (create, edit, deactivate, reactivate) is Administrator-only. Maintenance Manager may view PM rules and run PM evaluation manually, but cannot modify rule definitions.
 - Cumulative maintenance: when a higher-level PM work order (L2/L3/L4) closes, the baselines of all active lower-level PM rules (L1, etc.) on the same asset are reset. This applies only to the standard L1-L4 level scheme; custom free-text levels are independent.
+
+> **Known gap — Manager access to PM Rules (DECIDED, pending implementation):**
+> PM Rules lives under the **Admin** sidebar item, whose `visibleTo` is
+> currently `isAdmin` only. As a result a Maintenance Manager — who is granted
+> `view`/`viewAny`/`evaluate` by `PmRulePolicy` and passes the
+> `requiresAdminOrManager` guard on `/admin/pm-rules` — has **no UI path** to
+> reach PM Rules; the permission is effectively dormant. The single PM-rule
+> creation point in the system is `POST /api/pm-rules` (`PmRuleController::store`,
+> Admin-only); no other controller or Action creates PM rules.
+>
+> **Agreed direction:** grant the Maintenance Manager access to the full Admin
+> area (Users & Access, Lists & Dropdowns, and PM Rules tabs), rather than
+> role-filtering tabs or promoting PM Rules to its own sidebar item. This is
+> **not yet implemented** — to close the gap, update `AppSidebar.vue`
+> (`visibleTo`), `router/index.ts` (`requiresAdmin` guards on `/admin/*`), and
+> verify the Admin endpoints' policies match the intended scope.
 - Only Administrator may create, edit, activate, or deactivate location definitions and master-data values.
 - Logistics and Maintenance Manager may select existing active locations when recording asset location changes.
 - Administrator and Maintenance Manager may trigger manual ERP parts sync runs.

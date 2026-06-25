@@ -272,6 +272,11 @@ Tabs:
 ### 7c. PM Rules
 - **Visible to:** Admin only. (Maintenance Managers may view and trigger manual
   evaluation but configuration is Admin-only.)
+- > **Known gap (decided, pending implementation):** this tab lives under the
+  Admin sidebar item which is currently Admin-only, so a Manager has no UI path
+  to reach it despite holding view/evaluate permission. Agreed direction: grant
+  Manager full Admin-area access. See `docs/03-backend/RBAC.md` (Known gap) for
+  the full note and required changes.
 - List of preventive maintenance rules per individual asset.
 - Columns: rule name, asset, reading type, interval, last triggered, next due
   estimate, active/inactive status.

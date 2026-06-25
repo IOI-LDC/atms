@@ -138,3 +138,18 @@ The parts catalogue source depends on VJ:
 
 **Decision:** Defer `parts` table until VJ replies. Build `work_order_parts` in Phase 1,
 with a placeholder parts picker using demo data if VJ hasn't replied by then.
+
+## Open Follow-ups
+
+- **Manager access to PM Rules (decided, pending implementation):** PM Rules lives
+  under the Admin sidebar item (`visibleTo: isAdmin`), so a Maintenance Manager
+  has no UI path to reach it despite `PmRulePolicy` granting view/evaluate and
+  the `/admin/pm-rules` guard being `requiresAdminOrManager`. The single PM-rule
+  creation point is `POST /api/pm-rules` (Admin-only); nothing else creates PM
+  rules. **Agreed direction: grant the Manager full Admin-area access** (all
+  three tabs). To implement: `AppSidebar.vue` `visibleTo`, the `requiresAdmin`
+  guards on `/admin/lists` & `/admin/users` in `router/index.ts`, and confirm
+  the Admin endpoints' policies match the intended scope. Canonical note:
+  `docs/03-backend/RBAC.md` (Known gap). Pointers in SCREEN_INVENTORY.md §7c and
+  NAVIGATION.md §7.
+

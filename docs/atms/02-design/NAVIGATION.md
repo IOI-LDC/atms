@@ -142,6 +142,11 @@ Eight primary sidebar items.
 - **Type:** Tabbed group.
 - **Route:** `/admin`
 - **Visible to:** Administrator only.
+
+> **Known gap (decided, pending implementation):** PM Rules is a tab here, so
+the Manager's view/evaluate permission is currently unreachable in the UI.
+Agreed direction: open the full Admin area to the Maintenance Manager. See
+`docs/03-backend/RBAC.md` (Known gap) for details.
 - **Tabs:**
 
 | Tab | Visible To |
