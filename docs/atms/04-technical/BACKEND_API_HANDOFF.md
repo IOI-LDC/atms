@@ -263,7 +263,7 @@ returns more fields to an Administrator than to a Requester. Key global rules:
 | `is_active` on assets | Administrator & Manager only |
 | Inactive assets/parts in lists | Administrator & Manager only |
 | User `email` in `created_by` / `assigned_to` | Administrator & Manager only |
-| `download_url` on attachments | All **except Viewer** |
+| `download_url` on attachments | All |
 | Asset maintenance history | All **except Logistics** |
 
 Per-resource visibility matrices are in the
@@ -315,7 +315,7 @@ form fields.
 | `technician` | Technician | Assigned WOs only; create CM MRs; add readings |
 | `logistics` | Logistics | Asset location updates + location history only (no MRs, WOs, parts, PM, admin) |
 | `requester` | Requester | Create CM MRs, view own requests, basic active assets, parts |
-| `viewer` | Viewer | Read-only everything (no raw ERP, no downloads) |
+| `viewer` | ~~Viewer~~ (removed — merged into Requester) |
 
 Roles are immutable system data. A user has exactly one. Authorisation is enforced
 server-side via policies — **the backend is authoritative**; hide UI defensively
@@ -536,12 +536,12 @@ export interface MaintenanceRequest {
   created_at: string
   asset?: AssetRef                   // when loaded
   created_by?: UserRef               // visibility per matrix
-  reviewed_by?: UserRef              // Admin/Manager/Viewer
+  reviewed_by?: UserRef              // Admin/Manager/
   rejection_reason?: string          // hidden from Logistics
   cancellation_reason?: string       // hidden from Logistics
-  is_preventive?: boolean            // Admin/Manager/Viewer
-  triggered_by_date?: boolean        // Admin/Manager/Viewer
-  triggered_by_reading?: boolean     // Admin/Manager/Viewer
+  is_preventive?: boolean            // Admin/Manager/
+  triggered_by_date?: boolean        // Admin/Manager/
+  triggered_by_reading?: boolean     // Admin/Manager/
   trigger_date?: string | null       // "YYYY-MM-DD"
   trigger_reading_value?: string | null
   work_order?: { id: number; number: string; status: WorkOrderStatus } | null
@@ -563,9 +563,9 @@ export interface WorkOrder {
   description: string | null
   asset?: AssetRef
   created_at: string
-  assigned_to?: UserRef | null       // Admin/Manager/Tech/Viewer
+  assigned_to?: UserRef | null       // Admin/Manager/Tech/
   assigned_by?: UserRef              // Admin/Manager only
-  parts?: WorkOrderPart[]            // Admin/Manager/Tech/Viewer
+  parts?: WorkOrderPart[]            // Admin/Manager/Tech/
   started_at?: string | null
   completed_at?: string | null
   completion_notes?: string | null
@@ -597,7 +597,7 @@ export interface Attachment {
   size_bytes: number
   description: string | null
   created_at: string
-  download_url?: string                  // absent for Viewer
+  download_url?: string                  // absent for Requester
   uploaded_by?: UserRef                  // Admin/Manager only
 }
 

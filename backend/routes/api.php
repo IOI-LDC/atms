@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\ApiClientController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CompanySettingController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\ErpSyncController;
+use App\Http\Controllers\Admin\FaSubclassTypeCodeController;
 use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
@@ -12,6 +14,7 @@ use App\Http\Controllers\AssetLocationController;
 use App\Http\Controllers\AssetMeterReadingController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MaintenanceRequestController;
@@ -28,7 +31,9 @@ Route::post('/auth/activate', [AuthController::class, 'activate'])->middleware('
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::post('/auth/token', [TokenController::class, 'issue'])->middleware('throttle:5,1');
+
+Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureTokenAbilities::class])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
@@ -52,7 +57,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/employees/{employee}/provision-user', [EmployeeController::class, 'provisionUser']);
 
         Route::get('/erp/sync-jobs', [ErpSyncController::class, 'index']);
-        Route::post('/erp/sync-assets', [ErpSyncController::class, 'syncAssets']);
         Route::post('/erp/sync-parts', [ErpSyncController::class, 'syncParts']);
 
         Route::get('/audit-logs', [AuditLogController::class, 'index']);
@@ -65,15 +69,27 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/master-data/{groupKey}', [MasterDataController::class, 'storeMasterDataItem']);
         Route::patch('/master-data/items/{item}', [MasterDataController::class, 'updateMasterDataItem']);
 
+        Route::get('/fa-subclass-type-codes', [FaSubclassTypeCodeController::class, 'index']);
+        Route::post('/fa-subclass-type-codes', [FaSubclassTypeCodeController::class, 'store']);
+        Route::patch('/fa-subclass-type-codes/{code}', [FaSubclassTypeCodeController::class, 'update']);
+        Route::delete('/fa-subclass-type-codes/{code}', [FaSubclassTypeCodeController::class, 'destroy']);
+
+        Route::get('/api-clients', [ApiClientController::class, 'index']);
+        Route::post('/api-clients', [ApiClientController::class, 'store']);
+        Route::get('/api-clients/{client}', [ApiClientController::class, 'show']);
+        Route::delete('/api-clients/{client}', [ApiClientController::class, 'destroy']);
+
         Route::get('/usage-reading-types', [MasterDataController::class, 'indexUsageReadingTypes']);
         Route::post('/usage-reading-types', [MasterDataController::class, 'storeUsageReadingType']);
         Route::patch('/usage-reading-types/{type}', [MasterDataController::class, 'updateUsageReadingType']);
     });
 
+    Route::get('/assets/by-tag', [AssetController::class, 'byTag']);
     Route::get('/assets', [AssetController::class, 'index']);
     Route::post('/assets', [AssetController::class, 'store']);
     Route::get('/assets/{asset}', [AssetController::class, 'show']);
     Route::patch('/assets/{asset}', [AssetController::class, 'update']);
+    Route::post('/assets/{asset}/suggest-tag', [AssetController::class, 'suggestTag']);
     Route::get('/assets/{asset}/meter-readings', [AssetController::class, 'meterReadings']);
     Route::get('/assets/{asset}/location-history', [AssetController::class, 'locationHistory']);
     Route::get('/assets/{asset}/maintenance-history', [AssetController::class, 'maintenanceHistory']);

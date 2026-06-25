@@ -2,6 +2,7 @@
 
 namespace App\Actions\WorkOrders;
 
+use App\Enums\MaintenanceStatus;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\User;
@@ -14,6 +15,12 @@ class AssignWorkOrder
 {
     public function execute(WorkOrder $workOrder, int $assignToUserId, int $assignedByUserId): WorkOrder
     {
+        $asset = $workOrder->asset;
+
+        if ($asset && $asset->maintenance_status === MaintenanceStatus::INACTIVE) {
+            throw new DomainException('Cannot assign a work order for an inactive asset.');
+        }
+
         return DB::transaction(function () use ($workOrder, $assignToUserId, $assignedByUserId) {
             $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();

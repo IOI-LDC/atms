@@ -56,23 +56,34 @@ class AttachmentPolicy
 
     public function viewForAsset(User $user): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         return $user->hasRole(RoleCode::ADMINISTRATOR)
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $user->hasRole(RoleCode::TECHNICIAN)
-            || $user->hasRole(RoleCode::VIEWER);
+            || $user->hasRole(RoleCode::REQUESTER);
     }
 
     public function viewForPart(User $user): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         return $user->hasRole(RoleCode::ADMINISTRATOR)
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $user->hasRole(RoleCode::TECHNICIAN)
-            || $user->hasRole(RoleCode::VIEWER)
             || $user->hasRole(RoleCode::REQUESTER);
     }
 
     public function viewForMaintenanceRequest(User $user, MaintenanceRequest $maintenanceRequest): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         if ($user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
             return true;
         }
@@ -81,11 +92,7 @@ class AttachmentPolicy
             return true;
         }
 
-        if ($user->hasRole(RoleCode::REQUESTER) && $maintenanceRequest->created_by === $user->id) {
-            return true;
-        }
-
-        if ($user->hasRole(RoleCode::VIEWER)) {
+        if ($user->hasRole(RoleCode::REQUESTER)) {
             return true;
         }
 

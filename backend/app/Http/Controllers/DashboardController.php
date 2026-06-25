@@ -22,15 +22,14 @@ class DashboardController extends Controller
         $isManager = $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
         $isTech = $user->hasRole(RoleCode::TECHNICIAN);
         $isRequester = $user->hasRole(RoleCode::REQUESTER);
-        $isViewer = $user->hasRole(RoleCode::VIEWER);
 
         $summary = [];
         $widgets = [];
 
-        $showPendingMrs = $isAdmin || $isManager || $isRequester || $isViewer;
-        $showOpenWos = $isAdmin || $isManager || $isTech || $isViewer;
-        $showOverduePm = $isAdmin || $isManager || $isViewer;
-        $showRecentlyClosed = $isAdmin || $isManager || $isViewer;
+        $showPendingMrs = $isAdmin || $isManager || $isRequester;
+        $showOpenWos = $isAdmin || $isManager || $isTech || $isRequester;
+        $showOverduePm = $isAdmin || $isManager || $isRequester;
+        $showRecentlyClosed = $isAdmin || $isManager || $isRequester;
 
         if ($showPendingMrs) {
             $mrQuery = MaintenanceRequest::with(['asset', 'createdBy', 'workOrder', 'attachments'])

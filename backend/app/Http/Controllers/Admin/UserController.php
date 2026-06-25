@@ -40,7 +40,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'unique:users,email,' . $user->id],
+            'email' => ['nullable', 'email', 'unique:users,email,'.$user->id],
             'role_id' => ['nullable', 'exists:roles,id'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -100,4 +100,3 @@ class UserController extends Controller
         return response()->json(['message' => 'User reactivated.', 'data' => $user]);
     }
 }
-

@@ -14,8 +14,14 @@ implemented through Laravel policies. A granular permission package, multiple
 roles per user, and runtime-configurable permission assignment are excluded from
 MVP.
 
-The five roles are seeded, immutable system data. Administrators may assign
-these roles to users but may not create, rename, or delete roles. Frontend
+The five human roles are seeded, immutable system data. Administrators may assign
+these roles to users but may not create, rename, or delete roles.
+
+The **service** role (`service@atms.internal`) is a sixth, non-human role for
+machine-to-machine (M2M) API token authentication. It is never assigned to
+human users, never logs in via SPA, and is seeded as an immutable system user.
+Service tokens use ability-based access control (read/write) via the
+`EnsureTokenAbilities` middleware. Frontend
 navigation, record queries, and actions must reflect the same backend policy
 rules.
 

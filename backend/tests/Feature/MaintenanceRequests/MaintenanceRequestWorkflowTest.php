@@ -421,18 +421,6 @@ class MaintenanceRequestWorkflowTest extends TestCase
         $this->assertMatchesRegularExpression('/^WO-\d{6}$/', $wo2->number);
     }
 
-    public function test_viewer_cannot_create_maintenance_request(): void
-    {
-        $viewer = $this->createUser(RoleCode::VIEWER);
-        $asset = $this->createAsset();
-
-        $this->actingAs($viewer)->postJson('/api/maintenance-requests/corrective', [
-            'asset_id' => $asset->id,
-            'description' => 'Viewer attempt',
-            'priority' => 'low',
-        ])->assertForbidden();
-    }
-
     public function test_technician_can_create_corrective_request(): void
     {
         $tech = $this->createUser(RoleCode::TECHNICIAN);

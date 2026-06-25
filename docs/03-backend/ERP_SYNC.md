@@ -345,8 +345,7 @@ return [
 ## Migration from Mock ERP (COMPLETED)
 
 The Mock ERP development service and its Docker container have been removed. Migration to the real LDC ERP is complete. Token auth is working; asset endpoint confirmed; parts endpoint pending.
-The following renames are required to retarget the existing pipeline at LDC ERP
-(implementation tracked separately):
+The following renames were completed in Phase 1 (2026-06-25):
 
 | Current | Target |
 |---|---|
@@ -362,6 +361,6 @@ the sync job, the `ErpSyncController`, the routes, the scheduler entries, the
 `ErpSyncJob`/`ErpSyncError` models, and their migrations all remain unchanged —
 only the concrete adapter and config change.
 
-> **Note:** `SyncAssets` action, `SyncErpAssetsJob`, and asset-related ERP
-> endpoints and fields are deprecated. Assets are managed within ATMS — no ERP
-> asset sync.
+> ✅ **Phase 1 complete (2026-06-25):** `SyncErpAssetsJob`, `SyncAssets`, `erp_asset_id` column,
+> and asset-related ERP endpoints removed. `LdcErpHttpSource` is the live adapter.
+> Parts-only sync is the only remaining ERP pipeline.

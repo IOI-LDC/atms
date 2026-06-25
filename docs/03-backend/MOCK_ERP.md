@@ -14,9 +14,11 @@ unavailable. This is no longer relevant — we have the real LDC ERP.
 
 ## Cleanup Tasks
 
-- [ ] Remove mock ERP Docker Compose service and profile
-- [ ] Remove `config/mock-erp.php`
-- [ ] Remove `MockErpHttpSource` adapter class
-- [ ] Remove `MOCK_ERP_URL` / `MOCK_ERP_API_KEY` environment variables
-- [ ] Remove mock ERP seed data and migrations
-- [ ] Remove mock ERP contract tests
+- [x] Remove mock ERP Docker Compose service and profile
+- [x] Remove `config/mock-erp.php`
+- [x] Remove `MockErpHttpSource` adapter class
+- [x] Remove `MOCK_ERP_URL` / `MOCK_ERP_API_KEY` environment variables
+- [x] Remove mock ERP seed data and migrations
+- [x] Remove mock ERP contract tests
+
+> ✅ **All cleanup tasks complete (Phase 1, 2026-06-25).** The real `LdcErpHttpSource` is now the live adapter, bound in `AppServiceProvider`. Environment uses `LDC_ERP_*` variables. Mock ERP is fully eradicated from the codebase.

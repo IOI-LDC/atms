@@ -41,7 +41,6 @@ class AttachmentSecurityTest extends TestCase
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
 
         return Asset::create([
-            'erp_asset_id' => 'ERP-'.uniqid(),
             'erp_asset_code' => 'A-'.uniqid(),
             'name' => 'Asset',
             'is_active' => true,

@@ -112,7 +112,7 @@ The PHP codebase was NOT modified as part of this MOC. The following code-level 
 
 `CLAUDE.md` still references:
 - Old `frontend/` paths (should be `atms/`)
-- 6 roles (should be 5)
+- 6 roles (should be 5 human + 1 service)
 - ERP asset sync
 - Old doc folder structure
 
@@ -133,8 +133,8 @@ A follow-up task is needed to sync `CLAUDE.md` with the new docs.
 - **Source of truth:** `docs/00-project-rules/authoritative-sources.md`
 - **Parts are read-only from SM.** When recording parts on a WO, read the part from SM tables. The part-request form submits to SM's workflow.
 - **Location is read-only from AM.** Display the current location from AM tables. Do not write location data from ATMS.
-- **Assets have NO `erp_asset_id`.** The documented design says assets are ATMS-managed. If the code still has `erp_asset_id`, treat it as legacy (pending backend team removal).
-- **5 roles, not 6.** Viewer does not exist as a standalone role.
+- **Assets have NO `erp_asset_id`.** ✅ Phase 1 removed the column, job, and all references. Assets are ATMS-managed only.
+- **5 human roles (+1 service).** Viewer merged into Requester. SERVICE is a non-user-assignable role for M2M API tokens.
 
 ### 4.2 When Building SM Features
 
@@ -152,14 +152,14 @@ A follow-up task is needed to sync `CLAUDE.md` with the new docs.
 
 ### 4.4 Backend Cleanup Tasks (Separate MOC)
 
-These tasks are explicitly out of scope for this docs-only MOC but need a dedicated backend cleanup:
-1. Remove `SyncErpAssetsJob` and `SyncAssets` Action
-2. Remove `erp_asset_id` column from assets migration/model
-3. Remove asset sync route and scheduler entry
-4. Simplify `ErpSource` contract to parts-only
-5. Remove Viewer role seeder or merge into Requester
-6. Rename `frontend/` → `atms/` and update Docker/nginx config
-7. Update `CLAUDE.md` to match new docs structure
+These tasks were addressed in Phase 1 (2026-06-25). Status:
+1. ✅ Remove `SyncErpAssetsJob` and `SyncAssets` Action
+2. ✅ Remove `erp_asset_id` column from assets migration/model
+3. ✅ Remove asset sync route and scheduler entry
+4. ✅ Simplify `ErpSource` contract to parts-only
+5. ✅ Remove Viewer role seeder or merge into Requester
+6. ⏳ Rename `frontend/` → `atms/` and update Docker/nginx config (deferred)
+7. ✅ Update `CLAUDE.md` to match new docs structure
 
 ### 4.5 When In Doubt
 

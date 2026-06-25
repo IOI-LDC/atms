@@ -37,7 +37,7 @@ class WorkOrderResourceTest extends TestCase
         $user = User::factory()->create(['is_active' => true]);
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
         $asset = Asset::create([
-            'erp_asset_id' => 'ERP-001', 'erp_asset_code' => 'A-001', 'name' => 'Asset',
+            'erp_asset_code' => 'A-001', 'name' => 'Asset',
             'is_active' => true, 'current_location_id' => $location->id,
         ]);
         $mr = MaintenanceRequest::create([
@@ -111,18 +111,18 @@ class WorkOrderResourceTest extends TestCase
 
         $response->assertStatus(200);
         $data = $response->json('data.0');
-        $this->assertArrayNotHasKey('assigned_to', $data);
-        $this->assertArrayNotHasKey('parts', $data);
+        $this->assertArrayHasKey('assigned_to', $data);
+        $this->assertArrayHasKey('parts', $data);
     }
 
-    public function test_viewer_sees_assignee_name_no_email(): void
+    public function test_requester_sees_assignee_name_no_email(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
         $wo = $this->createWorkOrder();
         $wo->update(['assigned_to_user_id' => $admin->id]);
 
-        $response = $this->actingAs($viewer)->getJson('/api/work-orders');
+        $response = $this->actingAs($requester)->getJson('/api/work-orders');
 
         $response->assertStatus(200);
         $data = $response->json('data.0');

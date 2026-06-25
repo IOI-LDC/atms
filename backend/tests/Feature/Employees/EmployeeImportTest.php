@@ -32,7 +32,7 @@ class EmployeeImportTest extends TestCase
     private function createNonAdmin(): User
     {
         return User::factory()->create([
-            'role_id' => Role::where('code', RoleCode::VIEWER)->first()->id,
+            'role_id' => Role::where('code', RoleCode::REQUESTER)->first()->id,
             'is_active' => true,
         ]);
     }

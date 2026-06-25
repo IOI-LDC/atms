@@ -20,6 +20,7 @@ Example output:
 ```
 L-MTR-958-0011    LDC-owned Mud Motor, 9 5/8", serial suffix 0011
 L-MTR-634-0021    LDC-owned Mud Motor, 6 3/4", serial suffix 0021
+L-RTR-800-0011    LDC-owned Rotor, 8", serial suffix 0011
 L-JRS-838-0010    LDC-owned Jar, 8 3/8", serial suffix 0010
 X-MWD-000-0005    External MWD/LWD tool, no physical size
 L-DHT-434-0120    LDC-owned Downhole Tool, 4 3/4", serial suffix 0120
@@ -43,6 +44,8 @@ Suggested defaults based on ERP data:
 | faSubclassCode | Type code | Count |
 |---|---|---|
 | MUD MOTOR | `MTR` | 197 |
+| — | `RTR` | Rotor component (detected by keyword in description) |
+| — | `STR` | Stator component (detected by keyword in description) |
 | MWD/LWD | `MWD` | 82 |
 | DHT | `DHT` | 42 |
 | NMDC | `NMD` | 22 |
@@ -83,6 +86,9 @@ subclass default CCC to `000` with no extraction attempted.
 
 ### XXXX — Serial suffix (4 chars)
 
+> **Format confirmed 2026-06-25:** `L-BBB-CCC-XXXX` with a **dash between CCC and XXXX**.
+> Total tag length: max 15 characters. Size codes >3 chars are truncated from the right.
+
 Last 4 characters of the ERP `serialNo`, uppercased. If the serial is shorter
 than 4 chars, pad with leading zeros. Characters are alphanumeric only —
 special characters in the serial suffix are stripped.
@@ -119,6 +125,6 @@ ERP faSubclassCode ──→ Admin mapping table ──→ BBB
 ERP serialNo ────────────────────────────────→ XXXX (last 4, zero-padded)
 ERP description ──→ Size extraction (inch regex) ──→ CCC (or 000)
 
-System suggests: {L|X}-{BBB}-{CCC}-{XXXX}
+System suggests: {L|X}-{BBB}-{CCC}-{XXXX}  (dashes between every segment)
 Admin reviews, adjusts if needed, saves.
 ```

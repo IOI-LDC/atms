@@ -37,9 +37,9 @@ class RoleSeeder extends Seeder
                 'description' => 'Creates corrective maintenance requests.',
             ],
             [
-                'code' => RoleCode::VIEWER->value,
-                'name' => 'Viewer',
-                'description' => 'Read-only access to records and dashboards.',
+                'code' => RoleCode::SERVICE->value,
+                'name' => 'Service Account',
+                'description' => 'Non-human role for M2M API tokens. Not assignable to users.',
             ],
         ];
 

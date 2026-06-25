@@ -36,7 +36,8 @@ Use Laravel Queue for long-running or repeatable tasks.
 
 Recommended jobs:
 
-- SyncErpAssetsJob
+> ✅ Phase 1 removed  — assets are ATMS-managed only.
+
 - SyncErpPartsJob
 - EvaluatePmRulesJob
 - GeneratePreventiveMaintenanceRequestJob

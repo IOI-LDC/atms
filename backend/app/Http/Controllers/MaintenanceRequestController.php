@@ -70,15 +70,19 @@ class MaintenanceRequestController extends Controller
             'meter_reading.reading_at' => ['required_with:meter_reading', 'date'],
         ]);
 
-        $mr = $action->execute(
-            Asset::findOrFail($validated['asset_id']),
-            auth()->id(),
-            $validated['priority'],
-            $validated['description'] ?? null,
-            isset($validated['meter_reading']) ? $validated['meter_reading'] : null
-        );
+        try {
+            $mr = $action->execute(
+                Asset::findOrFail($validated['asset_id']),
+                auth()->id(),
+                $validated['priority'],
+                $validated['description'] ?? null,
+                isset($validated['meter_reading']) ? $validated['meter_reading'] : null
+            );
 
-        return response()->json(['data' => $mr->fresh()], 201);
+            return response()->json(['data' => $mr->fresh()], 201);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function approve(MaintenanceRequest $maintenanceRequest, ApproveMaintenanceRequestAndCreateWorkOrder $action): JsonResponse

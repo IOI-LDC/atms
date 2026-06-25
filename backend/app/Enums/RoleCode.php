@@ -9,5 +9,5 @@ enum RoleCode: string
     case TECHNICIAN = 'technician';
     case LOGISTICS = 'logistics';
     case REQUESTER = 'requester';
-    case VIEWER = 'viewer';
+    case SERVICE = 'service';
 }

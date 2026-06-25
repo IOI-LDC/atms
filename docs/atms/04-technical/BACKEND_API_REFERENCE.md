@@ -45,10 +45,7 @@ Log in. Sets a session cookie.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `email` | string | required, valid email |
-| `password` | string | required |
+| Field | Type | Rules |-------|------|-------| `email` | string | required, valid email | `password` | string | required |
 
 **Response `200`:**
 ```json
@@ -102,11 +99,7 @@ Activate a new account using a one-time token (sent via email during provisionin
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `token` | string | required |
-| `password` | string | required, confirmed, min 8 chars (Laravel Password defaults) |
-| `password_confirmation` | string | required with `password` |
+| Field | Type | Rules |-------|------|-------| `token` | string | required | `password` | string | required, confirmed, min 8 chars (Laravel Password defaults) | `password_confirmation` | string | required with `password` |
 
 **Response `200`:** `{"message": "Account activated."}`
 **Error `422`:** Validation error (expired/invalid token).
@@ -122,9 +115,7 @@ Request a password reset link.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `email` | string | required, valid email |
+| Field | Type | Rules |-------|------|-------| `email` | string | required, valid email |
 
 **Response `200`:** `{"message": "If the email exists, a reset link has been sent."}`
 
@@ -141,11 +132,7 @@ Reset password using a token from the reset email.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `token` | string | required |
-| `password` | string | required, confirmed, min 8 chars |
-| `password_confirmation` | string | required with `password` |
+| Field | Type | Rules |-------|------|-------| `token` | string | required | `password` | string | required, confirmed, min 8 chars | `password_confirmation` | string | required with `password` |
 
 **Response `200`:** `{"message": "Password reset successful."}`
 **Error `422`:** Invalid/expired token.
@@ -186,18 +173,13 @@ List endpoints use **cursor pagination**. The response includes:
 
 **Query Parameters:**
 
-| Parameter | Type | Default | Max | Description |
-|-----------|------|---------|-----|-------------|
-| `per_page` | int | 25 | 100 | Items per page |
-| `cursor` | string | null | — | Cursor from `meta.next_cursor` or `meta.prev_cursor` |
+| Parameter | Type | Default | Max | Description |-----------|------|---------|-----|-------------| `per_page` | int | 25 | 100 | Items per page | `cursor` | string | null | — | Cursor from `meta.next_cursor` or `meta.prev_cursor` |
 
 ### Sorting
 
 List endpoints accept a `sort` query parameter in `field:direction` format:
 
-| Parameter | Example | Description |
-|-----------|---------|-------------|
-| `sort` | `created_at:desc` | Sort field and direction (`asc` or `desc`) |
+| Parameter | Example | Description |-----------|---------|-------------| `sort` | `created_at:desc` | Sort field and direction (`asc` or `desc`) |
 
 Each endpoint documents its sortable fields.
 
@@ -225,14 +207,7 @@ This sets the `XSRF-TOKEN` cookie. Include it as `X-XSRF-TOKEN` header in subseq
 
 ### Role Codes
 
-| Code | Label | Description |
-|------|-------|-------------|
-| `administrator` | Administrator | Full access to everything |
-| `maintenance_manager` | Maintenance Manager | Manage work orders, MRs, PM rules, assign technicians |
-| `technician` | Technician | Assigned work orders only, upload attachments to WOs |
-| `logistics` | Logistics | View assets/parts (basic fields), no maintenance access |
-| `requester` | Requester | Create/view own maintenance requests only |
-| `viewer` | Viewer | Read-only access to most resources |
+| Code | Label | Description |------|-------|-------------| `administrator` | Administrator | Full access to everything | `maintenance_manager` | Maintenance Manager | Manage work orders, MRs, PM rules, assign technicians | `technician` | Technician | Assigned work orders only, upload attachments to WOs | `logistics` | Logistics | View assets/parts (basic fields), no maintenance access | `requester` | Requester | Create/view own maintenance requests only | `viewer` | ~~Viewer~~ (removed — merged into Requester) |
 
 ### Role-Based Field Visibility
 
@@ -284,12 +259,7 @@ Role-adaptive dashboard with summary counts and widget previews.
 
 **Widgets by Role:**
 
-| Widget | Admin | Manager | Technician | Requester | Viewer | Logistics |
-|--------|-------|---------|------------|-----------|--------|-----------|
-| `pending_maintenance_requests` | All | All | — | Own only | All | — |
-| `open_work_orders` | All | All | Assigned only | — | All | — |
-| `overdue_pm_rules` | All | All | — | — | All | — |
-| `recently_closed_work_orders` | All | All | — | — | All | — |
+| Widget | Admin | Manager | Technician | Requester | Logistics |--------|-------|---------|------------|-----------|--------|-----------| `pending_maintenance_requests` | All | All | — | Own only | All | — | `open_work_orders` | All | All | Assigned only | — | All | — | `overdue_pm_rules` | All | All | — | — | All | — | `recently_closed_work_orders` | All | All | — | — | All | — |
 
 **Response `200`:**
 ```json
@@ -322,16 +292,7 @@ List assets with cursor pagination, filtering, and sorting.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `search` | string | Search by name or ERP asset code |
-| `is_active` | boolean | Filter by active status (admin/manager only) |
-| `operational_status` | string | Filter by operational status |
-| `category` | string | Filter by category |
-| `location_id` | int | Filter by current location ID |
-| `sort` | string | `name`, `erp_asset_code`, `category`, `operational_status`, `created_at` (default: `created_at:desc`) |
-| `per_page` | int | Default 25, max 100 |
-| `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `search` | string | Search by name or ERP asset code | `is_active` | boolean | Filter by active status (admin/manager only) | `operational_status` | string | Filter by operational status | `category` | string | Filter by category | `location_id` | int | Filter by current location ID | `sort` | string | `name`, `erp_asset_code`, `category`, `operational_status`, `created_at` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 **Response `200`:** Cursor-paginated list of `AssetResource`.
 
@@ -339,31 +300,7 @@ List assets with cursor pagination, filtering, and sorting.
 
 Fields vary by role:
 
-| Field | Type | Admin | Manager | Technician | Logistics | Requester | Viewer |
-|-------|------|-------|---------|------------|-----------|-----------|--------|
-| `id` | int | Y | Y | Y | Y | Y | Y |
-| `erp_asset_code` | string | Y | Y | Y | Y | Y | Y |
-| `name` | string | Y | Y | Y | Y | Y | Y |
-| `description` | string? | Y | Y | Y | Y | Y | Y |
-| `category` | string? | Y | Y | Y | Y | Y | Y |
-| `serial_number` | string? | Y | Y | Y | Y | Y | Y |
-| `model` | string? | Y | Y | Y | Y | Y | Y |
-| `manufacturer` | string? | Y | Y | Y | Y | Y | Y |
-| `operational_status` | string? | Y | Y | Y | Y | Y | Y |
-| `current_location` | object? | Y | Y | Y | Y | Y | Y |
-| `current_location.id` | int | Y | Y | Y | Y | Y | Y |
-| `current_location.name` | string | Y | Y | Y | Y | Y | Y |
-| `erp_status` | string? | Y | Y | Y | Y | — | Y |
-| `erp_last_synced_at` | string? | Y | Y | Y | Y | — | Y |
-| `is_active` | bool | Y | Y | — | — | — | — |
-| `erp_raw_data` | object? | Y | — | — | — | — | — |
-| `asset_tag` | string | Y | Y | Y | Y | Y | Y |
-| `parent_asset_id` | int? | Y | Y | Y | Y | Y | Y |
-| `asset_kind` | string | Y | Y | Y | Y | Y | Y |
-| `maintenance_status` | string | Y | Y | Y | Y | Y | Y |
-| `maintenance_sub_status` | string? | Y | Y | Y | Y | Y | Y |
-| `created_at` | string | Y | Y | Y | Y | Y | Y |
-| `updated_at` | string | Y | Y | Y | Y | Y | Y |
+| Field | Type | Admin | Manager | Technician | Logistics | Requester |-------|------|-------|---------|------------|-----------|-----------|--------| `id` | int | Y | Y | Y | Y | `erp_asset_code` | string | Y | Y | Y | Y | `name` | string | Y | Y | Y | Y | `description` | string? | Y | Y | Y | Y | `category` | string? | Y | Y | Y | Y | `serial_number` | string? | Y | Y | Y | Y | `model` | string? | Y | Y | Y | Y | `manufacturer` | string? | Y | Y | Y | Y | `operational_status` | string? | Y | Y | Y | Y | `current_location` | object? | Y | Y | Y | Y | `current_location.id` | int | Y | Y | Y | Y | `current_location.name` | string | Y | Y | Y | Y | `erp_status` | string? | Y | Y | Y | — | Y | `erp_last_synced_at` | string? | Y | Y | Y | — | Y | `is_active` | bool | Y | — | — | — | — | `erp_raw_data` | object? | Y | — | — | — | — | — | `asset_tag` | string | Y | Y | Y | Y | `parent_asset_id` | int? | Y | Y | Y | Y | `asset_kind` | string | Y | Y | Y | Y | `maintenance_status` | string | Y | Y | Y | Y | `maintenance_sub_status` | string? | Y | Y | Y | Y | `created_at` | string | Y | Y | Y | Y | `updated_at` | string | Y | Y | Y | Y |
 
 ---
 
@@ -385,20 +322,7 @@ Create a new asset manually. Assets are not sourced from ERP for this client.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `name` | string | required, max:255 |
-| `description` | string? | nullable |
-| `category` | string? | nullable, max:255 |
-| `serial_number` | string? | nullable, max:255 |
-| `model` | string? | nullable, max:255 |
-| `manufacturer` | string? | nullable, max:255 |
-| `operational_status` | string? | nullable, in:active,under_maintenance,down,inactive. Default: `active`. |
-| `current_location_id` | int? | nullable, exists:locations,id |
-| `asset_tag` | string? | nullable. Format `L-BBB-CCC-XXXX`. Auto-suggested if not provided; unique, immutable after save. |
-| `asset_kind` | string? | nullable. One of: `asset`, `package`, `component`. Default: `asset`. |
-| `parent_asset_id` | int? | nullable, exists:assets,id. Only allowed if asset_kind is `component` or `package`. |
-| `maintenance_sub_status` | string? | nullable. If parent_asset_id is set, must be `installed`. If NULL, must be `ready` (for component/package) or NULL (for asset). |
+| Field | Type | Rules |-------|------|-------| `name` | string | required, max:255 | `description` | string? | nullable | `category` | string? | nullable, max:255 | `serial_number` | string? | nullable, max:255 | `model` | string? | nullable, max:255 | `manufacturer` | string? | nullable, max:255 | `operational_status` | string? | nullable, in:active,under_maintenance,down,inactive. Default: `active`. | `current_location_id` | int? | nullable, exists:locations,id | `asset_tag` | string? | nullable. Format `L-BBB-CCC-XXXX`. Auto-suggested if not provided; unique, immutable after save. | `asset_kind` | string? | nullable. One of: `asset`, `package`, `component`. Default: `asset`. | `parent_asset_id` | int? | nullable, exists:assets,id. Only allowed if asset_kind is `component` or `package`. | `maintenance_sub_status` | string? | nullable. If parent_asset_id is set, must be `installed`. If NULL, must be `ready` (for component/package) or NULL (for asset). |
 
 **Response `201`:** `{ "data": { /* AssetResource */ } }`
 
@@ -412,21 +336,7 @@ Update asset operational fields and location.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `name` | string? | nullable, max:255 |
-| `description` | string? | nullable |
-| `category` | string? | nullable, max:255 |
-| `serial_number` | string? | nullable, max:255 |
-| `model` | string? | nullable, max:255 |
-| `manufacturer` | string? | nullable, max:255 |
-| `operational_status` | string? | nullable, in:active,under_maintenance,down,inactive |
-| `is_active` | boolean? | nullable |
-| `current_location_id` | int? | nullable, exists:locations,id |
-| `location_notes` | string? | nullable. Recorded in location history if location changes. |
-| `asset_kind` | string? | nullable. One of: `asset`, `package`, `component`. |
-| `parent_asset_id` | int? | nullable, exists:assets,id. Admin/Manager only outside WO context. |
-| `maintenance_sub_status` | string? | nullable. Must be consistent with parent_asset_id. |
+| Field | Type | Rules |-------|------|-------| `name` | string? | nullable, max:255 | `description` | string? | nullable | `category` | string? | nullable, max:255 | `serial_number` | string? | nullable, max:255 | `model` | string? | nullable, max:255 | `manufacturer` | string? | nullable, max:255 | `operational_status` | string? | nullable, in:active,under_maintenance,down,inactive | `is_active` | boolean? | nullable | `current_location_id` | int? | nullable, exists:locations,id | `location_notes` | string? | nullable. Recorded in location history if location changes. | `asset_kind` | string? | nullable. One of: `asset`, `package`, `component`. | `parent_asset_id` | int? | nullable, exists:assets,id. Admin/Manager only outside WO context. | `maintenance_sub_status` | string? | nullable. Must be consistent with parent_asset_id. |
 
 **Side effect:** If `current_location_id` differs from the current value, a location history record is created automatically (same as the dedicated location endpoint).
 
@@ -500,10 +410,7 @@ List closed work orders for an asset (maintenance history). Cursor-paginated.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `per_page` | int | Default 25, max 100 |
-| `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 **Response `200`:** Cursor-paginated list of `MaintenanceHistoryResource`:
 
@@ -539,28 +446,11 @@ List parts with cursor pagination, filtering, and sorting.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `search` | string | Search by name or ERP part code |
-| `sort` | string | `name`, `erp_part_code` (default: `name:asc`) |
-| `per_page` | int | Default 25, max 100 |
-| `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `search` | string | Search by name or ERP part code | `sort` | string | `name`, `erp_part_code` (default: `name:asc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 ### PartResource
 
-| Field | Type | Admin | Manager | Other roles |
-|-------|------|-------|---------|-------------|
-| `id` | int | Y | Y | Y |
-| `erp_part_code` | string | Y | Y | Y |
-| `name` | string | Y | Y | Y |
-| `description` | string? | Y | Y | Y |
-| `unit_of_measure` | string? | Y | Y | Y |
-| `category` | string? | Y | Y | Y |
-| `is_active` | bool | Y | Y | Y |
-| `erp_status` | string? | Y | Y | — |
-| `erp_last_synced_at` | string? | Y | Y | — |
-| `erp_raw_data` | object? | Y | — | — |
-| `created_at` | string | Y | Y | Y |
+| Field | Type | Admin | Manager | Other roles |-------|------|-------|---------|-------------| `id` | int | Y | Y | `erp_part_code` | string | Y | Y | `name` | string | Y | Y | `description` | string? | Y | Y | `unit_of_measure` | string? | Y | Y | `category` | string? | Y | Y | `is_active` | bool | Y | Y | `erp_status` | string? | Y | — | `erp_last_synced_at` | string? | Y | — | `erp_raw_data` | object? | Y | — | — | `created_at` | string | Y | Y |
 
 ---
 
@@ -583,13 +473,7 @@ Update local operational fields on a part. ERP-owned fields cannot be changed.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `name` | string? | nullable, max:255 |
-| `description` | string? | nullable |
-| `unit_of_measure` | string? | nullable, max:50 |
-| `category` | string? | nullable, max:255 |
-| `is_active` | boolean? | nullable |
+| Field | Type | Rules |-------|------|-------| `name` | string? | nullable, max:255 | `description` | string? | nullable | `unit_of_measure` | string? | nullable, max:50 | `category` | string? | nullable, max:255 | `is_active` | boolean? | nullable |
 
 **Blocked fields:** `erp_part_id`, `erp_part_code`, `erp_status`, `erp_raw_data`, `erp_last_synced_at` — returning 422 if any are present.
 
@@ -608,13 +492,7 @@ Record a new meter reading.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `usage_reading_type_id` | int | required, exists in `usage_reading_types` |
-| `reading_value` | numeric | required |
-| `reading_at` | datetime string | required, valid date |
-| `source` | string | required, one of: `user`, `manual` |
-| `notes` | string? | nullable |
+| Field | Type | Rules |-------|------|-------| `usage_reading_type_id` | int | required, exists in `usage_reading_types` | `reading_value` | numeric | required | `reading_at` | datetime string | required, valid date | `source` | string | required, one of: `user`, `manual` | `notes` | string? | nullable |
 
 **Response `201`:**
 ```json
@@ -666,11 +544,7 @@ Update an asset's current location. Creates a location history record.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `location_id` | int | required, exists in `locations` |
-| `reason` | string? | nullable |
-| `notes` | string? | nullable |
+| Field | Type | Rules |-------|------|-------| `location_id` | int | required, exists in `locations` | `reason` | string? | nullable | `notes` | string? | nullable |
 
 **Response `200`:**
 ```json
@@ -706,10 +580,7 @@ Install a component into a parent.
 **Auth:** Admin, Manager, or assigned Technician on non-terminal WO
 **Request Body:**
 
-| Field | Type | Rules |
-|---|---|---|
-| `parent_id` | int | required, exists:assets,id. Parent must have asset_kind `package` or `component`. |
-| `notes` | string? | nullable |
+| Field | Type | Rules |---|---|---| `parent_id` | int | required, exists:assets,id. Parent must have asset_kind `package` or `component`. | `notes` | string? | nullable |
 
 **Response `200`:** `{ "message": "Component installed.", "data": { /* AssetResource */ } }`
 **Error `422`:** Component not spare (parent_asset_id must be NULL, Active/Ready).
@@ -722,11 +593,7 @@ Remove a component from its parent.
 **Auth:** Admin, Manager, or assigned Technician on non-terminal WO
 **Request Body:**
 
-| Field | Type | Rules |
-|---|---|---|
-| `reason` | string | required |
-| `post_removal_sub_status` | string | required, one of: `ready`, `dbr`, `disposed`, `scrapped` |
-| `notes` | string? | nullable |
+| Field | Type | Rules |---|---|---| `reason` | string | required | `post_removal_sub_status` | string | required, one of: `ready`, `dbr`, `disposed`, `scrapped` | `notes` | string? | nullable |
 
 **Response `200`:** `{ "message": "Component removed.", "data": { /* AssetResource */ } }`
 
@@ -737,13 +604,7 @@ Atomically remove old component and install replacement.
 **Auth:** Admin, Manager, or assigned Technician on non-terminal WO
 **Request Body:**
 
-| Field | Type | Rules |
-|---|---|---|
-| `old_component_id` | int | required, exists:assets,id. Must be installed in this parent. |
-| `new_component_id` | int | required, exists:assets,id. Must be spare. |
-| `reason` | string | required |
-| `post_removal_sub_status` | string | required, one of: `ready`, `dbr`, `disposed`, `scrapped` |
-| `notes` | string? | nullable |
+| Field | Type | Rules |---|---|---| `old_component_id` | int | required, exists:assets,id. Must be installed in this parent. | `new_component_id` | int | required, exists:assets,id. Must be spare. | `reason` | string | required | `post_removal_sub_status` | string | required, one of: `ready`, `dbr`, `disposed`, `scrapped` | `notes` | string? | nullable |
 
 **Response `200`:** `{ "message": "Component swapped.", "data": { "removed": { /* Asset */ }, "installed": { /* Asset */ } } }`
 
@@ -758,40 +619,11 @@ List maintenance requests with cursor pagination.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `status` | string | `pending_review`, `rejected`, `converted`, `cancelled` |
-| `asset_id` | int | Filter by asset |
-| `priority` | string | `low`, `medium`, `high`, `critical` |
-| `type` | string | `corrective`, `preventive` |
-| `created_by` | int | Filter by creator user ID |
-| `sort` | string | `created_at`, `priority`, `status` (default: `created_at:desc`) |
-| `per_page` | int | Default 25, max 100 |
-| `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `status` | string | `pending_review`, `rejected`, `converted`, `cancelled` | `asset_id` | int | Filter by asset | `priority` | string | `low`, `medium`, `high`, `critical` | `type` | string | `corrective`, `preventive` | `created_by` | int | Filter by creator user ID | `sort` | string | `created_at`, `priority`, `status` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 ### MaintenanceRequestResource
 
-| Field | Type | Visible to |
-|-------|------|------------|
-| `id` | int | All |
-| `number` | string | All (e.g., `"MR-0001"`) |
-| `type` | string | All (`corrective` or `preventive`) |
-| `status` | string | All (`pending_review`, `rejected`, `converted`, `cancelled`) |
-| `priority` | string | All (`low`, `medium`, `high`, `critical`) |
-| `description` | string? | All |
-| `created_at` | string | All |
-| `asset` | object | All (includes `id`, `name`, `erp_asset_code`) |
-| `created_by` | object? | Admin, Manager, Technician, Viewer, Requester (own only). Includes `id`, `name`. `email` for Admin/Manager only. |
-| `reviewed_by` | object? | Admin, Manager, Viewer (includes `id`, `name`) |
-| `rejection_reason` | string? | All except Logistics |
-| `cancellation_reason` | string? | All except Logistics |
-| `is_preventive` | bool? | Admin, Manager, Viewer |
-| `triggered_by_date` | bool? | Admin, Manager, Viewer |
-| `triggered_by_reading` | bool? | Admin, Manager, Viewer |
-| `trigger_date` | string? | Admin, Manager, Viewer |
-| `trigger_reading_value` | string? | Admin, Manager, Viewer |
-| `work_order` | object? | Admin, Manager, Technician, Viewer, Requester (own only). Includes `id`, `number`, `status`. |
-| `has_attachments` | int | Admin, Manager, Technician, Requester (own only). Count of attachments. |
+| Field | Type | Visible to |-------|------|------------| `id` | int | All | `number` | string | All (e.g., `"MR-0001"`) | `type` | string | All (`corrective` or `preventive`) | `status` | string | All (`pending_review`, `rejected`, `converted`, `cancelled`) | `priority` | string | All (`low`, `medium`, `high`, `critical`) | `description` | string? | All | `created_at` | string | All | `asset` | object | All (includes `id`, `name`, `erp_asset_code`) | `created_by` | object? | Admin, Manager, Technician, Requester (own only). Includes `id`, `name`. `email` for Admin/Manager only. | `reviewed_by` | object? | Admin, Manager (includes `id`, `name`) | `rejection_reason` | string? | All except Logistics | `cancellation_reason` | string? | All except Logistics | `is_preventive` | bool? | Admin, Manager | `triggered_by_date` | bool? | Admin, Manager | `triggered_by_reading` | bool? | Admin, Manager | `trigger_date` | string? | Admin, Manager | `trigger_reading_value` | string? | Admin, Manager | `work_order` | object? | Admin, Manager, Technician, Requester (own only). Includes `id`, `number`, `status`. | `has_attachments` | int | Admin, Manager, Technician, Requester (own only). Count of attachments. |
 
 ---
 
@@ -809,19 +641,11 @@ Show a single maintenance request with all relations loaded.
 
 Create a corrective maintenance request.
 
-**Auth:** Required (Administrator, Maintenance Manager, Technician, or Requester — not Viewer)
+**Auth:** Required (Administrator, Maintenance Manager, Technician, or Requester)
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `asset_id` | int | required, exists in `assets` |
-| `description` | string? | nullable |
-| `priority` | string | required, one of: `low`, `medium`, `high`, `critical` |
-| `meter_reading` | object? | nullable, if present must include all 3 fields below |
-| `meter_reading.usage_reading_type_id` | int | required with `meter_reading`, exists in `usage_reading_types` |
-| `meter_reading.reading_value` | numeric | required with `meter_reading` |
-| `meter_reading.reading_at` | datetime | required with `meter_reading` |
+| Field | Type | Rules |-------|------|-------| `asset_id` | int | required, exists in `assets` | `description` | string? | nullable | `priority` | string | required, one of: `low`, `medium`, `high`, `critical` | `meter_reading` | object? | nullable, if present must include all 3 fields below | `meter_reading.usage_reading_type_id` | int | required with `meter_reading`, exists in `usage_reading_types` | `meter_reading.reading_value` | numeric | required with `meter_reading` | `meter_reading.reading_at` | datetime | required with `meter_reading` |
 
 **Response `201`:**
 ```json
@@ -868,11 +692,7 @@ Reject a pending review MR.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `reason` | string | required |
-| `suppressed_until_date` | string? | nullable, date. **Required** if MR is preventive and triggered by date. |
-| `suppressed_until_reading` | numeric? | nullable. **Required** if MR is preventive and triggered by reading. |
+| Field | Type | Rules |-------|------|-------| `reason` | string | required | `suppressed_until_date` | string? | nullable, date. **Required** if MR is preventive and triggered by date. | `suppressed_until_reading` | numeric? | nullable. **Required** if MR is preventive and triggered by reading. |
 
 **Response `200`:**
 ```json
@@ -914,11 +734,7 @@ Update a pending maintenance request. Only the creator or Admin/Manager may upda
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `description` | string? | nullable |
-| `priority` | string? | nullable, in:low,medium,high,critical |
-| `asset_id` | int? | nullable, exists:assets,id |
+| Field | Type | Rules |-------|------|-------| `description` | string? | nullable | `priority` | string? | nullable, in:low,medium,high,critical | `asset_id` | int? | nullable, exists:assets,id |
 
 **Response `200`:** `{ "data": { /* MaintenanceRequestResource */ } }`
 
@@ -954,42 +770,11 @@ List work orders with cursor pagination.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `status` | string | `open`, `in_progress`, `completed`, `closed`, `cancelled` |
-| `assigned_to` | int | Filter by assigned user ID |
-| `asset_id` | int | Filter by asset |
-| `priority` | string | `low`, `medium`, `high`, `critical` |
-| `from` | datetime | Filter created_at >= |
-| `to` | datetime | Filter created_at <= |
-| `sort` | string | `created_at`, `priority`, `status`, `started_at`, `closed_at` (default: `created_at:desc`) |
-| `per_page` | int | Default 25, max 100 |
-| `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `status` | string | `open`, `in_progress`, `completed`, `closed`, `cancelled` | `assigned_to` | int | Filter by assigned user ID | `asset_id` | int | Filter by asset | `priority` | string | `low`, `medium`, `high`, `critical` | `from` | datetime | Filter created_at >= | `to` | datetime | Filter created_at <= | `sort` | string | `created_at`, `priority`, `status`, `started_at`, `closed_at` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 ### WorkOrderResource
 
-| Field | Type | Admin | Manager | Technician | Viewer | Logistics | Requester |
-|-------|------|-------|---------|------------|--------|-----------|-----------|
-| `id` | int | Y | Y | Y | Y | Y | Y |
-| `number` | string | Y | Y | Y | Y | Y | Y |
-| `status` | string | Y | Y | Y | Y | Y | Y |
-| `priority` | string | Y | Y | Y | Y | Y | Y |
-| `description` | string? | Y | Y | Y | Y | Y | Y |
-| `asset` | object | Y | Y | Y | Y | Y | Y |
-| `created_at` | string | Y | Y | Y | Y | Y | Y |
-| `assigned_to` | object? | Y | Y | Y | Y | — | — |
-| `assigned_to.id` | int | Y | Y | Y | Y | — | — |
-| `assigned_to.name` | string | Y | Y | Y | Y | — | — |
-| `assigned_to.email` | string | Y | Y | — | — | — | — |
-| `assigned_by` | object? | Y | Y | — | — | — | — |
-| `parts` | array? | Y | Y | Y | Y | — | — |
-| `started_at` | string? | Y | Y | Y | Y | — | — |
-| `completed_at` | string? | Y | Y | Y | Y | — | — |
-| `completion_notes` | string? | Y | Y | Y | Y | — | — |
-| `closed_at` | string? | Y | Y | Y | Y | — | — |
-| `cancelled_at` | string? | Y | Y | Y | Y | — | — |
-| `cancellation_reason` | string? | Y | Y | Y | Y | — | — |
-| `has_attachments` | int | Y | Y | Y | — | — | — |
+| Field | Type | Admin | Manager | Technician | Logistics | Requester |-------|------|-------|---------|------------|--------|-----------|-----------| `id` | int | Y | Y | Y | Y | `number` | string | Y | Y | Y | Y | `status` | string | Y | Y | Y | Y | `priority` | string | Y | Y | Y | Y | `description` | string? | Y | Y | Y | Y | `asset` | object | Y | Y | Y | Y | `created_at` | string | Y | Y | Y | Y | `assigned_to` | object? | Y | Y | Y | — | — | `assigned_to.id` | int | Y | Y | Y | — | — | `assigned_to.name` | string | Y | Y | Y | — | — | `assigned_to.email` | string | Y | — | — | — | — | `assigned_by` | object? | Y | — | — | — | — | `parts` | array? | Y | Y | Y | — | — | `started_at` | string? | Y | Y | Y | — | — | `completed_at` | string? | Y | Y | Y | — | — | `completion_notes` | string? | Y | Y | Y | — | — | `closed_at` | string? | Y | Y | Y | — | — | `cancelled_at` | string? | Y | Y | Y | — | — | `cancellation_reason` | string? | Y | Y | Y | — | — | `has_attachments` | int | Y | Y | — | — | — |
 
 **Parts array** (each item is `WorkOrderPartResource`):
 
@@ -1027,9 +812,7 @@ Update execution details (description).
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `description` | string? | nullable |
+| Field | Type | Rules |-------|------|-------| `description` | string? | nullable |
 
 **Response `200`:**
 ```json
@@ -1048,9 +831,7 @@ Assign a technician to the work order. Requires WO in `open` status.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `user_id` | int | required, exists in `users`. Must be an active technician. |
+| Field | Type | Rules |-------|------|-------| `user_id` | int | required, exists in `users`. Must be an active technician. |
 
 **Response `200`:**
 ```json
@@ -1087,9 +868,7 @@ Mark the work order as completed. Only the assigned technician, a Maintenance Ma
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `completion_notes` | string? | nullable |
+| Field | Type | Rules |-------|------|-------| `completion_notes` | string? | nullable |
 
 **Response `200`:**
 ```json
@@ -1121,9 +900,7 @@ Cancel a work order (open or in_progress).
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `reason` | string | required |
+| Field | Type | Rules |-------|------|-------| `reason` | string | required |
 
 **Response `200`:**
 ```json
@@ -1140,11 +917,7 @@ Add a part to a non-terminal work order.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `part_id` | int | required, exists in `parts` |
-| `quantity` | numeric | required, min 0.01 |
-| `notes` | string? | nullable |
+| Field | Type | Rules |-------|------|-------| `part_id` | int | required, exists in `parts` | `quantity` | numeric | required, min 0.01 | `notes` | string? | nullable |
 
 **Response `201`:**
 ```json
@@ -1179,31 +952,11 @@ List PM rules with cursor pagination.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `is_active` | boolean | Filter by active status |
-| `asset_id` | int | Filter by asset |
-| `trigger_type` | string | `date`, `reading`, `date_or_reading` |
-| `sort` | string | `name`, `created_at`, `is_active` (default: `created_at:desc`) |
-| `per_page` | int | Default 25, max 100 |
-| `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `is_active` | boolean | Filter by active status | `asset_id` | int | Filter by asset | `trigger_type` | string | `date`, `reading`, `date_or_reading` | `sort` | string | `name`, `created_at`, `is_active` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 ### PmRuleResource
 
-| Field | Type | Admin/Manager | Other roles |
-|-------|------|---------------|-------------|
-| `id` | int | Y | Y (if they have access) |
-| `name` | string | Y | Y |
-| `description` | string? | Y | Y |
-| `trigger_type` | string | Y | Y |
-| `is_active` | bool | Y | Y |
-| `interval_days` | int? | Y | Y |
-| `interval_reading` | float? | Y | Y |
-| `last_triggered_date` | string? | Y | Y |
-| `last_triggered_reading` | float? | Y | Y |
-| `created_at` | string | Y | Y |
-| `asset` | object | Y | Y (id, name, erp_asset_code) |
-| `created_by` | object? | Y (Admin/Manager only) | — |
+| Field | Type | Admin/Manager | Other roles |-------|------|---------------|-------------| `id` | int | Y | Y (if they have access) | `name` | string | Y | Y | `description` | string? | Y | Y | `trigger_type` | string | Y | Y | `is_active` | bool | Y | Y | `interval_days` | int? | Y | Y | `interval_reading` | float? | Y | Y | `last_triggered_date` | string? | Y | Y | `last_triggered_reading` | float? | Y | Y | `created_at` | string | Y | Y | `asset` | object | Y | Y (id, name, erp_asset_code) | `created_by` | object? | Y (Admin/Manager only) | — |
 
 ---
 
@@ -1216,15 +969,7 @@ Create a PM rule.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `asset_id` | int | required, exists in `assets` |
-| `name` | string | required, max 255 |
-| `description` | string? | nullable |
-| `trigger_type` | string | required, one of: `date`, `reading`, `date_or_reading` |
-| `interval_days` | int? | nullable, min 1. Required if trigger_type is `date` or `date_or_reading`. |
-| `interval_reading` | numeric? | nullable, min 0.01. Required if trigger_type is `reading` or `date_or_reading`. |
-| `usage_reading_type_id` | int? | nullable, exists in `usage_reading_types`. Required if trigger_type is `reading` or `date_or_reading`. |
+| Field | Type | Rules |-------|------|-------| `asset_id` | int | required, exists in `assets` | `name` | string | required, max 255 | `description` | string? | nullable | `trigger_type` | string | required, one of: `date`, `reading`, `date_or_reading` | `interval_days` | int? | nullable, min 1. Required if trigger_type is `date` or `date_or_reading`. | `interval_reading` | numeric? | nullable, min 0.01. Required if trigger_type is `reading` or `date_or_reading`. | `usage_reading_type_id` | int? | nullable, exists in `usage_reading_types`. Required if trigger_type is `reading` or `date_or_reading`. |
 
 **Response `201`:**
 ```json
@@ -1253,12 +998,7 @@ Update a PM rule.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `name` | string? | nullable, max 255 |
-| `description` | string? | nullable |
-| `interval_days` | int? | nullable, min 1. Cannot nullify if trigger_type requires it. |
-| `interval_reading` | numeric? | nullable, min 0.01. Cannot nullify if trigger_type requires it. |
+| Field | Type | Rules |-------|------|-------| `name` | string? | nullable, max 255 | `description` | string? | nullable | `interval_days` | int? | nullable, min 1. Cannot nullify if trigger_type requires it. | `interval_reading` | numeric? | nullable, min 0.01. Cannot nullify if trigger_type requires it. |
 
 **Response `200`:** `{ "data": { /* PmRule */ } }`
 
@@ -1316,17 +1056,7 @@ Evaluate all active PM rules.
 
 ### Allowed File Types
 
-| Extension | MIME Type |
-|-----------|-----------|
-| `pdf` | `application/pdf` |
-| `jpg`, `jpeg` | `image/jpeg` |
-| `png` | `image/png` |
-| `gif` | `image/gif` |
-| `webp` | `image/webp` |
-| `doc` | `application/msword` |
-| `docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
-| `xls` | `application/vnd.ms-excel` |
-| `xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+| Extension | MIME Type |-----------|-----------| `pdf` | `application/pdf` | `jpg`, `jpeg` | `image/jpeg` | `png` | `image/png` | `gif` | `image/gif` | `webp` | `image/webp` | `doc` | `application/msword` | `docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | `xls` | `application/vnd.ms-excel` | `xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
 
 **Max size:** 20 MB
 **MIME validation:** Server detects actual MIME type using `finfo` and rejects mismatches.
@@ -1342,10 +1072,7 @@ All follow the same pattern. Replace `{parent}` with `assets`, `parts`, `mainten
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `file` | file | required, max 20 MB, allowed extensions/MIME types only |
-| `description` | string? | nullable |
+| Field | Type | Rules |-------|------|-------| `file` | file | required, max 20 MB, allowed extensions/MIME types only | `description` | string? | nullable |
 
 **Response `201`:**
 ```json
@@ -1356,12 +1083,7 @@ All follow the same pattern. Replace `{parent}` with `assets`, `parts`, `mainten
 
 ### Upload Access Control
 
-| Parent | Can Upload |
-|--------|-----------|
-| Asset | Admin, Manager, Technician, Logistics |
-| Part | Admin, Manager, Technician, Logistics |
-| Maintenance Request | Requester (own only), Admin, Manager |
-| Work Order | Assigned Technician, Admin, Manager |
+| Parent | Can Upload |--------|-----------| Asset | Admin, Manager, Technician, Logistics | Part | Admin, Manager, Technician, Logistics | Maintenance Request | Requester (own only), Admin, Manager | Work Order | Assigned Technician, Admin, Manager |
 
 ### List Endpoints
 
@@ -1369,25 +1091,11 @@ All follow the same pattern. Replace `{parent}` with `assets`, `parts`, `mainten
 
 **Auth:** Varies by parent.
 
-| Parent | Can List |
-|--------|----------|
-| Asset | Admin, Manager, Technician, Viewer |
-| Part | Admin, Manager, Technician, Logistics |
-| Maintenance Request | Requester (own only), Admin, Manager, Technician |
-| Work Order | Admin, Manager, Technician, Viewer |
+| Parent | Can List |--------|----------| Asset | Admin, Manager, Technician | Part | Admin, Manager, Technician, Logistics | Maintenance Request | Requester (own only), Admin, Manager, Technician | Work Order | Admin, Manager, Technician |
 
 ### AttachmentResource
 
-| Field | Type | Admin/Manager | Technician/Logistics/Requester | Viewer |
-|-------|------|---------------|-------------------------------|--------|
-| `id` | int | Y | Y | Y |
-| `file_name` | string | Y | Y | Y |
-| `mime_type` | string | Y | Y | Y |
-| `size_bytes` | int | Y | Y | Y |
-| `description` | string? | Y | Y | Y |
-| `created_at` | string | Y | Y | Y |
-| `download_url` | string | Y | Y | — |
-| `uploaded_by` | object? | Y (id, name) | — | — |
+| Field | Type | Admin/Manager | Technician/Logistics/Requester |-------|------|---------------|-------------------------------| `id` | int | Y | Y | Y | `file_name` | string | Y | Y | Y | `mime_type` | string | Y | Y | Y | `size_bytes` | int | Y | Y | Y | `description` | string? | Y | Y | Y | `created_at` | string | Y | Y | Y | `download_url` | string | Y | Y | — | `uploaded_by` | object? | Y (id, name) | — | — |
 
 ---
 
@@ -1472,12 +1180,7 @@ Update a user's details. Admin only. Cannot update own account through this endp
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `name` | string? | nullable, max:255 |
-| `email` | string? | nullable, email, unique:users,email,{id} |
-| `role_id` | int? | nullable, exists:roles,id |
-| `is_active` | boolean? | nullable |
+| Field | Type | Rules |-------|------|-------| `name` | string? | nullable, max:255 | `email` | string? | nullable, email, unique:users,email,{id} | `role_id` | int? | nullable, exists:roles,id | `is_active` | boolean? | nullable |
 
 **Response `200`:** `{ "data": { /* User object with role */ } }`
 **Error `422`:** Attempting to update yourself, or validation failure.
@@ -1492,10 +1195,7 @@ Admin-initiated password reset. Destroys all sessions and tokens for the user in
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `password` | string | required, min:8, confirmed |
-| `password_confirmation` | string | required with `password` |
+| Field | Type | Rules |-------|------|-------| `password` | string | required, min:8, confirmed | `password_confirmation` | string | required with `password` |
 
 **Response `200`:** `{ "message": "Password reset successful." }`
 **Error `422`:** Attempting to reset your own password.
@@ -1519,7 +1219,7 @@ List all roles. Roles are immutable (fixed set).
     { "id": 3, "code": "technician", "name": "Technician" },
     { "id": 4, "code": "logistics", "name": "Logistics" },
     { "id": 5, "code": "requester", "name": "Requester" },
-    { "id": 6, "code": "viewer", "name": "Viewer" }
+    // { "id": 6, "code": "viewer", "name": "Viewer" } — removed in Phase 1
   ]
 }
 ```
@@ -1536,12 +1236,7 @@ List employees from the SharePoint-synced directory. Cursor-paginated.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `search` | string | Search by name or emp_id |
-| `sort` | string | `name`, `emp_id` (default: `name:asc`) |
-| `per_page` | int | Default 25, max 100 |
-| `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `search` | string | Search by name or emp_id | `sort` | string | `name`, `emp_id` (default: `name:asc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 **Response `200`:** Cursor-paginated employee list.
 
@@ -1561,9 +1256,7 @@ Provision a user account for an employee. Sends an activation email.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `role_id` | int | required, exists in `roles` |
+| Field | Type | Rules |-------|------|-------| `role_id` | int | required, exists in `roles` |
 
 **Response `200`:**
 ```json
@@ -1635,12 +1328,7 @@ List audit log entries. Cursor-paginated (50 per page).
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `event` | string | Filter by event name (e.g., `auth.login`, `attachment.uploaded`) |
-| `user_id` | int | Filter by actor user ID |
-| `subject_type` | string | Filter by subject type (e.g., `Asset`, `WorkOrder`) |
-| `subject_id` | int | Filter by subject ID |
+| Parameter | Type | Description |-----------|------|-------------| `event` | string | Filter by event name (e.g., `auth.login`, `attachment.uploaded`) | `user_id` | int | Filter by actor user ID | `subject_type` | string | Filter by subject type (e.g., `Asset`, `WorkOrder`) | `subject_id` | int | Filter by subject ID |
 
 **Response `200`:** Cursor-paginated list with `actor` relation loaded.
 
@@ -1667,9 +1355,7 @@ Update company settings.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `timezone` | string | required, valid PHP timezone identifier |
+| Field | Type | Rules |-------|------|-------| `timezone` | string | required, valid PHP timezone identifier |
 
 **Response `200`:** `{ "timezone": "Africa/Tripoli" }`
 
@@ -1708,14 +1394,7 @@ Create a location.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `parent_id` | int? | nullable, exists in `locations` |
-| `name` | string | required |
-| `type` | string | required |
-| `code` | string? | nullable |
-| `description` | string? | nullable |
-| `is_active` | bool? | defaults to true |
+| Field | Type | Rules |-------|------|-------| `parent_id` | int? | nullable, exists in `locations` | `name` | string | required | `type` | string | required | `code` | string? | nullable | `description` | string? | nullable | `is_active` | bool? | defaults to true |
 
 **Response `201`:** `{ "data": { /* Location */ } }`
 
@@ -1758,12 +1437,7 @@ Create a master data item.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `value` | string | required |
-| `label` | string | required |
-| `sort_order` | int? | nullable |
-| `is_active` | bool? | defaults to true |
+| Field | Type | Rules |-------|------|-------| `value` | string | required | `label` | string | required | `sort_order` | int? | nullable | `is_active` | bool? | defaults to true |
 
 **Response `201`:** `{ "data": { /* MasterDataItem */ } }`
 
@@ -1802,11 +1476,7 @@ Create a reading type.
 
 **Request Body:**
 
-| Field | Type | Rules |
-|-------|------|-------|
-| `name` | string | required |
-| `unit` | string | required |
-| `is_active` | bool? | defaults to true |
+| Field | Type | Rules |-------|------|-------| `name` | string | required | `unit` | string | required | `is_active` | bool? | defaults to true |
 
 **Response `201`:** `{ "data": { /* UsageReadingType */ } }`
 
@@ -1824,30 +1494,15 @@ Update a reading type.
 
 ### MaintenanceRequestStatus
 
-| Value | Description |
-|-------|-------------|
-| `pending_review` | Awaiting manager action |
-| `rejected` | Rejected by manager (terminal) |
-| `converted` | Approved and converted to work order (terminal) |
-| `cancelled` | Cancelled by requester or manager (terminal) |
+| Value | Description |-------|-------------| `pending_review` | Awaiting manager action | `rejected` | Rejected by manager (terminal) | `converted` | Approved and converted to work order (terminal) | `cancelled` | Cancelled by requester or manager (terminal) |
 
 ### WorkOrderStatus
 
-| Value | Description |
-|-------|-------------|
-| `open` | Created, awaiting assignment |
-| `in_progress` | Technician working |
-| `completed` | Technician finished, awaiting manager review |
-| `closed` | Manager verified (terminal) |
-| `cancelled` | Cancelled (terminal) |
+| Value | Description |-------|-------------| `open` | Created, awaiting assignment | `in_progress` | Technician working | `completed` | Technician finished, awaiting manager review | `closed` | Manager verified (terminal) | `cancelled` | Cancelled (terminal) |
 
 ### PmTriggerType
 
-| Value | Description |
-|-------|-------------|
-| `date` | Triggers based on calendar interval |
-| `reading` | Triggers based on meter reading interval |
-| `date_or_reading` | Triggers when either interval is met |
+| Value | Description |-------|-------------| `date` | Triggers based on calendar interval | `reading` | Triggers based on meter reading interval | `date_or_reading` | Triggers when either interval is met |
 
 ### Priority Values
 
@@ -1859,36 +1514,19 @@ Used in maintenance requests and work orders: `low`, `medium`, `high`, `critical
 
 ### AssetKind
 
-| Value | Description |
-|---|---|
-| `asset` | Leaf asset. Cannot have children or a parent. |
-| `package` | Can contain child assets. Can also be a component of another package. |
-| `component` | Can be installed in a parent. Cannot have children. |
+| Value | Description |---|---| `asset` | Leaf asset. Cannot have children or a parent. | `package` | Can contain child assets. Can also be a component of another package. | `component` | Can be installed in a parent. Cannot have children. |
 
 ### AssetMaintenanceStatus
 
-| Value | Description |
-|---|---|
-| `active` | Asset in operational use. PM/CM/WO active. |
-| `inactive` | Asset not in service. All maintenance flows blocked. |
+| Value | Description |---|---| `active` | Asset in operational use. PM/CM/WO active. | `inactive` | Asset not in service. All maintenance flows blocked. |
 
 ### AssetMaintenanceSubStatus (Active)
 
-| Value | Applies to | Description |
-|---|---|---|
-| *(none)* | `asset` | Default for standalone assets |
-| `installed` | `component`, `package` | Installed in a parent |
-| `ready` | `component`, `package` | Spare, available |
+| Value | Applies to | Description |---|---|---| *(none)* | `asset` | Default for standalone assets | `installed` | `component`, `package` | Installed in a parent | `ready` | `component`, `package` | Spare, available |
 
 ### AssetMaintenanceSubStatus (Inactive)
 
-| Value | Description |
-|---|---|
-| `lih` | Lost in Hole |
-| `dbr` | Damaged Beyond Repair |
-| `disposed` | Formally disposed |
-| `scrapped` | Sold for scrap / removed |
-| `other` | Other reason (free-text note) |
+| Value | Description |---|---| `lih` | Lost in Hole | `dbr` | Damaged Beyond Repair | `disposed` | Formally disposed | `scrapped` | Sold for scrap / removed | `other` | Other reason (free-text note) |
 
 ---
 

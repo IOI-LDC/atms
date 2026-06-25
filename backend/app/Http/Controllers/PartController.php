@@ -56,4 +56,3 @@ class PartController extends Controller
         return (new PartResource($part->fresh()))->toResponse($request);
     }
 }
-

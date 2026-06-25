@@ -11,11 +11,19 @@ class MaintenanceRequestPolicy
 {
     public function viewAny(User $user): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         return true;
     }
 
     public function view(User $user, MaintenanceRequest $maintenanceRequest): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         if ($user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
             return true;
         }
@@ -25,10 +33,6 @@ class MaintenanceRequestPolicy
         }
 
         if ($user->hasRole(RoleCode::REQUESTER)) {
-            return $maintenanceRequest->created_by === $user->id;
-        }
-
-        if ($user->hasRole(RoleCode::VIEWER)) {
             return true;
         }
 

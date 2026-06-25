@@ -30,7 +30,7 @@ class UserManagementTest extends TestCase
         ]);
     }
 
-    private function createNonAdmin(RoleCode $roleCode = RoleCode::VIEWER): User
+    private function createNonAdmin(RoleCode $roleCode = RoleCode::REQUESTER): User
     {
         return User::factory()->create([
             'role_id' => Role::where('code', $roleCode)->first()->id,
@@ -45,7 +45,6 @@ class UserManagementTest extends TestCase
             'technician' => [RoleCode::TECHNICIAN, 403],
             'logistics' => [RoleCode::LOGISTICS, 403],
             'requester' => [RoleCode::REQUESTER, 403],
-            'viewer' => [RoleCode::VIEWER, 403],
         ];
     }
 

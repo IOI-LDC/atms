@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SyncErpAssetsJob;
 use App\Jobs\SyncErpPartsJob;
 use App\Models\Asset;
 use App\Models\ErpSyncJob;
@@ -20,15 +19,6 @@ class ErpSyncController extends Controller
         $jobs = ErpSyncJob::latest()->get();
 
         return response()->json(['data' => $jobs]);
-    }
-
-    public function syncAssets(): JsonResponse
-    {
-        Gate::authorize('manage', Asset::class);
-
-        SyncErpAssetsJob::dispatch(auth()->id());
-
-        return response()->json(['message' => 'ERP Asset synchronization started.']);
     }
 
     public function syncParts(): JsonResponse

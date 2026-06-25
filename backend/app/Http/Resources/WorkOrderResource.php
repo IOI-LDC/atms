@@ -14,15 +14,14 @@ class WorkOrderResource extends JsonResource
         $isAdmin = $user->hasRole(RoleCode::ADMINISTRATOR);
         $isManager = $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
         $isTech = $user->hasRole(RoleCode::TECHNICIAN);
-        $isViewer = $user->hasRole(RoleCode::VIEWER);
         $isLogistics = $user->hasRole(RoleCode::LOGISTICS);
         $isRequester = $user->hasRole(RoleCode::REQUESTER);
 
-        $canSeeAssignee = $isAdmin || $isManager || $isTech || $isViewer;
+        $canSeeAssignee = $isAdmin || $isManager || $isTech || $isRequester;
         $canSeeEmail = $isAdmin || $isManager;
         $canSeeAssignedBy = $isAdmin || $isManager;
-        $canSeeParts = $isAdmin || $isManager || $isTech || $isViewer;
-        $canSeeTimestamps = $isAdmin || $isManager || $isTech || $isViewer;
+        $canSeeParts = $isAdmin || $isManager || $isTech || $isRequester;
+        $canSeeTimestamps = $isAdmin || $isManager || $isTech || $isRequester;
         $canSeeAttachments = $isAdmin || $isManager || $isTech;
 
         $data = [

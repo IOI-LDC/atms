@@ -3,6 +3,7 @@
 namespace App\Actions\MaintenanceRequests;
 
 use App\Enums\MaintenanceRequestStatus;
+use App\Enums\MaintenanceStatus;
 use App\Enums\WorkOrderStatus;
 use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
@@ -15,6 +16,12 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
 {
     public function execute(MaintenanceRequest $maintenanceRequest, int $approvedByUserId): MaintenanceRequest
     {
+        $asset = $maintenanceRequest->asset;
+
+        if ($asset && $asset->maintenance_status === MaintenanceStatus::INACTIVE) {
+            throw new DomainException('Cannot approve a maintenance request for an inactive asset.');
+        }
+
         return DB::transaction(function () use ($maintenanceRequest, $approvedByUserId) {
             $logger = app(AuditLogger::class);
             $locked = MaintenanceRequest::where('id', $maintenanceRequest->id)->lockForUpdate()->first();

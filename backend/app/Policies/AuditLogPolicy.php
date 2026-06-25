@@ -13,7 +13,11 @@ class AuditLogPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role->code === RoleCode::ADMINISTRATOR;
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
+        return $user->hasRole(RoleCode::ADMINISTRATOR);
     }
 
     /**

@@ -27,7 +27,9 @@ class EvaluatePmRulesJob implements ShouldBeUnique, ShouldQueue
         $systemUser = User::where('email', 'system@atms.internal')->first();
         $triggeredByUserId = $systemUser?->id ?? throw new \RuntimeException('System user not found. Run db:seed.');
 
-        $rules = PmRule::where('is_active', true)->get();
+        $rules = PmRule::where('is_active', true)
+            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', 'Active'))
+            ->get();
         $generated = 0;
 
         foreach ($rules as $rule) {

@@ -41,9 +41,6 @@ class PmRuleController extends Controller
         ]);
 
         $asset = Asset::findOrFail($validated['asset_id']);
-        if (! $asset->erp_asset_id) {
-            return response()->json(['message' => 'PM rules can only target ERP-linked assets.'], 422);
-        }
 
         $rule = PmRule::create([
             'asset_id' => $validated['asset_id'],

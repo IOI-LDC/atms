@@ -152,7 +152,7 @@ Statuses are defined as PHP-backed Enums in `app/Enums/`.
 
 ### RBAC
 
-Five fixed roles: `administrator`, `maintenance_manager`, `technician`, `logistics`, `requester`. The legacy Viewer role has been merged into Requester — all users are Requesters at minimum. Roles are immutable system data; each user has exactly one role. Authorization is enforced exclusively through Laravel Policies (`app/Policies/`). See `docs/03-backend/RBAC.md` for the full permission matrix.
+Five human roles: `administrator`, `maintenance_manager`, `technician`, `logistics`, `requester` — plus one non-human `service` role for M2M API token authentication. The legacy Viewer role has been merged into Requester — all users are Requesters at minimum. Roles are immutable system data; each user has exactly one role. Authorization is enforced exclusively through Laravel Policies (`app/Policies/`). See `docs/03-backend/RBAC.md` for the full permission matrix.
 
 ### Three Subsystems Sharing One Backend
 
@@ -167,7 +167,7 @@ Source-of-truth boundaries:
 - **Parts** are owned by SM. ERP syncs parts into SM tables. ATMS reads parts only to populate Work Order part-request forms. SM parts tables are the source of truth for parts.
 - **Asset location** is owned by AM. ATMS reads the current location from AM tables for display only. AM location tables are the source of truth for location history.
 
-> ⚠️ The codebase still contains `SyncErpAssetsJob` and `erp_asset_id` columns from the pre-restructure design. These are scheduled for removal by the backend team.
+> ✅ Phase 1 backend cleanup complete — `SyncErpAssetsJob`, `SyncAssets`, `ExternalAssetData`, `MockErpHttpSource`, and `erp_asset_id` column have been removed. ERP now syncs parts only via `LdcErpHttpSource`.
 
 ### Asset management
 
@@ -258,9 +258,9 @@ Pinia only for: `auth.store.ts` (user session + role), `ui.store.ts` (preference
 
 ### Role codes
 
-`administrator`, `maintenance_manager`, `technician`, `logistics`, `requester`
+`administrator`, `maintenance_manager`, `technician`, `logistics`, `requester`, `service`
 
-The legacy Viewer role has been merged into Requester — all users are Requesters at minimum. The backend may still seed a `viewer` role in current code; treat users with the viewer role as equivalent to a requester. Role determines which actions and fields are visible. Backend authorization is authoritative — hide unavailable UI but do not rely solely on frontend guards.
+Five human roles (Administrator, Maintenance Manager, Technician, Logistics, Requester) + one non-human `service` role for M2M API token authentication. The legacy Viewer role has been merged into Requester — all users are Requesters at minimum. Role determines which actions and fields are visible. Backend authorization is authoritative — hide unavailable UI but do not rely solely on frontend guards.
 
 ### Forms and overlays pattern
 

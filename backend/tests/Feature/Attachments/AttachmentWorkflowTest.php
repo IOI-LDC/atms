@@ -159,16 +159,6 @@ class AttachmentWorkflowTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_viewer_cannot_upload_attachment_to_asset(): void
-    {
-        $viewer = $this->createUser(RoleCode::VIEWER);
-        $asset = $this->createAsset();
-
-        $this->actingAs($viewer)->postJson("/api/assets/{$asset->id}/attachments", [
-            'file' => $this->pdfFile(),
-        ])->assertForbidden();
-    }
-
     public function test_upload_attachment_to_part(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
@@ -227,17 +217,6 @@ class AttachmentWorkflowTest extends TestCase
         ])->assertCreated();
     }
 
-    public function test_viewer_cannot_upload_attachment_to_mr(): void
-    {
-        $requester = $this->createUser(RoleCode::REQUESTER);
-        $viewer = $this->createUser(RoleCode::VIEWER);
-        $mr = $this->createMaintenanceRequest($requester);
-
-        $this->actingAs($viewer)->postJson("/api/maintenance-requests/{$mr->id}/attachments", [
-            'file' => $this->imageFile(),
-        ])->assertForbidden();
-    }
-
     public function test_assigned_technician_can_upload_attachment_to_wo(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
@@ -284,14 +263,14 @@ class AttachmentWorkflowTest extends TestCase
         ])->assertCreated();
     }
 
-    public function test_viewer_cannot_upload_attachment_to_wo(): void
+    public function test_requester_cannot_upload_attachment_to_wo(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $otherRequester = $this->createUser(RoleCode::REQUESTER);
         $wo = $this->createWorkOrder($requester, $manager);
 
-        $this->actingAs($viewer)->postJson("/api/work-orders/{$wo->id}/attachments", [
+        $this->actingAs($otherRequester)->postJson("/api/work-orders/{$wo->id}/attachments", [
             'file' => $this->pdfFile(),
         ])->assertForbidden();
     }
@@ -686,9 +665,9 @@ class AttachmentWorkflowTest extends TestCase
         }
     }
 
-    public function test_part_upload_forbids_requester_and_viewer(): void
+    public function test_part_upload_forbids_requester(): void
     {
-        $forbidden = [RoleCode::REQUESTER, RoleCode::VIEWER];
+        $forbidden = [RoleCode::REQUESTER];
 
         foreach ($forbidden as $roleCode) {
             $user = $this->createUser($roleCode);
@@ -700,25 +679,25 @@ class AttachmentWorkflowTest extends TestCase
         }
     }
 
-    public function test_viewer_can_list_asset_attachments(): void
+    public function test_requester_can_list_asset_attachments(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
         $asset = $this->createAsset();
 
         $this->actingAs($admin)->postJson("/api/assets/{$asset->id}/attachments", [
             'file' => $this->pdfFile(),
         ])->assertCreated();
 
-        $response = $this->actingAs($viewer)->getJson("/api/assets/{$asset->id}/attachments");
+        $response = $this->actingAs($requester)->getJson("/api/assets/{$asset->id}/attachments");
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));
     }
 
-    public function test_viewer_can_download_attachment(): void
+    public function test_requester_can_download_attachment(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
         $asset = $this->createAsset();
 
         $uploadResponse = $this->actingAs($admin)->postJson("/api/assets/{$asset->id}/attachments", [
@@ -726,7 +705,7 @@ class AttachmentWorkflowTest extends TestCase
         ]);
         $attachmentId = $uploadResponse->json('data.id');
 
-        $this->actingAs($viewer)->getJson("/api/attachments/{$attachmentId}/download")->assertOk();
+        $this->actingAs($requester)->getJson("/api/attachments/{$attachmentId}/download")->assertOk();
     }
 
     public function test_technician_can_list_and_download_wo_attachment(): void
@@ -793,20 +772,6 @@ class AttachmentWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_requester_cannot_list_asset_attachments(): void
-    {
-        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $requester = $this->createUser(RoleCode::REQUESTER);
-        $asset = $this->createAsset();
-
-        $this->actingAs($admin)->postJson("/api/assets/{$asset->id}/attachments", [
-            'file' => $this->pdfFile(),
-        ])->assertCreated();
-
-        $this->actingAs($requester)->getJson("/api/assets/{$asset->id}/attachments")
-            ->assertForbidden();
-    }
-
     public function test_logistics_cannot_download_asset_attachment(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
@@ -819,21 +784,6 @@ class AttachmentWorkflowTest extends TestCase
         $attachmentId = $uploadResponse->json('data.id');
 
         $this->actingAs($logistics)->getJson("/api/attachments/{$attachmentId}/download")
-            ->assertForbidden();
-    }
-
-    public function test_requester_cannot_download_asset_attachment(): void
-    {
-        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $requester = $this->createUser(RoleCode::REQUESTER);
-        $asset = $this->createAsset();
-
-        $uploadResponse = $this->actingAs($admin)->postJson("/api/assets/{$asset->id}/attachments", [
-            'file' => $this->pdfFile(),
-        ]);
-        $attachmentId = $uploadResponse->json('data.id');
-
-        $this->actingAs($requester)->getJson("/api/attachments/{$attachmentId}/download")
             ->assertForbidden();
     }
 
@@ -851,7 +801,7 @@ class AttachmentWorkflowTest extends TestCase
             ->assertOk();
     }
 
-    public function test_requester_cannot_download_other_users_mr_attachment(): void
+    public function test_requester_can_download_other_users_mr_attachment(): void
     {
         $owner = $this->createUser(RoleCode::REQUESTER);
         $other = $this->createUser(RoleCode::REQUESTER);
@@ -863,7 +813,7 @@ class AttachmentWorkflowTest extends TestCase
         $attachmentId = $uploadResponse->json('data.id');
 
         $this->actingAs($other)->getJson("/api/attachments/{$attachmentId}/download")
-            ->assertForbidden();
+            ->assertOk();
     }
 
     public function test_mime_mismatch_is_rejected_after_server_detection(): void

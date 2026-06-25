@@ -16,10 +16,7 @@ database. Source-of-truth boundaries:
 - **Parts** are owned by SM. ERP syncs parts into SM tables. ATMS reads parts only to populate Work Order part-request forms, which submit into SM's workflow. The SM parts tables are the source of truth for parts.
 - **Asset location** is owned by AM. ATMS reads the current location from AM tables for display only. The AM location tables are the source of truth for asset location and location history.
 
-> Note: the backend codebase still contains `SyncErpAssetsJob` and the
-> `erp_asset_id` columns from the pre-restructure design. These are scheduled
-> for removal by the backend team; the documented intent is that no ERP asset
-> sync exists.
+> ✅ Phase 1 backend cleanup complete — `SyncErpAssetsJob`, the `erp_asset_id` column, and `MockErpHttpSource` have been removed. Parts-only sync via `LdcErpHttpSource` is the live binding. `SyncErpPartsJob` is the only remaining ERP sync job.
 
 ## Locked Backend Stack
 

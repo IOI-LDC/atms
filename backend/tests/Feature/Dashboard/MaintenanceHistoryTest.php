@@ -36,7 +36,7 @@ class MaintenanceHistoryTest extends TestCase
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
 
         return Asset::create([
-            'erp_asset_id' => 'ERP-001', 'erp_asset_code' => 'A-001', 'name' => 'Asset',
+            'erp_asset_code' => 'A-001', 'name' => 'Asset',
             'is_active' => true, 'current_location_id' => $location->id,
         ]);
     }

@@ -35,7 +35,6 @@ class AttachmentResourceTest extends TestCase
     {
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
         $asset = Asset::create([
-            'erp_asset_id' => 'ERP-001',
             'erp_asset_code' => 'A-001',
             'name' => 'Asset',
             'is_active' => true,
@@ -66,17 +65,17 @@ class AttachmentResourceTest extends TestCase
         $this->assertArrayHasKey('download_url', $data);
     }
 
-    public function test_viewer_sees_no_download_url(): void
+    public function test_requester_sees_download_url(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $attachment = $this->createAttachment($admin);
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
 
-        $response = $this->actingAs($viewer)->getJson("/api/assets/{$attachment->attachable_id}/attachments");
+        $response = $this->actingAs($requester)->getJson("/api/assets/{$attachment->attachable_id}/attachments");
 
         $response->assertStatus(200);
         $data = $response->json('data.0');
-        $this->assertArrayNotHasKey('download_url', $data);
+        $this->assertArrayHasKey('download_url', $data);
         $this->assertArrayHasKey('file_name', $data);
     }
 

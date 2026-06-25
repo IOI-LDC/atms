@@ -36,6 +36,7 @@ class MaintenanceRequestDemoSeeder extends Seeder
                 'maintenance_requests already has '.MaintenanceRequest::count()
                 .' rows. Aborting to avoid duplicates — delete them first if you want a fresh demo.'
             );
+
             return;
         }
 
@@ -157,7 +158,7 @@ class MaintenanceRequestDemoSeeder extends Seeder
                 };
 
                 // forceFill bypasses $fillable so we can set created_at/updated_at.
-                (new MaintenanceRequest())->forceFill($attrs)->save();
+                (new MaintenanceRequest)->forceFill($attrs)->save();
             });
         });
 

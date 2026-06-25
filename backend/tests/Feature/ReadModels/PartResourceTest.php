@@ -91,7 +91,7 @@ class PartResourceTest extends TestCase
 
     public function test_non_admin_non_manager_only_sees_active_parts(): void
     {
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
         Part::create([
             'erp_part_id' => 'ERP-P002',
             'erp_part_code' => 'PC-002',
@@ -105,7 +105,7 @@ class PartResourceTest extends TestCase
             'is_active' => false,
         ]);
 
-        $response = $this->actingAs($viewer)->getJson('/api/parts');
+        $response = $this->actingAs($requester)->getJson('/api/parts');
 
         $response->assertStatus(200);
         $names = collect($response->json('data'))->pluck('name');

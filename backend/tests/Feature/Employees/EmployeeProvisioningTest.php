@@ -33,7 +33,7 @@ class EmployeeProvisioningTest extends TestCase
     private function createNonAdmin(): User
     {
         return User::factory()->create([
-            'role_id' => Role::where('code', RoleCode::VIEWER)->first()->id,
+            'role_id' => Role::where('code', RoleCode::REQUESTER)->first()->id,
             'is_active' => true,
         ]);
     }
@@ -94,7 +94,7 @@ class EmployeeProvisioningTest extends TestCase
             'email' => 'diana@example.com',
             'last_synced_at' => now(),
         ]);
-        $role = Role::where('code', RoleCode::VIEWER)->first();
+        $role = Role::where('code', RoleCode::REQUESTER)->first();
 
         // First provisioning should succeed
         $this->actingAs($admin)->postJson("/api/admin/employees/{$employee->id}/provision-user", [

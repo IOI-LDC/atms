@@ -39,7 +39,6 @@ class PmWorkflowTest extends TestCase
     {
         return Asset::create([
             'erp_asset_code' => 'AST-PM-'.uniqid(),
-            'erp_asset_id' => 'ERP-'.uniqid(),
             'name' => 'PM Asset',
             'is_active' => true,
         ]);
@@ -65,7 +64,7 @@ class PmWorkflowTest extends TestCase
         ]);
     }
 
-    public function test_pm_rule_cannot_target_non_erp_asset(): void
+    public function test_pm_rule_can_target_any_atms_managed_asset(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $asset = Asset::create([
@@ -79,7 +78,7 @@ class PmWorkflowTest extends TestCase
             'name' => 'Monthly PM',
             'trigger_type' => 'date',
             'interval_days' => 30,
-        ])->assertStatus(422);
+        ])->assertStatus(201);
     }
 
     public function test_only_one_active_chain_per_rule(): void
@@ -597,5 +596,63 @@ class PmWorkflowTest extends TestCase
         $rule->refresh();
         $this->assertEquals(1600, (float) $rule->last_triggered_reading);
         $this->assertNotNull($rule->last_triggered_date);
+    }
+
+    public function test_date_or_reading_suppression_requires_both_boundaries(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+        $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Dual trigger PM',
+            'trigger_type' => PmTriggerType::DATE_OR_READING,
+            'interval_days' => 30,
+            'interval_reading' => 1000,
+            'usage_reading_type_id' => $readingType->id,
+            'last_triggered_date' => now()->subDays(31),
+            'last_triggered_reading' => 5000,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $mr = MaintenanceRequest::create([
+            'number' => 'MR-DUAL-001',
+            'asset_id' => $asset->id,
+            'type' => 'preventive',
+            'status' => 'pending_review',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+            'is_preventive' => true,
+            'pm_rule_id' => $rule->id,
+            'triggered_by_date' => true,
+            'triggered_by_reading' => true,
+            'trigger_date' => now()->toDateString(),
+            'trigger_reading_value' => 6100,
+            'trigger_reading_type_id' => $readingType->id,
+        ]);
+
+        // Rejecting with ONLY date boundary fails because reading also triggered
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/reject", [
+            'reason' => 'Deferred',
+            'suppressed_until_date' => now()->addDays(10)->toDateString(),
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'The suppressed until reading field is required.');
+
+        // Rejecting with BOTH boundaries succeeds
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/reject", [
+            'reason' => 'Deferred',
+            'suppressed_until_date' => now()->addDays(10)->toDateString(),
+            'suppressed_until_reading' => 7000,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('pm_occurrence_suppressions', [
+            'pm_rule_id' => $rule->id,
+            'triggered_by_date' => true,
+            'triggered_by_reading' => true,
+            'suppressed_until_reading' => 7000,
+        ]);
     }
 }

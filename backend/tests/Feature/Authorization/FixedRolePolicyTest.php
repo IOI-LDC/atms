@@ -30,7 +30,7 @@ class FixedRolePolicyTest extends TestCase
             RoleCode::TECHNICIAN->value,
             RoleCode::LOGISTICS->value,
             RoleCode::REQUESTER->value,
-            RoleCode::VIEWER->value,
+            RoleCode::SERVICE->value,
         ];
 
         foreach ($expectedRoles as $role) {
@@ -40,10 +40,10 @@ class FixedRolePolicyTest extends TestCase
 
     public function test_user_has_one_role(): void
     {
-        $role = Role::where('code', RoleCode::VIEWER)->first();
+        $role = Role::where('code', RoleCode::REQUESTER)->first();
         $user = User::factory()->create(['role_id' => $role->id]);
 
         $this->assertInstanceOf(Role::class, $user->role);
-        $this->assertEquals(RoleCode::VIEWER->value, $user->role->code->value);
+        $this->assertEquals(RoleCode::REQUESTER->value, $user->role->code->value);
     }
 }

@@ -14,6 +14,7 @@ class CreateAsset
             $logger = app(AuditLogger::class);
 
             $asset = Asset::create([
+                'erp_asset_code' => $data['erp_asset_code'],
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
                 'category' => $data['category'] ?? null,

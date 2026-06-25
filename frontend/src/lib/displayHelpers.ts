@@ -71,6 +71,72 @@ export function operationalStatusLabel(s: string | null | undefined): string {
   return m[s] ?? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
 
+export function operationalStatusClass(s: string | null | undefined): string {
+  const m: Record<string, string> = {
+    // active/inactive → new .status-active / .status-inactive (added to style.css)
+    active:            'status-badge status-active',
+    inactive:          'status-badge status-inactive',
+    // under_maintenance → reuse existing amber WO badge
+    under_maintenance: 'status-badge status-in-progress',
+    // down → reuse existing red priority badge
+    down:              'status-badge priority-critical',
+  }
+  return m[s ?? ''] ?? 'status-badge'
+}
+
+export function assetMaintenanceStatusLabel(s: string | null | undefined): string {
+  if (!s) return '—'
+  const m: Record<string, string> = {
+    Active:   'Active',
+    Inactive: 'Inactive',
+  }
+  return m[s] ?? s
+}
+
+export function assetMaintenanceStatusClass(s: string | null | undefined): string {
+  // Reuses the same .status-active / .status-inactive added for operational status
+  const m: Record<string, string> = {
+    Active:   'status-badge status-active',
+    Inactive: 'status-badge status-inactive',
+  }
+  return m[s ?? ''] ?? 'status-badge'
+}
+
+export function assetMaintenanceSubStatusLabel(s: string | null | undefined): string {
+  if (!s) return '—'
+  const m: Record<string, string> = {
+    Installed: 'Installed',
+    Ready:     'Ready',
+    LIH:       'Lost in Hole',
+    DBR:       'Damaged Beyond Repair',
+    Disposed:  'Disposed',
+    Scrapped:  'Scrapped',
+    Other:     'Other',
+  }
+  return m[s] ?? s
+}
+
+export function assetKindLabel(k: string | null | undefined): string {
+  if (!k) return '—'
+  const m: Record<string, string> = {
+    asset:     'Asset',
+    package:   'Package',
+    component: 'Component',
+  }
+  return m[k] ?? k
+}
+
+export function assetKindClass(k: string | null | undefined): string {
+  const m: Record<string, string> = {
+    // asset → reuse existing blue WO-open badge
+    asset:     'status-badge status-open',
+    // package / component → new classes (no analog exists)
+    package:   'status-badge badge-kind-package',
+    component: 'status-badge badge-kind-component',
+  }
+  return m[k ?? ''] ?? 'status-badge'
+}
+
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   return iso.slice(0, 10)

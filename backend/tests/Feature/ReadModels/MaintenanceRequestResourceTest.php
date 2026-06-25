@@ -34,7 +34,7 @@ class MaintenanceRequestResourceTest extends TestCase
         $uniq = uniqid();
         $location = Location::create(['name' => 'Loc-'.$uniq, 'type' => 'building']);
         $asset = Asset::create([
-            'erp_asset_id' => 'ERP-'.$uniq, 'erp_asset_code' => 'A-'.$uniq, 'name' => 'Asset',
+            'erp_asset_code' => 'A-'.$uniq, 'name' => 'Asset',
             'is_active' => true, 'current_location_id' => $location->id,
         ]);
 
@@ -100,17 +100,16 @@ class MaintenanceRequestResourceTest extends TestCase
         $this->assertArrayNotHasKey('has_attachments', $data);
     }
 
-    public function test_viewer_sees_no_attachments(): void
+    public function test_requester_sees_attachments_flag(): void
     {
-        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $viewer = $this->createUser(RoleCode::VIEWER);
-        $this->createMaintenanceRequest($admin->id);
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $this->createMaintenanceRequest($requester->id);
 
-        $response = $this->actingAs($viewer)->getJson('/api/maintenance-requests');
+        $response = $this->actingAs($requester)->getJson('/api/maintenance-requests');
 
         $response->assertStatus(200);
         $data = $response->json('data.0');
-        $this->assertArrayNotHasKey('has_attachments', $data);
+        $this->assertArrayHasKey('has_attachments', $data);
         $this->assertArrayHasKey('is_preventive', $data);
     }
 

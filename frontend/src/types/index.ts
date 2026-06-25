@@ -15,6 +15,11 @@ export type Priority                 = 'low' | 'medium' | 'high' | 'critical'
 export type MrType                   = 'corrective' | 'preventive'
 export type MeterReadingSource       = 'user' | 'manual'
 export type ErpSyncStatus            = 'running' | 'success' | 'partial' | 'failed'
+export type AssetMaintenanceStatus   = 'Active' | 'Inactive'
+export type AssetKind                = 'asset' | 'package' | 'component'
+export type AssetMaintenanceSubStatus =
+  | 'Installed' | 'Ready'                             // Active sub-statuses (component/package)
+  | 'LIH' | 'DBR' | 'Disposed' | 'Scrapped' | 'Other' // Inactive sub-statuses
 
 // ── Shared fragments ──────────────────────────────────────────────────────────
 
@@ -47,18 +52,25 @@ export interface User {
 export interface Asset {
   id: number
   erp_asset_code: string
+  /** ERP FA subclass code — the authoritative asset classification (e.g. "MUD MOTOR", "MWD/LWD"). Read-only. */
+  fa_subclass_code: string | null
   name: string
   description: string | null
-  category: string | null
   serial_number: string | null
   model: string | null
   manufacturer: string | null
   operational_status: string | null
+  maintenance_status: AssetMaintenanceStatus | null
+  maintenance_sub_status: AssetMaintenanceSubStatus | null
+  asset_kind: AssetKind | null
+  asset_tag: string | null
+  parent_asset_id: number | null
+  child_assets_count?: number
   current_location?: LocationRef | null
-  erp_status?: string | null           // not for Requester
-  erp_last_synced_at?: string | null   // not for Requester
-  is_active?: boolean                  // Admin/Manager only
-  erp_raw_data?: Record<string, unknown> // Admin only
+  erp_status?: string | null              // not for Requester
+  erp_last_synced_at?: string | null      // not for Requester
+  is_active?: boolean                     // Admin/Manager only
+  erp_raw_data?: Record<string, unknown>  // Admin only
   created_at: string
   updated_at: string
 }

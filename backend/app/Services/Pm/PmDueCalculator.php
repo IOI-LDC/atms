@@ -6,6 +6,7 @@ use App\Enums\PmTriggerType;
 use App\Models\AssetMeterReading;
 use App\Models\PmOccurrenceSuppression;
 use App\Models\PmRule;
+use Illuminate\Support\Collection;
 
 class PmDueCalculator
 {

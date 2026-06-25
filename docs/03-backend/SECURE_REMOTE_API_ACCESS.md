@@ -1,6 +1,6 @@
 # Secure Remote API Access
 
-**Status:** Production requirement — not yet implemented in code.
+**Status:** Implemented in code (Phase 1). Token endpoint, client management, and ability enforcement are live.
 
 ## Context
 

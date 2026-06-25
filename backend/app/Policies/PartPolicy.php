@@ -15,6 +15,10 @@ class PartPolicy
 
     public function view(User $user, Part $part): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         if ($part->is_active) {
             return true;
         }

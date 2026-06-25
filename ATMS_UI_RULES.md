@@ -1,6 +1,6 @@
 # Frontend UI Rules & Implementation Patterns
 
-A portable rulebook for **Vue 3.5 + shadcn-vue + reka-ui + `@ioi-dev/vue-table` +
+A portable rulebook for **Vue 3.5 + shadcn-vue + reka-ui + `@tanstack/vue-table` +
 Tailwind v4 + semantic-CSS** apps. Derived from and tested on a production
 maintenance-management frontend.
 
@@ -28,7 +28,7 @@ unreviewed visual assets.
 | Routing | Vue Router |
 | State (shared only) | Pinia (auth, session, settings) |
 | UI primitives | shadcn-vue 2.x + reka-ui |
-| Data tables | `@ioi-dev/vue-table` ^0.3.x |
+| Data tables | `@tanstack/vue-table` ^8.x (headless) |
 | Icons | Lucide Vue |
 | Styling – primitives | Tailwind v4 (inside `src/components/ui/` **only**) |
 | Styling – feature code | Semantic CSS classes in one central stylesheet |
@@ -144,23 +144,14 @@ class like `.page-header { display: flex; }` automatically wins over any
 Tailwind utility on the same element. No `!important` needed for normal
 overrides.
 
-### Third-Party Table CSS Overrides
+### Table CSS — No Third-Party Overrides Needed
 
-When overriding the `@ioi-dev/vue-table` library's built-in CSS, **scope the
-override under the app's own wrapper class** for specificity:
-
-```css
-/* Target a lib class only within the app's table shell */
-.app-data-table .ioi-table__sort-button:focus {
-  outline: none;
-}
-.app-data-table .ioi-table__sort-button:focus-visible {
-  outline: var(--ioi-table-focus-outline);
-}
-```
-
-This guarantees your rule wins regardless of CSS import order, without resorting
-to `!important`.
+TanStack Table is **headless** — it provides state and row models, not markup.
+`AppDataTable` renders its own `<table>`/`<thead>`/`<tbody>` with semantic
+classes defined in the central stylesheet (`.app-data-table-*`). There are no
+third-party table CSS classes to override, so specificity tricks are
+unnecessary. If a visual tweak is needed, add or edit a semantic class in the
+central stylesheet directly.
 
 ### Class Vocabulary
 
@@ -172,7 +163,7 @@ Extend this vocabulary centrally; never invent one-off class names:
 | Page | `.page-section`, `.page-header`, `.page-heading`, `.page-title`, `.page-subtitle`, `.page-actions` |
 | Cards | `.card-grid`, `.data-card`, `.data-card-header`, `.data-card-title`, `.data-card-content`, `.data-card-actions` |
 | Detail | `.detail-back`, `.detail-meta`, `.detail-text`, `.detail-section`, `.detail-actions` |
-| Table shell | `.app-data-table`, `.data-table-toolbar`, `.data-table-search`, `.data-table-pagination`, `.data-table-pagination-info`, `.data-table-pagination-nav`, `.data-table-pagination-page`, `.data-table-pagination-btn`, `.data-table-pagination-size`, `.table-filter-trigger` |
+| Table shell | `.app-data-table`, `.app-data-table-scroll`, `.app-data-table-table`, `.app-data-table-thead`, `.app-data-table-th`, `.app-data-table-sort-btn`, `.app-data-table-sort-icon`, `.app-data-table-filter-row`, `.app-data-table-filter-cell`, `.app-data-table-tbody`, `.app-data-table-row`, `.app-data-table-cell`, `.app-data-table-empty`, `.data-table-toolbar`, `.data-table-search`, `.data-table-pagination`, `.data-table-pagination-info`, `.data-table-pagination-subtle`, `.data-table-pagination-controls`, `.data-table-pagination-nav`, `.data-table-pagination-page`, `.data-table-pagination-size`, `.table-filter-trigger` |
 | Table cells | `.table-cell-stack`, `.table-cell-primary`, `.table-cell-secondary`, `.table-cell-truncate`, `.table-link` |
 | Combobox | `.asset-combobox-trigger`, `-value`, `-placeholder`, `-caret`, `-panel`, `-search`, `-search-icon`, `-search-input`, `-list`, `-option`, `-option-name`, `-option-code`, `-check`, `-empty` |
 | Forms | `.form-grid`, `.form-field`, `.form-field-full`, `.form-help`, `.form-error`, `.form-actions` |
@@ -218,8 +209,10 @@ Every primary page contains:
 
 ## 7. Data Table Pattern (AppDataTable)
 
-Use `@ioi-dev/vue-table` through a **single generic shared shell**
+Use `@tanstack/vue-table` (headless) through a **single generic shared shell**
 (`AppDataTable`) — do not rebuild sorting, filtering, or pagination per-feature.
+The shell renders its own `<table>` markup with semantic classes; TanStack
+provides only state + row models (core, filtered, sorted, pagination).
 
 ### 7.1 Generic SFC + Typed `#cell` Slot
 
@@ -231,70 +224,63 @@ gets fully-typed cell rendering with zero consumer-side casts:
 <script setup lang="ts" generic="TRow">
 ```
 
-The `@ioi-dev/vue-table` `<Table>` is **not** itself a generic SFC, so a
-boundary cast is needed inside the shell:
+TanStack's `useVueTable` is not generic-friendly enough to infer `TRow` through
+the wrapper, so a boundary cast is used inside the shell:
 
 ```ts
 type AnyRow = Record<string, unknown>
-const tableColumns = props.columns as unknown as ColumnDef<AnyRow>[]
-const tableRows = computed(() => props.rows as unknown as AnyRow[])
 ```
 
 The `#cell` slot re-asserts `TRow` so every consumer gets typed cells:
 
 ```vue
-<template #cell="slotProps">
-  <slot name="cell" :column="slotProps.column as ColumnDef<TRow>"
-        :row="slotProps.row as TRow" … />
-</template>
-```
-
-Consumer (zero casts):
-
-```vue
-<template #cell="{ column, row }">
+<template #cell="{ column, row, value }">
   <span v-if="column.field === 'priority'" :class="priorityClass(row.priority)">
     {{ priorityLabel(row.priority) }}
   </span>
 </template>
 ```
 
-### 7.2 Table Ref Type
+### 7.2 Column Definitions (Framework-Agnostic)
 
-Expose the table API with the library's own type:
+Columns are declared with the local `AppColumnDef<T>` type
+(`src/lib/appTable.ts`) — **never** import TanStack's `ColumnDef` in a column
+module. `AppDataTable` maps `AppColumnDef` → TanStack's `ColumnDef` internally:
 
 ```ts
-import type { IoiTableApi } from '@ioi-dev/vue-table'
-const tableRef = ref<IoiTableApi | null>(null)
+import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
+
+export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
+  { field: 'number', header: 'Request', sortable: true },
+  { field: 'priority', header: 'Priority', sortable: true, headerFilter: 'select' },
+  // …
+]
 ```
+
+Fields: `field` (row property + column key), `header`, `sortable`,
+`headerFilter: 'select' | 'text'`, `type: 'date' | 'number' | 'text'`,
+`minWidth` (px), `comparator` (custom sort).
 
 ### 7.3 Global Search (Debounced)
 
-```ts
-import { useDebounceFn } from '@vueuse/core'
-const debouncedSearch = useDebounceFn(
-  (v: string) => tableRef.value?.setGlobalSearch(v),
-  200,
-)
-watch(search, debouncedSearch)
-```
+Search is owned by the shell. The toolbar `Input` feeds a debounced
+`globalFilter` (200 ms) into TanStack's global filter, which matches across all
+columns. A custom `globalFilterFn` normalizes object values (e.g. `asset.name`)
+to a searchable string so relations are matchable.
 
 ### 7.4 Header Filters (Select + Text)
 
-The `#header-filter` slot receives `mode: 'text' | 'select'`. Handle both:
-
-```vue
-<template #header-filter="{ column, mode, value, setValue, clear }">
-  <Select v-if="mode === 'select'" … />
-  <Input  v-else-if="mode === 'text'"
-          :model-value="value" @update:model-value="(v) => setValue(String(v))" />
-</template>
-```
+Column filters use TanStack's `columnFilters` state. A `select` filter uses
+`filterFn: 'equals'` (exact match); a `text` filter uses `'includesString'`. The
+header renders a shadcn `<Select>` or `<Input>` bound to the column's filter
+value. Filter options come from the `filterOptions` prop
+(`Record<field, FilterOption[]>`).
 
 ### 7.5 Client-Side Sort with Comparator
 
 For object fields (e.g. `asset` which is `{ name, code }`), provide a
-`comparator` to sort by the nested value:
+`comparator` to sort by the nested value. The shell adapts it to TanStack's
+`sortingFn` signature:
 
 ```ts
 export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
@@ -308,54 +294,48 @@ export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
 ]
 ```
 
-### 7.6 Pagination — Correct API & the "All" Option
+Multi-sort is enabled (shift-click adds to the sort stack). Sort direction is
+shown via chevron icons (asc / desc / unsorted) in the header.
 
-#### The API (NOT `:pagination` — that's an object, ignored silently)
+### 7.6 Pagination — "Showing X to Y of Z" + "All" Option
 
-```vue
-<Table
-  v-model:page-index="pageIndex"
-  v-model:page-size="pageSize"
-  :show-pagination="true"
-/>
-```
-
-- `v-model:page-index` / `v-model:page-size` — two-way-bind pagination state.
-- `:show-pagination="true"` — renders the pagination control.
-- The library **does** render a default pagination bar (info, size selector,
-  first/prev/next/last buttons), but the size selector labels are hardcoded as
-  `N / page` — it cannot label an "All" option.
-
-#### Why a custom `#pagination` slot is sometimes justified
-
-The built-in page-size selector renders `pageSizeOptions` (a `number[]`) as
-`N / page` — there is no way to label an "All" option cleanly. To offer "All":
+The shell renders a custom pagination bar with a First/Prev/Next/Last chevron
+cluster (shadcn `Button size="icon-sm"`) and a page-size `<Select>` that offers
+`10 / 50 / 100 / All`. The info line shows the current page range over the
+**filtered** total (not the unfiltered total):
 
 ```vue
-<template #pagination="{ pageIndex, pageSize, pageCount, rowCount,
-                          canPreviousPage, canNextPage,
-                          previousPage, nextPage, setPageSize }">
-  <div class="data-table-pagination">
-    <span class="data-table-pagination-info">{{ rowCount }} item…</span>
-    <div class="data-table-pagination-nav">
-      <Button … @click="previousPage">Prev</Button>
-      <span>Page {{ pageIndex + 1 }} of {{ Math.max(pageCount, 1) }}</span>
-      <Button … @click="nextPage">Next</Button>
-      <Select
-        :model-value="pageSize >= ALL ? 'all' : String(pageSize)"
-        @update:model-value="(v) => setPageSize(v === 'all' ? ALL : Number(v))"
-      >
-        <SelectItem value="10">10 / page</SelectItem>
-        <SelectItem value="50">50 / page</SelectItem>
-        <SelectItem value="100">100 / page</SelectItem>
-        <SelectItem value="all">All</SelectItem>
-      </Select>
-    </div>
-  </div>
-</template>
+<span class="data-table-pagination-info">
+  Showing {{ pageInfo.start }} to {{ pageInfo.end }} of {{ pageInfo.total }}
+  <span v-if="hasActiveFilters" class="data-table-pagination-subtle">
+    ({{ pageInfo.originalTotal }} total)
+  </span>
+</span>
 ```
 
-Map "All" to a huge page size (`const ALL = 100_000`) so all rows render on one page.
+```ts
+const filteredCount = computed(() => table.getFilteredRowModel().rows.length)
+const pageInfo = computed(() => {
+  const { pageIndex, pageSize } = pagination.value
+  const total = filteredCount.value
+  return {
+    start: total === 0 ? 0 : pageIndex * pageSize + 1,
+    end: Math.min((pageIndex + 1) * pageSize, total),
+    total,
+    originalTotal: totalCount.value,
+  }
+})
+```
+
+Map "All" to a huge page size (`const ALL_ROWS = 100_000`) so all rows render on
+one page. Changing page size resets to page 1 (standard UX).
+
+### 7.7 State Persistence Across Navigation
+
+The shell caches sort / column filters / global search / page-size per
+`route.path + label` key in a module-level `Map`. On revisit, these are
+restored; `pageIndex` is intentionally NOT restored (the table resets it on
+filter/sort change — re-applying it fights that reset).
 
 ---
 

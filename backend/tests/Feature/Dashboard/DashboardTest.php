@@ -36,7 +36,7 @@ class DashboardTest extends TestCase
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
 
         return Asset::create([
-            'erp_asset_id' => 'ERP-001', 'erp_asset_code' => 'A-001', 'name' => 'Asset',
+            'erp_asset_code' => 'A-001', 'name' => 'Asset',
             'is_active' => true, 'current_location_id' => $location->id,
         ]);
     }
@@ -156,11 +156,11 @@ class DashboardTest extends TestCase
         $this->assertEquals(1, $summary['recently_closed_work_orders']);
     }
 
-    public function test_viewer_sees_widgets_except_no_logistics_style_exclusions(): void
+    public function test_requester_sees_widgets_except_no_logistics_style_exclusions(): void
     {
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
 
-        $response = $this->actingAs($viewer)->getJson('/api/dashboard');
+        $response = $this->actingAs($requester)->getJson('/api/dashboard');
 
         $response->assertStatus(200);
         $json = $response->json();

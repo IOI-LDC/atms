@@ -1,4 +1,4 @@
-import type { ColumnDef } from '@ioi-dev/vue-table'
+import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
 import type { Priority, WorkOrder, WorkOrderStatus } from '@/types'
 import { priorityLabel, woStatusLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
@@ -29,9 +29,9 @@ export const woColumns: ColumnDef<WorkOrder>[] = [
  * `#header-filter` slot. Labels reuse displayHelpers (single source of truth).
  */
 export const woFilterOptions: Record<string, FilterOption[]> = {
-  status: (
-    ['open', 'in_progress', 'completed', 'closed', 'cancelled'] as WorkOrderStatus[]
-  ).map((v) => ({ value: v, label: woStatusLabel(v) })),
+  status: (['open', 'in_progress', 'completed', 'closed', 'cancelled'] as WorkOrderStatus[]).map(
+    (v) => ({ value: v, label: woStatusLabel(v) }),
+  ),
   priority: (['low', 'medium', 'high', 'critical'] as Priority[]).map((v) => ({
     value: v,
     label: priorityLabel(v),

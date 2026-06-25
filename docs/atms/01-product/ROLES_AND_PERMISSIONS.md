@@ -3,7 +3,7 @@
 ## Access Control Decision
 
 ATMS uses a simple fixed-role access model for MVP. Each user has exactly one
-assigned role from the **five** system-defined roles below. The legacy **Viewer**
+assigned role from the **five human** system-defined roles below (plus a non-human **SERVICE** role for M2M API tokens). The legacy **Viewer**
 role has been merged into **Requester** — all users are Requesters at minimum.
 
 The MVP does not support:

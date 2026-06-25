@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\AssetKind;
+use App\Enums\MaintenanceStatus;
+use App\Enums\MaintenanceSubStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Asset extends Model
 {
     protected $fillable = [
-        'erp_asset_id',
         'erp_asset_code',
         'name',
         'description',
@@ -24,21 +26,46 @@ class Asset extends Model
         'erp_raw_data',
         'erp_last_synced_at',
         'is_active',
+        'maintenance_status',
+        'maintenance_sub_status',
+        'asset_kind',
+        'asset_tag',
+        'asset_tag_generated_at',
+        'asset_tag_override_reason',
+        'fa_subclass_code',
+        'parent_asset_id',
     ];
 
     protected $hidden = [
         'erp_raw_data',
     ];
 
-    protected $casts = [
-        'erp_raw_data' => 'array',
-        'erp_last_synced_at' => 'datetime',
-        'is_active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'erp_raw_data' => 'array',
+            'erp_last_synced_at' => 'datetime',
+            'is_active' => 'boolean',
+            'asset_tag_generated_at' => 'datetime',
+            'maintenance_status' => MaintenanceStatus::class,
+            'maintenance_sub_status' => MaintenanceSubStatus::class,
+            'asset_kind' => AssetKind::class,
+        ];
+    }
 
     public function currentLocation(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'current_location_id');
+    }
+
+    public function parentAsset(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class, 'parent_asset_id');
+    }
+
+    public function childAssets(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'parent_asset_id');
     }
 
     public function locationHistories(): HasMany

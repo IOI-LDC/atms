@@ -10,12 +10,20 @@ class PmRulePolicy
 {
     public function viewAny(User $user): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         return $user->hasRole(RoleCode::ADMINISTRATOR)
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
     }
 
     public function view(User $user, PmRule $pmRule): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         return $user->hasRole(RoleCode::ADMINISTRATOR)
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
     }

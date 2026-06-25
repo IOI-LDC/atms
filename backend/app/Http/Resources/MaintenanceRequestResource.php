@@ -16,15 +16,13 @@ class MaintenanceRequestResource extends JsonResource
         $isTech = $user->hasRole(RoleCode::TECHNICIAN);
         $isLogistics = $user->hasRole(RoleCode::LOGISTICS);
         $isRequester = $user->hasRole(RoleCode::REQUESTER);
-        $isViewer = $user->hasRole(RoleCode::VIEWER);
-        $isOwn = $this->created_by === $user->id;
 
-        $showCreatedBy = $isAdmin || $isManager || $isTech || ($isRequester && $isOwn) || $isViewer;
+        $showCreatedBy = $isAdmin || $isManager || $isTech || $isRequester;
         $showCreatedByEmail = $isAdmin || $isManager;
-        $showReviewedBy = $isAdmin || $isManager || $isViewer;
-        $showPmFields = $isAdmin || $isManager || $isViewer;
-        $showWorkOrder = $isAdmin || $isManager || $isTech || ($isRequester && $isOwn) || $isViewer;
-        $showAttachments = $isAdmin || $isManager || $isTech || ($isRequester && $isOwn);
+        $showReviewedBy = $isAdmin || $isManager || $isRequester;
+        $showPmFields = $isAdmin || $isManager || $isRequester;
+        $showWorkOrder = $isAdmin || $isManager || $isTech || $isRequester;
+        $showAttachments = $isAdmin || $isManager || $isTech || $isRequester;
 
         $data = [
             'id' => $this->id,

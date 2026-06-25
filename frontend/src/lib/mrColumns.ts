@@ -1,10 +1,5 @@
-import type { ColumnDef } from '@ioi-dev/vue-table'
-import type {
-  MaintenanceRequest,
-  MaintenanceRequestStatus,
-  MrType,
-  Priority,
-} from '@/types'
+import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
+import type { MaintenanceRequest, MaintenanceRequestStatus, MrType, Priority } from '@/types'
 import { mrStatusLabel, mrTypeLabel, priorityLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
 

@@ -13,7 +13,6 @@ class AttachmentResource extends JsonResource
         $user = $request->user();
         $isAdmin = $user->hasRole(RoleCode::ADMINISTRATOR);
         $isManager = $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
-        $isViewer = $user->hasRole(RoleCode::VIEWER);
 
         $data = [
             'id' => $this->id,
@@ -22,11 +21,8 @@ class AttachmentResource extends JsonResource
             'size_bytes' => $this->size_bytes,
             'description' => $this->description,
             'created_at' => $this->created_at?->toIso8601String(),
+            'download_url' => url("/api/attachments/{$this->id}/download"),
         ];
-
-        if (! $isViewer) {
-            $data['download_url'] = url("/api/attachments/{$this->id}/download");
-        }
 
         if ($isAdmin || $isManager) {
             $data['uploaded_by'] = $this->whenLoaded('uploadedBy', fn () => [

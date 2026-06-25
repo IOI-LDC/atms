@@ -3,12 +3,14 @@
 namespace App\Actions\MaintenanceRequests;
 
 use App\Actions\Assets\RecordMeterReading;
+use App\Enums\MaintenanceStatus;
 use App\Models\Asset;
 use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
 use App\Models\UsageReadingType;
 use App\Services\Audit\AuditLogger;
 use Carbon\Carbon;
+use DomainException;
 use Illuminate\Support\Facades\DB;
 
 class CreateCorrectiveMaintenanceRequest
@@ -20,6 +22,10 @@ class CreateCorrectiveMaintenanceRequest
         ?string $description = null,
         ?array $meterReading = null
     ): MaintenanceRequest {
+        if ($asset->maintenance_status === MaintenanceStatus::INACTIVE) {
+            throw new DomainException('Cannot create a maintenance request for an inactive asset.');
+        }
+
         return DB::transaction(function () use ($asset, $createdByUserId, $priority, $description, $meterReading) {
             $logger = app(AuditLogger::class);
             $number = BusinessNumberSequence::next('MR', 'MR-');

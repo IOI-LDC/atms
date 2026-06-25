@@ -33,7 +33,6 @@ class PmRuleResourceTest extends TestCase
     {
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
         $asset = Asset::create([
-            'erp_asset_id' => 'ERP-001',
             'erp_asset_code' => 'A-001',
             'name' => 'Asset',
             'is_active' => true,

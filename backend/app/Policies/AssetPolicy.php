@@ -15,6 +15,10 @@ class AssetPolicy
 
     public function view(User $user, Asset $asset): bool
     {
+        if ($user->hasRole(RoleCode::SERVICE)) {
+            return true;
+        }
+
         if ($asset->is_active) {
             return true;
         }
@@ -24,7 +28,9 @@ class AssetPolicy
 
     public function manage(User $user): bool
     {
-        return $user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
+        return $user->hasRole(RoleCode::ADMINISTRATOR)
+            || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
+            || $user->hasRole(RoleCode::SERVICE);
     }
 
     public function create(User $user): bool

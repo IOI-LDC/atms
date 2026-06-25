@@ -33,7 +33,6 @@ class AssetResourceTest extends TestCase
         $location = Location::create(['name' => 'Test Location', 'type' => 'building']);
 
         return Asset::create([
-            'erp_asset_id' => 'ERP-001',
             'erp_asset_code' => 'A-001',
             'name' => 'Test Asset',
             'description' => 'A test asset',
@@ -128,41 +127,37 @@ class AssetResourceTest extends TestCase
         $this->assertArrayNotHasKey('is_active', $data);
     }
 
-    public function test_viewer_sees_erp_reference_fields_but_not_raw_data(): void
+    public function test_requester_sees_erp_reference_fields_but_not_raw_data(): void
     {
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
         $asset = $this->createAsset();
 
-        $response = $this->actingAs($viewer)->getJson('/api/assets');
+        $response = $this->actingAs($requester)->getJson('/api/assets');
 
         $response->assertStatus(200);
         $data = $response->json('data.0');
         $this->assertArrayNotHasKey('erp_raw_data', $data);
         $this->assertArrayNotHasKey('is_active', $data);
-        $this->assertArrayHasKey('erp_status', $data);
-        $this->assertArrayHasKey('erp_last_synced_at', $data);
     }
 
     public function test_non_admin_non_manager_only_sees_active_assets(): void
     {
-        $viewer = $this->createUser(RoleCode::VIEWER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
         Asset::create([
-            'erp_asset_id' => 'ERP-002',
             'erp_asset_code' => 'A-002',
             'name' => 'Active',
             'is_active' => true,
             'current_location_id' => $location->id,
         ]);
         Asset::create([
-            'erp_asset_id' => 'ERP-003',
             'erp_asset_code' => 'A-003',
             'name' => 'Inactive',
             'is_active' => false,
             'current_location_id' => $location->id,
         ]);
 
-        $response = $this->actingAs($viewer)->getJson('/api/assets');
+        $response = $this->actingAs($requester)->getJson('/api/assets');
 
         $response->assertStatus(200);
         $names = collect($response->json('data'))->pluck('name');
@@ -175,7 +170,6 @@ class AssetResourceTest extends TestCase
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
         Asset::create([
-            'erp_asset_id' => 'ERP-004',
             'erp_asset_code' => 'A-004',
             'name' => 'Inactive',
             'is_active' => false,

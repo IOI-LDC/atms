@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('assets', function (Blueprint $table) {
             $table->id();
-            $table->string('erp_asset_id')->nullable()->unique();
             $table->string('erp_asset_code')->unique();
             $table->string('name');
             $table->text('description')->nullable();
