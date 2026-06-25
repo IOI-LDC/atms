@@ -4,8 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import type { Component } from 'vue'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
-  SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
@@ -15,7 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   LayoutDashboard, ClipboardList, Wrench, HardDrive, Package, Settings,
-  Zap, ChevronUp,
+  Shield, ChevronUp,
 } from '@lucide/vue'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -26,63 +25,78 @@ interface RoleFlags {
   isLogistics: boolean
   isRequester: boolean
 }
-interface NavLinkDef {
-  kind: 'link'; label: string; to: string; icon: Component
+interface NavItemDef {
+  label: string
+  icon: Component
+  to: (r: RoleFlags) => string
+  isActiveFor: (path: string) => boolean
   visibleTo: (r: RoleFlags) => boolean
 }
-interface NavGroupDef {
-  kind: 'group'; label: string; icon: Component
-  visibleTo: (r: RoleFlags) => boolean
-  items: { label: string; to: string; action?: boolean; visibleTo: (r: RoleFlags) => boolean }[]
+interface DisplayItem {
+  label: string
+  icon: Component
+  to: string
+  isActive: boolean
 }
-type NavNodeDef = NavLinkDef | NavGroupDef
-interface DisplayLink { kind: 'link'; label: string; to: string; icon: Component }
-interface DisplayGroup { kind: 'group'; label: string; icon: Component; items: { label: string; to: string; action?: boolean }[] }
-type DisplayNode = DisplayLink | DisplayGroup
 
-// ── Nav tree (migrated verbatim from AppNav) ─────────────────────────────────
-const navTree: NavNodeDef[] = [
-  { kind: 'link', label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, visibleTo: () => true },
+// ── Nav tree — flat list, one entry per sidebar item ─────────────────────────
+const navItems: NavItemDef[] = [
   {
-    kind: 'group', label: 'Maintenance Requests', icon: ClipboardList, visibleTo: () => true,
-    items: [
-      { label: 'New Request', to: '/maintenance?action=new', action: true, visibleTo: () => true },
-      { label: 'My Requests', to: '/maintenance?tab=my-requests', visibleTo: () => true },
-      { label: 'Pending Approval', to: '/maintenance?tab=pending-approval', visibleTo: (r) => r.isAdminOrManager },
-      { label: 'All Requests', to: '/maintenance?tab=all-requests', visibleTo: (r) => r.isAdminOrManager },
-    ],
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    to: () => '/dashboard',
+    isActiveFor: (p) => p === '/dashboard',
+    visibleTo: () => true,
   },
   {
-    kind: 'group', label: 'Work Orders', icon: Wrench,
+    label: 'Maintenance Requests',
+    icon: ClipboardList,
+    to: (r) => r.isAdminOrManager ? '/maintenance?tab=all-requests' : '/maintenance?tab=my-requests',
+    isActiveFor: (p) => p === '/maintenance' || p.startsWith('/maintenance/'),
+    visibleTo: () => true,
+  },
+  {
+    label: 'Work Orders',
+    icon: Wrench,
+    to: (r) => r.isAdminOrManager ? '/work-orders?tab=all' : '/work-orders?tab=my-work-orders',
+    isActiveFor: (p) => p === '/work-orders' || p.startsWith('/work-orders/'),
     visibleTo: (r) => r.isAdminOrManager || r.isTechnician,
-    items: [
-      { label: 'My Work Orders', to: '/work-orders?tab=my-work-orders', visibleTo: (r) => r.isTechnician },
-      { label: 'All Work Orders', to: '/work-orders?tab=all', visibleTo: (r) => r.isAdminOrManager },
-      { label: 'Active', to: '/work-orders?tab=active', visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
-      { label: 'Completed', to: '/work-orders?tab=completed', visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
-      { label: 'Closed', to: '/work-orders?tab=closed', visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
-    ],
   },
-  { kind: 'link', label: 'Assets', to: '/assets', icon: HardDrive, visibleTo: (r) => r.isAdminOrManager || r.isTechnician || r.isLogistics },
-  { kind: 'link', label: 'Parts Reference', to: '/parts', icon: Package, visibleTo: (r) => r.isAdminOrManager || r.isTechnician },
-  { kind: 'link', label: 'PM Rules', to: '/settings/pm-rules', icon: Zap, visibleTo: (r) => r.isAdminOrManager },
   {
-    kind: 'group', label: 'Settings', icon: Settings, visibleTo: (r) => r.isAdmin,
-    items: [
-      { label: 'Users & Access', to: '/settings/users', visibleTo: (r) => r.isAdmin },
-      { label: 'Lists & Dropdowns', to: '/settings/lists', visibleTo: (r) => r.isAdmin },
-      { label: 'Locations', to: '/settings/locations', visibleTo: (r) => r.isAdmin },
-      { label: 'System & Integration', to: '/settings/system', visibleTo: (r) => r.isAdmin },
-      { label: 'Activity Logs', to: '/settings/audit-logs', visibleTo: (r) => r.isAdmin },
-    ],
+    label: 'Asset Management',
+    icon: HardDrive,
+    to: () => '/assets?tab=all-assets',
+    isActiveFor: (p) => p === '/assets' || p.startsWith('/assets/'),
+    visibleTo: (r) => r.isAdminOrManager || r.isTechnician || r.isLogistics,
+  },
+  {
+    label: 'Parts Management',
+    icon: Package,
+    to: () => '/parts?tab=all-parts',
+    isActiveFor: (p) => p === '/parts' || p.startsWith('/parts/'),
+    visibleTo: (r) => r.isAdminOrManager || r.isTechnician,
+  },
+  {
+    label: 'Admin',
+    icon: Shield,
+    to: () => '/settings/users',
+    isActiveFor: (p) => p === '/settings/users' || p === '/settings/lists' || p.startsWith('/settings/pm-rules'),
+    visibleTo: (r) => r.isAdmin,
+  },
+  {
+    label: 'Settings',
+    icon: Settings,
+    to: () => '/settings/system',
+    isActiveFor: (p) => p === '/settings/system' || p === '/settings/audit-logs',
+    visibleTo: (r) => r.isAdmin,
   },
 ]
 
-// ── Store + computed nodes (migrated verbatim) ────────────────────────────────
+// ── Store + computed ──────────────────────────────────────────────────────────
 const route = useRoute()
 const auth = useAuthStore()
 
-const visibleNodes = computed<DisplayNode[]>(() => {
+const visibleItems = computed<DisplayItem[]>(() => {
   const r: RoleFlags = {
     isAdmin: auth.isAdmin,
     isAdminOrManager: auth.isAdminOrManager,
@@ -90,14 +104,14 @@ const visibleNodes = computed<DisplayNode[]>(() => {
     isLogistics: auth.isLogistics,
     isRequester: auth.isRequester,
   }
-  return navTree.flatMap((node): DisplayNode[] => {
-    if (node.kind === 'link') {
-      return node.visibleTo(r) ? [{ kind: 'link', label: node.label, to: node.to, icon: node.icon }] : []
-    }
-    if (!node.visibleTo(r)) return []
-    const items = node.items.filter((i) => i.visibleTo(r)).map((i) => ({ label: i.label, to: i.to, action: i.action }))
-    return items.length > 0 ? [{ kind: 'group', label: node.label, icon: node.icon, items }] : []
-  })
+  return navItems
+    .filter((item) => item.visibleTo(r))
+    .map((item) => ({
+      label: item.label,
+      icon: item.icon,
+      to: item.to(r),
+      isActive: item.isActiveFor(route.path),
+    }))
 })
 
 function toLocation(to: string): string | { path: string; query: Record<string, string> } {
@@ -107,22 +121,7 @@ function toLocation(to: string): string | { path: string; query: Record<string, 
   new URLSearchParams(qs).forEach((v, k) => { query[k] = v })
   return { path, query }
 }
-function isLinkActive(to: string): boolean {
-  if (!to.includes('?')) {
-    if (to === '/dashboard') return route.path === '/dashboard'
-    return route.path === to || route.path.startsWith(to + '/')
-  }
-  const [path, qs] = to.split('?') as [string, string]
-  const tabParam = new URLSearchParams(qs).get('tab')
-  return route.path === path && route.query['tab'] === tabParam
-}
-function isGroupActive(group: DisplayGroup): boolean {
-  if (group.items.some((i) => isLinkActive(i.to))) return true
-  if (group.label === 'Maintenance Requests' && route.path === '/maintenance') return true
-  if (group.label === 'Work Orders' && route.path === '/work-orders') return true
-  if (group.label === 'Settings' && route.path.startsWith('/settings') && !route.path.startsWith('/settings/pm-rules')) return true
-  return false
-}
+
 async function handleLogout() { await auth.logout() }
 </script>
 
@@ -131,40 +130,22 @@ async function handleLogout() { await auth.logout() }
     <SidebarHeader>
       <div class="sidebar-brand">
         <img src="@/assets/logo.svg" alt="ATMS" class="sidebar-brand-logo" />
+        <span class="sidebar-brand-mark" aria-hidden="true">ATMS</span>
       </div>
     </SidebarHeader>
 
     <SidebarContent>
-      <SidebarGroup v-for="node in visibleNodes" :key="node.kind === 'link' ? node.to : node.label">
-        <SidebarGroupLabel v-if="node.kind === 'group'">{{ node.label }}</SidebarGroupLabel>
+      <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
-            <!-- Top-level link -->
-            <SidebarMenuItem v-if="node.kind === 'link'">
-              <SidebarMenuButton :is-active="isLinkActive(node.to)" :tooltip="node.label" as-child>
-                <RouterLink :to="toLocation(node.to)">
-                  <component :is="node.icon" />
-                  <span>{{ node.label }}</span>
+            <SidebarMenuItem v-for="item in visibleItems" :key="item.label">
+              <SidebarMenuButton :is-active="item.isActive" :tooltip="item.label" as-child>
+                <RouterLink :to="toLocation(item.to)">
+                  <component :is="item.icon" />
+                  <span>{{ item.label }}</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
-            <!-- Group with sub-items -->
-            <template v-else>
-              <SidebarMenuItem>
-                <SidebarMenuButton :is-active="isGroupActive(node)" :tooltip="node.label">
-                  <component :is="node.icon" />
-                  <span>{{ node.label }}</span>
-                </SidebarMenuButton>
-                <SidebarMenuSub>
-                  <SidebarMenuSubItem v-for="item in node.items" :key="item.to">
-                    <SidebarMenuSubButton :is-active="isLinkActive(item.to)" as-child>
-                      <RouterLink :to="toLocation(item.to)">{{ item.label }}</RouterLink>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                </SidebarMenuSub>
-              </SidebarMenuItem>
-            </template>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

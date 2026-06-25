@@ -170,6 +170,35 @@
   width: auto;
 }
 
+.sidebar-brand-mark {
+  display: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: hsl(var(--primary));
+}
+
+[data-sidebar="menu"] {
+  gap: 0.5rem;
+}
+
+[data-slot="sidebar-menu-button"][data-sidebar="menu-button"] {
+  font-size: 1rem;
+}
+
+[data-state="collapsed"] .sidebar-brand {
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+[data-state="collapsed"] .sidebar-brand-logo {
+  display: none;
+}
+
+[data-state="collapsed"] .sidebar-brand-mark {
+  display: block;
+}
+
 .sidebar-user-info {
   display: flex;
   flex-direction: column;
