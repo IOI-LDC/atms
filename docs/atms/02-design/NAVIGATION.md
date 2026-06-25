@@ -1,91 +1,190 @@
 # Navigation Model
 
-The navigation should remain intentionally simple.
+## Design Concept: Flat Sidebar with Internal Tabs
 
-## Main Navigation
+The navigation uses a **flat sidebar + tabbed content area** pattern to reduce
+clutter and cognitive load. There are no nested dropdown menus.
 
-1. Dashboard
-2. Assets
-3. Work Orders
-4. Parts Reference
-5. PM Rules
-6. Administration
+- **Sidebar:** A single-level vertical list of primary navigation links. Hover
+  states provide visual feedback; a clear active state (background highlight
+  or bold text) shows the user's current location.
+- **Tabs:** When the user clicks a primary category that contains sub-items,
+  the sidebar remains static and the main content area header displays a
+  horizontal row of tabs. Each tab filters the content below it.
+- **Role-based visibility:** The sidebar dynamically hides items the user's
+  role cannot access. Within tabbed groups, individual tabs are also shown or
+  hidden based on role.
 
-## Dashboard
+## Sidebar Structure
 
-Purpose: operational overview.
+Seven primary sidebar items.
 
-Typical cards:
+| # | Label | Type | Visible To |
+|---|---|---|---|
+| 1 | **Dashboard** | Direct Link | Everyone |
+| 2 | **Maintenance Requests** | Tabbed Group | Everyone |
+| 3 | **Work Orders** | Tabbed Group | Admin, Manager, Technician |
+| 4 | **Asset Management** | Tabbed Group | Admin, Manager, Technician, Logistics |
+| 5 | **Parts Management** | Tabbed Group | Admin, Manager, Technician |
+| 6 | **Admin** | Tabbed Group | Admin only |
+| 7 | **Settings** | Tabbed Group | Admin only |
 
-- Pending Maintenance Requests
-- Open Work Orders
-- Overdue PMs
-- Assets Due for Maintenance
-- Recently Closed Work Orders
-- Recently Updated Assets
+## Tab Definitions
 
-## Assets
+### 1. Dashboard
 
-Purpose: local operational asset registry based on ERP fixed assets.
+- **Type:** Direct link.
+- **Route:** `/dashboard`
+- **Content:** Operational overview with KPI summary cards, pending MR list,
+  open WO list, overdue PM list, recently closed WO list, and recently updated
+  assets.
 
-Asset area should include:
+### 2. Maintenance Requests
 
-- Asset Registry
-- Asset Detail
-- Usage & Meter Readings
-- Location History
-- Maintenance History
-- Attachments
-- ERP Reference Data
+- **Type:** Tabbed group.
+- **Route:** `/maintenance`
+- **Tabs:**
 
-## Work Orders
+| Tab | Visible To |
+|---|---|
+| New Request | Everyone |
+| My Requests | Everyone |
+| Pending Approval | Admin, Manager |
+| All Requests | Admin, Manager |
 
-Purpose: manage Maintenance Requests and Work Orders in one module.
+- **"New Request" tab** opens the corrective maintenance request form (side
+  sheet). Preventively generated MRs appear automatically in the other tabs.
+- **"My Requests" tab** shows requests created by the current user.
+- **"Pending Approval" tab** shows all MRs with status `pending_review`.
+- **"All Requests" tab** shows every MR regardless of status.
 
-Tabs:
+### 3. Work Orders
 
-- Pending Requests
-- Active Work Orders
-- Closed Work Orders
+- **Type:** Tabbed group.
+- **Route:** `/work-orders`
+- **Tabs:**
 
-## Parts Reference
+| Tab | Visible To |
+|---|---|
+| My Work Orders | Technician only |
+| All Work Orders | Admin, Manager |
+| Active | Admin, Manager, Technician |
+| Completed | Admin, Manager, Technician |
+| Closed | Admin, Manager, Technician |
 
-Purpose: read-only or mostly read-only SM parts reference database.
+- **"My Work Orders" tab** shows WOs assigned to the current technician.
+- **"All Work Orders" tab** shows every WO regardless of status or assignment.
+- **"Active" tab** shows WOs with status `open` or `in_progress`.
+- **"Completed" tab** shows WOs with status `completed` (awaiting closure).
+- **"Closed" tab** shows WOs with status `closed` (terminal, read-only).
 
-Part detail should include:
+### 4. Asset Management
 
-- Part overview
-- ERP reference fields
-- Attachments/manuals/datasheets
-- Usage references where applicable
+- **Type:** Tabbed group.
+- **Route:** `/assets`
+- **Tabs:**
 
-## PM Rules
+| Tab | Visible To |
+|---|---|
+| All Assets | Admin, Manager, Technician, Logistics |
+| Asset Assembly | Admin, Manager, Technician, Logistics |
 
-Purpose: configure rules for generating Preventive Maintenance Requests.
+- **"All Assets" tab** shows the full asset registry with search, filters,
+  status badges, current location, and links to asset detail.
+- **"Asset Assembly" tab** shows asset assembly management: package/component
+  hierarchy, install/remove/swap operations, assembly history, and component
+  PM status indicators.
 
-PM rules can be based on:
+### 5. Parts Management
 
-- Calendar interval
-- Operating hours
-- Kilometers
-- Other usage readings
-- Whichever comes first
+- **Type:** Tabbed group.
+- **Route:** `/parts`
+- **Tabs:**
 
-## Administration
+| Tab | Visible To |
+|---|---|
+| All Parts | Admin, Manager, Technician |
+| Part Request | Admin, Manager, Technician |
 
-Purpose: system configuration and administration.
+- **"All Parts" tab** shows the read-only SM parts catalogue with search,
+  filters, ERP reference fields, and links to part detail.
+- **"Part Request" tab** allows users to submit a part request into SM's
+  order/stock workflow. Used for requesting parts for work orders or general
+  maintenance needs.
 
-Sub-sections:
+### 6. Admin
 
-- Users & Fixed Role Assignment
-- Master Data
-- Locations
-- ERP Sync Settings
-- Company Settings
+- **Type:** Tabbed group.
+- **Route:** `/admin`
+- **Visible to:** Administrator only.
+- **Tabs:**
 
-Location and Master Data management are Administrator-only. Maintenance
-Managers and Logistics users select existing active locations through
-operational asset screens.
+| Tab | Visible To |
+|---|---|
+| Users & Access | Admin only |
+| Lists & Dropdowns | Admin only |
+| PM Rules | Admin only |
 
-Administrator and Maintenance Manager may run a manual ERP sync. ERP Sync
-Settings are Administrator-only.
+- **"Users & Access" tab** — Employee directory import, user provisioning,
+  fixed-role assignment, activation/deactivation, password resets.
+- **"Lists & Dropdowns" tab** — Manage all configurable dropdown values
+  including locations, asset statuses, maintenance priorities, usage reading
+  types, work order statuses, asset maintenance sub-statuses, and other
+  master-data items used across the system.
+- **"PM Rules" tab** — Configure preventive maintenance rules per individual
+  asset. Rule types: calendar interval, operating hours, kilometers, or other
+  usage readings. Each rule belongs to one asset. Deactivation (not deletion)
+  for retired rules.
+
+### 7. Settings
+
+- **Type:** Tabbed group.
+- **Route:** `/settings`
+- **Visible to:** Administrator only.
+- **Tabs:**
+
+| Tab | Visible To |
+|---|---|
+| System & Integration | Admin only |
+| Activity Logs | Admin only |
+
+- **"System & Integration" tab** — ERP sync settings, sync history, company
+  timezone, and other system-level configuration.
+- **"Activity Logs" tab** — Read-only append-only audit trail. Filterable by
+  event type, user, date range. Entries cannot be edited or deleted.
+
+## Sidebar Behavior
+
+- **Collapsible:** Icon-only mode on desktop via the sidebar toggle. Full
+  labels when expanded.
+- **Mobile:** Slide-in sheet triggered by a hamburger/menu button.
+- **Active state:** The active sidebar item is highlighted with a background
+  accent. For tabbed groups, the item stays highlighted while the user is on
+  any of its tabs.
+- **Hover:** Subtle background change on hover for all items.
+- **Footer:** User avatar, name, role label, and sign-out action at the bottom
+  of the sidebar.
+
+## Role Visibility Summary
+
+| Sidebar Item | Requester | Technician | Logistics | Manager | Admin |
+|---|---|---|---|---|---|
+| Dashboard | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Maintenance Requests | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Work Orders | — | ✓ | — | ✓ | ✓ |
+| Asset Management | — | ✓ | ✓ | ✓ | ✓ |
+| Parts Management | — | ✓ | — | ✓ | ✓ |
+| Admin | — | — | — | — | ✓ |
+| Settings | — | — | — | — | ✓ |
+
+## Implementation Notes
+
+- The sidebar is implemented in `AppSidebar.vue` using shadcn-vue `Sidebar`
+  components.
+- Tab state is driven by URL query parameters (e.g., `?tab=active`) so that
+  deep-linking and browser back/forward work correctly.
+- The `AppSidebar.vue` file is the authoritative source for the nav tree and
+  role-visibility logic. Any changes to the sidebar structure must be reflected
+  there.
+- Backend authorization remains authoritative. Hiding sidebar items or tabs
+  does not replace server-side policy enforcement.

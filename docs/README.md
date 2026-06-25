@@ -39,7 +39,7 @@ Maintenance Requests can be generated in two ways:
 docs/
 ├── README.md                  ← this file
 ├── 00-project-rules/          ← authoritative-sources, project-wide rules
-├── 03-backend/                ← shared backend architecture, RBAC, status model, jobs, ERP sync, attachments
+├── 03-backend/                ← shared backend architecture, RBAC, status model, jobs, ERP sync, attachments, secure remote API access
 ├── 05-delivery/               ← implementation plan, milestones, risks
 ├── operations/                ← deployment, backup & restore
 ├── atms/                      ← ATMS subsystem

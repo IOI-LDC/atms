@@ -36,3 +36,43 @@ If Store Order is NOT in use, no problem — we proceed with our own SM module.
 Just checking before we build something that might already exist.
 
 Thanks.
+
+---
+
+## VJ's Reply — 2026-06-25
+
+> Currently, we are not using a separate Store Management or Store Order
+> module in Dynamics 365 Business Central. Inventory management and material
+> issuance are handled through the Warehouse Management functionality
+> available in BC.
+>
+> Parts are issued and consumed through warehouse-related transactions rather
+> than a dedicated store order workflow. Therefore, there is no active
+> "Store Order" entity or process that can be queried through the standard BC
+> OData API in the format described below.
+>
+> As a result:
+>
+> - There is no separate Store Order module currently implemented or in use.
+> - Store order headers and lines are not available through standard OData
+>   endpoints because the process is managed through warehouse transactions.
+>
+> If your proposed solution requires a dedicated store request/order
+> workflow, you may proceed with your own SM module. Alternatively, we can
+> discuss leveraging the existing warehouse processes and inventory
+> transactions in BC to determine whether they can support the required
+> functionality.
+>
+> If needed, we can arrange a discussion to review the current warehouse
+> management process and identify the most suitable integration approach.
+
+### Outcome
+
+**Decision:** Build the SM subsystem as a focused maintenance-consumption
+module. Decline the "integrate on top of BC Warehouse Management" path — BC
+Warehouse remains the physical/warehouse execution layer; SM only needs a
+narrow consumption **write-back** at Goods Receipt.
+
+**Follow-up:** [`ERP_WAREHOUSE_FOLLOWUP.md`](./ERP_WAREHOUSE_FOLLOWUP.md) —
+two asks: the parts/M&S/consumables read URL, and confirmation that the part
+QTY in BC can be updated when a part is consumed.

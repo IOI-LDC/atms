@@ -59,34 +59,40 @@ BC has `mainAssetComponent` and `componentOfMainAsset` fields that may support t
 
 ## Pending — Internal Decisions
 
-### 7. Does BC have Store Order / Store Management live?
-
-Can we query BC store orders by number through the OData API? If yes, we
-integrate with BC's native store workflow instead of building SM.
+### 7. ✅ Does BC have Store Order / Store Management live?
 
 | Field | Value |
 |---|---|
-| **Blocked since** | 2026-06-24 |
-| **Depends on** | VJ (ERP Consultant) |
-| **What we need** | Confirmation whether BC Store Order is implemented and used at LDC. If yes: API endpoint, payload shape, and whether individual store orders can be queried by number to extract part line items. |
-| **Impact if yes** | SM subsystem may not need to be built. ATMS reads from BC store orders directly. Consumption is native in BC — no write-back needed. |
-| **Impact if no** | SM subsystem built as planned. |
-| **Message** | [`docs/sm/01-product/ERP_STORE_ORDER_QUESTION.md`](../sm/01-product/ERP_STORE_ORDER_QUESTION.md) |
+| **Resolved** | 2026-06-25 — VJ confirmed BC has **no** Store Order / Store Management module. Parts issuance flows through **Warehouse Management transactions**. By the documented decision rule, this means **build the SM subsystem as planned**. The "integrate on top of BC Warehouse" alternative was evaluated and declined (high coupling, scope creep, BC Warehouse is the client's execution layer — SM only needs a narrow consumption write-back). |
+| **VJ reply** | Appended to [`ERP_STORE_ORDER_QUESTION.md`](../sm/01-product/ERP_STORE_ORDER_QUESTION.md) |
+| **Follow-up** | [`ERP_WAREHOUSE_FOLLOWUP.md`](../sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md) — warehouse write-back questions |
+
+> **Decision:** Build SM as a focused maintenance-consumption module. BC
+> Warehouse remains the inventory source of truth; SM posts a consumption
+> write-back at Goods Receipt (see #8).
 
 ---
 
-### 8. Parts consumption write-back mechanism
+### 8. Parts read URL + QTY update on consumption 🔴
 
-Can SM push a stock consumption/decrement transaction to ERP when a part is
-issued at Goods Receipt? What is the ERP endpoint and payload for such a
-transaction?
+Two things from VJ, framed as outcomes (not BC internals — VJ owns the "how"):
+
+1. **Read URL** for all M&S, Consumables, and Parts from BC (same Entra ID
+   token as fixed assets).
+2. **QTY update on consumption** — when a part is consumed in SM/ATMS, can the
+   part's quantity in BC be decremented? If yes, what handoff does VJ need
+   from us (API call, record/file, or ERP-side setup)? We will provide part
+   code, qty consumed, date, and reference.
 
 | Field | Value |
 |---|---|
-| **Blocked since** | 2026-06-24 |
-| **Depends on** | ERP team / LDC |
-| **What we need** | Confirmation that ERP can accept consumption/decrement transactions; API endpoint, payload shape, and auth mechanism. |
-| **Impact if resolved** | SM GR workflow gains ERP write-back; ERP inventory stays accurate. |
+| **Blocked since** | 2026-06-25 |
+| **Depends on** | VJ (ERP Consultant) |
+| **What we need** | (1) Parts/consumables/M&S read URL; (2) confirmation that QTY can be updated in BC on consumption + the handoff format VJ requires from us. |
+| **Phase** | Phase 2 (SM build). Phase 1 parts reference is read-only and unaffected. |
+| **Impact if QTY update possible** | SM consumption flows straight into BC; ERP inventory stays accurate. |
+| **Impact if QTY update not possible** | SM maintains its own balances; reconciliation with BC becomes manual/periodic. |
+| **Message** | [`ERP_WAREHOUSE_FOLLOWUP.md`](../sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md) |
 
 ---
 
@@ -110,6 +116,7 @@ transaction?
 | # | Item | Date |
 |---|---|---|
 | — | Token auth working (Entra ID → BC) | 2026-06-24 ✅ |
+| — | BC Store Order question — VJ confirmed no Store Order module; SM to be built as planned | 2026-06-25 ✅ |
 | — | Fixed assets endpoint confirmed (`fixedAssestAPI`, 429 assets, 24 fields) | 2026-06-24 ✅ |
 | — | Asset Assembly model: Q1–Q5 all decided | 2026-06-24 ✅ |
 | — | Mock ERP deprecated, config/infra cleaned | 2026-06-24 ✅ |

@@ -73,16 +73,10 @@ hours, kilometers, or other usage readings.
 Corrective Maintenance Requests are created manually by users when an asset is
 faulty, damaged, underperforming, or requires repair.
 
-## Main Navigation
+## Navigation
 
-The locked navigation is:
-
-1. Dashboard
-2. Assets
-3. Work Orders
-4. Parts Reference (read-only from SM)
-5. PM Rules
-6. Administration
+See [NAVIGATION.md](../02-design/NAVIGATION.md) for the authoritative sidebar
+and tab structure.
 
 ## In-Scope Summary
 

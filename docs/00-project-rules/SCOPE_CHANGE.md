@@ -42,11 +42,15 @@
 |---|---|---|---|
 | 19 | Store Management (SM) Subsystem | Parts catalogue, inventory balances, stock movement, Order → Approval → Dispatch → Goods Receipt workflow. ERP parts sync owned by SM. | Client needed operational store workflow beyond a passive parts list. |
 
-> ⚠️ **SM scope contingent on VJ's reply:** If BC's native Store Order module is
-> live and queryable by order number through OData, SM becomes a thin integration
-> layer instead of a full subsystem. ATMS reads from BC store orders directly.
-> Pending VJ (ERP Consultant) confirmation. See
-> [`sm/01-product/ERP_STORE_ORDER_QUESTION.md`](../sm/01-product/ERP_STORE_ORDER_QUESTION.md).
+> ✅ **RESOLVED (2026-06-25):** VJ (ERP Consultant) confirmed BC has **no**
+> Store Order / Store Management module — parts issuance flows through
+> Warehouse Management transactions. Per the decision rule above, **SM is built
+> as a full subsystem as planned.** The "integrate on top of BC Warehouse"
+> alternative was evaluated and declined (BC Warehouse stays the client's
+> execution layer; SM only needs a narrow consumption write-back at Goods
+> Receipt). See [`sm/01-product/ERP_STORE_ORDER_QUESTION.md`](../sm/01-product/ERP_STORE_ORDER_QUESTION.md)
+> for VJ's reply and [`sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md`](../sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md)
+> for the open warehouse write-back questions.
 | 20 | Asset Movement (AM) Subsystem | Movement request workflow, location history, arrival confirmation. Source of truth for asset location across all subsystems. | Client needed formal movement tracking with Logistics approval. |
 | 21 | Asset Assembly (Package / Component) | Assets composed of other assets with independent maintenance lifecycles. Parent-child relationships, install/remove/swap operations, `asset_assembly_history` audit table, component operating hours derivation. | Client has equipment like mud motors where rotor and stator are independently maintained assets that can be swapped between motors. |
 | 22 | Asset Maintenance Status | Active (standalone / Installed / Ready) and Inactive (LIH, DBR, Disposed, Scrapped, Other). Independent of ERP financial treatment. | Client needed clearer asset lifecycle states beyond simple active/inactive. |
@@ -101,9 +105,12 @@ ERP parts write-back, MinIO object storage.
 | ERP write-back | Parts consumption (GR) pushed from SM to BC ERP (pending LDC confirmation) |
 | ERP parts sync | Full bidirectional awareness — ERP is source of truth for parts, SM owns consumption |
 
-**Phase 2 dependencies:** VJ's reply on BC Store Order determines SM architecture
-(full build vs. thin integration). Parts consumption write-back requires LDC
-meeting decision.
+**Phase 2 dependencies:** ~~VJ's reply on BC Store Order determines SM
+architecture~~ — **RESOLVED 2026-06-25:** VJ confirmed no Store Order; SM built
+as full subsystem. Remaining dependency: BC Warehouse consumption write-back
+mechanism (correct transaction type + OData write support) — see
+[`sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md`](../sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md)
+and TDL #8.
 
 ---
 
@@ -199,9 +206,11 @@ re-estimate should separate ATMS core from SM and AM, which can be phased.
   registry with assembly + tags + status, PM rules with component cross-check,
   5-role RBAC. Roughly equivalent to original 18-day estimate with scope
   adjustments.
-- **SM subsystem** (net new — scope TBD): If BC Store Order is live, SM is a
-  thin integration layer (read store orders via OData, no separate inventory).
-  If not, full store management build. Estimate depends on VJ's reply.
+- **SM subsystem** (net new): Full store management build — Order → Approval
+  → Dispatch → Goods Receipt, inventory, Virtual Store. **Scope confirmed
+  2026-06-25** (VJ confirmed no BC Store Order). Optional ERP write-back at GR
+  (BC Warehouse transaction) is a separate, smaller effort pending the
+  warehouse review session with VJ.
 - **AM subsystem** (net new): Asset movement frontend + backend. Movement
   workflow, location history. New estimate required.
 - **ERP write-back** (under discussion): If parts GR write-back to ERP is

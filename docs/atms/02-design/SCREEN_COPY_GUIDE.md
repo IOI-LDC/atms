@@ -8,7 +8,7 @@
 - Parent Asset
 - Spare (component not currently installed)
 - Assembly
-- Parts Reference
+- Parts Management
 - Maintenance Request
 - Preventive Maintenance
 - Corrective Maintenance

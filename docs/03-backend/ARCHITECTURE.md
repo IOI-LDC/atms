@@ -30,8 +30,9 @@ database. Source-of-truth boundaries:
 - Background jobs: Laravel Queues using the PostgreSQL database driver for MVP
 - Scheduled jobs: Laravel Scheduler
 - File storage: Laravel local storage on a persistent Docker volume
-- Authentication: Laravel Sanctum SPA cookie/session authentication
-- Primary web authentication must not use bearer API tokens
+- Authentication: Laravel Sanctum SPA cookie/session authentication (web users)
+- Machine-to-machine API authentication: Laravel Sanctum API bearer tokens (see [SECURE_REMOTE_API_ACCESS.md](./SECURE_REMOTE_API_ACCESS.md))
+- Primary web (browser) authentication must not use bearer API tokens
 - Authorization: Laravel policies using one fixed role per user
 - Granular permission packages and multiple roles per user are excluded from MVP
 - Timestamp storage: UTC
@@ -71,7 +72,7 @@ Recommended domains:
 - Locations
 - Attachments
 - ERP Sync
-- Administration / Master Data
+- Master Data & Dropdowns
 - Dashboard / Reporting
 
 ## Core Backend Responsibilities
@@ -293,3 +294,13 @@ The VPS deployment must provide:
 
 Secrets and environment configuration must be backed up through an approved
 secure operational process, not included in application backup archives.
+
+## Secure Remote API Access
+
+Machine-to-machine API access from external systems (e.g., a remote system
+consuming parts QTY data from SM tables) requires three production safeguards:
+HTTPS (TLS via reverse proxy), API bearer tokens scoped to read-only, and
+strong secrets with locked-down ports.
+
+See [SECURE_REMOTE_API_ACCESS.md](./SECURE_REMOTE_API_ACCESS.md) for the full
+specification and deployment checklist.

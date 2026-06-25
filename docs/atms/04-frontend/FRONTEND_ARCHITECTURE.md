@@ -43,8 +43,8 @@ src/
     parts/
     maintenance-requests/
     work-orders/
-    pm-rules/
     admin/
+    settings/
     attachments/
   services/
     api.ts
@@ -57,24 +57,24 @@ src/
 
 ## Routing
 
-Main routes:
+Main routes. Tab state is driven by `?tab=` query parameters.
 
 ```text
-/dashboard
-/assets
-/assets/:id
-/work-orders
-/work-orders/requests/:id
-/work-orders/:id
-/parts
-/parts/:id
-/pm-rules
-/pm-rules/:id
-/admin/users
-/admin/locations
-/admin/master-data
-/admin/erp-sync
+/dashboard                  Dashboard (direct link)
+/maintenance                Maintenance Requests (tabbed: new-request, my-requests,
+                            pending-approval, all-requests)
+/work-orders                Work Orders (tabbed: my, all, active, completed, closed)
+/work-orders/:id            Work Order Detail (full-page drill-down)
+/assets                     Asset Management (tabbed: all, assembly)
+/assets/:id                 Asset Detail (drill-down)
+/parts                      Parts Management (tabbed: all, part-request)
+/parts/:id                  Part Detail (drill-down)
+/admin                      Admin (tabbed: users, lists, pm-rules)
+/settings                   Settings (tabbed: system, audit-logs)
 ```
+
+Tabs are role-filtered at the view level — a tab that is not visible to the
+current user's role is hidden from the tab bar.
 
 ## State Management
 

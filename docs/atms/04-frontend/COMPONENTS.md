@@ -51,12 +51,7 @@
 - PartsTable
 - PartDetailCard
 - PartAttachmentsPanel
-
-### PM Rules
-
-- PmRuleTable
-- PmRuleForm
-- PmDueStatusBadge
+- PartRequestForm
 
 ### Admin
 
@@ -64,7 +59,14 @@
 - UserForm
 - LocationTreeOrTable
 - MasterDataGroupEditor
+- PmRuleTable
+- PmRuleForm
+- PmDueStatusBadge
+
+### Settings
+
 - ErpSyncHistoryTable
+- AuditLogTable
 
 ## Component Rules
 
