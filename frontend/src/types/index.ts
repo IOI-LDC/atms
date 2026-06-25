@@ -6,7 +6,7 @@ export type RoleCode =
   | 'technician'
   | 'logistics'
   | 'requester'
-  | 'viewer'
+  | 'service'
 
 export type MaintenanceRequestStatus = 'pending_review' | 'rejected' | 'converted' | 'cancelled'
 export type WorkOrderStatus          = 'open' | 'in_progress' | 'completed' | 'closed' | 'cancelled'
@@ -23,7 +23,7 @@ export type AssetMaintenanceSubStatus =
 
 // ── Shared fragments ──────────────────────────────────────────────────────────
 
-export interface Role { id: number; code: RoleCode; name: string }
+export interface Role { id: number; code: RoleCode; name: string; description?: string }
 
 /** Minimal asset reference embedded in other resources. */
 export interface AssetRef { id: number; name: string; erp_asset_code: string; operational_status?: string }
@@ -42,9 +42,12 @@ export interface User {
   email: string
   is_active: boolean
   activated_at: string | null
+  email_verified_at: string | null
   emp_id: string | null
   employee_id: number | null
   role: Role
+  created_at: string
+  updated_at: string
 }
 
 // ── Assets ────────────────────────────────────────────────────────────────────
@@ -185,9 +188,20 @@ export interface WorkOrder {
 
 // ── PM Rules ──────────────────────────────────────────────────────────────────
 
+export type PmStatus = 'ok' | 'soon' | 'due'
+
+export interface PmSuppression {
+  id: number
+  decision_type?: string | null
+  suppressed_until_date: string | null
+  suppressed_until_reading: number | null
+  source_mr_id: number | null
+}
+
 export interface PmRule {
   id: number
   name: string
+  maintenance_level: string | null
   description: string | null
   trigger_type: PmTriggerType
   is_active: boolean
@@ -195,10 +209,15 @@ export interface PmRule {
   interval_reading: number | null
   last_triggered_date: string | null
   last_triggered_reading: number | null
+  next_due_date: string | null
+  next_due_reading: number | null
+  progress_percentage: number | null
+  pm_status: PmStatus
   created_at: string
   asset: AssetRef
+  usage_reading_type?: { id: number; name: string; unit: string } | null
+  suppressions?: PmSuppression[]
   created_by?: UserRef | null      // Admin/Manager only
-  usage_reading_type_id?: number | null
 }
 
 // ── Attachments ───────────────────────────────────────────────────────────────
@@ -250,6 +269,14 @@ export interface UsageReadingType {
   name: string
   unit: string
   is_active: boolean
+}
+
+export interface FaSubclassTypeCode {
+  id: number
+  fa_subclass_code: string
+  type_code: string
+  description: string | null
+  has_no_physical_size: boolean
 }
 
 export interface ErpSyncJob {

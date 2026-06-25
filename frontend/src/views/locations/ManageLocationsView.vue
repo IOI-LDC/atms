@@ -116,10 +116,10 @@ async function confirmToggle() {
 
         <!-- Per-row actions -->
         <div v-else-if="column.field === 'actions'" class="table-row-actions">
-          <Button variant="outline" size="icon-sm" aria-label="Edit location" @click="openEdit(row)">
+          <Button variant="outline" size="icon-sm" :aria-label="`Edit ${row.name}`" @click="openEdit(row)">
             <Pencil />
           </Button>
-          <Button variant="ghost" size="icon-sm" :aria-label="row.is_active ? 'Deactivate location' : 'Activate location'" @click="openToggle(row)">
+          <Button variant="ghost" size="icon-sm" :aria-label="`${row.is_active ? 'Deactivate' : 'Activate'} ${row.name}`" @click="openToggle(row)">
             <ToggleRight v-if="row.is_active" />
             <ToggleLeft v-else />
           </Button>

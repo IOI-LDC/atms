@@ -337,6 +337,44 @@ The shell caches sort / column filters / global search / page-size per
 restored; `pageIndex` is intentionally NOT restored (the table resets it on
 filter/sort change — re-applying it fights that reset).
 
+### 7.8 Row Actions — Icon-Only
+
+Per-row action controls in a table's `actions` column are **icon-only** — never
+text-labelled buttons. This keeps action columns compact and visually uniform
+across every table in the app. A text button in a row action column is a bug.
+
+Rules:
+- Wrap the controls in a `<div class="table-row-actions">`.
+- Each control is a `Button` with `size="icon-sm"` and a single Lucide icon child.
+- The **primary** action (e.g. Edit) uses `variant="outline"`; **secondary**
+  actions (toggle active, reset password, delete, view history) use
+  `variant="ghost"`.
+- Every icon button **must** carry a meaningful, row-specific `aria-label`
+  (e.g. `:aria-label="\`Edit ${row.name}\`"`) — icon alone is not accessible
+  (see §3).
+- Disable (don't hide) actions that are contextually unavailable, so the column
+  stays aligned (e.g. self-action guard in the users table).
+- A **status** that looks like a chip (e.g. a "Provisioned" badge) is not an
+  action — render it as a `.status-badge`, not a `Button`.
+
+Canonical icons: Edit → `Pencil`; activate/deactivate → `ToggleLeft`/`ToggleRight`;
+delete → `Trash2`; reset password → `KeyRound`; provision/add user → `UserPlus`;
+view history → `History`; update location → `MapPin`.
+
+```vue
+<div v-else-if="column.field === 'actions'" class="table-row-actions">
+  <Button variant="outline" size="icon-sm" :aria-label="`Edit ${row.name}`" @click="openEdit(row)">
+    <Pencil />
+  </Button>
+  <Button variant="ghost" size="icon-sm" :aria-label="`Deactivate ${row.name}`" @click="openToggle(row)">
+    <ToggleRight />
+  </Button>
+</div>
+```
+
+Reference implementations: `ManageLocationsView.vue`, `AssetLocationUpdateView.vue`,
+`admin/UsersView.vue`, `admin/ListsView.vue`.
+
 ---
 
 ## 8. Combobox / Searchable Selector Pattern

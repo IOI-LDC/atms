@@ -86,8 +86,8 @@ const navItems: NavItemDef[] = [
   {
     label: 'Admin',
     icon: Shield,
-    to: () => '/settings/users',
-    isActiveFor: (p) => p === '/settings/users' || p === '/settings/lists' || p.startsWith('/settings/pm-rules'),
+    to: () => '/admin/lists',
+    isActiveFor: (p) => p === '/admin/lists' || p === '/admin/users' || p.startsWith('/admin/pm-rules'),
     visibleTo: (r) => r.isAdmin,
   },
   {

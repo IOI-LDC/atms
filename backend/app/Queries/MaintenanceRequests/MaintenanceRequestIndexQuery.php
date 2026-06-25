@@ -57,6 +57,10 @@ class MaintenanceRequestIndexQuery
         if ($request->filled('created_by')) {
             $query->where('created_by', $request->input('created_by'));
         }
+
+        if ($request->filled('pm_rule_id')) {
+            $query->where('pm_rule_id', $request->input('pm_rule_id'));
+        }
     }
 
     protected function applySort($query, Request $request): void

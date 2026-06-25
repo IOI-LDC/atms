@@ -914,6 +914,10 @@
   display: inline-block;
 }
 
+.app-data-table-col {
+  width: var(--col-min-width, auto);
+}
+
 /* Sort header button: fills the cell so the click target is the whole header;
    label left, direction icon right. Reset to a plain button (no Button primitive
    chrome) since it lives inside the table grid. */
@@ -1085,6 +1089,14 @@
 
 .field-required {
   color: var(--destructive);
+}
+
+/* Inline checkbox + label row (e.g. boolean flags in forms) */
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
 }
 
 .sheet-form-actions {
@@ -1351,6 +1363,167 @@
   border-color: oklch(0.922 0.011 247);
 }
 
+/* PM rule status — traffic-light readiness (green / amber / red) */
+.pm-status-ok {
+  background: oklch(0.53 0.145 142 / 0.12);
+  color: oklch(0.38 0.12 142);
+  border-color: oklch(0.53 0.145 142 / 0.25);
+}
+.pm-status-soon {
+  background: oklch(0.7 0.155 75 / 0.12);
+  color: oklch(0.5 0.13 75);
+  border-color: oklch(0.7 0.155 75 / 0.25);
+}
+.pm-status-due {
+  background: oklch(0.577 0.245 27 / 0.1);
+  color: oklch(0.45 0.2 27);
+  border-color: oklch(0.577 0.245 27 / 0.2);
+}
+
+/* PM maintenance level badges — L1 lightest → L4 deepest */
+.pm-level-l1 {
+  background: oklch(0.62 0.1 232 / 0.1);
+  color: oklch(0.4 0.08 232);
+  border-color: oklch(0.62 0.1 232 / 0.2);
+}
+.pm-level-l2 {
+  background: oklch(0.55 0.12 180 / 0.1);
+  color: oklch(0.36 0.1 180);
+  border-color: oklch(0.55 0.12 180 / 0.22);
+}
+.pm-level-l3 {
+  background: oklch(0.5 0.16 295 / 0.1);
+  color: oklch(0.36 0.135 295);
+  border-color: oklch(0.5 0.16 295 / 0.22);
+}
+.pm-level-l4 {
+  background: oklch(0.52 0.14 25 / 0.1);
+  color: oklch(0.36 0.13 25);
+  border-color: oklch(0.52 0.14 25 / 0.22);
+}
+.pm-level-custom {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+
+/* PM progress meter (detail page) — bar itself is the ui/progress primitive */
+.pm-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.pm-progress-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* PM rule list filter bar (reuses asset-filter-bar spacing) */
+.pm-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.375rem;
+}
+
+/* Schedule cell — keep the composed sentence readable in a table cell */
+.pm-schedule-cell {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  line-height: 1.35;
+}
+
+/* PM multi-level setup rows in the create sheet */
+.pm-level-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pm-level-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.pm-level-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.pm-level-row-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+/* Mode toggle (Single vs Multi-Level) in the create sheet */
+.pm-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+.pm-mode-toggle-btn {
+  flex: 1;
+}
+
+/* Role badges — one colour per role */
+.role-administrator {
+  background: oklch(0.4148 0.1297 262 / 0.12);
+  color: oklch(0.4148 0.1297 262);
+  border-color: oklch(0.4148 0.1297 262 / 0.25);
+}
+.role-maintenance-manager {
+  background: oklch(0.5 0.16 295 / 0.1);
+  color: oklch(0.36 0.135 295);
+  border-color: oklch(0.5 0.16 295 / 0.22);
+}
+.role-technician {
+  background: oklch(0.55 0.12 180 / 0.1);
+  color: oklch(0.36 0.1 180);
+  border-color: oklch(0.55 0.12 180 / 0.22);
+}
+.role-logistics {
+  background: oklch(0.65 0.185 45 / 0.12);
+  color: oklch(0.46 0.155 45);
+  border-color: oklch(0.65 0.185 45 / 0.25);
+}
+.role-requester {
+  background: oklch(0.966 0.008 245);
+  color: oklch(0.556 0.01 247);
+  border-color: oklch(0.922 0.011 247);
+}
+
+/* "(you)" marker on the current admin's own row in the users table */
+.user-you-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.0625rem 0.3125rem;
+  margin-left: 0.375rem;
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* User account status — pending activation (amber, distinct from pending-review) */
+.status-activation-pending {
+  background: oklch(0.7 0.155 75 / 0.12);
+  color: oklch(0.5 0.13 75);
+  border-color: oklch(0.7 0.155 75 / 0.25);
+}
+
 /* Asset kind badges — package (purple) and component (teal) have no existing
    analog; asset reuses .status-open (blue) via displayHelpers. */
 .badge-kind-package {
@@ -1434,6 +1607,103 @@
   background: oklch(0.55 0.02 265 / 0.08);
   color: oklch(0.36 0.02 265);
   border-color: oklch(0.55 0.02 265 / 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Lists & Dropdowns — left rail + table panel
+   ═══════════════════════════════════════════════════════════════════ */
+
+.lists-layout {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.lists-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.lists-rail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.lists-rail-section-title {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  padding: 0.25rem 0.5rem;
+  margin: 0;
+}
+
+/* Rail item = shadcn Button variant=ghost with chrome overridden to a
+   full-width, left-aligned nav row (mirrors .asset-combobox-option). */
+.lists-rail-item {
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 0.4375rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.lists-rail-item-active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 600;
+}
+
+.lists-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.lists-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.lists-panel-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lists-panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.lists-panel-subtitle {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .lists-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Inline code hint inside a Select item (e.g. location code) */

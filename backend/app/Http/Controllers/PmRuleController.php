@@ -33,6 +33,7 @@ class PmRuleController extends Controller
         $validated = $request->validate([
             'asset_id' => ['required', 'exists:assets,id'],
             'name' => ['required', 'string', 'max:255'],
+            'maintenance_level' => ['nullable', 'string', 'max:10'],
             'description' => ['nullable', 'string'],
             'trigger_type' => ['required', 'string', 'in:date,reading,date_or_reading'],
             'interval_days' => ['nullable', 'integer', 'min:1', 'required_if:trigger_type,date,date_or_reading'],
@@ -45,6 +46,7 @@ class PmRuleController extends Controller
         $rule = PmRule::create([
             'asset_id' => $validated['asset_id'],
             'name' => $validated['name'],
+            'maintenance_level' => $validated['maintenance_level'] ?? null,
             'description' => $validated['description'] ?? null,
             'trigger_type' => $validated['trigger_type'],
             'interval_days' => $validated['interval_days'] ?? null,
@@ -54,9 +56,11 @@ class PmRuleController extends Controller
             'created_by' => auth()->id(),
         ]);
 
+        $rule->load(['asset', 'usageReadingType', 'createdBy', 'suppressions']);
+
         app(AuditLogger::class)->log('pm_rule.created', $rule, [], $rule->toArray());
 
-        return response()->json(['data' => $rule], 201);
+        return (new PmRuleResource($rule))->toResponse($request)->setStatusCode(201);
     }
 
     public function show(Request $request, PmRule $pmRule): JsonResponse
@@ -74,6 +78,7 @@ class PmRuleController extends Controller
 
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
+            'maintenance_level' => ['nullable', 'string', 'max:10'],
             'description' => ['nullable', 'string'],
             'interval_days' => ['nullable', 'integer', 'min:1'],
             'interval_reading' => ['nullable', 'numeric', 'min:0.01'],
@@ -99,7 +104,9 @@ class PmRuleController extends Controller
 
         app(AuditLogger::class)->log('pm_rule.updated', $pmRule, $before, $after);
 
-        return response()->json(['data' => $pmRule->fresh()]);
+        $pmRule->load(['asset', 'usageReadingType', 'createdBy', 'suppressions']);
+
+        return (new PmRuleResource($pmRule->fresh()))->toResponse($request);
     }
 
     public function deactivate(PmRule $pmRule, DeactivatePmRule $action): JsonResponse

@@ -138,10 +138,10 @@ function onCloseHistory() {
 
         <!-- Per-row actions -->
         <div v-else-if="column.field === 'actions'" class="table-row-actions">
-          <Button variant="outline" size="icon-sm" aria-label="Update location" @click="openSheet(row)">
+          <Button variant="outline" size="icon-sm" :aria-label="`Update location for ${row.name}`" @click="openSheet(row)">
             <MapPin />
           </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="View location history" @click="openHistory(row)">
+          <Button variant="ghost" size="icon-sm" :aria-label="`View location history for ${row.name}`" @click="openHistory(row)">
             <History />
           </Button>
         </div>

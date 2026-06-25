@@ -344,7 +344,8 @@ watch(
           <col
             v-for="c in cols"
             :key="c.field"
-            :style="c.minWidth ? { width: `${c.minWidth}px` } : undefined"
+            class="app-data-table-col"
+            :style="c.minWidth ? { '--col-min-width': c.minWidth } : undefined"
           />
         </colgroup>
 
@@ -367,11 +368,11 @@ watch(
                     : undefined
               "
             >
-              <button
+              <Button
                 v-if="c.sortable"
-                type="button"
+                variant="ghost"
                 class="app-data-table-sort-btn"
-                @click="(e) => toggleSort(c.field, e)"
+                @click="(e: MouseEvent) => toggleSort(c.field, e)"
               >
                 <span class="app-data-table-th-label">{{ c.header }}</span>
                 <ChevronUpIcon
@@ -383,7 +384,7 @@ watch(
                   class="app-data-table-sort-icon app-data-table-sort-icon-active"
                 />
                 <ChevronsUpDownIcon v-else class="app-data-table-sort-icon" />
-              </button>
+              </Button>
               <span v-else class="app-data-table-th-label">{{ c.header }}</span>
             </th>
           </tr>

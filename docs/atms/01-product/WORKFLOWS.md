@@ -42,6 +42,10 @@ Preventive Maintenance is system-initiated.
 12. Technician marks the Work Order as completed.
 13. Maintenance Manager or Administrator reviews and closes the Work Order.
 14. PM rule baseline is updated using closure date and/or latest reading.
+    If the PM rule has a standard L1-L4 maintenance level, all active
+    lower-level PM rules on the same asset are also reset to maintain
+    cumulative maintenance alignment (e.g. closing L3 resets L1 and L2
+    baselines). Custom free-text levels are independent.
 15. The closed Work Order appears in the asset maintenance history read model.
 
 An active maintenance chain exists when the PM Rule has:

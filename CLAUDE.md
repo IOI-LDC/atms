@@ -299,6 +299,7 @@ Do not add: labor hours/rates/costs/timesheets, category-level or template-level
 
 | Method | Path | Roles | Notes |
 |---|---|---|---|
+| `GET` | `/locations` | Admin, Manager, Logistics | List active locations only (`is_active = true`), sorted by name. Distinct from Admin-only `/admin/locations` (all statuses). Backs the Locations sidebar location picker. |
 | `POST` | `/assets` | Admin, Manager | Create asset; location at creation starts location history |
 | `PATCH` | `/assets/{asset}` | Admin, Manager | Update asset; location change delegates to `UpdateAssetLocation` Action |
 | `PATCH` | `/parts/{part}` | Admin, Manager | Update local fields only; ERP columns are excluded from validation |

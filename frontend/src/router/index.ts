@@ -99,34 +99,40 @@ const router = createRouter({
       component: () => import('@/views/locations/LocationsView.vue'),
     },
 
-    // ── Settings ──────────────────────────────────────────────────────────────
+    // ── Admin ─────────────────────────────────────────────────────────────────
     {
-      path: '/settings/pm-rules',
-      name: 'pm-rules',
-      component: () => import('@/views/pm-rules/PmRulesView.vue'),
+      path: '/admin',
+      redirect: '/admin/lists',
+    },
+    {
+      path: '/admin/lists',
+      name: 'admin-lists',
+      component: () => import('@/views/admin/AdminView.vue'),
+      meta: { requiresAdmin: true },
+    },
+    {
+      path: '/admin/pm-rules',
+      name: 'admin-pm-rules',
+      component: () => import('@/views/admin/AdminView.vue'),
       meta: { requiresAdminOrManager: true },
     },
     {
-      path: '/settings/pm-rules/:ruleId',
+      path: '/admin/pm-rules/:ruleId',
       name: 'pm-rule-detail',
       component: () => import('@/views/pm-rules/PmRuleDetailView.vue'),
       meta: { requiresAdminOrManager: true },
     },
     {
-      path: '/settings/users',
-      name: 'settings-users',
-      component: () => import('@/views/admin/UsersView.vue'),
+      path: '/admin/users',
+      name: 'admin-users',
+      component: () => import('@/views/admin/AdminView.vue'),
       meta: { requiresAdmin: true },
     },
+
+    // ── Settings ──────────────────────────────────────────────────────────────
     {
       path: '/settings/locations',
       redirect: { path: '/locations', query: { tab: 'manage-locations' } },
-    },
-    {
-      path: '/settings/lists',
-      name: 'settings-lists',
-      component: () => import('@/views/admin/ListsView.vue'),
-      meta: { requiresAdmin: true },
     },
     {
       path: '/settings/system',
@@ -139,6 +145,32 @@ const router = createRouter({
       name: 'settings-audit-logs',
       component: () => import('@/views/admin/AuditLogsView.vue'),
       meta: { requiresAdmin: true },
+    },
+
+    // ── Legacy redirects (old /settings/... bookmarks) ────────────────────────
+    {
+      path: '/settings/users',
+      redirect: '/admin/users',
+    },
+    {
+      path: '/settings/lists',
+      redirect: '/admin/lists',
+    },
+    {
+      path: '/settings/pm-rules',
+      redirect: '/admin/pm-rules',
+    },
+    {
+      path: '/settings/pm-rules/:ruleId',
+      redirect: (to) => `/admin/pm-rules/${to.params.ruleId}`,
+    },
+    {
+      path: '/pm-rules',
+      redirect: '/admin/pm-rules',
+    },
+    {
+      path: '/pm-rules/:ruleId',
+      redirect: (to) => `/admin/pm-rules/${to.params.ruleId}`,
     },
 
     // ── Errors ────────────────────────────────────────────────────────────────

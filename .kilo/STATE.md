@@ -5,6 +5,13 @@
 
 ## Last Session Accomplished
 
+- **Locations Sidebar Backend Dependency — COMPLETE (2026-06-25):**
+  - Implemented `GET /api/locations` read-only endpoint: active locations only (`is_active = true`), sorted by name, authorized for Admin/Manager/Logistics.
+  - `LocationPolicy::viewAny()`, `LocationController@index`, route `GET /api/locations` (outside admin prefix — distinct from `GET /api/admin/locations` which is Admin-only/all-status).
+  - 5 feature tests in `tests/Feature/Locations/ListActiveLocationsTest.php` (role auth 200/403/401, active-only filter, name sort, response shape).
+  - Docs synced: `LOCATION_SIDEBAR_CHANGE.md` (status → resolved, added Backend Implementation section), `BACKEND_API_REFERENCE.md` (removed ⚠️ warning).
+  - **Test suite: 316 passed (808 assertions)** — no regressions.
+
 - **Phase 1 Backend Cleanup & ATMS Core Features — COMPLETE:**
   - Purged `SyncErpAssetsJob`, `erp_asset_id` column, `MockErpHttpSource`, Viewer role
   - Asset registry with tags (`L-BBB-CCC-XXXX`) + `AssetTagService` generation algorithm
@@ -21,7 +28,7 @@
   - 4 medium: silent lifecycle drop → 403, null tag clearing, hardcoded TTL, tag collision race
   - 6 additional fixes found during test writing (see plan doc Post-Review Fixes section)
 
-- **Test suite: 304 tests passing** (278 baseline + 26 new across 4 new test files + 1 addition)
+- **Test suite: 316 tests passing** (was 304 baseline; 5 new in `ListActiveLocationsTest` for `GET /api/locations`, plus location workflow tests)
 
 - **Documentation updated:**
   - `.kilo/plans/1782388457617-phase1-backend-cleanup-and-features.md` — Post-Review Fixes appendix

@@ -302,7 +302,7 @@ class PmWorkflowTest extends TestCase
         $this->assertTrue(now()->toDateString() === $rule->last_triggered_date->toDateString());
     }
 
-    public function test_manager_can_manage_pm_rules(): void
+    public function test_manager_cannot_create_pm_rules(): void
     {
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $asset = $this->createAsset();
@@ -312,7 +312,7 @@ class PmWorkflowTest extends TestCase
             'name' => 'Manager PM',
             'trigger_type' => 'date',
             'interval_days' => 60,
-        ])->assertCreated();
+        ])->assertForbidden();
     }
 
     public function test_requester_cannot_manage_pm_rules(): void
@@ -654,5 +654,177 @@ class PmWorkflowTest extends TestCase
             'triggered_by_reading' => true,
             'suppressed_until_reading' => 7000,
         ]);
+    }
+
+    public function test_pm_rule_can_store_maintenance_level(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $response = $this->actingAs($admin)->postJson('/api/pm-rules', [
+            'asset_id' => $asset->id,
+            'name' => 'Quarterly PM',
+            'maintenance_level' => 'L2',
+            'trigger_type' => 'date',
+            'interval_days' => 90,
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('pm_rules', [
+            'asset_id' => $asset->id,
+            'maintenance_level' => 'L2',
+        ]);
+        $response->assertJsonPath('data.maintenance_level', 'L2');
+    }
+
+    public function test_manager_cannot_deactivate_pm_rule(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Monthly PM',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($manager)->postJson("/api/pm-rules/{$rule->id}/deactivate")
+            ->assertForbidden();
+    }
+
+    public function test_maintenance_requests_can_be_filtered_by_pm_rule_id(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $rule = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Monthly PM',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $pmMr = MaintenanceRequest::create([
+            'number' => 'MR-FLT-001',
+            'asset_id' => $asset->id,
+            'type' => 'preventive',
+            'status' => 'pending_review',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+            'is_preventive' => true,
+            'pm_rule_id' => $rule->id,
+        ]);
+
+        $otherMr = MaintenanceRequest::create([
+            'number' => 'MR-FLT-002',
+            'asset_id' => $asset->id,
+            'type' => 'corrective',
+            'status' => 'pending_review',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+        ]);
+
+        $response = $this->actingAs($admin)->getJson("/api/maintenance-requests?pm_rule_id={$rule->id}");
+
+        $response->assertStatus(200);
+        $ids = collect($response->json('data'))->pluck('id');
+        $this->assertContains($pmMr->id, $ids);
+        $this->assertNotContains($otherMr->id, $ids);
+    }
+
+    public function test_closing_higher_level_wo_resets_lower_level_baselines(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $asset = $this->createAsset();
+
+        $l1 = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'L1 Monthly',
+            'maintenance_level' => 'L1',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'last_triggered_date' => now()->subDays(20),
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $l2 = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'L2 Quarterly',
+            'maintenance_level' => 'L2',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 90,
+            'last_triggered_date' => now()->subDays(70),
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $custom = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'Annual',
+            'maintenance_level' => 'Annual',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 365,
+            'last_triggered_date' => now()->subDays(100),
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $l3 = PmRule::create([
+            'asset_id' => $asset->id,
+            'name' => 'L3 Semi-annual',
+            'maintenance_level' => 'L3',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 180,
+            'last_triggered_date' => now()->subDays(181),
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $mr = MaintenanceRequest::create([
+            'number' => 'MR-CUM-001',
+            'asset_id' => $asset->id,
+            'type' => 'preventive',
+            'status' => 'converted',
+            'priority' => 'medium',
+            'created_by' => $admin->id,
+            'reviewed_by' => $manager->id,
+            'reviewed_at' => now(),
+            'is_preventive' => true,
+            'pm_rule_id' => $l3->id,
+        ]);
+
+        $wo = WorkOrder::create([
+            'number' => 'WO-CUM-001',
+            'maintenance_request_id' => $mr->id,
+            'asset_id' => $asset->id,
+            'status' => 'open',
+            'priority' => 'medium',
+            'assigned_to_user_id' => $tech->id,
+            'assigned_by_user_id' => $manager->id,
+            'assigned_at' => now(),
+        ]);
+
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $l3->refresh();
+        $l1->refresh();
+        $l2->refresh();
+        $custom->refresh();
+
+        $this->assertTrue(now()->toDateString() === $l3->last_triggered_date->toDateString());
+        $this->assertTrue(now()->toDateString() === $l1->last_triggered_date->toDateString());
+        $this->assertTrue(now()->toDateString() === $l2->last_triggered_date->toDateString());
+        $this->assertFalse(now()->toDateString() === $custom->last_triggered_date->toDateString());
     }
 }

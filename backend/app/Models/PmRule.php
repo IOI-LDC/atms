@@ -12,6 +12,7 @@ class PmRule extends Model
     protected $fillable = [
         'asset_id',
         'name',
+        'maintenance_level',
         'description',
         'trigger_type',
         'interval_days',
@@ -76,5 +77,18 @@ class PmRule extends Model
             ->exists();
 
         return $activeWo;
+    }
+
+    public function latestConfirmedReading(): ?AssetMeterReading
+    {
+        if (! $this->usage_reading_type_id) {
+            return null;
+        }
+
+        return AssetMeterReading::where('asset_id', $this->asset_id)
+            ->where('usage_reading_type_id', $this->usage_reading_type_id)
+            ->whereNotNull('confirmed_at')
+            ->orderByDesc('reading_at')
+            ->first();
     }
 }

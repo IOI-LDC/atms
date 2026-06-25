@@ -63,7 +63,8 @@ rules.
 | Mark assigned WO completed | Yes | Yes | Assigned only | No | No |
 | Close completed WO | Yes | Yes | No | No | No |
 | Cancel non-closed WO | Yes | Yes | No | No | No |
-| Manage PM rules | Yes | Yes | No | No | No |
+| Configure PM rules (create/edit/deactivate/reactivate) | Yes | No | No | No | No |
+| View PM rules / run PM evaluation | Yes | Yes | No | No | No |
 | Manage users | Yes | No | No | No | No |
 | View user list (for WO assignment) | Yes | Yes | No | No | No |
 | Import SharePoint employees | Yes | No | No | No | No |
@@ -125,6 +126,8 @@ rules.
 - Requester-submitted meter readings remain unverified.
 - Only Administrator, Maintenance Manager, or Technician may confirm a meter reading.
 - Only confirmed meter readings update current meter values or participate in PM calculations.
+- PM rule configuration (create, edit, deactivate, reactivate) is Administrator-only. Maintenance Manager may view PM rules and run PM evaluation manually, but cannot modify rule definitions.
+- Cumulative maintenance: when a higher-level PM work order (L2/L3/L4) closes, the baselines of all active lower-level PM rules (L1, etc.) on the same asset are reset. This applies only to the standard L1-L4 level scheme; custom free-text levels are independent.
 - Only Administrator may create, edit, activate, or deactivate location definitions and master-data values.
 - Logistics and Maintenance Manager may select existing active locations when recording asset location changes.
 - Administrator and Maintenance Manager may trigger manual ERP parts sync runs.

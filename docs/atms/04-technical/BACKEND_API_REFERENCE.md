@@ -647,7 +647,7 @@ List maintenance requests with cursor pagination.
 
 **Query Parameters:**
 
-| Parameter | Type | Description |-----------|------|-------------| `status` | string | `pending_review`, `rejected`, `converted`, `cancelled` | `asset_id` | int | Filter by asset | `priority` | string | `low`, `medium`, `high`, `critical` | `type` | string | `corrective`, `preventive` | `created_by` | int | Filter by creator user ID | `sort` | string | `created_at`, `priority`, `status` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `status` | string | `pending_review`, `rejected`, `converted`, `cancelled` | `asset_id` | int | Filter by asset | `priority` | string | `low`, `medium`, `high`, `critical` | `type` | string | `corrective`, `preventive` | `created_by` | int | Filter by creator user ID | `pm_rule_id` | int | Filter by originating PM rule (backs the PM Rule detail MR-history view) | `sort` | string | `created_at`, `priority`, `status` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
 ### MaintenanceRequestResource
 
@@ -984,7 +984,27 @@ List PM rules with cursor pagination.
 
 ### PmRuleResource
 
-| Field | Type | Admin/Manager | Other roles |-------|------|---------------|-------------| `id` | int | Y | Y (if they have access) | `name` | string | Y | Y | `description` | string? | Y | Y | `trigger_type` | string | Y | Y | `is_active` | bool | Y | Y | `interval_days` | int? | Y | Y | `interval_reading` | float? | Y | Y | `last_triggered_date` | string? | Y | Y | `last_triggered_reading` | float? | Y | Y | `created_at` | string | Y | Y | `asset` | object | Y | Y (id, name, erp_asset_code) | `created_by` | object? | Y (Admin/Manager only) | — |
+| Field | Type | Admin/Manager | Other roles |
+|-------|------|---------------|-------------|
+| `id` | int | Y | Y (if they have access) |
+| `name` | string | Y | Y |
+| `maintenance_level` | string? | Y | Y (`L1`-`L4` or custom, nullable) |
+| `description` | string? | Y | Y |
+| `trigger_type` | string | Y | Y |
+| `is_active` | bool | Y | Y |
+| `interval_days` | int? | Y | Y |
+| `interval_reading` | float? | Y | Y |
+| `last_triggered_date` | string? | Y | Y |
+| `last_triggered_reading` | float? | Y | Y |
+| `next_due_date` | string? | Y | Y (computed: `last_triggered_date + interval_days`; null if not date-based or no baseline) |
+| `next_due_reading` | float? | Y | Y (computed: `last_triggered_reading + interval_reading`; null if not reading-based or no baseline) |
+| `progress_percentage` | float? | Y | Y (0-100, max of date/reading progress; null if no baseline or no confirmed reading) |
+| `pm_status` | string | Y | Y (`ok` < 60%, `soon` 60-80%, `due` >= 80% or rule is due per calculator) |
+| `created_at` | string | Y | Y |
+| `asset` | object | Y | Y (id, name, erp_asset_code) |
+| `usage_reading_type` | object? | Y | Y (id, name, unit; `show` only — eager-loaded) |
+| `suppressions` | array | Y | Y (`show` only — eager-loaded) |
+| `created_by` | object? | Y (Admin/Manager only) | — |
 
 ---
 
@@ -992,12 +1012,21 @@ List PM rules with cursor pagination.
 
 Create a PM rule.
 
-**Auth:** Required (Administrator or Maintenance Manager)
+**Auth:** Required (Administrator only)
 **Validation:** Target asset must be an ATMS-managed asset.
 
 **Request Body:**
 
-| Field | Type | Rules |-------|------|-------| `asset_id` | int | required, exists in `assets` | `name` | string | required, max 255 | `description` | string? | nullable | `trigger_type` | string | required, one of: `date`, `reading`, `date_or_reading` | `interval_days` | int? | nullable, min 1. Required if trigger_type is `date` or `date_or_reading`. | `interval_reading` | numeric? | nullable, min 0.01. Required if trigger_type is `reading` or `date_or_reading`. | `usage_reading_type_id` | int? | nullable, exists in `usage_reading_types`. Required if trigger_type is `reading` or `date_or_reading`. |
+| Field | Type | Rules |
+|-------|------|-------|
+| `asset_id` | int | required, exists in `assets` |
+| `name` | string | required, max 255 |
+| `maintenance_level` | string? | nullable, max 10 (`L1`-`L4` or custom free-text) |
+| `description` | string? | nullable |
+| `trigger_type` | string | required, one of: `date`, `reading`, `date_or_reading` |
+| `interval_days` | int? | nullable, min 1. Required if trigger_type is `date` or `date_or_reading`. |
+| `interval_reading` | numeric? | nullable, min 0.01. Required if trigger_type is `reading` or `date_or_reading`. |
+| `usage_reading_type_id` | int? | nullable, exists in `usage_reading_types`. Required if trigger_type is `reading` or `date_or_reading`. |
 
 **Response `201`:**
 ```json
@@ -1022,11 +1051,17 @@ Show a single PM rule with relations.
 
 Update a PM rule.
 
-**Auth:** Required (Administrator or Maintenance Manager)
+**Auth:** Required (Administrator only)
 
 **Request Body:**
 
-| Field | Type | Rules |-------|------|-------| `name` | string? | nullable, max 255 | `description` | string? | nullable | `interval_days` | int? | nullable, min 1. Cannot nullify if trigger_type requires it. | `interval_reading` | numeric? | nullable, min 0.01. Cannot nullify if trigger_type requires it. |
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | string? | nullable, max 255 |
+| `maintenance_level` | string? | nullable, max 10 (`L1`-`L4` or custom free-text) |
+| `description` | string? | nullable |
+| `interval_days` | int? | nullable, min 1. Cannot nullify if trigger_type requires it. |
+| `interval_reading` | numeric? | nullable, min 0.01. Cannot nullify if trigger_type requires it. |
 
 **Response `200`:** `{ "data": { /* PmRule */ } }`
 
@@ -1036,7 +1071,7 @@ Update a PM rule.
 
 Deactivate a PM rule. Blocked if there's an active chain (pending MR or open/in-progress/completed WO from this rule).
 
-**Auth:** Required (Administrator or Maintenance Manager)
+**Auth:** Required (Administrator only)
 
 **Response `200`:** `{ "message": "PM rule deactivated.", "data": { /* PmRule */ } }`
 **Error `409`:** Active chain exists.
@@ -1047,7 +1082,7 @@ Deactivate a PM rule. Blocked if there's an active chain (pending MR or open/in-
 
 Reactivate an inactive PM rule. Throws `409` if the rule is already active.
 
-**Auth:** Required (Administrator or Maintenance Manager)
+**Auth:** Required (Administrator only)
 
 **Response `200`:** `{ "message": "PM rule reactivated.", "data": { /* PmRule */ } }`
 **Error `409`:** PM rule is already active.

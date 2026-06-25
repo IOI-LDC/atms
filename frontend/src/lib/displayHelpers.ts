@@ -160,6 +160,80 @@ export function locationTypeClass(type: string | null | undefined): string {
   return m[type ?? ''] ?? 'location-type-badge location-type-building'
 }
 
+export function pmStatusLabel(s: string | null | undefined): string {
+  const m: Record<string, string> = {
+    ok:   'OK',
+    soon: 'Soon',
+    due:  'Due',
+  }
+  return m[s ?? ''] ?? '—'
+}
+
+export function pmStatusClass(s: string | null | undefined): string {
+  const m: Record<string, string> = {
+    ok:   'status-badge pm-status-ok',
+    soon: 'status-badge pm-status-soon',
+    due:  'status-badge pm-status-due',
+  }
+  return m[s ?? ''] ?? 'status-badge'
+}
+
+export function pmTriggerLabel(t: string | null | undefined): string {
+  const m: Record<string, string> = {
+    date:            'Calendar',
+    reading:         'Usage',
+    date_or_reading: 'Calendar or Usage',
+  }
+  return m[t ?? ''] ?? '—'
+}
+
+/** Maintenance level badge — L1–L4 get a colour; any other custom value is neutral. */
+export function pmLevelClass(level: string | null | undefined): string {
+  if (!level) return ''
+  const m: Record<string, string> = {
+    L1: 'status-badge pm-level-l1',
+    L2: 'status-badge pm-level-l2',
+    L3: 'status-badge pm-level-l3',
+    L4: 'status-badge pm-level-l4',
+  }
+  return m[level] ?? 'status-badge pm-level-custom'
+}
+
+export function roleLabel(code: string): string {
+  const m: Record<string, string> = {
+    administrator:       'Administrator',
+    maintenance_manager: 'Maintenance Manager',
+    technician:          'Technician',
+    logistics:           'Logistics',
+    requester:           'Requester',
+    service:             'Service',
+  }
+  return m[code] ?? code
+}
+
+export function roleClass(code: string): string {
+  const m: Record<string, string> = {
+    administrator:       'status-badge role-administrator',
+    maintenance_manager: 'status-badge role-maintenance-manager',
+    technician:          'status-badge role-technician',
+    logistics:           'status-badge role-logistics',
+    requester:           'status-badge role-requester',
+  }
+  return m[code] ?? 'status-badge'
+}
+
+export function userStatusLabel(user: { is_active: boolean; activated_at: string | null }): string {
+  if (!user.is_active) return 'Inactive'
+  if (!user.activated_at) return 'Pending Activation'
+  return 'Active'
+}
+
+export function userStatusClass(user: { is_active: boolean; activated_at: string | null }): string {
+  if (!user.is_active) return 'status-badge status-inactive'
+  if (!user.activated_at) return 'status-badge status-activation-pending'
+  return 'status-badge status-active'
+}
+
 export function locationTypeLabel(type: string | null | undefined): string {
   if (!type) return '—'
   const m: Record<string, string> = {
