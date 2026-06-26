@@ -47,6 +47,78 @@
   - `docs/03-backend/ARCHITECTURE.md` — removed stale sync job/erp_asset_id notes
   - `backend/.env.example` — fixed `MOCK_ERP_*` → `LDC_ERP_*` variables
 
+- **SPA auth "save → kicked to login" investigation (2026-06-26):**
+  - Symptom: intermittent **401 on mutations** (MR/WO/PM/User) → redirect to `/login`.
+  - Root cause: **SPA-side concurrency races**, NOT backend. `initCsrf()` (api.ts) wasn't single-flight → N parallel `/sanctum/csrf-cookie` calls racing each other's `Set-Cookie`; the router guard skipped an in-flight `fetchCurrentUser()` and redirected prematurely. Backend auth is correct and stable for sequential requests (verified via curl: login → GET×5 = all 200).
+  - **Frontend team fixed it** (single-flight `initCsrf` + `fetchCurrentUser`, router guard). Backend **unchanged**; `SANCTUM_STATEFUL_DOMAINS=localhost`.
+  - **⚠️ Do NOT re-add `:5173` to `SANCTUM_STATEFUL_DOMAINS`.** Tried it (made `localhost:5173` stateful) → exposed `AuthenticateSession`/session instability → *every* navigation 401'd. Reverted. That config is the wrong lever.
+  - If 401s recur post-deploy → the backend lever is the **DB session driver concurrent-write (last-write-wins)**: `session.block` / `session.block_seconds` (tradeoff: serialized latency). Investigate then.
+  - **Config gotcha:** `SANCTUM_STATEFUL_DOMAINS`/`SESSION_DOMAIN`/`APP_URL` are injected by `compose.yaml` from the **root `.env`** (`atms/.env`) — they **override** `backend/.env`. Edit the root `.env`, then `docker compose up -d api`.
+  - **Operational:** `admin@atms.local` password was reset to `Password123!` during offline curl testing.
+- **Git state:** PM M:N refactor + SPA auth fixes committed as `a399864` on branch `feature/pm-rules-mn`. **Not pushed / not merged.** `.env` is gitignored.
+
+## Next Steps — Prioritized Execution Order (2026-06-26)
+
+Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
+(team), ⏳ = blocked on an external dependency.
+
+### P0 — Employee → System User provisioning (real users) 🔓
+- **Goal:** real LDC people in the system; Admin converts an Employee into a login.
+- **Backend — EXISTS:** `EmployeeController` (`GET /admin/employees`,
+  `POST /admin/employees/import`, `POST /admin/employees/{id}/provision-user`)
+  + `AdminResetUserPassword` for activation/reset. CSV import is already wired.
+- **Needed:**
+  - **(External)** A CSV of a few LDC employees — request from client/HR.
+  - **(F)** Admin → Users tab: employee directory list + "Provision User" action
+    + activation/reset UX, wired to the existing endpoints.
+- **Why first:** unblocks creating real users for all other testing/demo.
+
+### P1 — Work Order Assign 🔓
+- **Goal:** assign a Technician to an open WO.
+- **Backend — EXISTS:** `POST /work-orders/{wo}/assign` → `AssignWorkOrder`.
+- **Needed:** **(F)** WO detail "Assign" action (technician picker). **(B)** verify
+  policy + audit on the existing endpoint.
+
+### P1 — Assign at MR → WO conversion 🔓
+- **Goal:** when a Manager approves an MR (converting it to a WO), optionally
+  assign the Technician right then instead of after.
+- **Backend — TO BUILD (B):** extend `ApproveMaintenanceRequestAndCreateWorkOrder`
+  to accept an optional `assigned_to_user_id` (+ assign timestamp) and persist it
+  on the created WO. Add validation + policy check + tests.
+- **Needed:** **(F)** "Assign" option in the MR review/approve flow, just before
+  conversion.
+
+### P2 — Parts catalogue from ERP ⏳ BLOCKED
+- **Goal:** populate the parts list (SM-owned) from BC, the same way Assets are
+  pulled.
+- **Backend — EXISTS (pipeline):** `SyncErpPartsJob`, `LdcErpHttpSource`. Cannot
+  run without the ERP parts endpoint.
+- **Blocked on ERP team (TDL #1, #2, #8):**
+  1. Parts / M&S / consumables **read URL** (OData page name).
+  2. **Field mapping** (sample response rows).
+  3. QTY-on-consumption write-back feasibility + handoff format.
+- **Action:** chase VJ/ERP; once #1 + #2 land, wire `SyncErpPartsJob`, document
+  the mapping, and the WO parts picker gets real data.
+
+### Existing backlog (low urgency, no dependencies — slot in opportunistically)
+- #6 Rename `frontend/` → `atms/` + update Docker/nginx (infra).
+- #7 Create `sm/` and `am/` Vue 3 scaffolds (Phase 8/9).
+
+### Suggested execution order
+**P0 (employees/users) → P1 (WO assign) → P1 (MR→WO assign) → P2 (parts, when
+ERP replies).** #6 / #7 anytime.
+
+---
+
+## Phase 1 pending review
+Phase 1 core is **COMPLETE** (see note below). The remaining "Backend Team
+(future)" items (#6 rename, #7 scaffolds) are infra/Phase 8–9, not feature gaps.
+The feature work above (P0–P2) is the real next iteration; P0 and P1 are
+unblocked and mostly backend-complete (need the client CSV for P0 and small
+backend additions for the MR-assign item). P2 is fully blocked on the ERP team.
+
+---
+
 ## Key Decisions (do not reopen unless new information)
 
 | Topic | Decision |
