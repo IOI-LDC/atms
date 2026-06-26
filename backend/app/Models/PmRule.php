@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\MaintenanceRequestStatus;
 use App\Enums\PmTriggerType;
+use App\Enums\WorkOrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -78,7 +80,7 @@ class PmRule extends Model
     {
         $pendingMr = MaintenanceRequest::where('pm_rule_id', $this->id)
             ->where('is_preventive', true)
-            ->where('status', 'pending_review')
+            ->where('status', MaintenanceRequestStatus::PENDING_REVIEW)
             ->exists();
 
         if ($pendingMr) {
@@ -86,7 +88,7 @@ class PmRule extends Model
         }
 
         return WorkOrder::whereHas('maintenanceRequest', fn ($q) => $q->where('pm_rule_id', $this->id)->where('is_preventive', true))
-            ->whereIn('status', ['open', 'in_progress', 'completed'])
+            ->whereIn('status', [WorkOrderStatus::OPEN, WorkOrderStatus::IN_PROGRESS, WorkOrderStatus::COMPLETED])
             ->exists();
     }
 }

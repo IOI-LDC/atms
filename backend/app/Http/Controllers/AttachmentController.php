@@ -38,7 +38,7 @@ class AttachmentController extends Controller
                 $validated['file'],
                 Asset::class,
                 $asset->id,
-                auth()->id(),
+                $request->user()->id,
                 $validated['description'] ?? null,
             );
 
@@ -69,7 +69,7 @@ class AttachmentController extends Controller
                 $validated['file'],
                 Part::class,
                 $part->id,
-                auth()->id(),
+                $request->user()->id,
                 $validated['description'] ?? null,
             );
 
@@ -100,7 +100,7 @@ class AttachmentController extends Controller
                 $validated['file'],
                 MaintenanceRequest::class,
                 $maintenanceRequest->id,
-                auth()->id(),
+                $request->user()->id,
                 $validated['description'] ?? null,
             );
 
@@ -131,7 +131,7 @@ class AttachmentController extends Controller
                 $validated['file'],
                 WorkOrder::class,
                 $workOrder->id,
-                auth()->id(),
+                $request->user()->id,
                 $validated['description'] ?? null,
             );
 
@@ -152,7 +152,7 @@ class AttachmentController extends Controller
         return $attachment->streamDownload();
     }
 
-    public function softDelete(Attachment $attachment, SoftDeleteAttachment $action): JsonResponse
+    public function softDelete(Request $request, Attachment $attachment, SoftDeleteAttachment $action): JsonResponse
     {
         if ($attachment->deleted_at !== null) {
             return response()->json(['message' => 'Attachment not found.'], 404);
@@ -161,7 +161,7 @@ class AttachmentController extends Controller
         Gate::authorize('delete', $attachment);
 
         try {
-            $action->execute($attachment, auth()->id());
+            $action->execute($attachment, $request->user()->id);
 
             return response()->json(['message' => 'Attachment deleted.']);
         } catch (\DomainException $e) {

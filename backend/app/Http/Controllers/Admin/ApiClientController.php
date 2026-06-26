@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\ApiClients\CreateApiClient;
+use App\Actions\ApiClients\RevokeApiClient;
 use App\Http\Controllers\Controller;
 use App\Models\ApiClient;
-use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class ApiClientController extends Controller
 {
@@ -30,7 +29,7 @@ class ApiClientController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, CreateApiClient $action): JsonResponse
     {
         Gate::authorize('create', ApiClient::class);
 
@@ -40,21 +39,7 @@ class ApiClientController extends Controller
             'abilities.*' => ['string', 'distinct'],
         ]);
 
-        $clientId = Str::random(64);
-        $rawSecret = Str::random(64);
-
-        $client = ApiClient::create([
-            'name' => $validated['name'],
-            'client_id' => $clientId,
-            'client_secret_hash' => Hash::make($rawSecret),
-            'abilities' => $validated['abilities'] ?? ['read'],
-        ]);
-
-        app(AuditLogger::class)->log('api_client_created', $client, [], [
-            'name' => $client->name,
-            'client_id' => $client->client_id,
-            'abilities' => $client->abilities,
-        ]);
+        [$client, $rawSecret] = $action->execute($validated['name'], $validated['abilities'] ?? ['read']);
 
         return response()->json([
             'data' => [
@@ -85,13 +70,11 @@ class ApiClientController extends Controller
         ]);
     }
 
-    public function destroy(ApiClient $client): JsonResponse
+    public function destroy(ApiClient $client, RevokeApiClient $action): JsonResponse
     {
         Gate::authorize('delete', $client);
 
-        $client->update(['revoked_at' => now()]);
-
-        app(AuditLogger::class)->log('api_client_revoked', $client, ['revoked_at' => null], ['revoked_at' => $client->revoked_at]);
+        $action->execute($client);
 
         return response()->json(null, 204);
     }

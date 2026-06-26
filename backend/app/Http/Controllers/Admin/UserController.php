@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Users\AdminResetUserPassword;
 use App\Actions\Users\DeactivateUser;
 use App\Actions\Users\ReactivateUser;
+use App\Actions\Users\UpdateUser;
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -30,11 +30,11 @@ class UserController extends Controller
         return response()->json(['data' => $user->load('role')]);
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(Request $request, User $user, UpdateUser $action): JsonResponse
     {
         Gate::authorize('update', $user);
 
-        if ($user->id === auth()->id()) {
+        if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'Cannot update your own account through this endpoint.'], 422);
         }
 
@@ -50,13 +50,7 @@ class UserController extends Controller
             array_flip(['name', 'email', 'role_id', 'is_active'])
         );
 
-        if (! empty($fieldUpdates)) {
-            $logger = app(AuditLogger::class);
-            $before = $user->toArray();
-            $user->update($fieldUpdates);
-            $after = $user->fresh()->toArray();
-            $logger->log('user.updated', $user, $before, $after);
-        }
+        $user = $action->execute($user, $fieldUpdates);
 
         return response()->json(['data' => $user->fresh()->load('role')]);
     }
@@ -65,7 +59,7 @@ class UserController extends Controller
     {
         Gate::authorize('update', $user);
 
-        if ($user->id === auth()->id()) {
+        if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'Cannot reset your own password via admin endpoint.'], 422);
         }
 
@@ -78,11 +72,11 @@ class UserController extends Controller
         return response()->json(['message' => 'Password reset successful.']);
     }
 
-    public function deactivate(User $user, DeactivateUser $action): JsonResponse
+    public function deactivate(Request $request, User $user, DeactivateUser $action): JsonResponse
     {
         Gate::authorize('manage', User::class);
 
-        if ($user->id === auth()->id()) {
+        if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'Cannot deactivate yourself.'], 422);
         }
 

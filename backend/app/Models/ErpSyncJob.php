@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ErpSyncJobStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -22,6 +23,7 @@ class ErpSyncJob extends Model
     ];
 
     protected $casts = [
+        'status' => ErpSyncJobStatus::class,
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
     ];

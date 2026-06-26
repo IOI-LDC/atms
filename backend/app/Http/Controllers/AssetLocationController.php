@@ -36,7 +36,7 @@ class AssetLocationController extends Controller
             $location,
             $validated['reason'] ?? null,
             $validated['notes'] ?? null,
-            auth()->id()
+            $request->user()->id
         );
 
         return response()->json(['message' => 'Asset location updated.', 'data' => $asset]);

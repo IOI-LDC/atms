@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Employees\ImportEmployees;
 use App\Actions\Employees\ProvisionEmployeeUser;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\EmployeeResource;
 use App\Models\Employee;
 use App\Models\Role;
 use App\Queries\Employees\EmployeeIndexQuery;
@@ -20,7 +21,7 @@ class EmployeeController extends Controller
 
         $results = app(EmployeeIndexQuery::class)->build($request);
 
-        return response()->json($results);
+        return EmployeeResource::collection($results)->toResponse($request);
     }
 
     public function import(ImportEmployees $action): JsonResponse

@@ -3,6 +3,7 @@
 namespace App\Actions\MaintenanceRequests;
 
 use App\Actions\Assets\RecordMeterReading;
+use App\Enums\MaintenanceRequestStatus;
 use App\Enums\MaintenanceStatus;
 use App\Models\Asset;
 use App\Models\BusinessNumberSequence;
@@ -36,7 +37,7 @@ class CreateCorrectiveMaintenanceRequest
                 'number' => $number,
                 'asset_id' => $asset->id,
                 'type' => 'corrective',
-                'status' => 'pending_review',
+                'status' => MaintenanceRequestStatus::PENDING_REVIEW,
                 'priority' => $priority,
                 'description' => $description,
                 'created_by' => $createdByUserId,

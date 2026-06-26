@@ -21,11 +21,11 @@ class ErpSyncController extends Controller
         return response()->json(['data' => $jobs]);
     }
 
-    public function syncParts(): JsonResponse
+    public function syncParts(Request $request): JsonResponse
     {
         Gate::authorize('manage', Part::class);
 
-        SyncErpPartsJob::dispatch(auth()->id());
+        SyncErpPartsJob::dispatch($request->user()->id);
 
         return response()->json(['message' => 'ERP Part synchronization started.']);
     }

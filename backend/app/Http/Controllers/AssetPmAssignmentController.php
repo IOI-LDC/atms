@@ -2,18 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Pm\CreateAssetPmAssignment;
 use App\Actions\Pm\DeactivateAssetPmAssignment;
 use App\Actions\Pm\EvaluatePmRule;
 use App\Actions\Pm\ReactivateAssetPmAssignment;
 use App\Http\Resources\AssetPmAssignmentResource;
-use App\Models\AssetMeterReading;
 use App\Models\AssetPmAssignment;
 use App\Models\Asset;
 use App\Models\PmRule;
-use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class AssetPmAssignmentController extends Controller
@@ -38,7 +36,7 @@ class AssetPmAssignmentController extends Controller
         return AssetPmAssignmentResource::collection($assignments)->toResponse($request);
     }
 
-    public function store(Request $request, Asset $asset): JsonResponse
+    public function store(Request $request, Asset $asset, CreateAssetPmAssignment $action): JsonResponse
     {
         Gate::authorize('create', AssetPmAssignment::class);
 
@@ -60,33 +58,7 @@ class AssetPmAssignmentController extends Controller
             return response()->json(['message' => 'This PM rule is already assigned to this asset.'], 409);
         }
 
-        // Initial baseline: one full grace interval before the first PM is due.
-        $lastTriggeredDate = now()->toDateString();
-        $lastTriggeredReading = null;
-
-        if ($rule->usage_reading_type_id) {
-            $lastTriggeredReading = AssetMeterReading::where('asset_id', $asset->id)
-                ->where('usage_reading_type_id', $rule->usage_reading_type_id)
-                ->whereNotNull('confirmed_at')
-                ->orderByDesc('reading_at')
-                ->value('reading_value');
-        }
-
-        $assignment = DB::transaction(function () use ($asset, $rule, $lastTriggeredDate, $lastTriggeredReading, $request) {
-            $created = AssetPmAssignment::create([
-                'asset_id' => $asset->id,
-                'pm_rule_id' => $rule->id,
-                'last_triggered_date' => $lastTriggeredDate,
-                'last_triggered_reading' => $lastTriggeredReading,
-                'is_active' => true,
-                'assigned_by' => auth()->id(),
-            ]);
-
-            $created->load(['asset', 'pmRule.usageReadingType', 'assignedBy']);
-            app(AuditLogger::class)->log('pm_assignment.created', $created, [], $created->toArray());
-
-            return $created;
-        });
+        $assignment = $action->execute($asset, $rule, $request->user()->id);
 
         return (new AssetPmAssignmentResource($assignment))->toResponse($request)->setStatusCode(201);
     }
@@ -101,13 +73,13 @@ class AssetPmAssignmentController extends Controller
         return (new AssetPmAssignmentResource($assignment))->toResponse($request);
     }
 
-    public function deactivate(Asset $asset, AssetPmAssignment $assignment, DeactivateAssetPmAssignment $action): JsonResponse
+    public function deactivate(Request $request, Asset $asset, AssetPmAssignment $assignment, DeactivateAssetPmAssignment $action): JsonResponse
     {
         Gate::authorize('deactivate', $assignment);
         abort_unless($assignment->asset_id === $asset->id, 404);
 
         try {
-            $result = $action->execute($assignment, auth()->id());
+            $result = $action->execute($assignment, $request->user()->id);
 
             return response()->json(['message' => 'PM assignment deactivated.', 'data' => $result]);
         } catch (\DomainException $e) {
@@ -115,13 +87,13 @@ class AssetPmAssignmentController extends Controller
         }
     }
 
-    public function reactivate(Asset $asset, AssetPmAssignment $assignment, ReactivateAssetPmAssignment $action): JsonResponse
+    public function reactivate(Request $request, Asset $asset, AssetPmAssignment $assignment, ReactivateAssetPmAssignment $action): JsonResponse
     {
         Gate::authorize('reactivate', $assignment);
         abort_unless($assignment->asset_id === $asset->id, 404);
 
         try {
-            $result = $action->execute($assignment, auth()->id());
+            $result = $action->execute($assignment, $request->user()->id);
 
             return response()->json(['message' => 'PM assignment reactivated.', 'data' => $result]);
         } catch (\DomainException $e) {
@@ -129,13 +101,13 @@ class AssetPmAssignmentController extends Controller
         }
     }
 
-    public function evaluate(Asset $asset, AssetPmAssignment $assignment, EvaluatePmRule $action): JsonResponse
+    public function evaluate(Request $request, Asset $asset, AssetPmAssignment $assignment, EvaluatePmRule $action): JsonResponse
     {
         Gate::authorize('evaluate', $assignment);
         abort_unless($assignment->asset_id === $asset->id, 404);
 
         try {
-            $mr = $action->execute($assignment, auth()->id());
+            $mr = $action->execute($assignment, $request->user()->id);
 
             if ($mr === null) {
                 return response()->json(['message' => 'PM assignment is not due.']);
@@ -160,7 +132,7 @@ class AssetPmAssignmentController extends Controller
 
         foreach ($assignments as $assignment) {
             try {
-                $mr = $action->execute($assignment, auth()->id());
+                $mr = $action->execute($assignment, $request->user()->id);
                 if ($mr !== null) {
                     $generated++;
                 }

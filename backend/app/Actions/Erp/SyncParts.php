@@ -3,6 +3,7 @@
 namespace App\Actions\Erp;
 
 use App\Contracts\Erp\ErpSource;
+use App\Enums\ErpSyncJobStatus;
 use App\Models\ErpSyncJob;
 use App\Models\Part;
 use App\Services\Audit\AuditLogger;
@@ -21,7 +22,7 @@ class SyncParts
         $beforeJob = [];
         $job = ErpSyncJob::create([
             'sync_type' => 'parts',
-            'status' => 'running',
+            'status' => ErpSyncJobStatus::RUNNING,
             'started_at' => now(),
             'triggered_by_user_id' => $triggeredByUserId,
         ]);
@@ -91,7 +92,7 @@ class SyncParts
 
             $beforeEnd = $job->toArray();
             $job->update([
-                'status' => $failedCount > 0 ? 'partial' : 'success',
+                'status' => $failedCount > 0 ? ErpSyncJobStatus::PARTIAL : ErpSyncJobStatus::SUCCESS,
                 'total_records' => $totalRecords,
                 'created_count' => $createdCount,
                 'updated_count' => $updatedCount,
@@ -103,7 +104,7 @@ class SyncParts
         } catch (\Exception $e) {
             $beforeEnd = $job->toArray();
             $job->update([
-                'status' => 'failed',
+                'status' => ErpSyncJobStatus::FAILED,
                 'completed_at' => now(),
                 'error_message' => $e->getMessage(),
             ]);

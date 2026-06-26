@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureTokenAbilities
@@ -23,7 +24,7 @@ class EnsureTokenAbilities
         $token = $user->currentAccessToken();
         $abilities = $token->abilities ?? [];
 
-        \Log::info('Token abilities check', [
+        Log::debug('Token abilities check', [
             'token_class' => get_class($token),
             'token_id' => $token->id ?? null,
             'token_name' => $token->name ?? null,

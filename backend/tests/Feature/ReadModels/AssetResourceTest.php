@@ -41,7 +41,7 @@ class AssetResourceTest extends TestCase
             'model' => 'Model-X',
             'manufacturer' => 'Mfg-Co',
             'current_location_id' => $location->id,
-            'operational_status' => 'operational',
+            'operational_status' => 'active',
             'erp_status' => 'active',
             'erp_raw_data' => ['internal' => 'data'],
             'erp_last_synced_at' => now(),

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
@@ -13,7 +14,7 @@ class AuditLogController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', AuditLog::class);
 
@@ -37,6 +38,6 @@ class AuditLogController extends Controller
 
         $logs = $query->latest('id')->cursorPaginate(50);
 
-        return JsonResource::collection($logs);
+        return JsonResource::collection($logs)->toResponse($request);
     }
 }

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Assets\CreateAsset;
+use App\Actions\Assets\UpdateAssetFields;
 use App\Actions\Assets\UpdateAssetLocation;
 use App\Enums\RoleCode;
+use App\Http\Resources\AssetLocationHistoryResource;
+use App\Http\Resources\AssetMeterReadingResource;
 use App\Http\Resources\AssetResource;
 use App\Http\Resources\MaintenanceHistoryResource;
 use App\Models\Asset;
@@ -12,8 +15,7 @@ use App\Models\Location;
 use App\Queries\Assets\AssetIndexQuery;
 use App\Queries\MaintenanceHistory\BuildAssetMaintenanceHistory;
 use App\Services\AssetTagService;
-use App\Services\Audit\AuditLogger;
-use Illuminate\Database\QueryException;
+use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -140,7 +142,7 @@ class AssetController extends Controller
                 $location,
                 null,
                 $validated['location_notes'] ?? null,
-                auth()->id()
+                $request->user()->id
             );
         }
 
@@ -150,45 +152,33 @@ class AssetController extends Controller
             array_flip(['name', 'description', 'category', 'fa_subclass_code', 'serial_number', 'model', 'manufacturer', 'operational_status', 'is_active', 'asset_tag', 'asset_tag_override_reason', 'maintenance_status', 'maintenance_sub_status', 'asset_kind'])
         );
 
-        if (array_key_exists('asset_tag', $fieldUpdates) && $fieldUpdates['asset_tag'] !== null) {
-            $fieldUpdates['asset_tag_generated_at'] = $asset->asset_tag_generated_at ?? now();
-        }
-
-        if (! empty($fieldUpdates)) {
-            $logger = app(AuditLogger::class);
-            $before = $asset->toArray();
-
-            try {
-                $asset->update($fieldUpdates);
-            } catch (QueryException $e) {
-                if (str_contains($e->getMessage(), 'unique constraint') || str_contains($e->getMessage(), '23505')) {
-                    return response()->json([
-                        'errors' => ['asset_tag' => ['The generated asset tag is already in use.']],
-                    ], 409);
-                }
-
-                throw $e;
-            }
-
-            $after = $asset->fresh()->toArray();
-            $logger->log('asset.updated', $asset, $before, $after);
+        try {
+            $asset = app(UpdateAssetFields::class)->execute($asset, $fieldUpdates);
+        } catch (DomainException $e) {
+            return response()->json([
+                'errors' => ['asset_tag' => [$e->getMessage()]],
+            ], 409);
         }
 
         return (new AssetResource($asset->fresh()->load('currentLocation')))->toResponse($request);
     }
 
-    public function meterReadings(Asset $asset): JsonResponse
+    public function meterReadings(Request $request, Asset $asset): JsonResponse
     {
         Gate::authorize('view', $asset);
 
-        return response()->json(['data' => $asset->meterReadings()->orderByDesc('reading_at')->get()]);
+        $readings = $asset->meterReadings()->orderByDesc('reading_at')->get();
+
+        return AssetMeterReadingResource::collection($readings)->toResponse($request);
     }
 
-    public function locationHistory(Asset $asset): JsonResponse
+    public function locationHistory(Request $request, Asset $asset): JsonResponse
     {
         Gate::authorize('view', $asset);
 
-        return response()->json(['data' => $asset->locationHistories()->orderByDesc('effective_at')->get()]);
+        $history = $asset->locationHistories()->orderByDesc('effective_at')->get();
+
+        return AssetLocationHistoryResource::collection($history)->toResponse($request);
     }
 
     public function maintenanceHistory(Request $request, Asset $asset)
@@ -220,6 +210,8 @@ class AssetController extends Controller
 
     public function byTag(Request $request): JsonResponse
     {
+        Gate::authorize('viewAny', Asset::class);
+
         $request->validate(['tag' => ['required', 'string', 'max:15']]);
 
         $asset = Asset::where('asset_tag', $request->query('tag'))->firstOrFail();

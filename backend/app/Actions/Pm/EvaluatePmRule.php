@@ -2,6 +2,7 @@
 
 namespace App\Actions\Pm;
 
+use App\Enums\MaintenanceRequestStatus;
 use App\Models\AssetMeterReading;
 use App\Models\AssetPmAssignment;
 use App\Models\BusinessNumberSequence;
@@ -57,7 +58,7 @@ class EvaluatePmRule
                 'number' => $number,
                 'asset_id' => $locked->asset_id,
                 'type' => 'preventive',
-                'status' => 'pending_review',
+                'status' => MaintenanceRequestStatus::PENDING_REVIEW,
                 'priority' => 'medium',
                 'description' => "Auto-generated PM: {$locked->pmRule->name}",
                 'created_by' => $triggeredByUserId,

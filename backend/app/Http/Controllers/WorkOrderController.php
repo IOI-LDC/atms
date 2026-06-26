@@ -8,15 +8,16 @@ use App\Actions\WorkOrders\CloseWorkOrder;
 use App\Actions\WorkOrders\CompleteWorkOrder;
 use App\Actions\WorkOrders\DeleteWorkOrderPart;
 use App\Actions\WorkOrders\RecordWorkOrderPart;
+use App\Actions\WorkOrders\SetWorkOrderAssetStatus;
 use App\Actions\WorkOrders\StartWorkOrder;
 use App\Actions\WorkOrders\UpdateWorkOrderExecution;
+use App\Enums\OperationalStatus;
 use App\Enums\WorkOrderStatus;
 use App\Http\Resources\AssetResource;
 use App\Http\Resources\WorkOrderResource;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Queries\WorkOrders\WorkOrderIndexQuery;
-use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -52,7 +53,7 @@ class WorkOrderController extends Controller
         $assignee = User::findOrFail($validated['user_id']);
 
         try {
-            $wo = $action->execute($workOrder, $assignee->id, auth()->id());
+            $wo = $action->execute($workOrder, $assignee->id, $request->user()->id);
 
             return response()->json(['message' => 'Work order assigned.', 'data' => $wo]);
         } catch (\DomainException $e) {
@@ -99,7 +100,7 @@ class WorkOrderController extends Controller
         ]);
 
         try {
-            $wo = $action->execute($workOrder, auth()->id(), $validated['completion_notes'] ?? null);
+            $wo = $action->execute($workOrder, $request->user()->id, $validated['completion_notes'] ?? null);
 
             return response()->json(['message' => 'Work order completed.', 'data' => $wo]);
         } catch (\DomainException $e) {
@@ -107,12 +108,12 @@ class WorkOrderController extends Controller
         }
     }
 
-    public function close(WorkOrder $workOrder, CloseWorkOrder $action): JsonResponse
+    public function close(Request $request, WorkOrder $workOrder, CloseWorkOrder $action): JsonResponse
     {
         Gate::authorize('close', $workOrder);
 
         try {
-            $wo = $action->execute($workOrder, auth()->id());
+            $wo = $action->execute($workOrder, $request->user()->id);
 
             return response()->json(['message' => 'Work order closed.', 'data' => $wo]);
         } catch (\DomainException $e) {
@@ -129,7 +130,7 @@ class WorkOrderController extends Controller
         ]);
 
         try {
-            $wo = $action->execute($workOrder, auth()->id(), $validated['reason']);
+            $wo = $action->execute($workOrder, $request->user()->id, $validated['reason']);
 
             return response()->json(['message' => 'Work order cancelled.', 'data' => $wo]);
         } catch (\DomainException $e) {
@@ -152,7 +153,7 @@ class WorkOrderController extends Controller
                 $workOrder->id,
                 $validated['part_id'],
                 (float) $validated['quantity'],
-                auth()->id(),
+                $request->user()->id,
                 $validated['notes'] ?? null
             );
 
@@ -175,12 +176,12 @@ class WorkOrderController extends Controller
         }
     }
 
-    public function setAssetStatus(Request $request, WorkOrder $workOrder): JsonResponse
+    public function setAssetStatus(Request $request, WorkOrder $workOrder, SetWorkOrderAssetStatus $action): JsonResponse
     {
         Gate::authorize('setAssetStatus', $workOrder);
 
         $validated = $request->validate([
-            'operational_status' => ['required', 'string', 'in:active,under_maintenance,down,inactive'],
+            'operational_status' => ['required', 'string', 'in:'.implode(',', array_map(fn ($c) => $c->value, OperationalStatus::cases()))],
         ]);
 
         if (in_array($workOrder->status, [WorkOrderStatus::CLOSED, WorkOrderStatus::CANCELLED], true)) {
@@ -189,23 +190,15 @@ class WorkOrderController extends Controller
             ], 409);
         }
 
-        $asset = $workOrder->asset;
-
-        if (! $asset) {
+        if (! $workOrder->asset) {
             return response()->json([
                 'message' => 'Work order has no associated asset.',
             ], 422);
         }
 
-        $logger = app(AuditLogger::class);
-        $before = $asset->toArray();
-        $asset->update(['operational_status' => $validated['operational_status']]);
-        $after = $asset->fresh()->toArray();
-        $logger->log('asset.status_updated', $asset, $before, $after, [
-            'work_order_id' => $workOrder->id,
-        ]);
+        $action->execute($workOrder, OperationalStatus::from($validated['operational_status']));
 
-        $resource = new AssetResource($asset->fresh()->load('currentLocation'));
+        $resource = new AssetResource($workOrder->asset->fresh()->load('currentLocation'));
 
         return response()->json([
             'message' => 'Asset status updated.',

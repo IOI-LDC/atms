@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AssetKind;
 use App\Enums\MaintenanceStatus;
 use App\Enums\MaintenanceSubStatus;
+use App\Enums\OperationalStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -47,6 +48,7 @@ class Asset extends Model
             'erp_last_synced_at' => 'datetime',
             'is_active' => 'boolean',
             'asset_tag_generated_at' => 'datetime',
+            'operational_status' => OperationalStatus::class,
             'maintenance_status' => MaintenanceStatus::class,
             'maintenance_sub_status' => MaintenanceSubStatus::class,
             'asset_kind' => AssetKind::class,

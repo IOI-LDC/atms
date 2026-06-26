@@ -73,7 +73,7 @@ class MaintenanceRequestController extends Controller
         try {
             $mr = $action->execute(
                 Asset::findOrFail($validated['asset_id']),
-                auth()->id(),
+                $request->user()->id,
                 $validated['priority'],
                 $validated['description'] ?? null,
                 isset($validated['meter_reading']) ? $validated['meter_reading'] : null
@@ -85,12 +85,12 @@ class MaintenanceRequestController extends Controller
         }
     }
 
-    public function approve(MaintenanceRequest $maintenanceRequest, ApproveMaintenanceRequestAndCreateWorkOrder $action): JsonResponse
+    public function approve(Request $request, MaintenanceRequest $maintenanceRequest, ApproveMaintenanceRequestAndCreateWorkOrder $action): JsonResponse
     {
         Gate::authorize('approve', $maintenanceRequest);
 
         try {
-            $mr = $action->execute($maintenanceRequest, auth()->id());
+            $mr = $action->execute($maintenanceRequest, $request->user()->id);
 
             return response()->json([
                 'message' => 'Maintenance request approved and work order created.',
@@ -124,7 +124,7 @@ class MaintenanceRequestController extends Controller
         try {
             $mr = $action->execute(
                 $maintenanceRequest,
-                auth()->id(),
+                $request->user()->id,
                 $validated['reason'],
                 $validated['suppressed_until_date'] ?? null,
                 $validated['suppressed_until_reading'] ?? null
@@ -159,7 +159,7 @@ class MaintenanceRequestController extends Controller
         try {
             $mr = $action->execute(
                 $maintenanceRequest,
-                auth()->id(),
+                $request->user()->id,
                 $validated['reason'],
                 $validated['suppressed_until_date'] ?? null,
                 $validated['suppressed_until_reading'] ?? null

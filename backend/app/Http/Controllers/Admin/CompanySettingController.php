@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CompanySetting;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class CompanySettingController extends Controller
 {
-    public function show()
+    public function show(): JsonResponse
     {
         Gate::authorize('manage', CompanySetting::class);
 
@@ -20,7 +21,7 @@ class CompanySettingController extends Controller
         ]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request): JsonResponse
     {
         Gate::authorize('manage', CompanySetting::class);
 

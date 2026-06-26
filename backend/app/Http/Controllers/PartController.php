@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Parts\UpdatePart;
 use App\Http\Resources\PartResource;
 use App\Models\Part;
 use App\Queries\Parts\PartIndexQuery;
-use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -28,7 +28,7 @@ class PartController extends Controller
         return (new PartResource($part))->toResponse($request);
     }
 
-    public function update(Request $request, Part $part): JsonResponse
+    public function update(Request $request, Part $part, UpdatePart $action): JsonResponse
     {
         Gate::authorize('update', $part);
 
@@ -45,13 +45,7 @@ class PartController extends Controller
             array_flip(['name', 'description', 'unit_of_measure', 'category', 'is_active'])
         );
 
-        if (! empty($fieldUpdates)) {
-            $logger = app(AuditLogger::class);
-            $before = $part->toArray();
-            $part->update($fieldUpdates);
-            $after = $part->fresh()->toArray();
-            $logger->log('part.updated', $part, $before, $after);
-        }
+        $part = $action->execute($part, $fieldUpdates);
 
         return (new PartResource($part->fresh()))->toResponse($request);
     }

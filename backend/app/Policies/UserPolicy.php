@@ -18,6 +18,11 @@ class UserPolicy
         return $user->hasRole(RoleCode::ADMINISTRATOR) || $user->id === $model->id;
     }
 
+    public function viewSelf(User $user): bool
+    {
+        return true;
+    }
+
     public function manage(User $user): bool
     {
         return $user->hasRole(RoleCode::ADMINISTRATOR);

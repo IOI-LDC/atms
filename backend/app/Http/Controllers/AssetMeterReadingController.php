@@ -42,8 +42,8 @@ class AssetMeterReadingController extends Controller
             (float) $validated['reading_value'],
             Carbon::parse($validated['reading_at']),
             $validated['source'],
-            auth()->id(),
-            null,
+                $request->user()->id,
+                null,
             $validated['notes'] ?? null
         );
 
@@ -59,7 +59,7 @@ class AssetMeterReadingController extends Controller
         }
 
         try {
-            $reading = $action->execute($reading, auth()->id());
+            $reading = $action->execute($reading, $request->user()->id);
 
             return response()->json(['message' => 'Meter reading confirmed.', 'data' => $reading]);
         } catch (\DomainException $e) {

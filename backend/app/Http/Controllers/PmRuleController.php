@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Pm\CreatePmRule;
 use App\Actions\Pm\DeactivatePmRule;
 use App\Actions\Pm\ReactivatePmRule;
+use App\Actions\Pm\UpdatePmRule;
 use App\Enums\PmTriggerType;
 use App\Http\Resources\AssetPmAssignmentResource;
 use App\Http\Resources\PmRuleResource;
 use App\Models\PmRule;
 use App\Queries\PmRules\PmRuleIndexQuery;
-use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -25,7 +26,7 @@ class PmRuleController extends Controller
         return PmRuleResource::collection($results)->toResponse($request);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, CreatePmRule $action): JsonResponse
     {
         Gate::authorize('create', PmRule::class);
 
@@ -39,22 +40,7 @@ class PmRuleController extends Controller
             'usage_reading_type_id' => ['nullable', 'exists:usage_reading_types,id', 'required_if:trigger_type,reading,date_or_reading'],
         ]);
 
-        $rule = PmRule::create([
-            'name' => $validated['name'],
-            'maintenance_level' => $validated['maintenance_level'] ?? null,
-            'description' => $validated['description'] ?? null,
-            'trigger_type' => $validated['trigger_type'],
-            'interval_days' => $validated['interval_days'] ?? null,
-            'interval_reading' => $validated['interval_reading'] ?? null,
-            'usage_reading_type_id' => $validated['usage_reading_type_id'] ?? null,
-            'is_active' => true,
-            'created_by' => auth()->id(),
-        ]);
-
-        $rule->load(['usageReadingType', 'createdBy']);
-        $rule->loadCount(['assignments' => fn ($q) => $q->where('is_active', true)]);
-
-        app(AuditLogger::class)->log('pm_rule.created', $rule, [], $rule->toArray());
+        $rule = $action->execute($validated, $request->user()->id);
 
         return (new PmRuleResource($rule))->toResponse($request)->setStatusCode(201);
     }
@@ -75,7 +61,7 @@ class PmRuleController extends Controller
         return (new PmRuleResource($pmRule))->toResponse($request);
     }
 
-    public function update(Request $request, PmRule $pmRule): JsonResponse
+    public function update(Request $request, PmRule $pmRule, UpdatePmRule $action): JsonResponse
     {
         Gate::authorize('update', $pmRule);
 
@@ -101,24 +87,17 @@ class PmRuleController extends Controller
             }
         }
 
-        $before = $pmRule->toArray();
-        $pmRule->update($validated);
-        $after = $pmRule->fresh()->toArray();
+        $rule = $action->execute($pmRule, $validated);
 
-        app(AuditLogger::class)->log('pm_rule.updated', $pmRule, $before, $after);
-
-        $pmRule->load(['usageReadingType', 'createdBy']);
-        $pmRule->loadCount(['assignments' => fn ($q) => $q->where('is_active', true)]);
-
-        return (new PmRuleResource($pmRule->fresh()))->toResponse($request);
+        return (new PmRuleResource($rule))->toResponse($request);
     }
 
-    public function deactivate(PmRule $pmRule, DeactivatePmRule $action): JsonResponse
+    public function deactivate(Request $request, PmRule $pmRule, DeactivatePmRule $action): JsonResponse
     {
         Gate::authorize('deactivate', $pmRule);
 
         try {
-            $rule = $action->execute($pmRule, auth()->id());
+            $rule = $action->execute($pmRule, $request->user()->id);
 
             return response()->json(['message' => 'PM rule deactivated.', 'data' => $rule]);
         } catch (\DomainException $e) {
@@ -126,12 +105,12 @@ class PmRuleController extends Controller
         }
     }
 
-    public function reactivate(PmRule $pmRule, ReactivatePmRule $action): JsonResponse
+    public function reactivate(Request $request, PmRule $pmRule, ReactivatePmRule $action): JsonResponse
     {
         Gate::authorize('reactivate', $pmRule);
 
         try {
-            $rule = $action->execute($pmRule, auth()->id());
+            $rule = $action->execute($pmRule, $request->user()->id);
 
             return response()->json(['message' => 'PM rule reactivated.', 'data' => $rule]);
         } catch (\DomainException $e) {

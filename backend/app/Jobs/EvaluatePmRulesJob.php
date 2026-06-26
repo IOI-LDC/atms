@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Pm\EvaluatePmRule;
+use App\Enums\MaintenanceStatus;
 use App\Models\AssetPmAssignment;
 use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -29,7 +30,7 @@ class EvaluatePmRulesJob implements ShouldBeUnique, ShouldQueue
 
         $assignments = AssetPmAssignment::where('is_active', true)
             ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
-            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', 'Active'))
+            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', MaintenanceStatus::ACTIVE))
             ->with('pmRule')
             ->get();
         $generated = 0;

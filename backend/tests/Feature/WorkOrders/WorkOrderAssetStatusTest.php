@@ -78,7 +78,7 @@ class WorkOrderAssetStatusTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('data.operational_status', 'under_maintenance');
 
-        $this->assertEquals('under_maintenance', $wo->asset->fresh()->operational_status);
+        $this->assertEquals('under_maintenance', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_assigned_technician_can_set_status_on_in_progress_work_order(): void
@@ -90,7 +90,7 @@ class WorkOrderAssetStatusTest extends TestCase
             'operational_status' => 'down',
         ])->assertOk();
 
-        $this->assertEquals('down', $wo->asset->fresh()->operational_status);
+        $this->assertEquals('down', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_assigned_technician_can_set_status_on_completed_work_order(): void
@@ -102,7 +102,7 @@ class WorkOrderAssetStatusTest extends TestCase
             'operational_status' => 'active',
         ])->assertOk();
 
-        $this->assertEquals('active', $wo->asset->fresh()->operational_status);
+        $this->assertEquals('active', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_unassigned_technician_cannot_set_asset_status(): void
@@ -138,7 +138,7 @@ class WorkOrderAssetStatusTest extends TestCase
             'operational_status' => 'down',
         ])->assertOk();
 
-        $this->assertEquals('down', $wo->asset->fresh()->operational_status);
+        $this->assertEquals('down', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_administrator_can_set_asset_status(): void
@@ -150,7 +150,7 @@ class WorkOrderAssetStatusTest extends TestCase
             'operational_status' => 'inactive',
         ])->assertOk();
 
-        $this->assertEquals('inactive', $wo->asset->fresh()->operational_status);
+        $this->assertEquals('inactive', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_assigned_technician_cannot_set_status_on_closed_work_order(): void
@@ -223,7 +223,7 @@ class WorkOrderAssetStatusTest extends TestCase
             'name' => 'Attempted Rename',
         ])->assertOk();
 
-        $this->assertEquals('down', $asset->fresh()->operational_status);
+        $this->assertEquals('down', $asset->fresh()->operational_status->value);
         $this->assertEquals($originalName, $asset->fresh()->name);
     }
 }

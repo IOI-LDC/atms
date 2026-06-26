@@ -15,6 +15,7 @@ use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -56,7 +57,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): Response
     {
-        $user = auth()->user();
+        $user = $request->user();
 
         auth()->guard('web')->logout();
         $request->session()->invalidate();
@@ -69,9 +70,11 @@ class AuthController extends Controller
         return response()->noContent();
     }
 
-    public function me(): JsonResponse
+    public function me(Request $request): JsonResponse
     {
-        return response()->json(['user' => auth()->user()->load('role')]);
+        Gate::authorize('viewSelf', User::class);
+
+        return response()->json(['user' => $request->user()->load('role')]);
     }
 
     public function activate(ActivateRequest $request, ActivateUser $action): JsonResponse

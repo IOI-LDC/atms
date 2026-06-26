@@ -8,6 +8,10 @@ class ApiClient extends Model
 {
     protected $fillable = ['name', 'client_id', 'client_secret_hash', 'abilities', 'last_used_at', 'revoked_at'];
 
+    protected $hidden = [
+        'client_secret_hash',
+    ];
+
     protected function casts(): array
     {
         return [

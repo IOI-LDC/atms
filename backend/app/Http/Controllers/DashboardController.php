@@ -3,20 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RoleCode;
-use App\Enums\WorkOrderStatus;
 use App\Http\Resources\AssetPmAssignmentResource;
 use App\Http\Resources\MaintenanceRequestResource;
 use App\Http\Resources\WorkOrderResource;
-use App\Models\MaintenanceRequest;
-use App\Models\WorkOrder;
+use App\Models\User;
+use App\Queries\Dashboard\OpenWorkOrdersQuery;
+use App\Queries\Dashboard\PendingMaintenanceRequestsQuery;
+use App\Queries\Dashboard\RecentlyClosedWorkOrdersQuery;
 use App\Queries\Pm\OverduePmQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class DashboardController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        Gate::authorize('viewDashboard', User::class);
+
         $user = $request->user();
         $isAdmin = $user->hasRole(RoleCode::ADMINISTRATOR);
         $isManager = $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
@@ -32,31 +36,15 @@ class DashboardController extends Controller
         $showRecentlyClosed = $isAdmin || $isManager || $isRequester;
 
         if ($showPendingMrs) {
-            $mrQuery = MaintenanceRequest::with(['asset', 'createdBy', 'workOrder', 'attachments'])
-                ->where('status', 'pending_review');
-
-            if ($isRequester) {
-                $mrQuery->where('created_by', $user->id);
-            }
-
-            $summary['pending_maintenance_requests'] = (clone $mrQuery)->count();
-
-            $mrList = (clone $mrQuery)->orderByDesc('created_at')->limit(5)->get();
-            $widgets['pending_maintenance_requests'] = MaintenanceRequestResource::collection($mrList)->resolve($request);
+            $pending = app(PendingMaintenanceRequestsQuery::class)->handle($user);
+            $summary['pending_maintenance_requests'] = $pending['count'];
+            $widgets['pending_maintenance_requests'] = MaintenanceRequestResource::collection($pending['items'])->resolve($request);
         }
 
         if ($showOpenWos) {
-            $woQuery = WorkOrder::with(['asset', 'assignedTo', 'maintenanceRequest', 'parts.part', 'attachments'])
-                ->whereIn('status', [WorkOrderStatus::OPEN, WorkOrderStatus::IN_PROGRESS]);
-
-            if ($isTech) {
-                $woQuery->where('assigned_to_user_id', $user->id);
-            }
-
-            $summary['open_work_orders'] = (clone $woQuery)->count();
-
-            $woList = (clone $woQuery)->orderByDesc('created_at')->limit(5)->get();
-            $widgets['open_work_orders'] = WorkOrderResource::collection($woList)->resolve($request);
+            $open = app(OpenWorkOrdersQuery::class)->handle($user);
+            $summary['open_work_orders'] = $open['count'];
+            $widgets['open_work_orders'] = WorkOrderResource::collection($open['items'])->resolve($request);
         }
 
         if ($showOverduePm) {
@@ -66,14 +54,9 @@ class DashboardController extends Controller
         }
 
         if ($showRecentlyClosed) {
-            $recentlyClosedQuery = WorkOrder::with(['asset', 'assignedTo', 'maintenanceRequest', 'parts.part', 'attachments'])
-                ->where('status', WorkOrderStatus::CLOSED)
-                ->where('closed_at', '>=', now()->subDays(30));
-
-            $summary['recently_closed_work_orders'] = (clone $recentlyClosedQuery)->count();
-
-            $recentlyClosed = (clone $recentlyClosedQuery)->orderByDesc('closed_at')->limit(5)->get();
-            $widgets['recently_closed_work_orders'] = WorkOrderResource::collection($recentlyClosed)->resolve($request);
+            $closed = app(RecentlyClosedWorkOrdersQuery::class)->handle();
+            $summary['recently_closed_work_orders'] = $closed['count'];
+            $widgets['recently_closed_work_orders'] = WorkOrderResource::collection($closed['items'])->resolve($request);
         }
 
         return response()->json(array_merge(['summary' => $summary], $widgets));

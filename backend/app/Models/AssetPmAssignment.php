@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\MaintenanceRequestStatus;
+use App\Enums\WorkOrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -73,7 +75,7 @@ class AssetPmAssignment extends Model
         $pendingMr = MaintenanceRequest::where('asset_id', $this->asset_id)
             ->where('pm_rule_id', $this->pm_rule_id)
             ->where('is_preventive', true)
-            ->where('status', 'pending_review')
+            ->where('status', MaintenanceRequestStatus::PENDING_REVIEW)
             ->exists();
 
         if ($pendingMr) {
@@ -82,7 +84,7 @@ class AssetPmAssignment extends Model
 
         return WorkOrder::where('asset_id', $this->asset_id)
             ->whereHas('maintenanceRequest', fn ($q) => $q->where('pm_rule_id', $this->pm_rule_id)->where('is_preventive', true))
-            ->whereIn('status', ['open', 'in_progress', 'completed'])
+            ->whereIn('status', [WorkOrderStatus::OPEN, WorkOrderStatus::IN_PROGRESS, WorkOrderStatus::COMPLETED])
             ->exists();
     }
 

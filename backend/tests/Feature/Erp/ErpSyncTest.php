@@ -86,7 +86,7 @@ class ErpSyncTest extends TestCase
         $action = app(SyncParts::class);
         $job = $action->execute();
 
-        $this->assertEquals('success', $job->status);
+        $this->assertEquals('success', $job->status->value);
         $this->assertEquals(2, $job->total_records);
         $this->assertEquals(2, $job->created_count);
 
