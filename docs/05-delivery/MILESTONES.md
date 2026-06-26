@@ -22,7 +22,7 @@ Users can view active Work Orders, update notes, record parts used, add attachme
 
 ## Milestone 6 — Preventive Maintenance Ready
 
-Users can configure PM Rules. System evaluates rules and generates Preventive Maintenance Requests.
+Admins define reusable PM templates; templates are assigned to assets (Admin/Manager). The system evaluates active assignments and generates Preventive Maintenance Requests when due.
 
 ## Milestone 7 — Dashboard and UAT Ready
 

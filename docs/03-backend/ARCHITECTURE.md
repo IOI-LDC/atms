@@ -80,7 +80,7 @@ The backend owns all business rules:
 - Asset assembly management (install, remove, swap; cycle prevention; component hours derivation)
 - PM rule evaluation
 - Preventive Maintenance Request generation
-- Transaction-safe prevention of duplicate active maintenance chains per PM Rule
+- Transaction-safe prevention of duplicate active maintenance chains per PM assignment
 - PM occurrence suppression after preventive request rejection or cancellation
 - Corrective Maintenance Request creation
 - MR approval/rejection

@@ -19,7 +19,7 @@ class DeactivatePmRule
                 throw new DomainException('PM rule is already inactive.');
             }
 
-            if ($locked->hasActiveChain()) {
+            if ($locked->hasAnyActiveChain()) {
                 throw new DomainException('Cannot deactivate PM rule while it has an active maintenance chain.');
             }
 

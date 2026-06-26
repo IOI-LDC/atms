@@ -259,7 +259,7 @@ Role-adaptive dashboard with summary counts and widget previews.
 
 **Widgets by Role:**
 
-| Widget | Admin | Manager | Technician | Requester | Logistics |--------|-------|---------|------------|-----------|--------|-----------| `pending_maintenance_requests` | All | All | — | Own only | All | — | `open_work_orders` | All | All | Assigned only | — | All | — | `overdue_pm_rules` | All | All | — | — | All | — | `recently_closed_work_orders` | All | All | — | — | All | — |
+| Widget | Admin | Manager | Technician | Requester | Logistics |--------|-------|---------|------------|-----------|--------|-----------| `pending_maintenance_requests` | All | All | — | Own only | All | — | `open_work_orders` | All | All | Assigned only | — | All | — | `overdue_pm_assignments` | All | All | — | — | All | — | `recently_closed_work_orders` | All | All | — | — | All | — |
 
 **Response `200`:**
 ```json
@@ -267,12 +267,12 @@ Role-adaptive dashboard with summary counts and widget previews.
   "summary": {
     "pending_maintenance_requests": 12,
     "open_work_orders": 5,
-    "overdue_pm_rules": 2,
+    "overdue_pm_assignments": 2,
     "recently_closed_work_orders": 8
   },
   "pending_maintenance_requests": [ /* max 5 MaintenanceRequestResource items */ ],
   "open_work_orders": [ /* max 5 WorkOrderResource items */ ],
-  "overdue_pm_rules": [ /* max 5 PmRuleResource items */ ],
+  "overdue_pm_assignments": [ /* max 5 AssetPmAssignmentResource items */ ],
   "recently_closed_work_orders": [ /* max 5 WorkOrderResource items */ ]
 }
 ```
@@ -972,54 +972,52 @@ Remove a part from a non-terminal work order.
 
 ## PM Rules
 
+PM rules follow a **M:N template model**. A **PM Rule** is a reusable schedule template (no `asset_id`, no compliance state). An **Assignment** links a template to a specific asset and carries that asset's own compliance baseline.
+
+**Template lifecycle** (create/edit/deactivate/reactivate) is Administrator-only (`PmRulePolicy`). **Assignment lifecycle** (assign/evaluate/deactivate/reactivate) is Administrator + Maintenance Manager (`AssetPmAssignmentPolicy`). A **retired template** (`is_active = false`) stops all PM evaluation (daily job, calculator, overdue query) for its assignments but does **not** cascade-deactivate the assignments themselves.
+
 ### GET `/api/pm-rules`
 
-List PM rules with cursor pagination.
+List PM templates with cursor pagination.
 
 **Auth:** Required (Administrator or Maintenance Manager)
 
 **Query Parameters:**
 
-| Parameter | Type | Description |-----------|------|-------------| `is_active` | boolean | Filter by active status | `asset_id` | int | Filter by asset | `trigger_type` | string | `date`, `reading`, `date_or_reading` | `sort` | string | `name`, `created_at`, `is_active` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
+| Parameter | Type | Description |-----------|------|-------------| `is_active` | boolean | Filter by active status | `trigger_type` | string | `date`, `reading`, `date_or_reading` | `sort` | string | `name`, `created_at`, `is_active` (default: `created_at:desc`) | `per_page` | int | Default 25, max 100 | `cursor` | string | Pagination cursor |
 
-### PmRuleResource
+### PmRuleResource (template shape)
 
-| Field | Type | Admin/Manager | Other roles |
-|-------|------|---------------|-------------|
-| `id` | int | Y | Y (if they have access) |
-| `name` | string | Y | Y |
-| `maintenance_level` | string? | Y | Y (`L1`-`L4` or custom, nullable) |
-| `description` | string? | Y | Y |
-| `trigger_type` | string | Y | Y |
-| `is_active` | bool | Y | Y |
-| `interval_days` | int? | Y | Y |
-| `interval_reading` | float? | Y | Y |
-| `last_triggered_date` | string? | Y | Y |
-| `last_triggered_reading` | float? | Y | Y |
-| `next_due_date` | string? | Y | Y (computed: `last_triggered_date + interval_days`; null if not date-based or no baseline) |
-| `next_due_reading` | float? | Y | Y (computed: `last_triggered_reading + interval_reading`; null if not reading-based or no baseline) |
-| `progress_percentage` | float? | Y | Y (0-100, max of date/reading progress; null if no baseline or no confirmed reading) |
-| `pm_status` | string | Y | Y (`ok` < 60%, `soon` 60-80%, `due` >= 80% or rule is due per calculator) |
-| `created_at` | string | Y | Y |
-| `asset` | object | Y | Y (id, name, erp_asset_code) |
-| `usage_reading_type` | object? | Y | Y (id, name, unit; `show` only — eager-loaded) |
-| `suppressions` | array | Y | Y (`show` only — eager-loaded) |
-| `created_by` | object? | Y (Admin/Manager only) | — |
+| Field | Type | Admin/Manager | Notes |
+|-------|------|---------------|-------|
+| `id` | int | Y | |
+| `name` | string | Y | |
+| `maintenance_level` | string? | Y | `L1`-`L4` or custom, nullable |
+| `description` | string? | Y | |
+| `trigger_type` | string | Y | |
+| `is_active` | bool | Y | |
+| `interval_days` | int? | Y | |
+| `interval_reading` | float? | Y | |
+| `assignments_count` | int | Y | active assignment count (`withCount` of active assignments) |
+| `usage_reading_type` | object? | Y | id, name, unit (`show` only — eager-loaded) |
+| `assignments` | array | Y | `AssetPmAssignmentResource[]` (`show` only — eager-loaded) |
+| `created_by` | object? | Y (Admin/Manager only) | id, name |
+| `created_at` / `updated_at` | string | Y | |
+
+> The template resource has **no** computed `pm_status`/`next_due_*`/`progress_*`/`last_triggered_*` fields — those live on the assignment (per asset), not the template.
 
 ---
 
 ### POST `/api/pm-rules`
 
-Create a PM rule.
+Create a PM template.
 
 **Auth:** Required (Administrator only)
-**Validation:** Target asset must be an ATMS-managed asset.
 
 **Request Body:**
 
 | Field | Type | Rules |
 |-------|------|-------|
-| `asset_id` | int | required, exists in `assets` |
 | `name` | string | required, max 255 |
 | `maintenance_level` | string? | nullable, max 10 (`L1`-`L4` or custom free-text) |
 | `description` | string? | nullable |
@@ -1028,40 +1026,37 @@ Create a PM rule.
 | `interval_reading` | numeric? | nullable, min 0.01. Required if trigger_type is `reading` or `date_or_reading`. |
 | `usage_reading_type_id` | int? | nullable, exists in `usage_reading_types`. Required if trigger_type is `reading` or `date_or_reading`. |
 
-**Response `201`:**
-```json
-{ "data": { /* PmRule */ } }
-```
-
-**Error `422`:** Asset is not an ATMS-managed asset.
+**Response `201`:** `{ "data": { /* PmRule */ } }`
 
 ---
 
 ### GET `/api/pm-rules/{pmRule}`
 
-Show a single PM rule with relations.
+Show a single template, with its `usage_reading_type`, `created_by`, and `assignments` (coverage view) eager-loaded.
 
-**Auth:** Required
+**Auth:** Required (Administrator or Maintenance Manager)
 
-**Response `200`:** `PmRuleResource`.
+**Response `200`:** `PmRuleResource` (includes `assignments`).
+
+---
+
+### GET `/api/pm-rules/{pmRule}/assignments`
+
+List all assignments for a template (Admin coverage view: "which assets use this template?").
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `AssetPmAssignmentResource[]`.
 
 ---
 
 ### PATCH `/api/pm-rules/{pmRule}`
 
-Update a PM rule.
+Update a PM template.
 
 **Auth:** Required (Administrator only)
 
-**Request Body:**
-
-| Field | Type | Rules |
-|-------|------|-------|
-| `name` | string? | nullable, max 255 |
-| `maintenance_level` | string? | nullable, max 10 (`L1`-`L4` or custom free-text) |
-| `description` | string? | nullable |
-| `interval_days` | int? | nullable, min 1. Cannot nullify if trigger_type requires it. |
-| `interval_reading` | numeric? | nullable, min 0.01. Cannot nullify if trigger_type requires it. |
+**Request Body:** same optional fields as POST (`name`, `maintenance_level`, `description`, `interval_days`, `interval_reading`). Cannot nullify an interval required by the template's trigger type.
 
 **Response `200`:** `{ "data": { /* PmRule */ } }`
 
@@ -1069,49 +1064,135 @@ Update a PM rule.
 
 ### POST `/api/pm-rules/{pmRule}/deactivate`
 
-Deactivate a PM rule. Blocked if there's an active chain (pending MR or open/in-progress/completed WO from this rule).
+Deactivate (retire) a template. Blocked (`409`) if **any** active assignment for the template has an active MR/WO chain (`hasAnyActiveChain`). Deactivation sets the template `is_active = false`; it does **not** deactivate the assignments — a retired template simply stops generating PM work at the evaluation layer.
 
 **Auth:** Required (Administrator only)
 
 **Response `200`:** `{ "message": "PM rule deactivated.", "data": { /* PmRule */ } }`
-**Error `409`:** Active chain exists.
+**Error `409`:** An active chain exists on an assignment.
 
 ---
 
 ### POST `/api/pm-rules/{pmRule}/reactivate`
 
-Reactivate an inactive PM rule. Throws `409` if the rule is already active.
+Reactivate an inactive template.
 
 **Auth:** Required (Administrator only)
 
 **Response `200`:** `{ "message": "PM rule reactivated.", "data": { /* PmRule */ } }`
-**Error `409`:** PM rule is already active.
+**Error `409`:** Template is already active.
 
 ---
 
-### POST `/api/pm-rules/{pmRule}/evaluate`
+### POST `/api/pm-rules/evaluate-all`
 
-Evaluate a single PM rule. If due, generates a preventive maintenance request.
-
-For reading-triggered rules, the generated MR includes `trigger_reading_value` (from the latest confirmed reading) and `trigger_reading_type_id`. For date-triggered rules, the MR includes `trigger_date`.
-
-**Auth:** Required (Administrator or Maintenance Manager)
-
-**Response `200`:** `{ "message": "PM rule is not due." }`
-**Response `201`:** `{ "message": "PM request generated.", "data": { /* MaintenanceRequest */ } }`
-
----
-
-### POST `/api/pm-rules/evaluate`
-
-Evaluate all active PM rules.
+Manually evaluate all active assignments (whose template is also active).
 
 **Auth:** Required (Administrator or Maintenance Manager)
 
 **Response `200`:**
 ```json
-{ "message": "Evaluated 5 rules, generated 2 requests." }
+{ "evaluated": 5, "generated": 2 }
 ```
+
+---
+
+## PM Assignments
+
+Assignments are managed per-asset under `/api/assets/{asset}/pm-assignments`. `{assignment}` is scoped to the asset in the URL — cross-asset access returns `404`.
+
+### AssetPmAssignmentResource
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | int | |
+| `asset_id` | int | |
+| `pm_rule_id` | int | the template id |
+| `is_active` | bool | |
+| `last_triggered_date` | string? | this asset's date baseline |
+| `last_triggered_reading` | float? | this asset's reading baseline |
+| `next_due_date` | string? | computed: `last_triggered_date + interval_days`; null if not date-based or no baseline |
+| `next_due_reading` | float? | computed: `last_triggered_reading + interval_reading`; null if not reading-based or no baseline |
+| `progress_percentage` | float? | 0-100, max of date/reading progress; null if no baseline or no confirmed reading |
+| `pm_status` | string | `ok` < 60%, `soon` 60-80%, `due` >= 80% or assignment is due per calculator |
+| `rule` | object | nested template: id, name, maintenance_level, trigger_type, interval_days, interval_reading, usage_reading_type |
+| `assigned_by` | object | id, name |
+| `assigned_at` | string | pivot `created_at` |
+| `suppressions` | array | `show` only — eager-loaded; each item carries `decision_type`, `triggered_by_date`/`triggered_by_reading`, `trigger_date`, `trigger_reading_value`, `trigger_reading_type_id`, `suppressed_until_date`, `suppressed_until_reading`, `source_mr_id` |
+
+---
+
+### GET `/api/assets/{asset}/pm-assignments`
+
+List an asset's assignments.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Query Parameters:** `is_active` (boolean; default `1` — pass `0` to list deactivated assignments so they remain reachable for reactivation).
+
+**Response `200`:** `AssetPmAssignmentResource[]`.
+
+---
+
+### POST `/api/assets/{asset}/pm-assignments`
+
+Assign a template to an asset. The template must be active and not already assigned to this asset (unique `asset_id`+`pm_rule_id`). On create, the assignment's initial baseline is seeded: `last_triggered_date = today`, and `last_triggered_reading` = the asset's latest confirmed reading for the template's reading type (if any) — giving one full grace interval before the first PM is due.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `pm_rule_id` | int | required, exists in `pm_rules`, template must be active |
+
+**Response `201`:** `AssetPmAssignmentResource` (includes the seeded baselines).
+**Error `422`:** Template is inactive.
+**Error `409`:** Template already assigned to this asset.
+
+---
+
+### GET `/api/assets/{asset}/pm-assignments/{assignment}`
+
+Show a single assignment (includes `suppressions`).
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `AssetPmAssignmentResource`.
+
+---
+
+### POST `/api/assets/{asset}/pm-assignments/{assignment}/deactivate`
+
+Deactivate an assignment. Blocked (`409`) if it has an active MR/WO chain. On success, clears any still-effective suppression windows (date and reading) for this asset/template pair so a later reactivation is not blocked by pre-deactivation windows.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `{ "message": "PM assignment deactivated.", "data": { /* assignment */ } }`
+**Error `409`:** Active chain exists, or assignment already inactive.
+
+---
+
+### POST `/api/assets/{asset}/pm-assignments/{assignment}/reactivate`
+
+Reactivate an inactive assignment.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `{ "message": "PM assignment reactivated.", "data": { /* assignment */ } }`
+**Error `409`:** Assignment is already active.
+
+---
+
+### POST `/api/assets/{asset}/pm-assignments/{assignment}/evaluate`
+
+Evaluate a single assignment. If due, generates a preventive Maintenance Request. For reading-triggered assignments, the MR includes `trigger_reading_value` (latest confirmed reading) and `trigger_reading_type_id`; for date-triggered, the MR includes `trigger_date`. The MR records the originating **template** id in `pm_rule_id` plus the `asset_id`.
+
+**Auth:** Required (Administrator or Maintenance Manager)
+
+**Response `200`:** `{ "message": "PM assignment is not due." }`
+**Response `201`:** `{ "message": "PM request generated.", "data": { /* MaintenanceRequest */ } }`
+**Error `409`:** Assignment/template inactive, or an active chain already exists.
 
 ---
 

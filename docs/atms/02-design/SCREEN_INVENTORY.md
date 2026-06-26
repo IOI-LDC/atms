@@ -269,23 +269,35 @@ Tabs:
   "Manage Locations" tab in §6b. Both views operate on the same `locations`
   table.
 
-### 7c. PM Rules
-- **Visible to:** Admin only. (Maintenance Managers may view and trigger manual
-  evaluation but configuration is Admin-only.)
+### 7c. PM Rules (templates)
+- **Visible to:** Admin only for configuration. (Maintenance Managers may view templates; assignment management happens on Asset Detail.)
 - > **Known gap (decided, pending implementation):** this tab lives under the
   Admin sidebar item which is currently Admin-only, so a Manager has no UI path
-  to reach it despite holding view/evaluate permission. Agreed direction: grant
+  to view templates despite holding view permission. Agreed direction: grant
   Manager full Admin-area access. See `docs/03-backend/RBAC.md` (Known gap) for
   the full note and required changes.
-- List of preventive maintenance rules per individual asset.
-- Columns: rule name, asset, reading type, interval, last triggered, next due
-  estimate, active/inactive status.
+- List of reusable PM **templates** (schedule definitions, asset-agnostic). ~15 rows.
+- Columns: template name, maintenance level, trigger type, schedule, **assignments count** (how many assets use it), active/inactive status.
 - Rule types: calendar interval, operating hours, kilometers, other usage
   readings, or whichever comes first.
-- Each rule belongs to one asset. Category-level, asset-type-level, and
-  template rules are excluded.
-- Deactivation (not deletion) for retired rules. Inactive rules remain visible
-  and can be reactivated.
+- Each template can be assigned to many assets (explicit per-asset assignment
+  via the Asset Detail PM section). Category-level / asset-type-level auto-apply
+  is excluded.
+- "Evaluate All" runs every active assignment.
+- Deactivation (not deletion) for retired templates. A retired template stops
+  generating PM work but does not deactivate its assignments. Inactive templates
+  remain visible and can be reactivated.
+
+### 7d. Asset Detail — PM Rules section
+- **Visible to:** Administrator + Maintenance Manager (the only roles with
+  assignment permission).
+- Lists the templates **assigned** to this asset with per-asset `pm_status`
+  (🟢🟡🔴), schedule, last triggered, next due, and per-row actions (evaluate,
+  deactivate/reactivate).
+- "Assign Rule" opens a picker of active templates; assigning seeds the asset's
+  baseline (one grace interval before first PM).
+- Default view: active assignments; a toggle reveals inactive ones so they
+  remain reachable for reactivation.
 
 ---
 

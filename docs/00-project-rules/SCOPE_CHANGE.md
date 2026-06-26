@@ -82,7 +82,7 @@ and defer store/inventory complexity.
 |---|---|
 | Asset registry | Full asset CRUD with maintenance status (Active/Inactive + sub-statuses), asset tags (`L-BBB-CCC-XXXX`), operational fields |
 | Maintenance workflows | Corrective + Preventive MRs, Manager approval → Work Order → execution → closure. Full status model. |
-| Preventive maintenance | PM rules (date / reading / date_or_reading) per asset. `EvaluatePmRulesJob` generates PM MRs when due. |
+| Preventive maintenance | PM rules are reusable schedule **templates** (date / reading / date_or_reading) explicitly **assigned** to individual assets via an `asset_pm_assignments` pivot; each assignment carries its own compliance baseline. `EvaluatePmRulesJob` iterates active assignments and generates PM MRs when due. Template lifecycle is Admin-only; assignment lifecycle is Admin + Maintenance Manager. This is still explicit per-asset assignment — **not** category/type auto-apply (which remains out of scope). See `.kilo/plans/1782413031648-pm-rules-mn-refactor.md`. |
 | Parts reference | Parts catalogue seeded from ERP sync into SM tables. Read-only in Phase 1 — no ordering, no inventory, no stock movement. ATMS WOs reference parts by part ID for consumption recording. |
 | Asset location | Logistics role can update `asset.location_id` directly. No movement request workflow. No approval chain. Location history written by existing `UpdateAssetLocation` Action. |
 | RBAC | 5 roles: Administrator, Maintenance Manager, Technician, Logistics, Requester |

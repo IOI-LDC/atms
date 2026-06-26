@@ -5,12 +5,12 @@ namespace App\Models;
 use App\Enums\PmTriggerType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PmRule extends Model
 {
     protected $fillable = [
-        'asset_id',
         'name',
         'maintenance_level',
         'description',
@@ -18,8 +18,6 @@ class PmRule extends Model
         'interval_days',
         'interval_reading',
         'usage_reading_type_id',
-        'last_triggered_date',
-        'last_triggered_reading',
         'is_active',
         'created_by',
         'deactivated_by',
@@ -32,17 +30,10 @@ class PmRule extends Model
         'trigger_type' => PmTriggerType::class,
         'interval_days' => 'integer',
         'interval_reading' => 'decimal:2',
-        'last_triggered_date' => 'date',
-        'last_triggered_reading' => 'decimal:2',
         'is_active' => 'boolean',
         'deactivated_at' => 'datetime',
         'reactivated_at' => 'datetime',
     ];
-
-    public function asset(): BelongsTo
-    {
-        return $this->belongsTo(Asset::class);
-    }
 
     public function usageReadingType(): BelongsTo
     {
@@ -54,15 +45,38 @@ class PmRule extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function assets(): BelongsToMany
+    {
+        return $this->belongsToMany(Asset::class, 'asset_pm_assignments')
+            ->using(AssetPmAssignment::class)
+            ->withPivot([
+                'id',
+                'last_triggered_date',
+                'last_triggered_reading',
+                'is_active',
+                'assigned_by',
+                'created_at',
+                'updated_at',
+            ]);
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(AssetPmAssignment::class);
+    }
+
     public function suppressions(): HasMany
     {
         return $this->hasMany(PmOccurrenceSuppression::class);
     }
 
-    public function hasActiveChain(): bool
+    /**
+     * A template is protected from deactivation if ANY of its active
+     * assignments has an open MR/WO maintenance chain.
+     */
+    public function hasAnyActiveChain(): bool
     {
-        $pendingMr = MaintenanceRequest::where('asset_id', $this->asset_id)
-            ->where('pm_rule_id', $this->id)
+        $pendingMr = MaintenanceRequest::where('pm_rule_id', $this->id)
             ->where('is_preventive', true)
             ->where('status', 'pending_review')
             ->exists();
@@ -71,24 +85,8 @@ class PmRule extends Model
             return true;
         }
 
-        $activeWo = WorkOrder::where('asset_id', $this->asset_id)
-            ->whereHas('maintenanceRequest', fn ($q) => $q->where('pm_rule_id', $this->id)->where('is_preventive', true))
+        return WorkOrder::whereHas('maintenanceRequest', fn ($q) => $q->where('pm_rule_id', $this->id)->where('is_preventive', true))
             ->whereIn('status', ['open', 'in_progress', 'completed'])
             ->exists();
-
-        return $activeWo;
-    }
-
-    public function latestConfirmedReading(): ?AssetMeterReading
-    {
-        if (! $this->usage_reading_type_id) {
-            return null;
-        }
-
-        return AssetMeterReading::where('asset_id', $this->asset_id)
-            ->where('usage_reading_type_id', $this->usage_reading_type_id)
-            ->whereNotNull('confirmed_at')
-            ->orderByDesc('reading_at')
-            ->first();
     }
 }

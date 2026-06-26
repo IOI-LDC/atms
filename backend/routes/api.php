@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetLocationController;
 use App\Http\Controllers\AssetMeterReadingController;
+use App\Http\Controllers\AssetPmAssignmentController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TokenController;
@@ -103,6 +104,13 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureTokenAbilities::cl
     Route::post('/assets/{asset}/meter-readings', [AssetMeterReadingController::class, 'store']);
     Route::post('/assets/{asset}/meter-readings/{reading}/confirm', [AssetMeterReadingController::class, 'confirm']);
 
+    Route::get('/assets/{asset}/pm-assignments', [AssetPmAssignmentController::class, 'index']);
+    Route::post('/assets/{asset}/pm-assignments', [AssetPmAssignmentController::class, 'store']);
+    Route::get('/assets/{asset}/pm-assignments/{assignment}', [AssetPmAssignmentController::class, 'show']);
+    Route::post('/assets/{asset}/pm-assignments/{assignment}/deactivate', [AssetPmAssignmentController::class, 'deactivate']);
+    Route::post('/assets/{asset}/pm-assignments/{assignment}/reactivate', [AssetPmAssignmentController::class, 'reactivate']);
+    Route::post('/assets/{asset}/pm-assignments/{assignment}/evaluate', [AssetPmAssignmentController::class, 'evaluate']);
+
     Route::get('/parts', [PartController::class, 'index']);
     Route::get('/parts/{part}', [PartController::class, 'show']);
     Route::patch('/parts/{part}', [PartController::class, 'update']);
@@ -139,8 +147,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureTokenAbilities::cl
     Route::patch('/pm-rules/{pmRule}', [PmRuleController::class, 'update']);
     Route::post('/pm-rules/{pmRule}/deactivate', [PmRuleController::class, 'deactivate']);
     Route::post('/pm-rules/{pmRule}/reactivate', [PmRuleController::class, 'reactivate']);
-    Route::post('/pm-rules/{pmRule}/evaluate', [PmRuleController::class, 'evaluate']);
-    Route::post('/pm-rules/evaluate', [PmRuleController::class, 'evaluateAll']);
+    Route::get('/pm-rules/{pmRule}/assignments', [PmRuleController::class, 'assignments']);
+    Route::post('/pm-rules/evaluate-all', [AssetPmAssignmentController::class, 'evaluateAll']);
 
     Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download']);
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'softDelete']);

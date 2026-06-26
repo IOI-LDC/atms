@@ -16,11 +16,11 @@ Default schedule: once per week in the `Africa/Tripoli` company timezone.
 
 ### PM Rule Evaluation
 
-Purpose: check active PM rules and generate Preventive Maintenance Requests when due.
+Purpose: check active PM assignments (template assigned to an asset) and generate Preventive Maintenance Requests when due. Iterates `AssetPmAssignment::where('is_active', true)->whereHas('pmRule', active)` — an assignment is evaluated only if both the assignment and its template are active. A retired template therefore generates no new PM work despite its assignments remaining individually active.
 
 Default schedule: once per day in the `Africa/Tripoli` company timezone.
 
-Daily evaluation applies to date, reading, and `date_or_reading` rules. This
+Daily evaluation applies to date, reading, and `date_or_reading` triggers. This
 matches the expected maximum daily frequency of confirmed meter updates.
 
 ### Housekeeping

@@ -70,30 +70,28 @@ async function loadHistory() {
           No location changes recorded for this asset.
         </div>
 
-        <div v-else class="detail-table-wrapper">
-          <table class="detail-table">
-            <thead class="detail-table-head">
-              <tr>
-                <th>Date</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="h in history" :key="h.id" class="detail-table-row">
-                <td class="detail-table-cell detail-field-muted">{{ fmtDate(h.effective_at) }}</td>
-                <td class="detail-table-cell detail-field-muted">
-                  {{ h.from_location?.name ?? (h.from_location_id ? `Location #${h.from_location_id}` : '—') }}
-                </td>
-                <td class="detail-table-cell">
-                  {{ h.to_location?.name ?? `Location #${h.to_location_id}` }}
-                </td>
-                <td class="detail-table-cell">{{ h.reason ?? '—' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <table v-else class="detail-table">
+          <thead class="detail-table-head">
+            <tr>
+              <th>Date</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="h in history" :key="h.id" class="detail-table-row">
+              <td class="detail-table-cell detail-field-muted">{{ fmtDate(h.effective_at) }}</td>
+              <td class="detail-table-cell detail-field-muted">
+                {{ h.from_location?.name ?? (h.from_location_id ? `Location #${h.from_location_id}` : '—') }}
+              </td>
+              <td class="detail-table-cell">
+                {{ h.to_location?.name ?? `Location #${h.to_location_id}` }}
+              </td>
+              <td class="detail-table-cell">{{ h.reason ?? '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="create-sheet-footer">

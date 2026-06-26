@@ -16,7 +16,17 @@ defineOptions({
 })
 
 const props = withDefaults(
-  defineProps<SelectContentProps & { class?: HTMLAttributes["class"] }>(),
+  defineProps<SelectContentProps & {
+    class?: HTMLAttributes["class"]
+    /**
+     * Render the dropdown inline instead of teleporting it to <body>. Set this
+     * when the Select lives inside a Dialog/Sheet: keeping the content within
+     * the overlay's DOM stops reka-ui's focus-scope from applying aria-hidden
+     * to the (focused) trigger's ancestor, which the browser blocks and warns
+     * about. See https://w3c.github.io/aria/#aria-hidden.
+     */
+    disablePortal?: boolean
+  }>(),
   {
     position: "item-aligned",
     align: "center",
@@ -24,13 +34,13 @@ const props = withDefaults(
 )
 const emits = defineEmits<SelectContentEmits>()
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class", "disablePortal")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
-  <SelectPortal>
+  <SelectPortal :disabled="disablePortal">
     <SelectContent
       data-slot="select-content"
       :data-align-trigger="position === 'item-aligned'"

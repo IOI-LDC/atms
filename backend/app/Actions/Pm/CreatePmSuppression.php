@@ -29,7 +29,7 @@ class CreatePmSuppression
 
             $data = [
                 'pm_rule_id' => $rule->id,
-                'asset_id' => $rule->asset_id,
+                'asset_id' => $maintenanceRequest->asset_id,
                 'maintenance_request_id' => $maintenanceRequest->id,
                 'trigger_type' => $rule->trigger_type->value,
                 'decision_type' => $decisionType,

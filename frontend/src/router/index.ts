@@ -114,7 +114,10 @@ const router = createRouter({
       path: '/admin/pm-rules',
       name: 'admin-pm-rules',
       component: () => import('@/views/admin/AdminView.vue'),
-      meta: { requiresAdminOrManager: true },
+      // PM template configuration is Admin-only per plan §8. The detail route
+      // below stays Admin+Manager because Managers reach it via deep links from
+      // Asset Detail (where they manage assignments).
+      meta: { requiresAdmin: true },
     },
     {
       path: '/admin/pm-rules/:ruleId',
@@ -194,13 +197,12 @@ router.beforeEach(async (to) => {
 
   const auth = useAuthStore()
 
-  if (!auth.isAuthenticated && !auth.loading) {
+  // Always await the probe when unauthenticated. fetchCurrentUser is
+  // single-flight, so concurrent navigations share one /auth/me call rather
+  // than one of them skipping the fetch and redirecting to login prematurely.
+  if (!auth.isAuthenticated) {
     const ok = await auth.fetchCurrentUser()
     if (!ok) return { name: 'login', query: { redirect: to.fullPath } }
-  }
-
-  if (!auth.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {

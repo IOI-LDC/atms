@@ -144,9 +144,10 @@ Eight primary sidebar items.
 - **Visible to:** Administrator only.
 
 > **Known gap (decided, pending implementation):** PM Rules is a tab here, so
-the Manager's view/evaluate permission is currently unreachable in the UI.
-Agreed direction: open the full Admin area to the Maintenance Manager. See
-`docs/03-backend/RBAC.md` (Known gap) for details.
+> the Manager's template-view permission is currently unreachable in the UI
+> (assignment management, however, is reachable via Asset Detail). Agreed
+> direction: open the full Admin area to the Maintenance Manager. See
+> `docs/03-backend/RBAC.md` (Known gap) for details.
 - **Tabs:**
 
 | Tab | Visible To |
@@ -164,10 +165,12 @@ Agreed direction: open the full Admin area to the Maintenance Manager. See
   exclusively here; they now also have a dedicated sidebar item (§6) with a
   "Manage Locations" tab that provides the same CRUD capability in a
   location-focused context.
-- **"PM Rules" tab** — Configure preventive maintenance rules per individual
-  asset. Rule types: calendar interval, operating hours, kilometers, or other
-  usage readings. Each rule belongs to one asset. Deactivation (not deletion)
-  for retired rules.
+- **"PM Rules" tab** — Manage reusable PM **templates** (schedule definitions,
+  asset-agnostic). Rule types: calendar interval, operating hours, kilometers, or
+  other usage readings. Templates are assigned to assets from the Asset Detail PM
+  Rules section (Admin + Manager). Deactivation (not deletion) for retired
+  templates; a retired template stops generating PM work but keeps its
+  assignments on record.
 
 ### 8. Settings
 

@@ -88,6 +88,11 @@ class Asset extends Model
         return $this->hasMany(WorkOrder::class);
     }
 
+    public function pmAssignments(): HasMany
+    {
+        return $this->hasMany(AssetPmAssignment::class);
+    }
+
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');

@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import AssetCombobox from '@/components/app/AssetCombobox.vue'
 import { pmTriggerLabel } from '@/lib/displayHelpers'
 import type { PmRule, UsageReadingType } from '@/types'
 import type { PmRulePayload } from '@/composables/usePmRules'
@@ -44,8 +43,7 @@ const LEVEL_OPTIONS = ['L1', 'L2', 'L3', 'L4']
 // ── Mode (create only) ────────────────────────────────────────────────────────
 const mode = ref<'single' | 'multi'>('single')
 
-// ── Single-rule form state ────────────────────────────────────────────────────
-const asset = ref<{ id: number; label: string } | null>(null)
+// ── Single-template form state ────────────────────────────────────────────────
 const name = ref('')
 const description = ref('')
 const levelChoice = ref('__none__')   // '__none__' | 'L1'..'L4' | '__custom__'
@@ -97,7 +95,6 @@ watch(() => props.open, (nowOpen) => {
   mode.value = 'single'
   const e = props.editing
   if (e) {
-    asset.value = { id: e.asset.id, label: `${e.asset.name} (${e.asset.erp_asset_code})` }
     name.value = e.name
     description.value = e.description ?? ''
     triggerType.value = e.trigger_type
@@ -115,7 +112,6 @@ watch(() => props.open, (nowOpen) => {
       levelCustom.value = e.maintenance_level
     }
   } else {
-    asset.value = null
     name.value = ''
     description.value = ''
     levelChoice.value = '__none__'
@@ -144,9 +140,9 @@ function buildTriggerFields(tt: string, days: string, reading: string, readType:
 function handleSave() {
   localError.value = ''
 
-  // Edit: asset & trigger immutable; send editable fields only.
+  // Edit: trigger immutable; send editable fields only.
   if (isEdit.value && props.editing) {
-    if (!name.value.trim()) { localError.value = 'Rule name is required.'; return }
+    if (!name.value.trim()) { localError.value = 'Template name is required.'; return }
     const payload: PmRulePayload = {
       name: name.value.trim(),
       description: description.value.trim() || null,
@@ -157,16 +153,14 @@ function handleSave() {
     return
   }
 
-  // Create — single
+  // Create — single template
   if (mode.value === 'single') {
-    if (!asset.value) { localError.value = 'Please select an asset.'; return }
-    if (!name.value.trim()) { localError.value = 'Rule name is required.'; return }
+    if (!name.value.trim()) { localError.value = 'Template name is required.'; return }
     const tf = buildTriggerFields(triggerType.value, intervalDays.value, intervalReading.value, readingTypeId.value)
     if (showDays.value && !tf.interval_days) { localError.value = 'Calendar interval (days) is required.'; return }
     if (showReading.value && !tf.interval_reading) { localError.value = 'Usage interval is required.'; return }
     if (showReading.value && !tf.usage_reading_type_id) { localError.value = 'Reading type is required.'; return }
     emit('saveSingle', {
-      asset_id: asset.value.id,
       name: name.value.trim(),
       description: description.value.trim() || null,
       maintenance_level: resolvedLevel(levelChoice.value, levelCustom.value),
@@ -176,8 +170,7 @@ function handleSave() {
     return
   }
 
-  // Create — multi-level
-  if (!asset.value) { localError.value = 'Please select an asset.'; return }
+  // Create — multi-level templates
   const payloads: PmRulePayload[] = []
   for (const row of rows.value) {
     if (!row.name.trim()) { localError.value = `${row.level} name is required.`; return }
@@ -189,7 +182,6 @@ function handleSave() {
       localError.value = `${row.level} usage interval and reading type are required.`; return
     }
     payloads.push({
-      asset_id: asset.value.id,
       name: row.name.trim(),
       maintenance_level: row.level,
       trigger_type: row.triggerType,
@@ -199,7 +191,7 @@ function handleSave() {
   emit('saveMulti', payloads)
 }
 
-const title = computed(() => (isEdit.value ? 'Edit PM Rule' : 'Create PM Rule'))
+const title = computed(() => (isEdit.value ? 'Edit PM Template' : 'Create PM Template'))
 </script>
 
 <template>
@@ -208,7 +200,7 @@ const title = computed(() => (isEdit.value ? 'Edit PM Rule' : 'Create PM Rule'))
       <div class="create-sheet-header">
         <SheetHeader>
           <SheetTitle>{{ title }}</SheetTitle>
-          <SheetDescription>Configure a preventive maintenance schedule for an asset.</SheetDescription>
+          <SheetDescription>Define a reusable preventive maintenance schedule. Templates are assigned to assets from the Asset Detail screen.</SheetDescription>
         </SheetHeader>
       </div>
 
@@ -222,7 +214,7 @@ const title = computed(() => (isEdit.value ? 'Edit PM Rule' : 'Create PM Rule'))
             :variant="mode === 'single' ? 'default' : 'ghost'"
             size="sm"
             @click="mode = 'single'"
-          >Single Rule</Button>
+          >Single Template</Button>
           <Button
             class="pm-mode-toggle-btn"
             :variant="mode === 'multi' ? 'default' : 'ghost'"
@@ -232,17 +224,10 @@ const title = computed(() => (isEdit.value ? 'Edit PM Rule' : 'Create PM Rule'))
         </div>
 
         <div class="sheet-form">
-          <!-- Asset -->
-          <div class="form-field">
-            <Label>Asset <span class="field-required">*</span></Label>
-            <p v-if="isEdit" class="detail-field-value">{{ asset?.label }}</p>
-            <AssetCombobox v-else v-model="asset" />
-          </div>
-
           <!-- ── Single / Edit fields ──────────────────────────────────────── -->
           <template v-if="isEdit || mode === 'single'">
             <div class="form-field">
-              <Label for="pm-name">Rule Name <span class="field-required">*</span></Label>
+              <Label for="pm-name">Template Name <span class="field-required">*</span></Label>
               <Input id="pm-name" v-model="name" placeholder="E.g. Quarterly inspection" />
               <p v-if="validationErrors?.name" class="form-error">{{ validationErrors.name[0] }}</p>
             </div>
@@ -310,7 +295,7 @@ const title = computed(() => (isEdit.value ? 'Edit PM Rule' : 'Create PM Rule'))
           <!-- ── Multi-level rows ──────────────────────────────────────────── -->
           <template v-else>
             <p class="form-help">
-              Creates one rule per level for the selected asset. Each is independent — if one fails, the others still apply.
+              Creates one template per level. Each is independent — if one fails, the others still apply. Assign them to assets from the Asset Detail screen.
             </p>
             <div class="pm-level-rows">
               <div v-for="(row, i) in rows" :key="row.level" class="pm-level-row">
@@ -321,7 +306,7 @@ const title = computed(() => (isEdit.value ? 'Edit PM Rule' : 'Create PM Rule'))
                 </div>
 
                 <div class="form-field">
-                  <Label :for="`pm-row-name-${i}`">Rule Name <span class="field-required">*</span></Label>
+                  <Label :for="`pm-row-name-${i}`">Template Name <span class="field-required">*</span></Label>
                   <Input :id="`pm-row-name-${i}`" v-model="row.name" />
                   <p v-if="resultFor(i) && !resultFor(i)!.ok" class="form-error">
                     {{ resultFor(i)!.message ?? 'Failed to create.' }}
@@ -369,7 +354,7 @@ const title = computed(() => (isEdit.value ? 'Edit PM Rule' : 'Create PM Rule'))
       <div class="create-sheet-footer">
         <Button variant="outline" :disabled="saving" @click="emit('close')">Cancel</Button>
         <Button :disabled="saving" @click="handleSave">
-          {{ saving ? 'Saving…' : (isEdit ? 'Save Changes' : (mode === 'multi' ? 'Create Rules' : 'Create Rule')) }}
+          {{ saving ? 'Saving…' : (isEdit ? 'Save Changes' : (mode === 'multi' ? 'Create Templates' : 'Create Template')) }}
         </Button>
       </div>
     </SheetContent>

@@ -16,7 +16,8 @@ class PmRuleIndexQuery
 
     public function build(Request $request): CursorPaginator
     {
-        $query = PmRule::with(['asset', 'usageReadingType', 'createdBy']);
+        $query = PmRule::with(['usageReadingType', 'createdBy'])
+            ->withCount(['assignments' => fn ($q) => $q->where('is_active', true)]);
 
         $this->applyFilters($query, $request);
         $this->applySort($query, $request);
@@ -30,10 +31,6 @@ class PmRuleIndexQuery
     {
         if ($request->filled('is_active')) {
             $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN));
-        }
-
-        if ($request->filled('asset_id')) {
-            $query->where('asset_id', $request->input('asset_id'));
         }
 
         if ($request->filled('trigger_type')) {

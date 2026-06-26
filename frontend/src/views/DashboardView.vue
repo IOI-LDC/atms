@@ -29,8 +29,8 @@ const { data, loading, error } = useDashboard()
             <p class="kpi-card-value">{{ data.summary.open_work_orders }}</p>
           </div>
           <div class="kpi-card">
-            <p class="kpi-card-title">Overdue PM Rules</p>
-            <p class="kpi-card-value">{{ data.summary.overdue_pm_rules }}</p>
+            <p class="kpi-card-title">Overdue PM</p>
+            <p class="kpi-card-value">{{ data.summary.overdue_pm_assignments }}</p>
           </div>
           <div class="kpi-card">
             <p class="kpi-card-title">Recently Closed</p>

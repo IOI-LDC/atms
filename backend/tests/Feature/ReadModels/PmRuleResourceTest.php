@@ -4,8 +4,7 @@ namespace Tests\Feature\ReadModels;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
-use App\Models\AssetMeterReading;
-use App\Models\Location;
+use App\Models\AssetPmAssignment;
 use App\Models\PmRule;
 use App\Models\Role;
 use App\Models\UsageReadingType;
@@ -31,24 +30,25 @@ class PmRuleResourceTest extends TestCase
         return User::factory()->create(['role_id' => $role->id, 'is_active' => true]);
     }
 
-    private function createPmRule(): PmRule
+    private function createPmRule(array $overrides = []): PmRule
     {
-        $location = Location::create(['name' => 'Loc', 'type' => 'building']);
-        $asset = Asset::create([
-            'erp_asset_code' => 'A-001',
-            'name' => 'Asset',
-            'is_active' => true,
-            'current_location_id' => $location->id,
-        ]);
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
 
-        return PmRule::create([
-            'asset_id' => $asset->id,
+        return PmRule::create(array_merge([
             'name' => 'Test Rule',
             'trigger_type' => 'date',
             'interval_days' => 30,
             'is_active' => true,
             'created_by' => $admin->id,
+        ], $overrides));
+    }
+
+    private function createAsset(): Asset
+    {
+        return Asset::create([
+            'erp_asset_code' => 'AST-'.uniqid(),
+            'name' => 'Asset',
+            'is_active' => true,
         ]);
     }
 
@@ -90,7 +90,10 @@ class PmRuleResourceTest extends TestCase
         $this->assertArrayHasKey('trigger_type', $data);
         $this->assertArrayHasKey('is_active', $data);
         $this->assertArrayHasKey('interval_days', $data);
-        $this->assertArrayHasKey('asset', $data);
+        $this->assertArrayHasKey('assignments_count', $data);
+        $this->assertArrayNotHasKey('asset', $data);
+        $this->assertArrayNotHasKey('next_due_date', $data);
+        $this->assertArrayNotHasKey('pm_status', $data);
         $this->assertArrayHasKey('created_at', $data);
     }
 
@@ -110,8 +113,7 @@ class PmRuleResourceTest extends TestCase
     public function test_resource_returns_maintenance_level(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $rule = $this->createPmRule();
-        $rule->update(['maintenance_level' => 'L2']);
+        $rule = $this->createPmRule(['maintenance_level' => 'L2']);
 
         $response = $this->actingAs($admin)->getJson('/api/pm-rules');
 
@@ -119,66 +121,14 @@ class PmRuleResourceTest extends TestCase
         $response->assertJsonPath('data.0.maintenance_level', 'L2');
     }
 
-    public function test_resource_computes_next_due_date_for_date_rule(): void
+    public function test_resource_includes_usage_reading_type_on_show(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $rule = $this->createPmRule();
-        $baseline = now()->subDays(20)->toDateString();
-        $rule->update(['last_triggered_date' => $baseline]);
-
-        $response = $this->actingAs($admin)->getJson('/api/pm-rules');
-
-        $data = $response->json('data.0');
-        $expected = now()->parse($baseline)->addDays(30)->toDateString();
-        $this->assertEquals($expected, $data['next_due_date']);
-    }
-
-    public function test_resource_computes_date_progress_and_status(): void
-    {
-        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $rule = $this->createPmRule(); // interval_days 30
-        $rule->update(['last_triggered_date' => now()->subDays(27)->toDateString()]); // 27/30 = 90%
-
-        $response = $this->actingAs($admin)->getJson('/api/pm-rules');
-
-        $data = $response->json('data.0');
-        $this->assertSame('due', $data['pm_status']);
-        $this->assertGreaterThanOrEqual(80.0, $data['progress_percentage']);
-    }
-
-    public function test_resource_shows_ok_status_for_low_progress(): void
-    {
-        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $rule = $this->createPmRule(); // interval_days 30
-        $rule->update(['last_triggered_date' => now()->subDays(5)->toDateString()]); // 5/30 ~ 17%
-
-        $response = $this->actingAs($admin)->getJson('/api/pm-rules');
-
-        $data = $response->json('data.0');
-        $this->assertSame('ok', $data['pm_status']);
-    }
-
-    public function test_resource_includes_usage_reading_type(): void
-    {
-        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $location = Location::create(['name' => 'Loc', 'type' => 'building']);
-        $asset = Asset::create([
-            'erp_asset_code' => 'A-002',
-            'name' => 'Reading Asset',
-            'is_active' => true,
-            'current_location_id' => $location->id,
-        ]);
         $readingType = UsageReadingType::create(['name' => 'Operating Hours', 'unit' => 'hours']);
-
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Reading Rule',
+        $rule = $this->createPmRule([
             'trigger_type' => 'reading',
             'interval_reading' => 500,
             'usage_reading_type_id' => $readingType->id,
-            'last_triggered_reading' => 1000,
-            'is_active' => true,
-            'created_by' => $admin->id,
         ]);
 
         $response = $this->actingAs($admin)->getJson("/api/pm-rules/{$rule->id}");
@@ -187,59 +137,35 @@ class PmRuleResourceTest extends TestCase
         $this->assertNotNull($data['usage_reading_type']);
         $this->assertSame('Operating Hours', $data['usage_reading_type']['name']);
         $this->assertSame('hours', $data['usage_reading_type']['unit']);
-        $this->assertEquals(1500.0, $data['next_due_reading']);
     }
 
-    public function test_resource_computes_reading_progress(): void
+    public function test_assignments_count_counts_active_assignments_only(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $location = Location::create(['name' => 'Loc', 'type' => 'building']);
-        $asset = Asset::create([
-            'erp_asset_code' => 'A-003',
-            'name' => 'Reading Asset',
-            'is_active' => true,
-            'current_location_id' => $location->id,
-        ]);
-        $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
+        $rule = $this->createPmRule();
+        $asset = $this->createAsset();
 
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Reading Rule',
-            'trigger_type' => 'reading',
-            'interval_reading' => 500,
-            'usage_reading_type_id' => $readingType->id,
-            'last_triggered_reading' => 1000,
-            'is_active' => true,
-            'created_by' => $admin->id,
-        ]);
-
-        AssetMeterReading::create([
-            'asset_id' => $asset->id,
-            'usage_reading_type_id' => $readingType->id,
-            'reading_value' => 1300,
-            'reading_at' => now(),
-            'source' => 'manual',
-            'entered_by_user_id' => $admin->id,
-            'confirmed_by_user_id' => $admin->id,
-            'confirmed_at' => now(),
-        ]);
+        AssetPmAssignment::create(['asset_id' => $asset->id, 'pm_rule_id' => $rule->id, 'is_active' => true, 'assigned_by' => $admin->id]);
+        AssetPmAssignment::create(['asset_id' => $this->createAsset()->id, 'pm_rule_id' => $rule->id, 'is_active' => false, 'assigned_by' => $admin->id, 'deactivated_by' => $admin->id, 'deactivated_at' => now()]);
 
         $response = $this->actingAs($admin)->getJson('/api/pm-rules');
 
-        $data = collect($response->json('data'))->firstWhere('id', $rule->id);
-        $this->assertEquals(60.0, $data['progress_percentage']);
-        $this->assertSame('soon', $data['pm_status']);
+        $response->assertStatus(200);
+        $this->assertSame(1, $response->json('data.0.assignments_count'));
     }
 
-    public function test_resource_returns_null_progress_without_baseline(): void
+    public function test_show_includes_assignments(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $this->createPmRule(); // no last_triggered_date set
+        $rule = $this->createPmRule();
+        $asset = $this->createAsset();
+        AssetPmAssignment::create(['asset_id' => $asset->id, 'pm_rule_id' => $rule->id, 'is_active' => true, 'assigned_by' => $admin->id]);
 
-        $response = $this->actingAs($admin)->getJson('/api/pm-rules');
+        $response = $this->actingAs($admin)->getJson("/api/pm-rules/{$rule->id}");
 
-        $data = $response->json('data.0');
-        $this->assertNull($data['next_due_date']);
-        $this->assertNull($data['progress_percentage']);
+        $response->assertStatus(200);
+        $assignments = $response->json('data.assignments');
+        $this->assertNotNull($assignments);
+        $this->assertCount(1, $assignments);
     }
 }

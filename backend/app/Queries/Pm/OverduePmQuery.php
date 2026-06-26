@@ -3,8 +3,8 @@
 namespace App\Queries\Pm;
 
 use App\Models\AssetMeterReading;
+use App\Models\AssetPmAssignment;
 use App\Models\PmOccurrenceSuppression;
-use App\Models\PmRule;
 use App\Services\Pm\PmDueCalculator;
 use Illuminate\Support\Collection;
 
@@ -14,28 +14,32 @@ class OverduePmQuery
 
     public function execute(int $limit = 5): Collection
     {
-        $rules = PmRule::where('is_active', true)
-            ->with('asset')
+        $assignments = AssetPmAssignment::where('is_active', true)
+            ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
+            ->with(['asset', 'pmRule.usageReadingType'])
             ->get();
 
-        $readings = $this->loadLatestConfirmedReadings($rules);
-        $suppressions = $this->loadActiveSuppressions($rules);
+        $readings = $this->loadLatestConfirmedReadings($assignments);
+        $suppressions = $this->loadActiveSuppressions($assignments);
 
-        return $rules
-            ->filter(fn ($rule) => $this->calculator->isDue($rule, $readings, $suppressions))
+        return $assignments
+            ->filter(fn ($assignment) => $this->calculator->isDue($assignment, $readings, $suppressions))
             ->take($limit)
             ->values();
     }
 
-    private function loadLatestConfirmedReadings(Collection $rules): Collection
+    private function loadLatestConfirmedReadings(Collection $assignments): Collection
     {
-        $readingTypeIds = $rules->pluck('usage_reading_type_id')->filter()->unique();
+        $readingTypeIds = $assignments
+            ->map(fn ($a) => $a->pmRule?->usage_reading_type_id)
+            ->filter()
+            ->unique();
 
         if ($readingTypeIds->isEmpty()) {
             return collect();
         }
 
-        return AssetMeterReading::whereIn('asset_id', $rules->pluck('asset_id')->unique())
+        return AssetMeterReading::whereIn('asset_id', $assignments->pluck('asset_id')->unique())
             ->whereIn('usage_reading_type_id', $readingTypeIds)
             ->whereNotNull('confirmed_at')
             ->get()
@@ -43,19 +47,26 @@ class OverduePmQuery
             ->map(fn ($group) => $group->sortByDesc('reading_at')->first());
     }
 
-    private function loadActiveSuppressions(Collection $rules): Collection
+    private function loadActiveSuppressions(Collection $assignments): Collection
     {
-        $all = PmOccurrenceSuppression::whereIn('pm_rule_id', $rules->pluck('id'))->get();
+        $all = PmOccurrenceSuppression::whereIn('pm_rule_id', $assignments->pluck('pm_rule_id')->unique())->get();
         $grouped = collect();
 
-        foreach ($all as $s) {
-            if ($s->triggered_by_date && $s->suppressed_until_date >= now()->toDateString()) {
-                $key = $s->pm_rule_id.'_date';
-                $grouped[$key] = $grouped->get($key, collect())->push($s);
-            }
-            if ($s->triggered_by_reading) {
-                $key = $s->pm_rule_id.'_reading';
-                $grouped[$key] = $grouped->get($key, collect())->push($s);
+        foreach ($assignments as $assignment) {
+            foreach ($all as $suppression) {
+                if ($suppression->pm_rule_id !== $assignment->pm_rule_id || $suppression->asset_id !== $assignment->asset_id) {
+                    continue;
+                }
+
+                if ($suppression->triggered_by_date && $suppression->suppressed_until_date >= now()->toDateString()) {
+                    $key = "{$assignment->id}_date";
+                    $grouped[$key] = $grouped->get($key, collect())->push($suppression);
+                }
+
+                if ($suppression->triggered_by_reading) {
+                    $key = "{$assignment->id}_reading";
+                    $grouped[$key] = $grouped->get($key, collect())->push($suppression);
+                }
             }
         }
 

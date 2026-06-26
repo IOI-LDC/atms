@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Pm\DeactivatePmRule;
-use App\Actions\Pm\EvaluatePmRule;
 use App\Actions\Pm\ReactivatePmRule;
 use App\Enums\PmTriggerType;
+use App\Http\Resources\AssetPmAssignmentResource;
 use App\Http\Resources\PmRuleResource;
-use App\Models\Asset;
 use App\Models\PmRule;
 use App\Queries\PmRules\PmRuleIndexQuery;
 use App\Services\Audit\AuditLogger;
@@ -31,7 +30,6 @@ class PmRuleController extends Controller
         Gate::authorize('create', PmRule::class);
 
         $validated = $request->validate([
-            'asset_id' => ['required', 'exists:assets,id'],
             'name' => ['required', 'string', 'max:255'],
             'maintenance_level' => ['nullable', 'string', 'max:10'],
             'description' => ['nullable', 'string'],
@@ -41,10 +39,7 @@ class PmRuleController extends Controller
             'usage_reading_type_id' => ['nullable', 'exists:usage_reading_types,id', 'required_if:trigger_type,reading,date_or_reading'],
         ]);
 
-        $asset = Asset::findOrFail($validated['asset_id']);
-
         $rule = PmRule::create([
-            'asset_id' => $validated['asset_id'],
             'name' => $validated['name'],
             'maintenance_level' => $validated['maintenance_level'] ?? null,
             'description' => $validated['description'] ?? null,
@@ -56,7 +51,8 @@ class PmRuleController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        $rule->load(['asset', 'usageReadingType', 'createdBy', 'suppressions']);
+        $rule->load(['usageReadingType', 'createdBy']);
+        $rule->loadCount(['assignments' => fn ($q) => $q->where('is_active', true)]);
 
         app(AuditLogger::class)->log('pm_rule.created', $rule, [], $rule->toArray());
 
@@ -67,7 +63,14 @@ class PmRuleController extends Controller
     {
         Gate::authorize('view', $pmRule);
 
-        $pmRule->load(['asset', 'usageReadingType', 'createdBy', 'suppressions']);
+        $pmRule->load([
+            'usageReadingType',
+            'createdBy',
+            'assignments.asset',
+            'assignments.pmRule.usageReadingType',
+            'assignments.assignedBy',
+        ]);
+        $pmRule->loadCount(['assignments' => fn ($q) => $q->where('is_active', true)]);
 
         return (new PmRuleResource($pmRule))->toResponse($request);
     }
@@ -104,7 +107,8 @@ class PmRuleController extends Controller
 
         app(AuditLogger::class)->log('pm_rule.updated', $pmRule, $before, $after);
 
-        $pmRule->load(['asset', 'usageReadingType', 'createdBy', 'suppressions']);
+        $pmRule->load(['usageReadingType', 'createdBy']);
+        $pmRule->loadCount(['assignments' => fn ($q) => $q->where('is_active', true)]);
 
         return (new PmRuleResource($pmRule->fresh()))->toResponse($request);
     }
@@ -135,41 +139,14 @@ class PmRuleController extends Controller
         }
     }
 
-    public function evaluate(PmRule $pmRule, EvaluatePmRule $action): JsonResponse
+    public function assignments(Request $request, PmRule $pmRule): JsonResponse
     {
-        Gate::authorize('evaluate', $pmRule);
+        Gate::authorize('viewAssignments', $pmRule);
 
-        try {
-            $mr = $action->execute($pmRule, auth()->id());
+        $assignments = $pmRule->assignments()
+            ->with(['asset', 'pmRule.usageReadingType', 'assignedBy'])
+            ->get();
 
-            if ($mr === null) {
-                return response()->json(['message' => 'PM rule is not due.']);
-            }
-
-            return response()->json(['message' => 'PM request generated.', 'data' => $mr], 201);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 409);
-        }
-    }
-
-    public function evaluateAll(Request $request, EvaluatePmRule $action): JsonResponse
-    {
-        Gate::authorize('evaluate', PmRule::class);
-
-        $rules = PmRule::where('is_active', true)->get();
-        $generated = 0;
-
-        foreach ($rules as $rule) {
-            try {
-                $mr = $action->execute($rule, auth()->id());
-                if ($mr !== null) {
-                    $generated++;
-                }
-            } catch (\DomainException $e) {
-                continue;
-            }
-        }
-
-        return response()->json(['message' => "Evaluated {$rules->count()} rules, generated {$generated} requests."]);
+        return AssetPmAssignmentResource::collection($assignments)->toResponse($request);
     }
 }

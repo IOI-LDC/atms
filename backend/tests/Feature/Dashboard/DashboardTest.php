@@ -52,12 +52,12 @@ class DashboardTest extends TestCase
             'summary' => [
                 'pending_maintenance_requests',
                 'open_work_orders',
-                'overdue_pm_rules',
+                'overdue_pm_assignments',
                 'recently_closed_work_orders',
             ],
             'pending_maintenance_requests',
             'open_work_orders',
-            'overdue_pm_rules',
+            'overdue_pm_assignments',
             'recently_closed_work_orders',
         ]);
     }
@@ -71,7 +71,7 @@ class DashboardTest extends TestCase
         $response->assertStatus(200);
         $json = $response->json();
         $this->assertArrayNotHasKey('pending_maintenance_requests', $json);
-        $this->assertArrayNotHasKey('overdue_pm_rules', $json);
+        $this->assertArrayNotHasKey('overdue_pm_assignments', $json);
         $this->assertArrayNotHasKey('recently_closed_work_orders', $json);
         $this->assertArrayHasKey('open_work_orders', $json);
     }
@@ -86,7 +86,7 @@ class DashboardTest extends TestCase
         $json = $response->json();
         $this->assertArrayNotHasKey('pending_maintenance_requests', $json);
         $this->assertArrayNotHasKey('open_work_orders', $json);
-        $this->assertArrayNotHasKey('overdue_pm_rules', $json);
+        $this->assertArrayNotHasKey('overdue_pm_assignments', $json);
         $this->assertArrayNotHasKey('recently_closed_work_orders', $json);
     }
 
@@ -166,7 +166,7 @@ class DashboardTest extends TestCase
         $json = $response->json();
         $this->assertArrayHasKey('pending_maintenance_requests', $json);
         $this->assertArrayHasKey('open_work_orders', $json);
-        $this->assertArrayHasKey('overdue_pm_rules', $json);
+        $this->assertArrayHasKey('overdue_pm_assignments', $json);
         $this->assertArrayHasKey('recently_closed_work_orders', $json);
     }
 }

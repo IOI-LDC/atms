@@ -6,6 +6,7 @@ use App\Enums\PmTriggerType;
 use App\Enums\RoleCode;
 use App\Models\Asset;
 use App\Models\AssetMeterReading;
+use App\Models\AssetPmAssignment;
 use App\Models\MaintenanceRequest;
 use App\Models\PmOccurrenceSuppression;
 use App\Models\PmRule;
@@ -45,52 +46,50 @@ class PmDueCalculatorTest extends TestCase
         ]);
     }
 
-    public function test_date_trigger_is_due_when_interval_exceeded(): void
+    private function createAssignment(Asset $asset, array $ruleAttrs = [], array $assignmentAttrs = []): AssetPmAssignment
     {
-        $asset = $this->createAsset();
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
+        $rule = PmRule::create(array_merge([
             'name' => 'Monthly inspection',
             'trigger_type' => PmTriggerType::DATE,
             'interval_days' => 30,
-            'last_triggered_date' => now()->subDays(31),
             'is_active' => true,
             'created_by' => $this->userId,
+        ], $ruleAttrs));
+
+        return AssetPmAssignment::create(array_merge([
+            'asset_id' => $asset->id,
+            'pm_rule_id' => $rule->id,
+            'is_active' => true,
+            'assigned_by' => $this->userId,
+        ], $assignmentAttrs));
+    }
+
+    public function test_date_trigger_is_due_when_interval_exceeded(): void
+    {
+        $asset = $this->createAsset();
+        $assignment = $this->createAssignment($asset, [], [
+            'last_triggered_date' => now()->subDays(31),
         ]);
 
-        $this->assertTrue($this->calculator->isDue($rule));
+        $this->assertTrue($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_date_trigger_not_due_within_interval(): void
     {
         $asset = $this->createAsset();
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Monthly inspection',
-            'trigger_type' => PmTriggerType::DATE,
-            'interval_days' => 30,
+        $assignment = $this->createAssignment($asset, [], [
             'last_triggered_date' => now()->subDays(15),
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
-        $this->assertFalse($this->calculator->isDue($rule));
+        $this->assertFalse($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_date_trigger_due_when_no_last_triggered_date(): void
     {
         $asset = $this->createAsset();
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'First run',
-            'trigger_type' => PmTriggerType::DATE,
-            'interval_days' => 30,
-            'last_triggered_date' => null,
-            'is_active' => true,
-            'created_by' => $this->userId,
-        ]);
+        $assignment = $this->createAssignment($asset);
 
-        $this->assertTrue($this->calculator->isDue($rule));
+        $this->assertTrue($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_reading_trigger_is_due_when_interval_exceeded(): void
@@ -98,18 +97,14 @@ class PmDueCalculatorTest extends TestCase
         $asset = $this->createAsset();
         $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
 
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Every 1000 hours',
+        $assignment = $this->createAssignment($asset, [
             'trigger_type' => PmTriggerType::READING,
             'interval_reading' => 1000,
             'usage_reading_type_id' => $readingType->id,
+        ], [
             'last_triggered_reading' => 5000,
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
-        // Create a confirmed reading at 6100
         AssetMeterReading::create([
             'asset_id' => $asset->id,
             'usage_reading_type_id' => $readingType->id,
@@ -120,7 +115,7 @@ class PmDueCalculatorTest extends TestCase
             'confirmed_at' => now(),
         ]);
 
-        $this->assertTrue($this->calculator->isDue($rule));
+        $this->assertTrue($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_reading_trigger_not_due_within_interval(): void
@@ -128,15 +123,12 @@ class PmDueCalculatorTest extends TestCase
         $asset = $this->createAsset();
         $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
 
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Every 1000 hours',
+        $assignment = $this->createAssignment($asset, [
             'trigger_type' => PmTriggerType::READING,
             'interval_reading' => 1000,
             'usage_reading_type_id' => $readingType->id,
+        ], [
             'last_triggered_reading' => 5000,
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
         AssetMeterReading::create([
@@ -149,7 +141,7 @@ class PmDueCalculatorTest extends TestCase
             'confirmed_at' => now(),
         ]);
 
-        $this->assertFalse($this->calculator->isDue($rule));
+        $this->assertFalse($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_reading_trigger_ignores_unconfirmed_readings(): void
@@ -157,18 +149,14 @@ class PmDueCalculatorTest extends TestCase
         $asset = $this->createAsset();
         $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
 
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Every 1000 hours',
+        $assignment = $this->createAssignment($asset, [
             'trigger_type' => PmTriggerType::READING,
             'interval_reading' => 1000,
             'usage_reading_type_id' => $readingType->id,
+        ], [
             'last_triggered_reading' => 5000,
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
-        // Unconfirmed reading at 6100 — should be ignored
         AssetMeterReading::create([
             'asset_id' => $asset->id,
             'usage_reading_type_id' => $readingType->id,
@@ -178,7 +166,7 @@ class PmDueCalculatorTest extends TestCase
             'confirmed_at' => null,
         ]);
 
-        $this->assertFalse($this->calculator->isDue($rule));
+        $this->assertFalse($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_date_or_reading_is_due_when_either_exceeded(): void
@@ -186,18 +174,15 @@ class PmDueCalculatorTest extends TestCase
         $asset = $this->createAsset();
         $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
 
-        // Date exceeded but reading not
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
+        $assignment = $this->createAssignment($asset, [
             'name' => 'Whichever comes first',
             'trigger_type' => PmTriggerType::DATE_OR_READING,
             'interval_days' => 30,
             'interval_reading' => 1000,
             'usage_reading_type_id' => $readingType->id,
+        ], [
             'last_triggered_date' => now()->subDays(31),
             'last_triggered_reading' => 5000,
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
         AssetMeterReading::create([
@@ -210,7 +195,7 @@ class PmDueCalculatorTest extends TestCase
             'confirmed_at' => now(),
         ]);
 
-        $this->assertTrue($this->calculator->isDue($rule));
+        $this->assertTrue($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_date_or_reading_not_due_when_neither_exceeded(): void
@@ -218,17 +203,15 @@ class PmDueCalculatorTest extends TestCase
         $asset = $this->createAsset();
         $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
 
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
+        $assignment = $this->createAssignment($asset, [
             'name' => 'Whichever comes first',
             'trigger_type' => PmTriggerType::DATE_OR_READING,
             'interval_days' => 30,
             'interval_reading' => 1000,
             'usage_reading_type_id' => $readingType->id,
+        ], [
             'last_triggered_date' => now()->subDays(10),
             'last_triggered_reading' => 5000,
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
         AssetMeterReading::create([
@@ -241,24 +224,18 @@ class PmDueCalculatorTest extends TestCase
             'confirmed_at' => now(),
         ]);
 
-        $this->assertFalse($this->calculator->isDue($rule));
+        $this->assertFalse($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_is_suppressed_blocks_due_date_trigger(): void
     {
         $asset = $this->createAsset();
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Monthly',
-            'trigger_type' => PmTriggerType::DATE,
-            'interval_days' => 30,
+        $assignment = $this->createAssignment($asset, [], [
             'last_triggered_date' => now()->subDays(31),
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
         PmOccurrenceSuppression::create([
-            'pm_rule_id' => $rule->id,
+            'pm_rule_id' => $assignment->pm_rule_id,
             'asset_id' => $asset->id,
             'maintenance_request_id' => MaintenanceRequest::create([
                 'number' => 'MR-SUP-'.uniqid(),
@@ -279,24 +256,18 @@ class PmDueCalculatorTest extends TestCase
             'reason' => 'Deferred',
         ]);
 
-        $this->assertFalse($this->calculator->isDue($rule));
+        $this->assertFalse($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 
     public function test_expired_suppression_allows_due(): void
     {
         $asset = $this->createAsset();
-        $rule = PmRule::create([
-            'asset_id' => $asset->id,
-            'name' => 'Monthly',
-            'trigger_type' => PmTriggerType::DATE,
-            'interval_days' => 30,
+        $assignment = $this->createAssignment($asset, [], [
             'last_triggered_date' => now()->subDays(31),
-            'is_active' => true,
-            'created_by' => $this->userId,
         ]);
 
         PmOccurrenceSuppression::create([
-            'pm_rule_id' => $rule->id,
+            'pm_rule_id' => $assignment->pm_rule_id,
             'asset_id' => $asset->id,
             'maintenance_request_id' => MaintenanceRequest::create([
                 'number' => 'MR-SUP-'.uniqid(),
@@ -317,6 +288,27 @@ class PmDueCalculatorTest extends TestCase
             'reason' => 'Was deferred',
         ]);
 
-        $this->assertTrue($this->calculator->isDue($rule));
+        $this->assertTrue($this->calculator->isDue($assignment->fresh()->load('pmRule')));
+    }
+
+    public function test_inactive_assignment_is_not_due(): void
+    {
+        $asset = $this->createAsset();
+        $assignment = $this->createAssignment($asset, [], [
+            'last_triggered_date' => now()->subDays(31),
+            'is_active' => false,
+        ]);
+
+        $this->assertFalse($this->calculator->isDue($assignment->fresh()->load('pmRule')));
+    }
+
+    public function test_active_assignment_with_inactive_template_is_not_due(): void
+    {
+        $asset = $this->createAsset();
+        $assignment = $this->createAssignment($asset, ['is_active' => false], [
+            'last_triggered_date' => now()->subDays(31),
+        ]);
+
+        $this->assertFalse($this->calculator->isDue($assignment->fresh()->load('pmRule')));
     }
 }

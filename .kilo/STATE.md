@@ -1,9 +1,20 @@
-# Session State — 2026-06-25
+# Session State — 2026-06-26
 
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
 ## Last Session Accomplished
+
+- **PM Rules 1:1 → M:N refactor (backend) — COMPLETE (2026-06-26):**
+  - `PmRule` is now a reusable schedule **template** (no `asset_id`); new `asset_pm_assignments` pivot (`AssetPmAssignment`) carries each asset's own `last_triggered_date`/`_reading`/`is_active`.
+  - Two-layer RBAC: template lifecycle (create/edit/deactivate/reactivate) Admin-only (`PmRulePolicy`); assignment assign/evaluate/deactivate/reactivate Admin **+ Manager** (`AssetPmAssignmentPolicy`). `SERVICE` retained for view endpoints.
+  - `PmDueCalculator`, `EvaluatePmRule`, `EvaluatePmRulesJob`, `OverduePmQuery`, `CloseWorkOrder` operate on assignments and double-gate on **both** assignment and template `is_active` (a retired template stops all PM work without cascade-deactivating assignments).
+  - New routes: `/assets/{asset}/pm-assignments/*` (scoped binding), `/pm-rules/{rule}/assignments` (coverage), `/pm-rules/evaluate-all` (structured `{evaluated, generated}`); removed `/pm-rules/{rule}/evaluate` and `/pm-rules/evaluate`. Dashboard key `overdue_pm_rules` → `overdue_pm_assignments`.
+  - Assignment deactivation clears still-effective suppression windows (date+reading → null) so reactivation isn't blocked by pre-deactivation windows (deviation from plan §7.8: null instead of `now()`, since the calculator uses `>= today`).
+  - WO closure resets the originating assignment's baselines + lower-level sibling assignments on the same asset (cumulative reset).
+  - **Test suite: 351 passed (891 assertions)** (was 327; 4 rewritten suites + 3 new test files).
+  - Docs synced: `CLAUDE.md`, `RBAC`, `SCOPE_CHANGE`, `BACKEND_API_REFERENCE`/`HANDOFF`, `JOBS_AND_SCHEDULER`, `ROLES_AND_PERMISSIONS`, `WORKFLOWS`, `SCREEN_INVENTORY`, `NAVIGATION`, `ROUTES`. Plan: `.kilo/plans/1782413031648-pm-rules-mn-refactor.md`.
+  - **Note:** frontend (views/composable/Asset Detail PM section) was implemented in the same session but is now out of the agent's scope — review/integration of frontend is the user's / frontend team's call.
 
 - **Locations Sidebar Backend Dependency — COMPLETE (2026-06-25):**
   - Implemented `GET /api/locations` read-only endpoint: active locations only (`is_active = true`), sorted by name, authorized for Admin/Manager/Logistics.
@@ -141,15 +152,20 @@ with a placeholder parts picker using demo data if VJ hasn't replied by then.
 
 ## Open Follow-ups
 
-- **Manager access to PM Rules (decided, pending implementation):** PM Rules lives
-  under the Admin sidebar item (`visibleTo: isAdmin`), so a Maintenance Manager
-  has no UI path to reach it despite `PmRulePolicy` granting view/evaluate and
-  the `/admin/pm-rules` guard being `requiresAdminOrManager`. The single PM-rule
-  creation point is `POST /api/pm-rules` (Admin-only); nothing else creates PM
-  rules. **Agreed direction: grant the Manager full Admin-area access** (all
-  three tabs). To implement: `AppSidebar.vue` `visibleTo`, the `requiresAdmin`
-  guards on `/admin/lists` & `/admin/users` in `router/index.ts`, and confirm
-  the Admin endpoints' policies match the intended scope. Canonical note:
+- **Manager access to PM template viewing (decided, pending implementation):**
+  Under the M:N model, **assignment** management (assign/evaluate/deactivate/
+  reactivate a template on an asset) is reachable by a Maintenance Manager from
+  the **Asset Detail** screen — so the Manager's `AssetPmAssignmentPolicy`
+  permissions are no longer dormant. The remaining gap is **template viewing**:
+  PM Rules (template management) lives under the Admin sidebar item
+  (`visibleTo: isAdmin`), and a Manager — who holds `view`/`viewAny` via
+  `PmRulePolicy` and passes the `requiresAdminOrManager` guard on
+  `/admin/pm-rules` — has no UI path to view templates. Template creation is
+  `POST /api/pm-rules` (Admin-only). **Agreed direction: grant the Manager full
+  Admin-area access** (all three tabs). To implement: `AppSidebar.vue`
+  `visibleTo`, the `requiresAdmin` guards on `/admin/lists` & `/admin/users` in
+  `router/index.ts`, and confirm the Admin endpoints' policies match the intended
+  scope. **Frontend work — out of the backend agent's scope.** Canonical note:
   `docs/03-backend/RBAC.md` (Known gap). Pointers in SCREEN_INVENTORY.md §7c and
   NAVIGATION.md §7.
 

@@ -1,15 +1,25 @@
 const BASE_URL = '/api'
 
 let csrfInitialized = false
+let csrfPromise: Promise<void> | null = null
 
+// Single-flight: when several mutations fire in parallel before the cookie is
+// set, they must share ONE /sanctum/csrf-cookie request. Firing one per call
+// races each response's Set-Cookie and can land requests on a fresh/empty
+// session (intermittent 401s).
 async function initCsrf(): Promise<void> {
   if (csrfInitialized) return
-  await fetch('/sanctum/csrf-cookie', { credentials: 'include' })
-  csrfInitialized = true
+  if (!csrfPromise) {
+    csrfPromise = fetch('/sanctum/csrf-cookie', { credentials: 'include' })
+      .then(() => { csrfInitialized = true })
+      .finally(() => { csrfPromise = null })
+  }
+  return csrfPromise
 }
 
 export function resetCsrf(): void {
   csrfInitialized = false
+  csrfPromise = null
 }
 
 function getXsrfToken(): string {
@@ -42,6 +52,7 @@ async function request<T>(
   path: string,
   body?: unknown,
   isForm = false,
+  isRetry = false,
 ): Promise<T> {
   const mutating = method !== 'GET'
 
@@ -73,6 +84,15 @@ async function request<T>(
   })
 
   if (response.status === 204) return undefined as T
+
+  // Stale CSRF token (long idle / session regeneration) surfaces as 419
+  // "Page Expired". Refresh the cookie once and replay the request before
+  // surfacing the failure — a silent retry is far better UX than a hard error.
+  if (response.status === 419 && !isRetry) {
+    resetCsrf()
+    await initCsrf()
+    return request<T>(method, path, body, isForm, true)
+  }
 
   const data = await response.json().catch(() => ({}))
 

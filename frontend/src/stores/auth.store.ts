@@ -27,18 +27,28 @@ export const useAuthStore = defineStore('auth', () => {
       .toUpperCase()
   })
 
+  // Single-flight: concurrent navigations (or a redirect racing a push) must
+  // share ONE /auth/me probe. Without this, a second guard run that fires while
+  // the first is in flight would skip the fetch and wrongly redirect to login.
+  let inflight: Promise<boolean> | null = null
+
   async function fetchCurrentUser(): Promise<boolean> {
+    if (inflight) return inflight
     loading.value = true
-    try {
-      const data = await api.get<{ user: User }>('/auth/me')
-      user.value = data.user
-      return true
-    } catch {
-      user.value = null
-      return false
-    } finally {
-      loading.value = false
-    }
+    inflight = (async () => {
+      try {
+        const data = await api.get<{ user: User }>('/auth/me')
+        user.value = data.user
+        return true
+      } catch {
+        user.value = null
+        return false
+      } finally {
+        loading.value = false
+        inflight = null
+      }
+    })()
+    return inflight
   }
 
   async function login(email: string, password: string): Promise<void> {

@@ -12,9 +12,9 @@ import {
 } from '@/components/ui/dialog'
 import { usePmRules } from '@/composables/usePmRules'
 import { useAuthStore } from '@/stores/auth.store'
-import { pmStatusClass, pmStatusLabel, pmLevelClass, fmtDate } from '@/lib/displayHelpers'
+import { pmLevelClass } from '@/lib/displayHelpers'
 import { pmScheduleText } from '@/lib/pmSchedule'
-import { Pencil, ToggleLeft, ToggleRight, Play } from '@lucide/vue'
+import { Pencil, ToggleLeft, ToggleRight } from '@lucide/vue'
 import type { AppColumnDef } from '@/lib/appTable'
 import type { PmRule } from '@/types'
 import type { PmRulePayload } from '@/composables/usePmRules'
@@ -27,7 +27,7 @@ const {
   readingTypes, loadReadingTypes,
   saving, validationErrors, createRule, createRulesBatch, updateRule,
   acting, deactivateRule, reactivateRule,
-  evaluating, evaluateRule, evaluateAll,
+  evaluating, evaluateAll,
 } = usePmRules()
 
 // ── Status filter ─────────────────────────────────────────────────────────────
@@ -41,27 +41,18 @@ const filteredRules = computed<PmRule[]>(() => {
 
 // ── Columns ───────────────────────────────────────────────────────────────────
 const columns: AppColumnDef<PmRule>[] = [
-  { field: 'name',            header: 'Rule Name',      sortable: true, minWidth: 180 },
-  { field: 'asset',           header: 'Asset',          sortable: false, minWidth: 160 },
-  { field: 'maintenance_level', header: 'Level',        sortable: false, align: 'center' },
-  { field: 'schedule',        header: 'Schedule',       sortable: false, minWidth: 220 },
-  { field: 'pm_status',       header: 'Status',         sortable: false, align: 'center' },
-  { field: 'last_triggered',  header: 'Last Triggered', sortable: false, align: 'center' },
-  { field: 'is_active',       header: 'Active',         sortable: true, align: 'center' },
-  { field: 'actions',         header: '',               sortable: false, align: 'center', minWidth: 120 },
+  { field: 'name',              header: 'Template',      sortable: true, minWidth: 180 },
+  { field: 'maintenance_level', header: 'Level',         sortable: false, align: 'center' },
+  { field: 'schedule',          header: 'Schedule',      sortable: false, minWidth: 220 },
+  { field: 'assignments_count', header: 'Assets',        sortable: false, align: 'center' },
+  { field: 'is_active',         header: 'Active',        sortable: true, align: 'center' },
+  { field: 'actions',           header: '',              sortable: false, align: 'center', minWidth: 120 },
 ]
 
 onMounted(() => {
   loadRules()
   if (canConfigure.value) loadReadingTypes()
 })
-
-function lastTriggered(rule: PmRule): string {
-  if (rule.trigger_type === 'reading') {
-    return rule.last_triggered_reading != null ? String(rule.last_triggered_reading) : '—'
-  }
-  return fmtDate(rule.last_triggered_date)
-}
 
 // ── Create / Edit form ────────────────────────────────────────────────────────
 const formOpen = ref(false)
@@ -94,7 +85,7 @@ async function onSaveSingle(payload: PmRulePayload) {
     ? await updateRule(editing.value.id, payload)
     : await createRule(payload)
   if (result) {
-    toast.success(editing.value ? 'PM rule updated.' : 'PM rule created.')
+    toast.success(editing.value ? 'PM template updated.' : 'PM template created.')
     await loadRules(true)
     closeForm()
   }
@@ -107,22 +98,10 @@ async function onSaveMulti(payloads: PmRulePayload[]) {
   const failed = results.length - created
   await loadRules(true)
   if (failed === 0) {
-    toast.success(`Created ${created} PM rules.`)
+    toast.success(`Created ${created} PM templates.`)
     closeForm()
   } else {
     toast.warning(`Created ${created}, ${failed} failed. Review the highlighted rows.`)
-  }
-}
-
-// ── Evaluate (single) ─────────────────────────────────────────────────────────
-async function onEvaluate(rule: PmRule) {
-  const res = await evaluateRule(rule.id)
-  if (!res.ok) { toast.error(res.message ?? 'Evaluation failed.'); return }
-  if (res.data) {
-    toast.success(`PM request generated for ${rule.name}.`)
-    await loadRules(true)
-  } else {
-    toast.info(res.message ?? 'PM rule is not due.')
   }
 }
 
@@ -131,9 +110,8 @@ const evaluateAllOpen = ref(false)
 
 async function confirmEvaluateAll() {
   const res = await evaluateAll()
-  if (res.ok) {
-    toast.success(res.message ?? 'Evaluation complete.')
-    await loadRules(true)
+  if (res.ok && res.result) {
+    toast.success(`Evaluated ${res.result.evaluated} assignment${res.result.evaluated === 1 ? '' : 's'} — generated ${res.result.generated} request${res.result.generated === 1 ? '' : 's'}.`)
   } else {
     toast.error(res.message ?? 'Evaluation failed.')
   }
@@ -154,12 +132,12 @@ async function confirmToggle() {
   const t = toggleTarget.value
   const res = t.is_active ? await deactivateRule(t.id) : await reactivateRule(t.id)
   if (res.ok) {
-    toast.success(t.is_active ? 'PM rule deactivated.' : 'PM rule reactivated.')
+    toast.success(t.is_active ? 'PM template deactivated.' : 'PM template reactivated.')
     await loadRules(true)
     toggleOpen.value = false
     toggleTarget.value = null
   } else {
-    // 409 — active MR/WO chain blocks deactivation. Keep dialog open to show why.
+    // 409 — an assignment for this template has an active MR/WO chain.
     toast.error(res.message ?? 'Action failed.')
   }
 }
@@ -180,10 +158,10 @@ async function confirmToggle() {
         </Select>
       </div>
       <div class="filter-actions">
-        <Button variant="outline" :disabled="evaluating" @click="evaluateAllOpen = true">
+        <Button v-if="canConfigure" variant="outline" :disabled="evaluating" @click="evaluateAllOpen = true">
           {{ evaluating ? 'Evaluating…' : 'Evaluate All' }}
         </Button>
-        <Button v-if="canConfigure" @click="openCreate">Create Rule</Button>
+        <Button v-if="canConfigure" @click="openCreate">Create Template</Button>
       </div>
     </div>
 
@@ -193,8 +171,8 @@ async function confirmToggle() {
         :key="statusFilter"
         :rows="filteredRules"
         :columns="columns"
-        empty-text="No PM rules defined."
-        label="PM Rules"
+        empty-text="No PM templates defined."
+        label="PM Templates"
         :loading="rulesLoading"
       >
         <template #cell="{ column, row }">
@@ -203,12 +181,6 @@ async function confirmToggle() {
             :to="`/admin/pm-rules/${row.id}`"
             class="table-link"
           >{{ row.name }}</RouterLink>
-
-          <RouterLink
-            v-else-if="column.field === 'asset'"
-            :to="`/assets/${row.asset.id}`"
-            class="table-link"
-          >{{ row.asset.name }}</RouterLink>
 
           <span v-else-if="column.field === 'maintenance_level'">
             <span v-if="row.maintenance_level" :class="pmLevelClass(row.maintenance_level)">
@@ -221,12 +193,8 @@ async function confirmToggle() {
             {{ pmScheduleText(row) }}
           </span>
 
-          <span v-else-if="column.field === 'pm_status'" :class="pmStatusClass(row.pm_status)">
-            {{ pmStatusLabel(row.pm_status) }}
-          </span>
-
-          <span v-else-if="column.field === 'last_triggered'" class="table-cell-secondary">
-            {{ lastTriggered(row) }}
+          <span v-else-if="column.field === 'assignments_count'" class="table-cell-secondary">
+            {{ row.assignments_count ?? 0 }}
           </span>
 
           <span
@@ -235,15 +203,6 @@ async function confirmToggle() {
           >{{ row.is_active ? 'Active' : 'Inactive' }}</span>
 
           <div v-else-if="column.field === 'actions'" class="table-row-actions">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              :disabled="evaluating || !row.is_active"
-              :aria-label="`Evaluate ${row.name} now`"
-              @click="onEvaluate(row)"
-            >
-              <Play />
-            </Button>
             <Button
               v-if="canConfigure"
               variant="outline"
@@ -284,9 +243,9 @@ async function confirmToggle() {
     <Dialog v-model:open="evaluateAllOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Evaluate All PM Rules</DialogTitle>
+          <DialogTitle>Evaluate All PM Assignments</DialogTitle>
           <DialogDescription>
-            Run every active PM rule now. Due rules will generate preventive maintenance requests immediately.
+            Run every active assignment now. Due assignments will generate preventive maintenance requests immediately.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -302,11 +261,11 @@ async function confirmToggle() {
     <Dialog v-model:open="toggleOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{ toggleTarget?.is_active ? 'Deactivate PM Rule' : 'Reactivate PM Rule' }}</DialogTitle>
+          <DialogTitle>{{ toggleTarget?.is_active ? 'Deactivate PM Template' : 'Reactivate PM Template' }}</DialogTitle>
           <DialogDescription v-if="toggleTarget">
             {{ toggleTarget.is_active
-              ? `Deactivate "${toggleTarget.name}"? It will stop generating maintenance requests. Blocked if an active request or work order from this rule still exists.`
-              : `Reactivate "${toggleTarget.name}"? It will resume generating maintenance requests when due.` }}
+              ? `Deactivate "${toggleTarget.name}"? It will stop generating maintenance requests for all its assignments. Existing assignments stay on record. Blocked if any assignment has an active request or work order.`
+              : `Reactivate "${toggleTarget.name}"? Its active assignments will resume generating maintenance requests when due.` }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

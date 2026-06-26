@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
+use App\Http\Resources\AssetPmAssignmentResource;
 use App\Http\Resources\MaintenanceRequestResource;
-use App\Http\Resources\PmRuleResource;
 use App\Http\Resources\WorkOrderResource;
 use App\Models\MaintenanceRequest;
 use App\Models\WorkOrder;
@@ -60,9 +60,9 @@ class DashboardController extends Controller
         }
 
         if ($showOverduePm) {
-            $overdueRules = app(OverduePmQuery::class)->execute(5);
-            $summary['overdue_pm_rules'] = $overdueRules->count();
-            $widgets['overdue_pm_rules'] = PmRuleResource::collection($overdueRules)->resolve($request);
+            $overdueAssignments = app(OverduePmQuery::class)->execute(5);
+            $summary['overdue_pm_assignments'] = $overdueAssignments->count();
+            $widgets['overdue_pm_assignments'] = AssetPmAssignmentResource::collection($overdueAssignments)->resolve($request);
         }
 
         if ($showRecentlyClosed) {

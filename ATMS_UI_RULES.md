@@ -399,15 +399,17 @@ Keep the debounced fetch in a composable (`useXxxSearch`), returning
 component only owns popover open-state + `v-model` selection + keyboard nav
 (view orchestration).
 
-### 8.3 THE CRITICAL RULE — Popover Inside a Modal Sheet / Dialog
+### 8.3 THE CRITICAL RULE — Portaled Widget (Popover / Select / DropdownMenu) Inside a Modal Sheet / Dialog
 
-A reka-ui **modal** `Dialog`/`Sheet` activates three mechanisms:
+A reka-ui **modal** `Dialog`/`Sheet` activates three mechanisms. Any widget that
+**portals its content to `<body>`** — `Popover`/Combobox, **`Select`**,
+`DropdownMenu` — sits outside the dialog's DOM and trips them:
 
 1. **`useHideOthers`** — sets `aria-hidden="true"` on everything outside the
-   dialog content. If a `Popover` is portaled to `<body>` (outside the dialog),
-   it gets `aria-hidden`, making any focusable input inside it inaccessible
-   (browser warns: *"Blocked aria-hidden on an element because its descendant
-   retained focus"*).
+   dialog content. A widget portaled to `<body>` gets `aria-hidden`, making any
+   focusable element inside it inaccessible. When the dialog's own trigger still
+   holds focus, the browser blocks it and warns: *"Blocked aria-hidden on an
+   element because its descendant retained focus"*.
 2. **Focus trap** (`FocusScope` with `trapped: true`) — bounces focus back
    into the dialog. The portaled popover input is outside the dialog's DOM, so
    focus never lands there.
@@ -422,11 +424,25 @@ A reka-ui **modal** `Dialog`/`Sheet` activates three mechanisms:
 | Make the **Sheet non-modal** (`:modal="false"`) | ✅ Works — removes all three blocking mechanisms. The overlay/X/Esc still close it. Trade-off: loses focus trap (Tab escapes the sheet). Acceptable for form sheets. |
 | Make the **Popover modal** (`<Popover modal>`) | ❌ Fails — `useHideOthers` from the Sheet STILL hides the portaled popover (aria-hidden war), even with the FocusScope stack pause. The browser blocks the popover's input. |
 
-**Default to `:modal="false"` on any Sheet that contains a portaled widget**
-(Combobox, Select, DropdownMenu). For a popover that MUST live inside a modal
-Sheet, the only robust alternative is to render it **inline** (no `PopoverPortal`
-→ `position: absolute` within the sheet), but that loses reka-ui's built-in
-positioning.
+**Two sanctioned fixes — pick by overlay type:**
+
+| Overlay | Fix | Why |
+|---|---|---|
+| **Sheet** (create/edit form, usually scrollable) | `:modal="false"` on the `Sheet` | Removes all three mechanisms. Loses the focus trap (Tab can leave the sheet) — acceptable for forms. Keeps the portal, so dropdowns are **never clipped** by the sheet's `overflow-y: auto` body. This is the default for any Sheet with a portaled widget. |
+| **Modal Dialog** (short, non-scrolling) | Keep it modal; render the widget **inline** instead of portaled | Inline content lives *inside* the dialog DOM, so `useHideOthers`, the focus trap, and `disableOutsidePointerEvents` all treat it as in-scope. Preserves the focus trap (better a11y for a true modal). |
+
+For `Select`, the inline route is a first-class prop — **`<SelectContent disable-portal>`** (added to `components/ui/select/SelectContent.vue`; it sets `<SelectPortal :disabled>`). Use it for a `Select` inside a **modal `Dialog`**.
+
+> ⚠️ **`disable-portal` clipping caveat.** An inline (non-portaled) dropdown is
+> laid out within the overlay's DOM, so it can be **clipped by an `overflow`
+> ancestor** (e.g. a scrolling `.create-sheet-body`). Only use `disable-portal`
+> in a **non-scrolling** overlay (a short confirm-style Dialog). For a scrolling
+> Sheet, prefer `:modal="false"` and keep the portal.
+
+**Reference implementations:** Assign-Rule picker → `Select` in a modal Dialog
+uses `disable-portal` ([`AssetPmSection.vue`](frontend/src/components/assets/AssetPmSection.vue)).
+PM template form → `Select`s in a scrolling Sheet use `:modal="false"`
+([`PmRuleForm.vue`](frontend/src/components/pm-rules/PmRuleForm.vue)).
 
 ---
 

@@ -179,7 +179,9 @@ Parts are owned by the **SM (Store Management)** subsystem. ERP syncs parts into
 
 ### PM (Preventive Maintenance)
 
-`EvaluatePmRulesJob` runs daily (via scheduler) and generates PM Maintenance Requests when rules are due. PM trigger types: `date`, `reading`, `date_or_reading`. PM rules apply to individual ATMS-managed assets only (not categories or asset-types).
+`EvaluatePmRulesJob` runs daily (via scheduler) and generates PM Maintenance Requests when assignments are due. PM trigger types: `date`, `reading`, `date_or_reading`. PM rules are reusable schedule *templates* assigned to individual ATMS-managed assets (not categories or asset-types) — each assignment tracks its own compliance on the `asset_pm_assignments` pivot.
+
+> **M:N model (implemented):** a **PM Rule** is a reusable schedule *template* (no `asset_id`, no per-rule compliance state). An **Assignment** (`asset_pm_assignments`, model `AssetPmAssignment`) links one template to one asset and carries that asset's own `last_triggered_date` / `last_triggered_reading` / `is_active`. Template lifecycle (create/edit/deactivate/reactivate) is Administrator-only (`PmRulePolicy`); assigning a template to an asset and evaluating/deactivating/reactivating an assignment is Admin **+ Maintenance Manager** (`AssetPmAssignmentPolicy`). The daily job, `PmDueCalculator`, and the overdue query iterate **active assignments whose template is also active** and gate on both. WO closure resets the originating assignment's baselines (and lower-level sibling assignments on the same asset). This is still explicit per-asset assignment — **not** category/type auto-apply. See `.kilo/plans/1782413031648-pm-rules-mn-refactor.md`.
 
 ### Maintenance history
 
@@ -293,7 +295,7 @@ Five human roles (Administrator, Maintenance Manager, Technician, Logistics, Req
 
 ## Out of scope (MVP)
 
-Do not add: labor hours/rates/costs/timesheets, category-level or template-level PM rules, Redis, MinIO, SharePoint SSO, or Microsoft Entra SSO. Parts inventory, stock movement, and warehouse operations are owned by the SM (Store Management) subsystem. Asset physical movement tracking and location history are owned by the AM (Asset Movement) subsystem. The Logistics role handles AM movement approval/confirmation but does not introduce gate passes, shipment documents, or custody workflows within ATMS.
+Do not add: labor hours/rates/costs/timesheets, category-level or template-level PM rules, Redis, MinIO, SharePoint SSO, or Microsoft Entra SSO. (Scope clarification: "category-level or template-level PM rules" here means a rule that auto-applies to all assets of a category/type with no explicit assignment step. The planned reusable-template model — where each template is explicitly assigned to each individual asset via `asset_pm_assignments` — is a refinement of the per-asset constraint and is **in scope**; see `.kilo/plans/1782413031648-pm-rules-mn-refactor.md`.) Parts inventory, stock movement, and warehouse operations are owned by the SM (Store Management) subsystem. Asset physical movement tracking and location history are owned by the AM (Asset Movement) subsystem. The Logistics role handles AM movement approval/confirmation but does not introduce gate passes, shipment documents, or custody workflows within ATMS.
 
 ## New endpoints (added 2026-06-23)
 

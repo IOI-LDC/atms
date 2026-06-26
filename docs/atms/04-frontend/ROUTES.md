@@ -137,8 +137,10 @@ Location Update" tab links to this drill-down from each asset row.
 - **`lists`** — All configurable dropdown values including locations, asset
   statuses, maintenance priorities, usage reading types, work order statuses,
   asset maintenance sub-statuses, and other master-data items.
-- **`pm-rules`** — Preventive maintenance rule configuration per individual
-  asset. PM rule creation and editing are side-sheet or inline operations
+- **`pm-rules`** — PM **template** management (Admin): create/edit/deactivate/
+  reactivate reusable maintenance schedule templates. Templates are asset-agnostic;
+  they are assigned to assets from the Asset Detail screen (PM Rules section).
+  Template creation and editing are side-sheet operations within this tab.
   within this tab, not separate routes.
 
 PM Rules is no longer a top-level route (`/pm-rules`).

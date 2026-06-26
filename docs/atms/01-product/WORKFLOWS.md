@@ -28,9 +28,9 @@ request cannot be cancelled; the Work Order cancellation workflow applies.
 
 Preventive Maintenance is system-initiated.
 
-1. PM Rule is configured for an ATMS-managed asset.
-2. System checks PM rules on a scheduled basis.
-3. When criteria are met, the system checks that the PM Rule has no active maintenance chain.
+1. A PM Rule **template** is configured (schedule definition, no asset). An Administrator or Maintenance Manager **assigns** the template to an ATMS-managed asset (`asset_pm_assignments`), which seeds the asset's own baseline.
+2. System checks active assignments (whose template is also active) on a scheduled basis.
+3. When criteria are met, the system checks that the assignment has no active maintenance chain.
 4. If no active chain exists, the system creates one Preventive Maintenance Request.
 5. Maintenance Manager reviews the request.
 6. Maintenance Manager approves or rejects the request.
@@ -41,16 +41,16 @@ Preventive Maintenance is system-initiated.
 11. Asset readings and status are updated where applicable.
 12. Technician marks the Work Order as completed.
 13. Maintenance Manager or Administrator reviews and closes the Work Order.
-14. PM rule baseline is updated using closure date and/or latest reading.
-    If the PM rule has a standard L1-L4 maintenance level, all active
-    lower-level PM rules on the same asset are also reset to maintain
+14. The originating **assignment's** baseline is updated using closure date and/or latest reading.
+    If the template has a standard L1-L4 maintenance level, all active lower-level
+    **assignments** on the same asset are also reset to maintain
     cumulative maintenance alignment (e.g. closing L3 resets L1 and L2
-    baselines). Custom free-text levels are independent.
+    assignment baselines). Custom free-text levels are independent.
 15. The closed Work Order appears in the asset maintenance history read model.
 
-An active maintenance chain exists when the PM Rule has:
+An active maintenance chain exists when the assignment has:
 
-- A `pending_review` Maintenance Request, or
+- A `pending_review` Maintenance Request (same asset + template), or
 - A converted Work Order in `open`, `in_progress`, or `completed`
 
 Rejected or cancelled preventive requests create an occurrence suppression
@@ -109,7 +109,7 @@ ATMS does not write location data directly. This workflow does not create gate p
 6. If submitted by a Requester or Logistics user, the reading remains unverified until an Administrator, Maintenance Manager, or Technician confirms it.
 7. Confirmation rejects a reading lower than the latest confirmed reading for the same asset and reading type.
 8. Only confirmed readings update the asset's current meter value.
-9. PM rule evaluation uses only the latest confirmed readings.
+9. PM evaluation uses only the latest confirmed readings.
 
 No reading status workflow is required. A reading is considered confirmed only
 when its confirmation user and timestamp are present.
@@ -173,7 +173,7 @@ Corrections require a new valid reading and an Administrator audit note.
    Administrator.
 4. Indicators are computed from: (parent's current confirmed reading − reading
    at component's install time from `asset_assembly_history`) vs the component's
-   own PM rule interval.
+   own assigned PM template interval.
 
 ### Removed Component Maintenance
 

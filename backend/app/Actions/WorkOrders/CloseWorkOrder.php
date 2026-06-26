@@ -5,7 +5,7 @@ namespace App\Actions\WorkOrders;
 use App\Enums\PmTriggerType;
 use App\Enums\WorkOrderStatus;
 use App\Models\AssetMeterReading;
-use App\Models\PmRule;
+use App\Models\AssetPmAssignment;
 use App\Models\WorkOrder;
 use App\Services\Audit\AuditLogger;
 use DomainException;
@@ -34,14 +34,18 @@ class CloseWorkOrder
 
             $mr = $locked->maintenanceRequest;
             if ($mr && $mr->pm_rule_id) {
-                $pmRule = PmRule::find($mr->pm_rule_id);
-                if ($pmRule) {
-                    $beforeRule = $pmRule->toArray();
+                $assignment = AssetPmAssignment::where('pm_rule_id', $mr->pm_rule_id)
+                    ->where('asset_id', $mr->asset_id)
+                    ->first();
+
+                if ($assignment) {
+                    $assignment->load('pmRule');
+                    $beforeAssignment = $assignment->toArray();
                     $update = ['last_triggered_date' => now()->toDateString()];
 
-                    if ($pmRule->trigger_type === PmTriggerType::READING || $pmRule->trigger_type === PmTriggerType::DATE_OR_READING) {
-                        $latestConfirmed = AssetMeterReading::where('asset_id', $pmRule->asset_id)
-                            ->where('usage_reading_type_id', $pmRule->usage_reading_type_id)
+                    if (in_array($assignment->pmRule?->trigger_type, [PmTriggerType::READING, PmTriggerType::DATE_OR_READING])) {
+                        $latestConfirmed = AssetMeterReading::where('asset_id', $assignment->asset_id)
+                            ->where('usage_reading_type_id', $assignment->pmRule->usage_reading_type_id)
                             ->whereNotNull('confirmed_at')
                             ->orderByDesc('reading_at')
                             ->value('reading_value');
@@ -51,10 +55,10 @@ class CloseWorkOrder
                         }
                     }
 
-                    $pmRule->update($update);
-                    $logger->log('close_work_order_update_pm_rule', $pmRule, $beforeRule, $pmRule->fresh()->toArray());
+                    $assignment->update($update);
+                    $logger->log('close_work_order_update_pm_assignment', $assignment, $beforeAssignment, $assignment->fresh()->toArray());
 
-                    $this->resetLowerLevelPmRules($pmRule, $logger);
+                    $this->resetLowerLevelAssignments($assignment, $logger);
                 }
             }
 
@@ -64,25 +68,28 @@ class CloseWorkOrder
 
     /**
      * Cumulative maintenance: when a higher-level PM (e.g. L3) closes, reset the
-     * baselines of all active lower-level PM rules (L1, L2) on the same asset so
-     * the lower-level cycle restarts from this maintenance event. Only applies to
-     * the standard L1-L4 levels (parses numeric suffix); custom levels are skipped.
+     * baselines of all active lower-level assignments (L1, L2) on the same asset
+     * so the lower-level cycle restarts from this maintenance event. Only applies
+     * to the standard L1-L4 levels (parses numeric suffix); custom levels skipped.
      */
-    private function resetLowerLevelPmRules(PmRule $pmRule, AuditLogger $logger): void
+    private function resetLowerLevelAssignments(AssetPmAssignment $assignment, AuditLogger $logger): void
     {
-        if (! $pmRule->maintenance_level || ! preg_match('/^L([1-4])$/', $pmRule->maintenance_level, $matches)) {
+        $level = $assignment->pmRule?->maintenance_level;
+
+        if (! $level || ! preg_match('/^L([1-4])$/', $level, $matches)) {
             return;
         }
 
         $currentLevel = (int) $matches[1];
 
-        $lowerRules = PmRule::where('asset_id', $pmRule->asset_id)
-            ->where('id', '!=', $pmRule->id)
+        $lowerAssignments = AssetPmAssignment::where('asset_id', $assignment->asset_id)
+            ->where('id', '!=', $assignment->id)
             ->where('is_active', true)
+            ->with('pmRule')
             ->get();
 
-        foreach ($lowerRules as $lowerRule) {
-            if (! preg_match('/^L([1-4])$/', $lowerRule->maintenance_level ?? '', $lowerMatches)) {
+        foreach ($lowerAssignments as $lowerAssignment) {
+            if (! preg_match('/^L([1-4])$/', $lowerAssignment->pmRule?->maintenance_level ?? '', $lowerMatches)) {
                 continue;
             }
 
@@ -90,21 +97,23 @@ class CloseWorkOrder
                 continue;
             }
 
-            $beforeLower = $lowerRule->toArray();
+            $beforeLower = $lowerAssignment->toArray();
             $reset = ['last_triggered_date' => now()->toDateString()];
 
-            $latestConfirmed = AssetMeterReading::where('asset_id', $lowerRule->asset_id)
-                ->where('usage_reading_type_id', $lowerRule->usage_reading_type_id)
-                ->whereNotNull('confirmed_at')
-                ->orderByDesc('reading_at')
-                ->value('reading_value');
+            if (in_array($lowerAssignment->pmRule?->trigger_type, [PmTriggerType::READING, PmTriggerType::DATE_OR_READING])) {
+                $latestConfirmed = AssetMeterReading::where('asset_id', $lowerAssignment->asset_id)
+                    ->where('usage_reading_type_id', $lowerAssignment->pmRule->usage_reading_type_id)
+                    ->whereNotNull('confirmed_at')
+                    ->orderByDesc('reading_at')
+                    ->value('reading_value');
 
-            if ($latestConfirmed !== null) {
-                $reset['last_triggered_reading'] = $latestConfirmed;
+                if ($latestConfirmed !== null) {
+                    $reset['last_triggered_reading'] = $latestConfirmed;
+                }
             }
 
-            $lowerRule->update($reset);
-            $logger->log('close_work_order_reset_pm_rule', $lowerRule, $beforeLower, $lowerRule->fresh()->toArray());
+            $lowerAssignment->update($reset);
+            $logger->log('close_work_order_reset_pm_assignment', $lowerAssignment, $beforeLower, $lowerAssignment->fresh()->toArray());
         }
     }
 }

@@ -106,7 +106,7 @@ component detail screens.
 - Only Administrator can manage ERP connection and synchronization schedule settings.
 - Only Administrator can change company settings such as the display timezone.
 - Only Administrator can view raw ERP payloads.
-- Only Administrator can create, edit, deactivate, or reactivate PM Rules. Maintenance Manager may view PM rules and trigger manual evaluation.
+- Only Administrator can create, edit, deactivate, or reactivate PM Rule **templates**. Administrator and Maintenance Manager may view templates, assign a template to an asset, and evaluate/deactivate/reactivate an assignment (per asset).
 - Parts reference data is owned by SM. ATMS reads parts from SM tables for work order part-request forms.
 - Assets are managed fully within ATMS — there is no ERP asset source.
 - Technicians can mark only their assigned Work Orders as completed.

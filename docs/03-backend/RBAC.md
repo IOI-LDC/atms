@@ -63,8 +63,9 @@ rules.
 | Mark assigned WO completed | Yes | Yes | Assigned only | No | No |
 | Close completed WO | Yes | Yes | No | No | No |
 | Cancel non-closed WO | Yes | Yes | No | No | No |
-| Configure PM rules (create/edit/deactivate/reactivate) | Yes | No | No | No | No |
-| View PM rules / run PM evaluation | Yes | Yes | No | No | No |
+| Manage PM templates (create/edit/deactivate/reactivate) | Yes | No | No | No | No |
+| View PM templates | Yes | Yes | No | No | No |
+| Assign PM templates to assets; deactivate/reactivate/evaluate assignments | Yes | Yes | No | No | No |
 | Manage users | Yes | No | No | No | No |
 | View user list (for WO assignment) | Yes | Yes | No | No | No |
 | Import SharePoint employees | Yes | No | No | No | No |
@@ -126,17 +127,12 @@ rules.
 - Requester-submitted meter readings remain unverified.
 - Only Administrator, Maintenance Manager, or Technician may confirm a meter reading.
 - Only confirmed meter readings update current meter values or participate in PM calculations.
-- PM rule configuration (create, edit, deactivate, reactivate) is Administrator-only. Maintenance Manager may view PM rules and run PM evaluation manually, but cannot modify rule definitions.
-- Cumulative maintenance: when a higher-level PM work order (L2/L3/L4) closes, the baselines of all active lower-level PM rules (L1, etc.) on the same asset are reset. This applies only to the standard L1-L4 level scheme; custom free-text levels are independent.
+- PM rules are reusable schedule **templates** (M:N). Template lifecycle (create, edit, deactivate, reactivate) is Administrator-only (`PmRulePolicy`). Assigning a template to an asset and evaluating/deactivating/reactivating an assignment (`AssetPmAssignmentPolicy`) is Administrator **+ Maintenance Manager**. A retired template (`is_active = false`) stops all PM evaluation for its assignments without deactivating the assignments themselves.
+- Cumulative maintenance: when a higher-level PM work order (L2/L3/L4) closes, the baselines of all active lower-level PM **assignments** (L1, etc.) on the same asset are reset. This applies only to the standard L1-L4 level scheme; custom free-text levels are independent.
 
-> **Known gap — Manager access to PM Rules (DECIDED, pending implementation):**
-> PM Rules lives under the **Admin** sidebar item, whose `visibleTo` is
-> currently `isAdmin` only. As a result a Maintenance Manager — who is granted
-> `view`/`viewAny`/`evaluate` by `PmRulePolicy` and passes the
-> `requiresAdminOrManager` guard on `/admin/pm-rules` — has **no UI path** to
-> reach PM Rules; the permission is effectively dormant. The single PM-rule
-> creation point in the system is `POST /api/pm-rules` (`PmRuleController::store`,
-> Admin-only); no other controller or Action creates PM rules.
+> **Known gap — Manager access to PM template management (decided, pending UI):**
+> Under the M:N model, **assignment** management (assign/evaluate/deactivate/reactivate a template on an asset) is reachable by a Maintenance Manager from the **Asset Detail** screen, which Managers already see in the sidebar — so the Manager's `AssetPmAssignmentPolicy` permissions are no longer dormant.
+> **Template** management (create/edit/deactivate/reactivate), however, lives under the **Admin** sidebar item, whose `visibleTo` is `isAdmin` only. A Maintenance Manager is granted `view`/`viewAny` by `PmRulePolicy` and passes the `requiresAdminOrManager` guard on `/admin/pm-rules`, but has **no UI path** to view PM templates; that view permission is effectively dormant from the UI. The template-creation point is `POST /api/pm-rules` (`PmRuleController::store`, Admin-only).
 >
 > **Agreed direction:** grant the Maintenance Manager access to the full Admin
 > area (Users & Access, Lists & Dropdowns, and PM Rules tabs), rather than

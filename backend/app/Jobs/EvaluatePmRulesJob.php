@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Pm\EvaluatePmRule;
-use App\Models\PmRule;
+use App\Models\AssetPmAssignment;
 use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,22 +27,24 @@ class EvaluatePmRulesJob implements ShouldBeUnique, ShouldQueue
         $systemUser = User::where('email', 'system@atms.internal')->first();
         $triggeredByUserId = $systemUser?->id ?? throw new \RuntimeException('System user not found. Run db:seed.');
 
-        $rules = PmRule::where('is_active', true)
+        $assignments = AssetPmAssignment::where('is_active', true)
+            ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
             ->whereHas('asset', fn ($q) => $q->where('maintenance_status', 'Active'))
+            ->with('pmRule')
             ->get();
         $generated = 0;
 
-        foreach ($rules as $rule) {
+        foreach ($assignments as $assignment) {
             try {
-                $mr = $action->execute($rule, $triggeredByUserId);
+                $mr = $action->execute($assignment, $triggeredByUserId);
                 if ($mr !== null) {
                     $generated++;
                 }
             } catch (\DomainException $e) {
-                Log::info("PM evaluation skipped rule {$rule->id}: {$e->getMessage()}");
+                Log::info("PM evaluation skipped assignment {$assignment->id}: {$e->getMessage()}");
             }
         }
 
-        Log::info("PM evaluation completed: {$generated} requests generated from {$rules->count()} rules.");
+        Log::info("PM evaluation completed: {$generated} requests generated from {$assignments->count()} assignments.");
     }
 }

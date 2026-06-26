@@ -3,6 +3,7 @@ import { computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeftIcon, PaperclipIcon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
+import AssetPmSection from '@/components/assets/AssetPmSection.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -388,6 +389,13 @@ watch(
             </ul>
           </div>
         </div>
+
+        <!-- ── PM Rules (Admin / Manager) ───────────────────────────────────── -->
+        <AssetPmSection
+          v-if="auth.isAdminOrManager && record"
+          :asset-id="record.id"
+          :can-manage="auth.isAdminOrManager"
+        />
 
       </template>
     </div>

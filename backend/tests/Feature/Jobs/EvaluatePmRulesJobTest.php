@@ -5,6 +5,7 @@ namespace Tests\Feature\Jobs;
 use App\Actions\Pm\EvaluatePmRule;
 use App\Jobs\EvaluatePmRulesJob;
 use App\Models\Asset;
+use App\Models\AssetPmAssignment;
 use App\Models\Location;
 use App\Models\PmRule;
 use App\Models\Role;
@@ -30,17 +31,31 @@ class EvaluatePmRulesJobTest extends TestCase
         ]);
     }
 
-    public function test_job_evaluates_active_rules(): void
+    private function createAsset(): Asset
     {
         $location = Location::create(['name' => 'Loc', 'type' => 'building']);
-        $asset = Asset::create([
-            'erp_asset_code' => 'A-001', 'name' => 'Asset',
+
+        return Asset::create([
+            'erp_asset_code' => 'A-'.uniqid(), 'name' => 'Asset',
             'is_active' => true, 'current_location_id' => $location->id,
         ]);
-        $admin = User::first();
-        PmRule::create([
-            'asset_id' => $asset->id, 'name' => 'Rule 1', 'trigger_type' => 'date',
-            'interval_days' => 30, 'is_active' => true, 'created_by' => $admin->id,
+    }
+
+    private function adminId(): int
+    {
+        return User::first()->id;
+    }
+
+    public function test_job_evaluates_active_assignments(): void
+    {
+        $asset = $this->createAsset();
+        $rule = PmRule::create([
+            'name' => 'Rule 1', 'trigger_type' => 'date',
+            'interval_days' => 30, 'is_active' => true, 'created_by' => $this->adminId(),
+        ]);
+        AssetPmAssignment::create([
+            'asset_id' => $asset->id, 'pm_rule_id' => $rule->id,
+            'is_active' => true, 'assigned_by' => $this->adminId(),
         ]);
 
         $this->mock(EvaluatePmRule::class, function ($mock) {
@@ -50,17 +65,35 @@ class EvaluatePmRulesJobTest extends TestCase
         (new EvaluatePmRulesJob)->handle(app(EvaluatePmRule::class));
     }
 
-    public function test_job_skips_inactive_rules(): void
+    public function test_job_skips_inactive_assignments(): void
     {
-        $location = Location::create(['name' => 'Loc', 'type' => 'building']);
-        $asset = Asset::create([
-            'erp_asset_code' => 'A-002', 'name' => 'Asset',
-            'is_active' => true, 'current_location_id' => $location->id,
+        $asset = $this->createAsset();
+        $rule = PmRule::create([
+            'name' => 'Rule 2', 'trigger_type' => 'date',
+            'interval_days' => 30, 'is_active' => true, 'created_by' => $this->adminId(),
         ]);
-        $admin = User::first();
-        PmRule::create([
-            'asset_id' => $asset->id, 'name' => 'Rule 2', 'trigger_type' => 'date',
-            'interval_days' => 30, 'is_active' => false, 'created_by' => $admin->id,
+        AssetPmAssignment::create([
+            'asset_id' => $asset->id, 'pm_rule_id' => $rule->id,
+            'is_active' => false, 'assigned_by' => $this->adminId(),
+        ]);
+
+        $this->mock(EvaluatePmRule::class, function ($mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        (new EvaluatePmRulesJob)->handle(app(EvaluatePmRule::class));
+    }
+
+    public function test_job_skips_assignments_whose_template_is_inactive(): void
+    {
+        $asset = $this->createAsset();
+        $rule = PmRule::create([
+            'name' => 'Retired Rule', 'trigger_type' => 'date',
+            'interval_days' => 30, 'is_active' => false, 'created_by' => $this->adminId(),
+        ]);
+        AssetPmAssignment::create([
+            'asset_id' => $asset->id, 'pm_rule_id' => $rule->id,
+            'is_active' => true, 'assigned_by' => $this->adminId(),
         ]);
 
         $this->mock(EvaluatePmRule::class, function ($mock) {

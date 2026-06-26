@@ -1,7 +1,10 @@
-import type { PmRule } from '@/types'
+import type { PmRule, AssetPmAssignment } from '@/types'
 
 /**
  * Compose a human-readable schedule string from a PM rule's trigger config.
+ * Accepts either a template (`PmRule`, intervals top-level) or an assignment
+ * (`AssetPmAssignment`, intervals nested under `rule`).
+ *
  * Examples:
  *   date (90 days)                        → "Every 3 Months"
  *   reading (500, "Operating Hours")      → "Every 500 Operating Hours"
@@ -28,16 +31,13 @@ export function formatDayInterval(days: number): string {
   return `${days} Day${days === 1 ? '' : 's'}`
 }
 
-/** Reading-interval phrase, e.g. "500 Operating Hours" (falls back to "Reading"). */
-function formatReadingInterval(rule: PmRule): string {
-  const unit = rule.usage_reading_type?.name ?? 'Reading'
-  return `${rule.interval_reading} ${unit}`
-}
-
 /** Full schedule sentence for detail / list display. */
-export function pmScheduleText(rule: PmRule): string {
+export function pmScheduleText(source: PmRule | AssetPmAssignment): string {
+  // Normalise: an assignment carries its template under `rule`; a template has top-level fields.
+  const rule = 'rule' in source ? source.rule : source
   const datePart = rule.interval_days != null ? `Every ${formatDayInterval(rule.interval_days)}` : null
-  const readingPart = rule.interval_reading != null ? `Every ${formatReadingInterval(rule)}` : null
+  const readingPart =
+    rule.interval_reading != null ? `Every ${rule.interval_reading} ${rule.usage_reading_type?.name ?? 'Reading'}` : null
 
   switch (rule.trigger_type) {
     case 'date':
@@ -46,7 +46,6 @@ export function pmScheduleText(rule: PmRule): string {
       return readingPart ?? '—'
     case 'date_or_reading':
       if (readingPart && datePart) {
-        // Drop the leading "Every " from the date part for a natural sentence.
         return `${readingPart} or ${datePart.replace(/^Every /, '')}, whichever comes first`
       }
       return readingPart ?? datePart ?? '—'

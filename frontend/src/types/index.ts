@@ -207,17 +207,41 @@ export interface PmRule {
   is_active: boolean
   interval_days: number | null
   interval_reading: number | null
+  assignments_count?: number
+  created_at: string
+  updated_at?: string
+  usage_reading_type?: { id: number; name: string; unit: string } | null
+  assignments?: AssetPmAssignment[]
+  created_by?: UserRef | null      // Admin/Manager only
+}
+
+/** Nested rule template inside an assignment. */
+export interface PmAssignmentRule {
+  id: number
+  name: string
+  maintenance_level: string | null
+  trigger_type: PmTriggerType
+  interval_days: number | null
+  interval_reading: number | null
+  usage_reading_type?: { id: number; name: string; unit: string } | null
+}
+
+export interface AssetPmAssignment {
+  id: number
+  asset_id: number
+  pm_rule_id: number
+  is_active: boolean
+  asset?: AssetRef
   last_triggered_date: string | null
   last_triggered_reading: number | null
   next_due_date: string | null
   next_due_reading: number | null
   progress_percentage: number | null
   pm_status: PmStatus
-  created_at: string
-  asset: AssetRef
-  usage_reading_type?: { id: number; name: string; unit: string } | null
+  rule: PmAssignmentRule
+  assigned_by?: UserRef | null
+  assigned_at?: string
   suppressions?: PmSuppression[]
-  created_by?: UserRef | null      // Admin/Manager only
 }
 
 // ── Attachments ───────────────────────────────────────────────────────────────
@@ -313,7 +337,7 @@ export interface CompanySettings {
 export interface DashboardSummary {
   pending_maintenance_requests: number
   open_work_orders: number
-  overdue_pm_rules: number
+  overdue_pm_assignments: number
   recently_closed_work_orders: number
 }
 
@@ -321,7 +345,6 @@ export interface DashboardData {
   summary: DashboardSummary
   pending_maintenance_requests?: MaintenanceRequest[]
   open_work_orders?: WorkOrder[]
-  overdue_pm_rules?: PmRule[]
   recently_closed_work_orders?: WorkOrder[]
 }
 
