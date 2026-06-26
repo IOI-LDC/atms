@@ -433,6 +433,13 @@ A reka-ui **modal** `Dialog`/`Sheet` activates three mechanisms. Any widget that
 
 For `Select`, the inline route is a first-class prop — **`<SelectContent disable-portal>`** (added to `components/ui/select/SelectContent.vue`; it sets `<SelectPortal :disabled>`). Use it for a `Select` inside a **modal `Dialog`**.
 
+> ⚠️ **`disable-portal` forces `position="popper"` (do not override).** reka-ui's
+> default `item-aligned` positioning assumes the content is teleported to
+> `<body>`; rendered inline it can't compute its offset and **jumps to a screen
+> corner** (top-left/right). `SelectContent` therefore auto-switches to `popper`
+> (floating-ui, anchored to the trigger) whenever `disable-portal` is set — the
+> two are inseparable, so callers don't pass `position` alongside it.
+
 > ⚠️ **`disable-portal` clipping caveat.** An inline (non-portaled) dropdown is
 > laid out within the overlay's DOM, so it can be **clipped by an `overflow`
 > ancestor** (e.g. a scrolling `.create-sheet-body`). Only use `disable-portal`
