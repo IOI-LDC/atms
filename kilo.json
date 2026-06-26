@@ -7,6 +7,10 @@
       "environment": {
         "REGISTRY_URL": "https://tweakcn.com/r/themes/registry.json"
       }
+    },
+    "laravel-boost": {
+      "type": "local",
+      "command": ["bash", "scripts/boost-mcp.sh"]
     }
   }
 }
