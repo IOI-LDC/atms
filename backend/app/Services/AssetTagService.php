@@ -142,13 +142,13 @@ class AssetTagService
     private function decimalToFraction(string $value): string
     {
         $fractionMap = [
-            '.125'  => ' 1/8',
-            '.25'   => ' 1/4',
-            '.375'  => ' 3/8',
-            '.5'    => ' 1/2',
-            '.625'  => ' 5/8',
-            '.75'   => ' 3/4',
-            '.875'  => ' 7/8',
+            '.125' => ' 1/8',
+            '.25' => ' 1/4',
+            '.375' => ' 3/8',
+            '.5' => ' 1/2',
+            '.625' => ' 5/8',
+            '.75' => ' 3/4',
+            '.875' => ' 7/8',
         ];
 
         foreach ($fractionMap as $decimal => $fraction) {

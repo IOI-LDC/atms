@@ -23,6 +23,7 @@ use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\PmRuleController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Middleware\EnsureTokenAbilities;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health/live', [HealthController::class, 'live']);
@@ -35,7 +36,7 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->m
 
 Route::post('/auth/token', [TokenController::class, 'issue'])->middleware('throttle:5,1');
 
-Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureTokenAbilities::class])->group(function () {
+Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
@@ -58,7 +59,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureTokenAbilities::cl
 
         Route::get('/employees', [EmployeeController::class, 'index']);
         Route::post('/employees/import', [EmployeeController::class, 'import']);
-        Route::post('/employees/{employee}/provision-user', [EmployeeController::class, 'provisionUser']);
+        Route::post('/employees/provision-user', [EmployeeController::class, 'provisionUser']);
 
         Route::get('/erp/sync-jobs', [ErpSyncController::class, 'index']);
         Route::post('/erp/sync-parts', [ErpSyncController::class, 'syncParts']);

@@ -26,8 +26,8 @@ class EmployeeSeeder extends Seeder
                 ['emp_id' => $emp['emp_id']],
                 array_merge($emp, [
                     'sharepoint_item_id' => (string) Str::uuid(),
-                    'source_is_active'   => true,
-                    'last_synced_at'     => now(),
+                    'source_is_active' => true,
+                    'last_synced_at' => now(),
                 ]),
             );
         }

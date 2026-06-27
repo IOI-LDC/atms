@@ -10,6 +10,7 @@ use Database\Seeders\RoleSeeder;
 use Database\Seeders\ServiceUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ApiTokenTest extends TestCase
@@ -33,11 +34,11 @@ class ApiTokenTest extends TestCase
 
     private function createApiClient(array $abilities = ['read']): array
     {
-        $rawSecret = \Illuminate\Support\Str::random(64);
-        $client = \App\Models\ApiClient::create([
+        $rawSecret = Str::random(64);
+        $client = ApiClient::create([
             'name' => 'Test Client',
-            'client_id' => \Illuminate\Support\Str::random(64),
-            'client_secret_hash' => \Illuminate\Support\Facades\Hash::make($rawSecret),
+            'client_id' => Str::random(64),
+            'client_secret_hash' => Hash::make($rawSecret),
             'abilities' => $abilities,
         ]);
 

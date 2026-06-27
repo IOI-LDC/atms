@@ -1,9 +1,18 @@
-# Session State — 2026-06-26
+# Session State — 2026-06-27
 
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
 ## Last Session Accomplished
+
+- **P0 — Employee Directory from CSV (no DB import) — COMPLETE (2026-06-27):**
+  - `CsvEmployeeDirectorySource` reads `employee.csv` (94 employees) in-memory — zero DB rows until provisioning.
+  - `GET /api/admin/employees` now reads from CSV source, with search, sort, pagination, and `emp_ids` filter.
+  - Config-based whitelist via `EMPLOYEE_VISIBLE_EMP_IDS=45,6,18,29,23,60,37,3,9` — only those 9 appear by default.
+  - `POST /api/admin/employees/provision-user` changed: accepts `{emp_id, role_id}` in body (no route-model binding). Flow: find in CSV → upsert single Employee record → provision User → queue activation notification.
+  - Provisioning emails: backend only (`UserActivationNotification` → `AccountEmailChannel` → `AccountEmailTransport`). Currently `fake` transport (in-memory capture). Real transport is `PowerAutomateAccountEmailTransport` (Entra ID OAuth → MS Graph).
+  - Dirty users (demo accounts) deleted — only `system@atms.internal` and `admin@atms.local` remain.
+  - **Test suite: 358 passed (921 assertions).** 7 new tests (EmployeeIndexTest, emp_ids filter tests, updated EmployeeProvisioningTest).
 
 - **PM Rules 1:1 → M:N refactor (backend) — COMPLETE (2026-06-26):**
   - `PmRule` is now a reusable schedule **template** (no `asset_id`); new `asset_pm_assignments` pivot (`AssetPmAssignment`) carries each asset's own `last_triggered_date`/`_reading`/`is_active`.

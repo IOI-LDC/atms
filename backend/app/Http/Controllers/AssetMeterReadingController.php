@@ -42,8 +42,8 @@ class AssetMeterReadingController extends Controller
             (float) $validated['reading_value'],
             Carbon::parse($validated['reading_at']),
             $validated['source'],
-                $request->user()->id,
-                null,
+            $request->user()->id,
+            null,
             $validated['notes'] ?? null
         );
 

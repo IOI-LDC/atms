@@ -74,7 +74,11 @@ function closeProvision() {
 async function onProvisionConfirm(roleId: number) {
   if (!provisionTarget.value) return
   const target = provisionTarget.value
-  const ok = await provisionUser(target.id, roleId)
+  if (!target.emp_id) {
+    toast.error('This employee has no Employee ID and cannot be provisioned.')
+    return
+  }
+  const ok = await provisionUser(target.emp_id, roleId)
   if (ok) {
     toast.success(`${target.name} provisioned. Activation email queued.`)
     closeProvision()

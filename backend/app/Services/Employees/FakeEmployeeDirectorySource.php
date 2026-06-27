@@ -32,4 +32,15 @@ class FakeEmployeeDirectorySource implements EmployeeDirectorySource
             );
         });
     }
+
+    public function findOrFail(string $empId): ExternalEmployeeData
+    {
+        $match = $this->getEmployees()->first(fn (ExternalEmployeeData $e) => $e->empId === $empId);
+
+        if (! $match) {
+            throw new \DomainException("Employee with emp_id '{$empId}' not found in directory.");
+        }
+
+        return $match;
+    }
 }

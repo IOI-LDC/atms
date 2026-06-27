@@ -59,7 +59,7 @@ function handleConfirm() {
           <SelectTrigger id="provision-role">
             <SelectValue placeholder="Select a role…" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent disable-portal>
             <SelectItem
               v-for="role in roles"
               :key="role.id"

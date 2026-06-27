@@ -5,6 +5,7 @@ namespace Tests\Feature\Pm;
 use App\Enums\PmTriggerType;
 use App\Enums\RoleCode;
 use App\Models\Asset;
+use App\Models\AssetMeterReading;
 use App\Models\AssetPmAssignment;
 use App\Models\MaintenanceRequest;
 use App\Models\PmRule;
@@ -94,7 +95,7 @@ class AssetPmAssignmentControllerTest extends TestCase
     {
         $asset = $this->createAsset();
         $readingType = UsageReadingType::create(['name' => 'Hours', 'unit' => 'h']);
-        \App\Models\AssetMeterReading::create([
+        AssetMeterReading::create([
             'asset_id' => $asset->id,
             'usage_reading_type_id' => $readingType->id,
             'reading_value' => 4200,

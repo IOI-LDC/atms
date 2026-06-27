@@ -79,11 +79,11 @@ export function useUsers() {
   const provisioning = ref(false)
   const provisionErrors = ref<Record<string, string[]> | null>(null)
 
-  async function provisionUser(employeeId: number, roleId: number): Promise<boolean> {
+  async function provisionUser(empId: string, roleId: number): Promise<boolean> {
     provisioning.value = true
     provisionErrors.value = null
     try {
-      await api.post(`/admin/employees/${employeeId}/provision-user`, { role_id: roleId })
+      await api.post('/admin/employees/provision-user', { emp_id: empId, role_id: roleId })
       await refreshAll()
       return true
     } catch (e) {

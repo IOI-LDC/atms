@@ -255,7 +255,7 @@ class ImportErpAssetsCommand extends Command
         $this->line("  Parsed:   {$this->stats['parsed']}");
         $this->line("  Inserted: {$this->stats['inserted']}");
         $this->line("  Skipped:  {$this->stats['skipped']}");
-        $this->line("  Errors:   ".count($this->stats['errors']));
+        $this->line('  Errors:   '.count($this->stats['errors']));
 
         $total = Asset::count();
         $withSerial = Asset::whereNotNull('serial_number')->count();
