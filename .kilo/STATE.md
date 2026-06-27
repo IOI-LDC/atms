@@ -5,6 +5,16 @@
 
 ## Last Session Accomplished
 
+- **Asset Booking feature — COMPLETE (2026-06-27):**
+  - New `is_booked` boolean on `assets` table (default `false`). Availability marker for Operations to reserve an asset for a specific Job/Project. Auto-releases on location change or asset deactivation/inactivation. Does NOT gate MR/WO/PM.
+  - `ToggleAssetBooking` action with audit log (`asset.booked` / `asset.unbooked`), idempotency guards, inactive-asset block. `AssetBookingController` (`POST /assets/{id}/book`, `POST /assets/{id}/unbook`).
+  - `AssetPolicy::toggleBooking()` — Admin, Manager, Logistics.
+  - Auto-clear on location change: `UpdateAssetLocation::execute()` sets `is_booked = false`.
+  - Auto-clear on inactivation: `Asset::updating()` listener clears `is_booked` when `is_active → false` or `maintenance_status → Inactive`.
+  - MOC doc: `docs/atms/01-product/ASSET_BOOKING.md` (implemented, with rationale). Docs synced: STATUS_MODEL, RBAC, ROLES_AND_PERMISSIONS, ASSET_STATUS, BACKEND_API_REFERENCE (new Asset Booking section + `is_booked` in AssetResource table).
+  - **Test suite: 372 passed (951 assertions).** 14 new tests (`AssetBookingTest`).
+  - Commits: `673ca87` (booking + docs).
+
 - **P0 — Employee Directory from CSV (no DB import) — COMPLETE (2026-06-27):**
   - `CsvEmployeeDirectorySource` reads `employee.csv` (94 employees) in-memory — zero DB rows until provisioning.
   - `GET /api/admin/employees` now reads from CSV source, with search, sort, pagination, and `emp_ids` filter.
@@ -13,6 +23,7 @@
   - Provisioning emails: backend only (`UserActivationNotification` → `AccountEmailChannel` → `AccountEmailTransport`). Currently `fake` transport (in-memory capture). Real transport is `PowerAutomateAccountEmailTransport` (Entra ID OAuth → MS Graph).
   - Dirty users (demo accounts) deleted — only `system@atms.internal` and `admin@atms.local` remain.
   - **Test suite: 358 passed (921 assertions).** 7 new tests (EmployeeIndexTest, emp_ids filter tests, updated EmployeeProvisioningTest).
+  - Commits: `56ff747` (P0 employee CSV + frontend provision fix).
 
 - **PM Rules 1:1 → M:N refactor (backend) — COMPLETE (2026-06-26):**
   - `PmRule` is now a reusable schedule **template** (no `asset_id`); new `asset_pm_assignments` pivot (`AssetPmAssignment`) carries each asset's own `last_triggered_date`/`_reading`/`is_active`.
@@ -64,23 +75,20 @@
   - If 401s recur post-deploy → the backend lever is the **DB session driver concurrent-write (last-write-wins)**: `session.block` / `session.block_seconds` (tradeoff: serialized latency). Investigate then.
   - **Config gotcha:** `SANCTUM_STATEFUL_DOMAINS`/`SESSION_DOMAIN`/`APP_URL` are injected by `compose.yaml` from the **root `.env`** (`atms/.env`) — they **override** `backend/.env`. Edit the root `.env`, then `docker compose up -d api`.
   - **Operational:** `admin@atms.local` password was reset to `Password123!` during offline curl testing.
-- **Git state:** PM M:N refactor + SPA auth fixes committed as `a399864` on branch `feature/pm-rules-mn`. **Not pushed / not merged.** `.env` is gitignored.
+- **Git state (2026-06-27):** On `main`. Latest commits: `673ca87` (asset booking + docs), `56ff747` (P0 employee CSV + provision fix). Both pushed to working tree, not yet pushed to remote. `.env` is gitignored.
 
-## Next Steps — Prioritized Execution Order (2026-06-26)
+## Next Steps — Prioritized Execution Order (2026-06-27)
 
 Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 (team), ⏳ = blocked on an external dependency.
 
-### P0 — Employee → System User provisioning (real users) 🔓
-- **Goal:** real LDC people in the system; Admin converts an Employee into a login.
-- **Backend — EXISTS:** `EmployeeController` (`GET /admin/employees`,
-  `POST /admin/employees/import`, `POST /admin/employees/{id}/provision-user`)
-  + `AdminResetUserPassword` for activation/reset. CSV import is already wired.
-- **Needed:**
-  - **(External)** A CSV of a few LDC employees — request from client/HR.
-  - **(F)** Admin → Users tab: employee directory list + "Provision User" action
-    + activation/reset UX, wired to the existing endpoints.
-- **Why first:** unblocks creating real users for all other testing/demo.
+### ~~P0 — Employee → System User provisioning~~ ✅ COMPLETE (2026-06-27)
+- Backend done (CSV directory + provision by emp_id). Frontend UsersView +
+  useUsers updated for new endpoint. 9 real employees whitelisted.
+- **Remaining (F):** Frontend needs UI polish — booking book/unbook buttons on
+  Asset Detail + Asset List (backend ready, frontend not wired). Also: provision
+  UX to actually invoke provision-user on the 9 whitelisted employees once the
+  client confirms role assignments per person.
 
 ### P1 — Work Order Assign 🔓
 - **Goal:** assign a Technician to an open WO.
@@ -96,6 +104,12 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
   on the created WO. Add validation + policy check + tests.
 - **Needed:** **(F)** "Assign" option in the MR review/approve flow, just before
   conversion.
+
+### Asset Booking — Frontend wiring (F) 🔓
+- Backend complete (`POST /assets/{id}/book` + `/unbook`, `is_booked` in
+  AssetResource, auto-release on move/inactivation).
+- **Needed (F):** Book/Unbook toggle UI on Asset Detail + "Booked" badge in
+  Asset List. See `docs/atms/01-product/ASSET_BOOKING.md`.
 
 ### P2 — Parts catalogue from ERP ⏳ BLOCKED
 - **Goal:** populate the parts list (SM-owned) from BC, the same way Assets are
@@ -114,8 +128,8 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 - #7 Create `sm/` and `am/` Vue 3 scaffolds (Phase 8/9).
 
 ### Suggested execution order
-**P0 (employees/users) → P1 (WO assign) → P1 (MR→WO assign) → P2 (parts, when
-ERP replies).** #6 / #7 anytime.
+**~~P0 (employees/users)~~ ✅ → P1 (WO assign verify) → P1 (MR→WO assign build)
+→ Asset Booking frontend → P2 (parts, when ERP replies).** #6 / #7 anytime.
 
 ---
 
@@ -145,6 +159,8 @@ backend additions for the MR-assign item). P2 is fully blocked on the ERP team.
 | Asset tag ownership codes | `L` = LDC (we maintain), `X` = External (we don't) |
 | Asset maintenance status | `Active`/`Inactive` — gates MR/WO/PM workflows. Sub-statuses informational only. |
 | Asset operational status | Separate axis from maintenance_status — informational only, no workflow gating. |
+| Asset booking (`is_booked`) | Availability marker for Operations to reserve an asset for a Job/Project. Boolean, no job reference stored. Auto-releases on location change or deactivation/inactivation. Does NOT gate MR/WO/PM. Toggled by Admin/Manager/Logistics. (2026-06-27) |
+| Employee directory source | CSV-backed (`CsvEmployeeDirectorySource`, `EMPLOYEE_CSV_PATH`), not DB import. `EMPLOYEE_VISIBLE_EMP_IDS` whitelist controls who appears in the list. Provisioning upserts a single Employee row to DB. (2026-06-27) |
 | Migration strategy for erp_asset_id | Edit original migration (SQLite `:memory:` runs `migrate:fresh`). Production one-time `ALTER TABLE DROP COLUMN`. |
 | Mock ERP | Fully deleted. `LdcErpHttpSource` skips sync gracefully when `LDC_ERP_PARTS_API` is empty. |
 | API token abilities | Read-only (`['read']`) blocked on POST/PUT/PATCH/DELETE → 403. Write (`['read','write']`) allowed all. SPA session never blocked. |
