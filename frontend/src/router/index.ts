@@ -99,6 +99,13 @@ const router = createRouter({
       component: () => import('@/views/locations/LocationsView.vue'),
     },
 
+    // ── User Manual ───────────────────────────────────────────────────────────
+    {
+      path: '/user-manual',
+      name: 'user-manual',
+      component: () => import('@/views/UserManualView.vue'),
+    },
+
     // ── Admin ─────────────────────────────────────────────────────────────────
     {
       path: '/admin',

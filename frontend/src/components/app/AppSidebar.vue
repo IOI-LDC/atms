@@ -3,18 +3,13 @@ import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import type { Component } from 'vue'
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   LayoutDashboard, ClipboardList, Wrench, HardDrive, Package, Settings,
-  Shield, ChevronUp, MapPin,
+  Shield, MapPin,
 } from '@lucide/vue'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -128,8 +123,6 @@ function toLocation(to: string): string | { path: string; query: Record<string, 
   new URLSearchParams(qs).forEach((v, k) => { query[k] = v })
   return { path, query }
 }
-
-async function handleLogout() { await auth.logout() }
 </script>
 
 <template>
@@ -157,29 +150,5 @@ async function handleLogout() { await auth.logout() }
         </SidebarGroupContent>
       </SidebarGroup>
     </SidebarContent>
-
-    <SidebarFooter>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-              <SidebarMenuButton size="lg" :aria-label="`User menu for ${auth.user?.name ?? 'user'}`">
-                <Avatar><AvatarFallback>{{ auth.userInitials }}</AvatarFallback></Avatar>
-                <div class="sidebar-user-info">
-                  <span class="sidebar-user-name">{{ auth.user?.name }}</span>
-                  <span class="sidebar-user-role">{{ auth.user?.role?.name }}</span>
-                </div>
-                <ChevronUp class="sidebar-user-chevron" />
-              </SidebarMenuButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="end">
-              <DropdownMenuLabel>{{ auth.user?.email }}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem @click="handleLogout">Sign out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    </SidebarFooter>
   </Sidebar>
 </template>
