@@ -128,3 +128,24 @@ full specification.
 - Inactive assets may be reactivated at any time by Admin/Manager.
 - `Installed` requires `parent_asset_id IS NOT NULL`; `Ready` requires `parent_asset_id IS NULL`. These sub-statuses only apply to `asset_kind = component` or `package`.
 - Swapping a component auto-updates sub-status: Ready → Installed on install; Installed → Ready on removal (or Inactive/DBR if decommissioned).
+
+## Asset Booking
+
+Booking is an **availability marker** orthogonal to both operational and
+maintenance status. Operations books an asset to guarantee it is reserved and
+available for a specific Job or Project. See `atms/01-product/ASSET_BOOKING.md`
+for the full specification.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `is_booked` | boolean | `false` | `true` = reserved by Operations for a Job/Project; `false` = freely available |
+
+### Rules
+
+- Booking does not belong to `operational_status` or `maintenance_status` — it is a separate, independent axis.
+- Booking does NOT gate MR creation, WO creation, or PM evaluation. An asset can be booked and still be maintained.
+- Booking auto-clears (`is_booked = false`) on any location change (`UpdateAssetLocation`).
+- Booking auto-clears when an asset is deactivated (`is_active = false`) or its `maintenance_status` becomes `Inactive`. A decommissioned asset cannot remain booked.
+- Booking survives maintenance events (WO open/start/complete/close) — only location change or inactivation releases it.
+- No Job/Project/client reference is stored in ATMS; the booking is purely a binary availability flag.
+- Only Administrator, Maintenance Manager, and Logistics may toggle booking.

@@ -30,6 +30,9 @@ class UpdateAssetLocation
                     'changed_by_user_id' => $changedByUserId,
                 ]);
 
+                // Moving an asset releases any active booking — the original
+                // job/project reservation is no longer relevant at the new location.
+                $lockedAsset->is_booked = false;
                 $lockedAsset->current_location_id = $toLocation->id;
                 $lockedAsset->save();
 

@@ -15,6 +15,7 @@
 - [Parts](#parts)
 - [Meter Readings](#meter-readings)
 - [Asset Location](#asset-location)
+- [Asset Booking](#asset-booking)
 - [Maintenance Requests](#maintenance-requests)
 - [Work Orders](#work-orders)
 - [PM Rules](#pm-rules)
@@ -300,7 +301,7 @@ List assets with cursor pagination, filtering, and sorting.
 
 Fields vary by role:
 
-| Field | Type | Admin | Manager | Technician | Logistics | Requester |-------|------|-------|---------|------------|-----------|-----------|--------| `id` | int | Y | Y | Y | Y | `erp_asset_code` | string | Y | Y | Y | Y | `name` | string | Y | Y | Y | Y | `description` | string? | Y | Y | Y | Y | `category` | string? | Y | Y | Y | Y | `serial_number` | string? | Y | Y | Y | Y | `model` | string? | Y | Y | Y | Y | `manufacturer` | string? | Y | Y | Y | Y | `operational_status` | string? | Y | Y | Y | Y | `current_location` | object? | Y | Y | Y | Y | `current_location.id` | int | Y | Y | Y | Y | `current_location.name` | string | Y | Y | Y | Y | `erp_status` | string? | Y | Y | Y | — | Y | `erp_last_synced_at` | string? | Y | Y | Y | — | Y | `is_active` | bool | Y | — | — | — | — | `erp_raw_data` | object? | Y | — | — | — | — | — | `asset_tag` | string | Y | Y | Y | Y | `parent_asset_id` | int? | Y | Y | Y | Y | `asset_kind` | string | Y | Y | Y | Y | `maintenance_status` | string | Y | Y | Y | Y | `maintenance_sub_status` | string? | Y | Y | Y | Y | `created_at` | string | Y | Y | Y | Y | `updated_at` | string | Y | Y | Y | Y |
+| Field | Type | Admin | Manager | Technician | Logistics | Requester |-------|------|-------|---------|------------|-----------|-----------|--------| `id` | int | Y | Y | Y | Y | `erp_asset_code` | string | Y | Y | Y | Y | `name` | string | Y | Y | Y | Y | `description` | string? | Y | Y | Y | Y | `category` | string? | Y | Y | Y | Y | `serial_number` | string? | Y | Y | Y | Y | `model` | string? | Y | Y | Y | Y | `manufacturer` | string? | Y | Y | Y | Y | `operational_status` | string? | Y | Y | Y | Y | `current_location` | object? | Y | Y | Y | Y | `current_location.id` | int | Y | Y | Y | Y | `current_location.name` | string | Y | Y | Y | Y | `erp_status` | string? | Y | Y | Y | — | Y | `erp_last_synced_at` | string? | Y | Y | Y | — | Y | `is_active` | bool | Y | — | — | — | — | `erp_raw_data` | object? | Y | — | — | — | — | — | `asset_tag` | string | Y | Y | Y | Y | `parent_asset_id` | int? | Y | Y | Y | Y | `asset_kind` | string | Y | Y | Y | Y | `maintenance_status` | string | Y | Y | Y | Y | `maintenance_sub_status` | string? | Y | Y | Y | Y | `is_booked` | bool | Y | Y | Y | Y | `created_at` | string | Y | Y | Y | Y | `updated_at` | string | Y | Y | Y | Y |
 
 ---
 
@@ -581,6 +582,50 @@ populate the location picker dropdown for non-Admin roles (Manager, Logistics).
 **Note:** Returns only active locations (`is_active = true`). This is distinct from
 `GET /api/admin/locations` which is Admin-only and returns all locations regardless
 of active status.
+
+---
+
+## Asset Booking
+
+Booking is an availability marker used by Operations to reserve an asset for a
+specific Job or Project. Booking auto-releases when the asset's location changes
+or the asset is deactivated/inactivated. Booking does NOT gate any maintenance
+workflow (MR/WO/PM). See `atms/01-product/ASSET_BOOKING.md` for full spec.
+
+### POST `/api/assets/{asset}/book`
+
+Mark an asset as booked (reserved for a Job/Project).
+
+**Auth:** Required (Administrator, Maintenance Manager, or Logistics)
+**Precondition:** Asset must be active (`is_active = true`).
+
+**Response `200`:**
+```json
+{
+  "message": "Asset booked.",
+  "data": { /* AssetResource with is_booked: true */ }
+}
+```
+
+**Error `409`:** Asset is already booked, or asset is inactive.
+
+---
+
+### POST `/api/assets/{asset}/unbook`
+
+Release a booking on an asset.
+
+**Auth:** Required (Administrator, Maintenance Manager, or Logistics)
+
+**Response `200`:**
+```json
+{
+  "message": "Asset unbooked.",
+  "data": { /* AssetResource with is_booked: false */ }
+}
+```
+
+**Error `409`:** Asset is not booked.
 
 ---
 
@@ -1392,15 +1437,17 @@ Trigger employee import from SharePoint.
 
 **Response `200`:** `{ "message": "Imported 42 employees." }`
 
-### POST `/api/admin/employees/{employee}/provision-user`
+### POST `/api/admin/employees/provision-user`
 
-Provision a user account for an employee. Sends an activation email.
+Provision a user account for an employee from the directory. Looks up the
+employee by `emp_id`, upserts their `employees` row, creates a `User`, and queues
+an activation notification.
 
 **Auth:** Administrator only
 
 **Request Body:**
 
-| Field | Type | Rules |-------|------|-------| `role_id` | int | required, exists in `roles` |
+| Field | Type | Rules |-------|------|-------| `emp_id` | string | required (the employee's directory emp_id) | `role_id` | int | required, exists in `roles` |
 
 **Response `200`:**
 ```json

@@ -37,6 +37,7 @@ rules.
 | View mapped ERP reference fields | Yes | Yes | Yes | Yes | Yes |
 | View raw ERP payload | Yes | No | No | No | No |
 | Update asset location | Yes | Yes | No | Yes | No |
+| Book / unbook asset | Yes | Yes | No | Yes | No |
 | Add meter readings | Yes | Yes | Yes | No | Unverified only |
 | Confirm meter readings | Yes | Yes | Yes | No | No |
 | View parts reference | Yes | Yes | Yes | No | Yes |
@@ -108,6 +109,7 @@ rules.
 - Administrator and Maintenance Manager may cancel `open`, `in_progress`, or `completed` Work Orders with a required reason.
 - Technicians cannot cancel Work Orders.
 - Logistics, Maintenance Manager, and Administrator may update asset physical location (via AM subsystem).
+- Administrator, Maintenance Manager, and Logistics may toggle an asset's booking state (`is_booked`). Booking is an availability marker used by Operations to reserve an asset for a specific Job/Project. It auto-clears when the asset's location changes or the asset is deactivated/inactivated. Booking does not gate any maintenance workflow (MR/WO/PM).
 - Admin/Manager may create asset records manually and update asset operational fields at any time.
 - Only Administrator or Maintenance Manager may change an asset's asset_kind.
 - Only Administrator or Maintenance Manager may directly set parent_asset_id outside of a Work Order.

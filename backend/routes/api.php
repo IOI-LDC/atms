@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\FaSubclassTypeCodeController;
 use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AssetBookingController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetLocationController;
 use App\Http\Controllers\AssetMeterReadingController;
@@ -102,6 +103,8 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::post('/assets/{asset}/attachments', [AttachmentController::class, 'uploadForAsset']);
 
     Route::post('/assets/{asset}/location', [AssetLocationController::class, 'update']);
+    Route::post('/assets/{asset}/book', [AssetBookingController::class, 'book']);
+    Route::post('/assets/{asset}/unbook', [AssetBookingController::class, 'unbook']);
     Route::post('/assets/{asset}/meter-readings', [AssetMeterReadingController::class, 'store']);
     Route::post('/assets/{asset}/meter-readings/{reading}/confirm', [AssetMeterReadingController::class, 'confirm']);
 

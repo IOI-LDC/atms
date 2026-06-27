@@ -79,3 +79,7 @@ reporting only.
 | Active | Installed | Yes | Yes | Yes | Yes |
 | Active | Ready | Yes | Yes | Yes | Yes |
 | Inactive | any | No | No | No | Yes |
+
+> **Note:** Booking (`is_booked`) is a separate, orthogonal availability marker
+> set by Operations — it is not part of Asset Maintenance Status. See
+> `ASSET_BOOKING.md`.

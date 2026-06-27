@@ -28,6 +28,7 @@ class AssetResource extends JsonResource
             'maintenance_status' => $this->maintenance_status?->value,
             'maintenance_sub_status' => $this->maintenance_sub_status?->value,
             'asset_kind' => $this->asset_kind?->value,
+            'is_booked' => $this->is_booked,
             'asset_tag' => $this->asset_tag,
             'parent_asset_id' => $this->parent_asset_id,
             'child_assets_count' => $this->whenCounted('childAssets'),

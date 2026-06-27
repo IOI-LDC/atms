@@ -30,6 +30,9 @@ assign a fixed role, and send activation or password-reset links.
 May manage all assembly operations: install, remove, swap components, change
 asset_kind, and set parent_asset_id.
 
+May book and unbook assets (reserving them for a Job/Project); booking is
+released automatically when the asset is moved or deactivated.
+
 
 ### Maintenance Manager
 
@@ -44,6 +47,9 @@ for operational recovery; all such changes are audited.
 May install, remove, or swap components within asset assemblies. May change
 asset_kind and parent_asset_id. May create MRs for child components from a
 parent Work Order screen.
+
+May book and unbook assets (reserving them for a Job/Project); booking is
+released automatically when the asset is moved or deactivated.
 
 
 ### Technician
@@ -64,9 +70,10 @@ Owns the AM (Asset Movement) workflow externally: approves asset movement
 requests and confirms arrivals via the AM frontend. Within ATMS, views assets
 and asset location history. May also create Corrective Maintenance Requests and
 view their own submitted requests, identical to the Requester role in that
-regard. Has no Maintenance Request approval, Work Order execution, PM Rule, or
-administration permissions within ATMS. Does not have Parts Reference access in
-the MVP.
+regard. May book and unbook assets to reserve them for a Job/Project (booking
+auto-releases on location change or deactivation). Has no Maintenance Request
+approval, Work Order execution, PM Rule, or administration permissions within
+ATMS. Does not have Parts Reference access in the MVP.
 
 May view assembly history for components where they have view access to the
 asset.
