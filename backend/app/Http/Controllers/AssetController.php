@@ -176,7 +176,10 @@ class AssetController extends Controller
     {
         Gate::authorize('view', $asset);
 
-        $history = $asset->locationHistories()->orderByDesc('effective_at')->get();
+        $history = $asset->locationHistories()
+            ->with(['fromLocation', 'toLocation'])
+            ->orderByDesc('effective_at')
+            ->get();
 
         return AssetLocationHistoryResource::collection($history)->toResponse($request);
     }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Assets;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
+use App\Models\AssetLocationHistory;
 use App\Models\Location;
 use App\Models\Role;
 use App\Models\User;
@@ -99,5 +100,53 @@ class LocationWorkflowTest extends TestCase
             'reason' => 'transfer',
             'changed_by_user_id' => $logistics->id,
         ]);
+    }
+
+    public function test_location_history_endpoint_returns_location_names(): void
+    {
+        // Regression: AssetLocationHistoryResource exposes from_location /
+        // to_location via whenLoaded(...), which OMITS the keys when the
+        // relations are not eager-loaded. The controller must eager-load them
+        // or every From/To renders as "—" on the detail page.
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+
+        $from = Location::create(['name' => 'Yard 1', 'type' => 'yard']);
+        $to = Location::create(['name' => 'Workshop', 'type' => 'workshop']);
+
+        $asset = Asset::create([
+            'erp_asset_code' => 'AST-LOC-NAMES',
+            'name' => 'Names Test',
+            'current_location_id' => $to->id,
+        ]);
+
+        // A real move with both from/to.
+        AssetLocationHistory::create([
+            'asset_id' => $asset->id,
+            'from_location_id' => $from->id,
+            'to_location_id' => $to->id,
+            'effective_at' => now(),
+            'reason' => 'transfer',
+            'changed_by_user_id' => $admin->id,
+        ]);
+
+        // An initial placement (no "from") — from_location must still be a key.
+        AssetLocationHistory::create([
+            'asset_id' => $asset->id,
+            'from_location_id' => null,
+            'to_location_id' => $from->id,
+            'effective_at' => now()->subDay(),
+            'reason' => 'initial',
+            'changed_by_user_id' => $admin->id,
+        ]);
+
+        $response = $this->actingAs($admin)->getJson("/api/assets/{$asset->id}/location-history");
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.from_location.name', 'Yard 1')
+            ->assertJsonPath('data.0.to_location.name', 'Workshop')
+            // Most recent row is the move (ordered by effective_at desc).
+            ->assertJsonPath('data.1.from_location.name', null)
+            ->assertJsonPath('data.1.to_location.name', 'Yard 1');
     }
 }
