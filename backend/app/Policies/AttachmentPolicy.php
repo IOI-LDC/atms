@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\MaintenanceRequestStatus;
 use App\Enums\RoleCode;
 use App\Models\Asset;
 use App\Models\Attachment;
@@ -131,9 +132,24 @@ class AttachmentPolicy
         return false;
     }
 
-    public function delete(User $user): bool
+    public function delete(User $user, Attachment $attachment): bool
     {
-        return $user->hasRole(RoleCode::ADMINISTRATOR)
-            || $user->hasRole(RoleCode::MAINTENANCE_MANAGER);
+        // Admins and managers can delete any attachment at any stage.
+        if ($user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
+            return true;
+        }
+
+        // Anyone else may delete only their own attachment, and only while the
+        // parent maintenance request is still pending review (not yet
+        // converted/approved). Attachments on assets, parts or work orders are
+        // admin/manager-only.
+        if ($attachment->uploaded_by_user_id !== $user->id) {
+            return false;
+        }
+
+        $parent = $attachment->attachable;
+
+        return $parent instanceof MaintenanceRequest
+            && $parent->status === MaintenanceRequestStatus::PENDING_REVIEW;
     }
 }

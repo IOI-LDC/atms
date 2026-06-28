@@ -510,6 +510,73 @@ class AttachmentWorkflowTest extends TestCase
         $this->actingAs($requester)->deleteJson("/api/attachments/{$attachmentId}")->assertForbidden();
     }
 
+    public function test_owner_can_delete_own_attachment_while_mr_is_pending(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($requester);
+
+        $uploadResponse = $this->actingAs($requester)->postJson("/api/maintenance-requests/{$mr->id}/attachments", [
+            'file' => $this->pdfFile(),
+        ])->assertCreated();
+
+        $attachmentId = $uploadResponse->json('data.id');
+
+        $this->actingAs($requester)->deleteJson("/api/attachments/{$attachmentId}")->assertOk();
+
+        $this->assertNotNull(
+            Attachment::withoutGlobalScope('not-deleted')->find($attachmentId)->deleted_at
+        );
+    }
+
+    public function test_owner_cannot_delete_own_attachment_after_mr_converted(): void
+    {
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($requester);
+
+        $attachmentId = $this->actingAs($requester)
+            ->postJson("/api/maintenance-requests/{$mr->id}/attachments", ['file' => $this->pdfFile()])
+            ->assertCreated()
+            ->json('data.id');
+
+        // Converting the MR locks its attachments against owner deletion.
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+
+        $this->actingAs($requester)->deleteJson("/api/attachments/{$attachmentId}")->assertForbidden();
+    }
+
+    public function test_non_owner_cannot_delete_other_users_attachment_on_pending_mr(): void
+    {
+        $owner = $this->createUser(RoleCode::REQUESTER);
+        $other = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($owner);
+
+        $attachmentId = $this->actingAs($owner)
+            ->postJson("/api/maintenance-requests/{$mr->id}/attachments", ['file' => $this->pdfFile()])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->actingAs($other)->deleteJson("/api/attachments/{$attachmentId}")->assertForbidden();
+    }
+
+    public function test_admin_can_delete_owner_attachment_after_mr_converted(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($requester);
+
+        $attachmentId = $this->actingAs($requester)
+            ->postJson("/api/maintenance-requests/{$mr->id}/attachments", ['file' => $this->pdfFile()])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+
+        // Admins are still unrestricted after conversion.
+        $this->actingAs($admin)->deleteJson("/api/attachments/{$attachmentId}")->assertOk();
+    }
+
     public function test_cannot_soft_delete_already_deleted_attachment(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
