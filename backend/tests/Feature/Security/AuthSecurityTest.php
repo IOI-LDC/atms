@@ -83,16 +83,18 @@ class AuthSecurityTest extends TestCase
             'password' => Hash::make('password'),
         ]);
 
-        $this->postJson('/api/auth/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ])->assertOk();
+        $this->withHeaders(['Origin' => config('app.url')])
+            ->postJson('/api/auth/login', [
+                'email' => $user->email,
+                'password' => 'password',
+            ])->assertOk();
 
         app(DeactivateUser::class)->execute($user);
 
-        $this->postJson('/api/auth/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ])->assertStatus(401);
+        $this->withHeaders(['Origin' => config('app.url')])
+            ->postJson('/api/auth/login', [
+                'email' => $user->email,
+                'password' => 'password',
+            ])->assertStatus(401);
     }
 }

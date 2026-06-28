@@ -4,7 +4,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use Illuminate\Session\Middleware\StartSession;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,13 +23,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         // Makes first-party SPA requests stateful (session + CSRF) via Sanctum.
+        // EnsureFrontendRequestsAreStateful injects StartSession (+ cookies/CSRF)
+        // for requests whose Origin/Referer matches sanctum.stateful, so the API
+        // auth routes (login/logout/me) get a session exactly once per request.
+        // /sanctum/csrf-cookie already gets StartSession from the web group, so
+        // NO global StartSession append is added — that would double-run it and
+        // race the shared SessionManager, producing un-persisted session IDs.
         $middleware->statefulApi();
-
-        // Sessions for API auth routes (login/logout regenerate/invalidate the
-        // session). statefulApi() only attaches the session for requests Sanctum
-        // deems first-party, so StartSession is kept in the global stack to cover
-        // these auth endpoints unconditionally.
-        $middleware->append(StartSession::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

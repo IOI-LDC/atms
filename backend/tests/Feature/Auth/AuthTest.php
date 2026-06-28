@@ -27,10 +27,11 @@ class AuthTest extends TestCase
     {
         $user = $this->createActiveUser();
 
-        $response = $this->postJson('/api/auth/login', [
-            'email' => $user->email,
-            'password' => 'password123',
-        ]);
+        $response = $this->withHeaders(['Origin' => config('app.url')])
+            ->postJson('/api/auth/login', [
+                'email' => $user->email,
+                'password' => 'password123',
+            ]);
 
         $response->assertOk();
         $response->assertJsonStructure(['user']);
@@ -52,10 +53,11 @@ class AuthTest extends TestCase
     {
         $user = $this->createActiveUser();
 
-        $response = $this->postJson('/api/auth/login', [
-            'email' => $user->email,
-            'password' => 'password123',
-        ]);
+        $response = $this->withHeaders(['Origin' => config('app.url')])
+            ->postJson('/api/auth/login', [
+                'email' => $user->email,
+                'password' => 'password123',
+            ]);
 
         $response->assertOk();
         $cookies = $response->headers->getCookies();
@@ -69,6 +71,7 @@ class AuthTest extends TestCase
 
         $this->actingAs($user, 'web')
             ->withSession([])
+            ->withHeaders(['Origin' => config('app.url')])
             ->postJson('/api/auth/logout')
             ->assertNoContent();
     }
