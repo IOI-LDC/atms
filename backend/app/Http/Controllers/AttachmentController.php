@@ -21,7 +21,7 @@ class AttachmentController extends Controller
     {
         Gate::authorize('viewForAsset', Attachment::class);
 
-        return AttachmentResource::collection($asset->attachments()->with('uploadedBy')->get())->toResponse($request);
+        return AttachmentResource::collection($asset->attachments()->with(['uploadedBy', 'attachable'])->get())->toResponse($request);
     }
 
     public function uploadForAsset(Request $request, Asset $asset, UploadAttachment $action): JsonResponse
@@ -52,7 +52,7 @@ class AttachmentController extends Controller
     {
         Gate::authorize('viewForPart', Attachment::class);
 
-        return AttachmentResource::collection($part->attachments()->with('uploadedBy')->get())->toResponse($request);
+        return AttachmentResource::collection($part->attachments()->with(['uploadedBy', 'attachable'])->get())->toResponse($request);
     }
 
     public function uploadForPart(Request $request, Part $part, UploadAttachment $action): JsonResponse
@@ -83,7 +83,7 @@ class AttachmentController extends Controller
     {
         Gate::authorize('viewForMaintenanceRequest', [Attachment::class, $maintenanceRequest]);
 
-        return AttachmentResource::collection($maintenanceRequest->attachments()->with('uploadedBy')->get())->toResponse($request);
+        return AttachmentResource::collection($maintenanceRequest->attachments()->with(['uploadedBy', 'attachable'])->get())->toResponse($request);
     }
 
     public function uploadForMaintenanceRequest(Request $request, MaintenanceRequest $maintenanceRequest, UploadAttachment $action): JsonResponse
@@ -114,7 +114,7 @@ class AttachmentController extends Controller
     {
         Gate::authorize('viewForWorkOrder', Attachment::class);
 
-        return AttachmentResource::collection($workOrder->attachments()->with('uploadedBy')->get())->toResponse($request);
+        return AttachmentResource::collection($workOrder->attachments()->with(['uploadedBy', 'attachable'])->get())->toResponse($request);
     }
 
     public function uploadForWorkOrder(Request $request, WorkOrder $workOrder, UploadAttachment $action): JsonResponse

@@ -22,6 +22,11 @@ class AttachmentResource extends JsonResource
             'description' => $this->description,
             'created_at' => $this->created_at?->toIso8601String(),
             'download_url' => url("/api/attachments/{$this->id}/download"),
+            // Policy-driven delete permission for every role. Reuses
+            // AttachmentPolicy::delete as the single source of truth. The
+            // non-admin path reads $attachment->attachable, so attachment list
+            // endpoints MUST eager-load 'attachable' to avoid an N+1.
+            'can_delete' => $user?->can('delete', $this->resource) ?? false,
         ];
 
         if ($isAdmin || $isManager) {

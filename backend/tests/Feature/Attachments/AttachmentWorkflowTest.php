@@ -577,6 +577,77 @@ class AttachmentWorkflowTest extends TestCase
         $this->actingAs($admin)->deleteJson("/api/attachments/{$attachmentId}")->assertOk();
     }
 
+    private function canDeleteFor(int $mrId, User $viewer, int $attachmentId): ?bool
+    {
+        $response = $this->actingAs($viewer)->getJson("/api/maintenance-requests/{$mrId}/attachments")->assertOk();
+
+        return collect($response->json('data'))->firstWhere('id', $attachmentId)['can_delete'] ?? null;
+    }
+
+    public function test_can_delete_flag_true_for_owner_on_pending_mr(): void
+    {
+        $owner = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($owner);
+
+        $attachmentId = $this->actingAs($owner)
+            ->postJson("/api/maintenance-requests/{$mr->id}/attachments", ['file' => $this->pdfFile()])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->assertTrue($this->canDeleteFor($mr->id, $owner, $attachmentId));
+    }
+
+    public function test_can_delete_flag_false_for_owner_after_mr_converted(): void
+    {
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $owner = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($owner);
+
+        $attachmentId = $this->actingAs($owner)
+            ->postJson("/api/maintenance-requests/{$mr->id}/attachments", ['file' => $this->pdfFile()])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+
+        $this->assertFalse($this->canDeleteFor($mr->id, $owner, $attachmentId));
+    }
+
+    public function test_can_delete_flag_false_for_non_owner_on_pending_mr(): void
+    {
+        $owner = $this->createUser(RoleCode::REQUESTER);
+        $other = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($owner);
+
+        $attachmentId = $this->actingAs($owner)
+            ->postJson("/api/maintenance-requests/{$mr->id}/attachments", ['file' => $this->pdfFile()])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->assertFalse($this->canDeleteFor($mr->id, $other, $attachmentId));
+    }
+
+    public function test_can_delete_flag_true_for_admin_regardless_of_status(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $owner = $this->createUser(RoleCode::REQUESTER);
+        $mr = $this->createMaintenanceRequest($owner);
+
+        $attachmentId = $this->actingAs($owner)
+            ->postJson("/api/maintenance-requests/{$mr->id}/attachments", ['file' => $this->pdfFile()])
+            ->assertCreated()
+            ->json('data.id');
+
+        // Pending: admin can delete.
+        $this->assertTrue($this->canDeleteFor($mr->id, $admin, $attachmentId));
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+
+        // Converted: admin still can delete.
+        $this->assertTrue($this->canDeleteFor($mr->id, $admin, $attachmentId));
+    }
+
     public function test_cannot_soft_delete_already_deleted_attachment(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
