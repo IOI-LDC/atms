@@ -93,17 +93,65 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", $payload)->assertOk();
     }
 
-    public function test_assignee_must_be_active_technician(): void
+    public function test_non_eligible_assignee_role_is_rejected(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $wo = $this->createApprovedWorkOrder($requester, $manager);
 
-        $otherManager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        // Requesters and other non-technical roles are never assignable.
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", [
+            'user_id' => $requester->id,
+        ])->assertStatus(409);
+    }
+
+    public function test_manager_can_be_assigned_to_work_order(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $assigneeManager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", [
-            'user_id' => $otherManager->id,
+            'user_id' => $assigneeManager->id,
+        ])->assertOk();
+
+        $this->assertEquals($assigneeManager->id, $wo->fresh()->assigned_to_user_id);
+    }
+
+    public function test_inactive_manager_cannot_be_assigned(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $inactiveManager = User::factory()->create([
+            'role_id' => Role::where('code', RoleCode::MAINTENANCE_MANAGER)->first()->id,
+            'is_active' => false,
+        ]);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", [
+            'user_id' => $inactiveManager->id,
         ])->assertStatus(409);
+    }
+
+    public function test_assigned_manager_can_start_and_complete_work_order(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", [
+            'user_id' => $manager->id,
+        ])->assertOk();
+
+        // An assigned manager must be able to drive the whole lifecycle.
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->assertEquals(WorkOrderStatus::IN_PROGRESS, $wo->fresh()->status);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/complete", [
+            'completion_notes' => 'Handled by manager',
+        ])->assertOk();
+        $this->assertEquals(WorkOrderStatus::COMPLETED, $wo->fresh()->status);
     }
 
     public function test_assignment_required_before_start(): void

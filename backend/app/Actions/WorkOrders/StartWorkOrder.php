@@ -27,8 +27,8 @@ class StartWorkOrder
             }
 
             $assignee = User::find($locked->assigned_to_user_id);
-            if (! $assignee || ! $assignee->is_active || ! $assignee->hasRole(RoleCode::TECHNICIAN)) {
-                throw new DomainException('Assigned user is no longer an active Technician. Reassign before starting.');
+            if (! $assignee || ! $assignee->isWorkOrderAssignee()) {
+                throw new DomainException('Assigned user is no longer an active Technician or Maintenance Manager. Reassign before starting.');
             }
 
             $before = $workOrder->toArray();

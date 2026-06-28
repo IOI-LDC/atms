@@ -45,6 +45,17 @@ class User extends Authenticatable
         return $this->role?->code === $role;
     }
 
+    /**
+     * Whether this user is eligible to be assigned a work order: active and
+     * either a Technician or a Maintenance Manager (managers may execute WOs
+     * when technicians are overloaded).
+     */
+    public function isWorkOrderAssignee(): bool
+    {
+        return $this->is_active
+            && ($this->hasRole(RoleCode::TECHNICIAN) || $this->hasRole(RoleCode::MAINTENANCE_MANAGER));
+    }
+
     public function activationTokens(): HasMany
     {
         return $this->hasMany(UserActivationToken::class);

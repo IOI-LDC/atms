@@ -31,8 +31,8 @@ class AssignWorkOrder
 
             $assignee = User::find($assignToUserId);
 
-            if (! $assignee || ! $assignee->is_active || ! $assignee->hasRole(RoleCode::TECHNICIAN)) {
-                throw new DomainException('Assignee must be an active Technician.');
+            if (! $assignee || ! $assignee->isWorkOrderAssignee()) {
+                throw new DomainException('Assignee must be an active Technician or Maintenance Manager.');
             }
 
             $before = $workOrder->toArray();

@@ -256,6 +256,101 @@ class MaintenanceRequestWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_approval_can_atomically_assign_to_technician(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $asset = $this->createAsset();
+
+        $mrId = $this->actingAs($requester)->postJson('/api/maintenance-requests/corrective', [
+            'asset_id' => $asset->id,
+            'description' => 'Approve + assign tech',
+            'priority' => 'high',
+        ])->json('data.id');
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'assignee_id' => $tech->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('work_orders', [
+            'maintenance_request_id' => $mrId,
+            'assigned_to_user_id' => $tech->id,
+            'assigned_by_user_id' => $manager->id,
+            'status' => 'open',
+        ]);
+    }
+
+    public function test_approval_can_atomically_assign_to_manager(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $assigneeManager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        $mrId = $this->actingAs($requester)->postJson('/api/maintenance-requests/corrective', [
+            'asset_id' => $asset->id,
+            'description' => 'Approve + assign manager',
+            'priority' => 'medium',
+        ])->json('data.id');
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'assignee_id' => $assigneeManager->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('work_orders', [
+            'maintenance_request_id' => $mrId,
+            'assigned_to_user_id' => $assigneeManager->id,
+        ]);
+    }
+
+    public function test_approval_with_ineligible_assignee_rolls_back_atomically(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        $mrId = $this->actingAs($requester)->postJson('/api/maintenance-requests/corrective', [
+            'asset_id' => $asset->id,
+            'description' => 'Bad assignee rollback',
+            'priority' => 'low',
+        ])->json('data.id');
+
+        // Requester is not an eligible assignee: the whole conversion must roll
+        // back — MR stays pending_review and no WO is created.
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'assignee_id' => $requester->id,
+        ])->assertStatus(409);
+
+        $this->assertDatabaseHas('maintenance_requests', [
+            'id' => $mrId,
+            'status' => 'pending_review',
+        ]);
+        $this->assertDatabaseMissing('work_orders', [
+            'maintenance_request_id' => $mrId,
+        ]);
+    }
+
+    public function test_approval_without_assignee_still_creates_unassigned_work_order(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        $mrId = $this->actingAs($requester)->postJson('/api/maintenance-requests/corrective', [
+            'asset_id' => $asset->id,
+            'description' => 'No assignee',
+            'priority' => 'high',
+        ])->json('data.id');
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")->assertOk();
+
+        $this->assertDatabaseHas('work_orders', [
+            'maintenance_request_id' => $mrId,
+            'assigned_to_user_id' => null,
+        ]);
+    }
+
     public function test_no_approved_status_exists(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);

@@ -89,12 +89,20 @@ class MaintenanceRequestController extends Controller
     {
         Gate::authorize('approve', $maintenanceRequest);
 
+        $validated = $request->validate([
+            'assignee_id' => ['nullable', 'exists:users,id'],
+        ]);
+
         try {
-            $mr = $action->execute($maintenanceRequest, $request->user()->id);
+            $mr = $action->execute(
+                $maintenanceRequest,
+                $request->user()->id,
+                isset($validated['assignee_id']) ? (int) $validated['assignee_id'] : null
+            );
 
             return response()->json([
                 'message' => 'Maintenance request approved and work order created.',
-                'data' => $mr->load('workOrder'),
+                'data' => $mr->load(['workOrder.assignedTo']),
             ]);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
