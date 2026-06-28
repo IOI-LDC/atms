@@ -1,4 +1,9 @@
-const BASE_URL = '/api'
+// API origin is env-driven so the SPA can run same-origin (dev proxy, empty
+// string → relative paths) or cross-origin (production subdomain split:
+// VITE_API_ORIGIN=https://atmsapi.inova.krd). Never hardcode the origin here.
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? ''
+const BASE_URL = `${API_ORIGIN}/api`
+const CSRF_URL = `${API_ORIGIN}/sanctum/csrf-cookie`
 
 let csrfInitialized = false
 let csrfPromise: Promise<void> | null = null
@@ -10,7 +15,7 @@ let csrfPromise: Promise<void> | null = null
 async function initCsrf(): Promise<void> {
   if (csrfInitialized) return
   if (!csrfPromise) {
-    csrfPromise = fetch('/sanctum/csrf-cookie', { credentials: 'include' })
+    csrfPromise = fetch(CSRF_URL, { credentials: 'include' })
       .then(() => { csrfInitialized = true })
       .finally(() => { csrfPromise = null })
   }

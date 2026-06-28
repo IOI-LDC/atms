@@ -111,6 +111,81 @@ Two things from VJ, framed as outcomes (not BC internals — VJ owns the "how"):
 
 ---
 
+---
+
+### 10. Is ERP the source of truth for assets? 🔴
+
+**Status:** Pending LDC decision. Blocks the G-01 asset-creation strategy
+(`PHASE_1_GAP_ANALYSIS.md` §4.1).
+
+**The question for LDC:** Is ERP (Dynamics 365 BC) the source of truth for asset
+**reference data**, or is ATMS?
+
+**Path A — ERP is the source of truth for assets (preferred):**
+- Remove the disabled "Add Asset" button entirely.
+- Build an **ERP Asset Sync** mirroring the existing Parts Sync pattern:
+  scheduled (daily) + manual on-demand trigger (`POST /api/admin/erp/sync-assets`).
+- Same `ErpSource` contract, same token-exchange + OData fetch flow proven for parts.
+- ERP-owned columns overwritten on every sync; ATMS operational fields never touched.
+- The BC asset page (`fixedAssestAPI`, 429 assets, 24 fields) is **already confirmed**
+  — unlike parts, the asset endpoint page name is known. Token auth is already working.
+- Update `IN_SCOPE.md` §1, `PRD.md`, and `ERP_SYNC.md` — all currently assert Path B
+  (_"Assets are managed fully within ATMS; there is no ERP asset source"_).
+
+**Path B — ATMS is the source of truth for assets (current documented position):**
+- Build the "Add Asset" UI sheet (Admin/Manager create assets manually).
+- Matches current `IN_SCOPE.md`, `PRD.md`, and `ERP_SYNC.md`.
+
+| Field | Value |
+|---|---|
+| **Raised** | 2026-06-27 |
+| **Depends on** | LDC decision |
+| **What we need** | Confirm Path A (ERP source of truth → build ERP asset sync, remove create UI) or Path B (manual → build Add Asset UI). |
+| **Impact of Path A** | No manual asset creation in ATMS; assets arrive via daily/on-demand ERP sync. Cleaner data ownership. ~2 days to build the sync. |
+| **Impact of Path B** | Assets created manually in ATMS by Admin/Manager; no ERP asset sync. ~1 day to build the create UI. |
+| **Doc impact (Path A)** | `IN_SCOPE.md`, `PRD.md`, `ERP_SYNC.md` must be updated to reflect ERP as the source of truth for asset reference data. |
+
+---
+
+## Phase 1 Code Gaps — Discovered 2026-06-27 (Gap Analysis Re-verification)
+
+> Full details in [`docs/PHASE_1_GAP_ANALYSIS.md`](../PHASE_1_GAP_ANALYSIS.md).
+
+### Internal — Frontend Stubs & Defects
+
+| # | Gap | Severity | File | Effort |
+|---|-----|----------|------|--------|
+| G-01 | "Add Asset" button disabled — **intentional, pending LDC decision** (Path A: ERP sync vs Path B: manual create). See decision #10 above. | ⏸ Decision | `AssetsView.vue:81` | Path A ~2.0d / Path B ~1.0d |
+| G-02 | Parts Management UI is a stub (list + detail) | 🔴 Critical | `PartsView.vue`, `PartDetailView.vue` | 1.5d |
+| G-03 | Location picker empty for Manager/Logistics | 🔴 Critical | `useLocations.ts:24-26` | 0.25d |
+| G-05 | System Settings UI stub | 🟡 Medium | `SystemSettingsView.vue` | 0.5d |
+| G-06 | Audit Logs viewer stub | 🟡 Medium | `AuditLogsView.vue` | 0.5d |
+| G-08 | SharePoint import button disabled | 🟢 Low | `UsersView.vue:187-189` | 0.25d |
+| G-09 | Effective Date field disabled in location update | 🟢 Low | `UpdateLocationSheet.vue:191` | 0.25d |
+| G-10 | `sinceLastService` hardcoded null on WO detail | 🟢 Low | `useWorkOrderDetail.ts:110-111` | 0.25d |
+| G-11 | Dashboard missing "Recently updated assets" widget | 🟢 Low | `DashboardController` / `DashboardView` | 0.5d |
+| G-12 | Resend activation email not implemented | 🟢 Low | `ProvisionUserDialog.vue:74-75` | 0.25d |
+
+### Internal — Backend Defect
+
+| # | Gap | Severity | File | Effort |
+|---|-----|----------|------|--------|
+| G-04 | `CreateAsset` action drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, `fa_subclass_code` (validated + permission-gated in controller but never persisted) | 🔴 High | `CreateAsset.php:16-27` | 0.25d |
+
+### Internal — Dead Code
+
+| # | Gap | Files |
+|---|-----|-------|
+| — | 5 orphaned stub views not wired into router (safe to delete) | `EmployeesView.vue`, `MasterDataView.vue`, `ErpSyncView.vue`, `CompanySettingsView.vue`, `admin/LocationsView.vue` |
+
+### Doc Correction
+
+| # | Item |
+|---|------|
+| — | `RBAC.md` "Known gap — Manager PM template access" — **resolved**. Manager PM workflow is complete via Asset Detail → PM Rules section. Template create/edit is Admin-only by design. |
+
+---
+
 ## Resolved
 
 | # | Item | Date |

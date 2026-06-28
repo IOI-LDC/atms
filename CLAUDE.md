@@ -333,7 +333,7 @@ The single Laravel backend and PostgreSQL database are shared by three product s
 - **AM** (Asset Movement) — Asset movement form, location history, movement workflow.
 
 Source-of-truth boundaries:
-- **Assets** are owned by ATMS and managed fully within ATMS. There is **no ERP asset sync**.
+- **Assets** — ⚠️ **PENDING LDC DECISION** (`docs/05-delivery/TDL.md` #10): Path A (ERP as source of truth → build ERP asset sync like Parts Sync, remove manual create UI) vs Path B (ATMS manages assets manually — current documented position in `IN_SCOPE.md`/`PRD.md`/`ERP_SYNC.md`). The "Add Asset" button is intentionally disabled until LDC decides. See `docs/PHASE_1_GAP_ANALYSIS.md` §4.1 (G-01).
 - **Parts** are owned by SM. ERP syncs parts into SM tables. ATMS reads parts only to populate Work Order part-request forms. SM parts tables are the source of truth for parts.
 - **Asset location** is owned by AM. ATMS reads the current location from AM tables for display only. AM location tables are the source of truth for location history.
 
@@ -341,7 +341,7 @@ Source-of-truth boundaries:
 
 ### Asset management
 
-Assets are managed fully within ATMS via `POST /assets` and `PATCH /assets/{asset}`. The `CreateAsset` Action handles creation; the `AssetController::update` method delegates location changes to the existing `UpdateAssetLocation` Action (generating a separate `asset.location_updated` audit entry) and updates remaining operational fields separately — so a single PATCH that changes both name and location produces two audit entries. Asset create/update is restricted to Administrator and Maintenance Manager.
+Assets are managed fully within ATMS via `POST /assets` and `PATCH /assets/{asset}`. The `CreateAsset` Action handles creation; **⚠️ Known bug (G-04):** `CreateAsset::execute()` silently drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, and `fa_subclass_code` — these are validated and permission-gated in `AssetController::store` but never persisted. The `update()` path via `UpdateAssetFields` does honor them. See `docs/PHASE_1_GAP_ANALYSIS.md` §5.1. The `AssetController::update` method delegates location changes to the existing `UpdateAssetLocation` Action (generating a separate `asset.location_updated` audit entry) and updates remaining operational fields separately — so a single PATCH that changes both name and location produces two audit entries. Asset create/update is restricted to Administrator and Maintenance Manager.
 
 ### Parts and ERP sync
 
@@ -480,6 +480,19 @@ Do not add: labor hours/rates/costs/timesheets, category-level or template-level
 | `POST` | `/admin/users/{user}/reset-password` | Admin | Force-reset password, invalidates all sessions/tokens; self-reset rejected |
 
 Full request/response shapes: `docs/atms/04-technical/BACKEND_API_REFERENCE.md`.
+
+## Phase 1 Gap Analysis (2026-06-27)
+
+A code-verified gap analysis is in [`docs/PHASE_1_GAP_ANALYSIS.md`](docs/PHASE_1_GAP_ANALYSIS.md).
+Key findings future sessions must know:
+
+- **Backend is solid** (zero TODO/FIXME; consistent action-query-controller architecture).
+- **Frontend has 4 stub views** that look "complete" but show "coming soon": `PartsView`, `PartDetailView`, `SystemSettingsView`, `AuditLogsView`. The backend for all four is fully implemented.
+- **3 Critical code gaps:** G-02 (Parts UI stub), G-03 (location picker empty for Manager/Logistics — `useLocations.ts` only loads for Admins despite `GET /api/locations` existing), G-04 (CreateAsset drops lifecycle fields).
+- **G-01 (Add Asset disabled) is intentional** — pending LDC decision on ERP-as-source-of-truth (`TDL.md` #10). Do NOT build the create UI until LDC picks Path A or Path B.
+- **Manager PM workflow is complete** — not a gap. The `RBAC.md` "known gap" note was outdated; Manager manages all PM assignments from Asset Detail → PM Rules section. Template create/edit is Admin-only by design.
+- **Asset Assembly does NOT exist in the backend** (despite earlier docs claiming it was "implemented"). No routes, no controller, no history table. Correct for Phase 1 scope; the frontend shows an honest "Phase 2" placeholder.
+- **Parts sync blocked** on ERP team providing the BC parts API page name (`TDL.md` #1–2). Infrastructure is fully built.
 
 ## Documentation index
 

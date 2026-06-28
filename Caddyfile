@@ -1,0 +1,70 @@
+# ===========================================================================
+# ATMS — production reverse proxy (Option A, split subdomain)
+# --------------------------------------------------------------------------
+# Run on the VPS (NOT in Docker). Two site blocks:
+#
+#   atms.inova.krd    → serves the built Vue SPA (static files + SPA fallback)
+#   atmsapi.inova.krd → reverse-proxies ALL traffic to the Docker "nginx"
+#                       container (port 8080 = WEB_PORT) — Laravel API +
+#                       Sanctum endpoints. Bearer-token third-party clients
+#                       also hit this host.
+#
+# Both terminate TLS automatically (Let's Encrypt via Caddy).
+#
+# Install:
+#   sudo apt install caddy
+#   sudo cp Caddyfile /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# DNS: both atms.inova.krd and atmsapi.inova.krd must resolve (A records or
+# CNAMEs) to this VPS's public IP. Caddy cannot issue certs until DNS
+# resolves.
+# ===========================================================================
+
+# ---- SPA host --------------------------------------------------------------
+{$APP_HOST:atms.inova.krd} {
+	encode gzip zstd
+
+	# Built Vue bundle. `npm run build` in frontend/ produces frontend/dist/.
+	root * /srv/atms/frontend/dist
+
+	# SPA fallback: unknown paths return index.html so vue-router resolves them.
+	try_files {path} /index.html
+
+	# Fingerprinted Vite assets are immutable; cache aggressively.
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+
+	# Match nginx.conf's 25m upload limit for any future form posts.
+	request_body {
+		max_size 30MB
+	}
+
+	log {
+		output file /var/log/caddy/atms.log
+		format console
+	}
+}
+
+# ---- API host --------------------------------------------------------------
+{$API_HOST:atmsapi.inova.krd} {
+	encode gzip zstd
+
+	# Everything goes to the Laravel Docker stack (nginx container = WEB_PORT).
+	# This covers /api/*, /sanctum/csrf-cookie, /storage/*, and any other
+	# Laravel-served path. Cookie auth + bearer auth both work through this.
+	reverse_proxy 127.0.0.1:{$BACKEND_PORT:8080} {
+		header_up Host {host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote_host}
+	}
+
+	request_body {
+		max_size 30MB
+	}
+
+	log {
+		output file /var/log/caddy/atmsapi.log
+		format console
+	}
+}

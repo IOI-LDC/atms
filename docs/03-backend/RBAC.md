@@ -132,16 +132,25 @@ rules.
 - PM rules are reusable schedule **templates** (M:N). Template lifecycle (create, edit, deactivate, reactivate) is Administrator-only (`PmRulePolicy`). Assigning a template to an asset and evaluating/deactivating/reactivating an assignment (`AssetPmAssignmentPolicy`) is Administrator **+ Maintenance Manager**. A retired template (`is_active = false`) stops all PM evaluation for its assignments without deactivating the assignments themselves.
 - Cumulative maintenance: when a higher-level PM work order (L2/L3/L4) closes, the baselines of all active lower-level PM **assignments** (L1, etc.) on the same asset are reset. This applies only to the standard L1-L4 level scheme; custom free-text levels are independent.
 
-> **Known gap — Manager access to PM template management (decided, pending UI):**
-> Under the M:N model, **assignment** management (assign/evaluate/deactivate/reactivate a template on an asset) is reachable by a Maintenance Manager from the **Asset Detail** screen, which Managers already see in the sidebar — so the Manager's `AssetPmAssignmentPolicy` permissions are no longer dormant.
-> **Template** management (create/edit/deactivate/reactivate), however, lives under the **Admin** sidebar item, whose `visibleTo` is `isAdmin` only. A Maintenance Manager is granted `view`/`viewAny` by `PmRulePolicy` and passes the `requiresAdminOrManager` guard on `/admin/pm-rules`, but has **no UI path** to view PM templates; that view permission is effectively dormant from the UI. The template-creation point is `POST /api/pm-rules` (`PmRuleController::store`, Admin-only).
+> **Resolved — Maintenance Manager PM workflow is complete (verified 2026-06-27):**
+> The Maintenance Manager performs all PM **assignment** operations (assign,
+> evaluate, deactivate, reactivate) from the **Asset Detail → PM Rules section**
+> (`AssetPmSection.vue`), gated by `:can-manage="auth.isAdminOrManager"`. The
+> "Assign Rule" dialog lists all active templates via `loadActiveTemplates()`, so
+> the Manager never needs to visit the template list page. Template names in the
+> assignment table are deep-links to `/admin/pm-rules/:ruleId`, which is guarded
+> `requiresAdminOrManager` — so the Manager can view individual template details
+> (schedule, coverage, MR history).
 >
-> **Agreed direction:** grant the Maintenance Manager access to the full Admin
-> area (Users & Access, Lists & Dropdowns, and PM Rules tabs), rather than
-> role-filtering tabs or promoting PM Rules to its own sidebar item. This is
-> **not yet implemented** — to close the gap, update `AppSidebar.vue`
-> (`visibleTo`), `router/index.ts` (`requiresAdmin` guards on `/admin/*`), and
-> verify the Admin endpoints' policies match the intended scope.
+> **Template creation and editing** (create/edit/deactivate/reactivate) remains
+> **Administrator-only** by design (`PmRulePolicy::create/update/deactivate/
+> reactivate`). This is the correct scope boundary: defining schedule templates is
+> a system-configuration task owned by the Administrator; the Maintenance Manager
+> consumes and assigns those templates per asset.
+>
+> No UI changes are required. The earlier "agreed direction" (grant Manager full
+> Admin-area access) is **superseded** — the Manager's PM workflow is fully served
+> from Asset Detail. See `docs/PHASE_1_GAP_ANALYSIS.md` §8 for the code evidence.
 - Only Administrator may create, edit, activate, or deactivate location definitions and master-data values.
 - Logistics and Maintenance Manager may select existing active locations when recording asset location changes.
 - Administrator and Maintenance Manager may trigger manual ERP parts sync runs.
