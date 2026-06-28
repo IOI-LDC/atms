@@ -258,6 +258,7 @@ export interface Attachment {
   created_at: string
   download_url?: string            // absent for Viewer
   uploaded_by?: UserRef | null     // Admin/Manager only
+  can_delete?: boolean             // policy-driven; absent until backend ships the flag
 }
 
 // ── Admin resources ───────────────────────────────────────────────────────────

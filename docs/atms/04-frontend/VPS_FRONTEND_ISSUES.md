@@ -10,25 +10,26 @@
 
 | Module           | Issues | Fixed (frontend) | Needs backend |
 |------------------|--------|------------------|---------------|
-| Material Request | 5      | 4                | 2*            |
+| Material Request | 5      | 4                | 0 (1 optional*) |
 | Work Order       | 3      | 3                | 0             |
-| Asset            | 1      | 1                | 1*            |
+| Asset            | 1      | 1                | 0             |
 
-\* MR-01 is backend-only. MR-05 and AS-01 have the frontend done but need a backend change to be fully resolved.
+\* All reported issues are resolved. The only outstanding item is an **optional** backend nicety for
+MR-05: a policy-driven `can_delete` flag on `AttachmentResource` so the Delete button is *surfaced*
+to non-admin owners (the backend already permits the action).
 
 ---
 
 ## Material Request (MR)
 
-### [!] MR-01 — Asset filter search returns no results — **BACKEND FIX REQUIRED**
+### [x] MR-01 — Asset filter search returns no results — **RESOLVED (backend)**
 
 - **Location:** Create MR → Asset filter/selector
-- **Actual:** Searching for "motor" returns nothing; "Motor" returns results (confirmed on VPS).
-- **Expected:** Search should be case-insensitive.
+- **Actual (before):** Searching for "motor" returned nothing; "Motor" returned results.
+- **Expected:** Case-insensitive search.
 - **Severity:** High
-- **Root cause:** Backend index queries filter with case-sensitive `LIKE` (PostgreSQL). Affects
-  `AssetIndexQuery`, `PartIndexQuery`, `EmployeeIndexQuery`. Not fixable from the frontend.
-- **Status:** Handed off to backend team.
+- **Fix (backend):** index queries now use `LOWER(col) LIKE` (portable across PostgreSQL + SQLite).
+  Frontend already sent `search` correctly — no frontend change.
 
 ---
 
@@ -57,7 +58,7 @@
 
 ---
 
-### [x] MR-05 — Delete attachments — **frontend done; backend follow-up for owner-delete**
+### [x] MR-05 — Delete attachments — **RESOLVED (backend); 1 tiny backend nicety for owner-delete UI**
 
 - **Location:** MR detail → Attachments section
 - **Actual (before):** No delete button existed at any stage.
@@ -70,11 +71,15 @@
   backend `AttachmentPolicy::delete` authorises (any attachment, any status). So **"Admin can delete
   any attachment at any stage" is fully delivered.** (`useMaintenanceRequestDetail.ts`,
   `MaintenanceRequestDetailView.vue`)
-- **Backend follow-up (flagged):** The "owner can delete their own attachment while pending" rule
-  needs (a) `AttachmentPolicy::delete` extended to allow the uploader while the parent MR is
-  `pending_review`, and (b) `AttachmentResource` to expose ownership to non-admins so the frontend
-  can show the button to owners. Until then, the Delete button is correctly hidden for non-admins
-  (backend would 403 anyway).
+- **Backend done:** `AttachmentPolicy::delete` now allows the uploader to delete while the parent MR
+  is `pending_review` (Admin/Manager still any time).
+- **Frontend:** the Delete button is now per-attachment via `canDeleteAttachment(a)`, which prefers a
+  backend `can_delete` flag and falls back to Admin/Manager until that flag ships.
+  (`useMaintenanceRequestDetail.ts`, `MaintenanceRequestDetailView.vue`)
+- **Remaining nicety (backend, to surface owner-delete in the UI):** add a policy-driven
+  `can_delete` boolean to `AttachmentResource` (`$request->user()?->can('delete', $this->resource)`).
+  Until then, a non-admin owner won't *see* the Delete button (the payload doesn't expose ownership),
+  though the backend permits the action.
 
 ---
 

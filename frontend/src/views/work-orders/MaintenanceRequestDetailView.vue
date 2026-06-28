@@ -33,7 +33,7 @@ const {
   record, loading, error, notFound, forbidden,
   editing, saving, editError, draft, validationErrors,
   attachments, attachmentsLoading,
-  deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachments,
+  deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachment,
   openDeleteAttachment, closeDeleteAttachment, doDeleteAttachment,
   isTerminal, canEdit, canApprove, canReject, canCancel,
   load, startEdit, cancelEdit, saveEdit,
@@ -230,7 +230,7 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
                     @click="openAttachmentInNewTab(a.download_url, a.file_name)"
                   >Open</Button>
                   <Button
-                    v-if="canDeleteAttachments"
+                    v-if="canDeleteAttachment(a)"
                     variant="link"
                     size="sm"
                     class="attachment-delete"

@@ -28,6 +28,9 @@
 
 | Date | What changed | Who needs to know | Status |
 |---|---|---|---|
+| 2026-06-28 | VPS Frontend Issue Tracker created (`docs/atms/04-frontend/VPS_FRONTEND_ISSUES.md`) — 8 issues logged (5 MR, 3 WO, 1 Asset). 4 frontend fixes verified on VPS, 3 need backend follow-up. | Frontend, Backend | ⚠️ Unacknowledged |
+| 2026-06-28 | Power Automate Notification Integration spec (`docs/03-backend/NOTIFICATIONS.md`) — 5 triggers, payload contracts, Laravel implementation, setup checklist. | Frontend (notification UX), Backend (queued jobs) | ⚠️ Unacknowledged |
+| 2026-06-28 | WO assignable roles expanded — Admin/Manager can assign WO to Technician OR Maintenance Manager (small teams, overloaded tech). | Frontend (assign picker), Backend (policy) | ⚠️ Unacknowledged |
 | 2026-06-24 | ERP connection confirmed (Entra ID → BC OData V4). Token + assets working. Env vars in `backend/.env`. | Frontend (API base URL pattern changed), SM team | ⚠️ Unacknowledged |
 | 2026-06-24 | Asset Assembly model decided. 5 API endpoints defined: `install`, `remove`, `swap`, `assembly-history`, `children`. | Frontend (new routes), Backend (new actions) | ⚠️ Unacknowledged |
 | 2026-06-24 | Asset tag format `L-BBB-CCC-XXXX` decided. New `asset_tag` column added to spec. | Frontend (create/edit forms, QR), Backend (migration, validation) | ⚠️ Unacknowledged |
@@ -45,7 +48,7 @@
 | D-001 | Rename `frontend/` → `atms/` + update Docker/nginx configs | Docs restructure done; code rename deferred per plan | When backend team starts SM subsystem |
 | D-002 | Update `CLAUDE.md` to match new docs structure | Explicitly out of scope for docs restructure | After `frontend/` → `atms/` rename |
 | D-003 | `asset_tag` QR code generation on asset detail page | Tag format decided; QR is future scope | After asset_tag column is implemented and populated |
-| D-004 ✅ | Virtual Store resolved — one workshop, per-part approval, auto-flag, overnight hold with next-day enforcement | 2026-06-24 | Done — spec in `docs/sm/01-product/VIRTUAL_STORE.md` | (transfer-in, consumption, return cycle, end-of-day rules, overnight hold with manager approval) | Spec written, 4 open questions to settle | After Q1-Q4 from VIRTUAL_STORE.md are resolved |
+| D-004 ✅ | Virtual Store resolved — one workshop, per-part approval, auto-flag, overnight hold with next-day enforcement | 2026-06-24 | Done — spec in `docs/sm/01-product/VIRTUAL_STORE.md` |
 | D-005 | SM architecture + parts catalogue design | VJ reply pending. If BC Store Order live → no local `parts` table needed; query BC directly. If not → build `parts` table synced from ERP. `work_order_parts` table needed either way. | When VJ replies about BC Store Order |
 | D-006 | Parts consumption write-back to ERP (SM → ERP when stock issued at GR) | Under discussion with LDC; not yet agreed. ERP team must confirm API contract for consumption/decrement transaction. | After LDC meeting on parts write-back |
 
@@ -57,6 +60,7 @@
 
 | Date | What | Completed by |
 |---|---|---|
+| 2026-06-28 | VPS frontend bug tracker + notification integration spec + docs README updated | AI-assisted |
 | 2026-06-24 | Documentation restructure (3 subsystems, 5 roles, 19 files updated) | AI-assisted |
 | 2026-06-24 | ERP connection tested: token acquired, 429 assets fetched from BC | AI-assisted |
 | 2026-06-24 | Mock ERP env vars removed from compose.yaml, .env, backend/.env | AI-assisted |
@@ -76,6 +80,7 @@
 | 1 | Parts API page name (BC custom API page) | ERP team / LDC |
 | 2 | Parts field mapping (response schema) | ERP team / LDC |
 | 3 | `componentOfMainAsset` sample with non-null parent | ERP team / LDC |
+| 4 | Power Automate webhook URL for notification testing | LDC IT / Power Automate admin |
 
 ---
 

@@ -39,13 +39,13 @@ Maintenance Requests can be generated in two ways:
 docs/
 ├── README.md                  ← this file
 ├── 00-project-rules/          ← authoritative-sources, project-wide rules
-├── 03-backend/                ← shared backend architecture, RBAC, status model, jobs, ERP sync, attachments, secure remote API access
-├── 05-delivery/               ← implementation plan, milestones, risks
+├── 03-backend/                ← shared backend architecture, RBAC, status model, jobs, ERP sync, attachments, notifications, secure remote API access
+├── 05-delivery/               ← implementation plan, milestones, risks, TDL
 ├── operations/                ← deployment, backup & restore
 ├── atms/                      ← ATMS subsystem
 │   ├── 01-product/            ← PRD, scope, workflows, roles, asset status
 │   ├── 02-design/             ← navigation, screens, UX, design system
-│   ├── 04-frontend/           ← frontend architecture, routes, components
+│   ├── 04-frontend/           ← frontend architecture, routes, components, VPS issue tracker
 │   └── 04-technical/          ← backend API reference & handoff for ATMS
 ├── sm/                        ← Store Management (placeholder — not built yet)
 │   ├── 01-product/
@@ -72,7 +72,7 @@ The `03-backend/`, `00-project-rules/`, `05-delivery/`, and `operations/` folder
 - **ERP Sync:** Parts master data synced from LDC ERP into SM tables using client-credentials token auth. No asset sync.
 - **Attachments:** Laravel local storage on a persistent Docker volume
 - **Auth/RBAC:** Laravel Sanctum SPA cookie/session authentication with role-based permissions
-- **Production Account Email:** Microsoft Power Automate for activation and password-reset delivery
+- **Notifications / Email Delivery:** All transactional emails (MR created, WO assigned, SM approval workflow, activation, password reset) are delivered via Microsoft Power Automate (company standard). ATMS dispatches a queued job that POSTs a JSON payload to the Power Automate HTTP trigger endpoint. Power Automate owns email composition, template rendering, approved sender, and delivery. See `03-backend/NOTIFICATIONS.md`.
 - **Company Portal:** SharePoint contains a normal link to the separately hosted product web applications; they are not embedded in or deployed to SharePoint
 
 Redis and MinIO are optional future upgrades and are not part of the default MVP deployment.
@@ -90,3 +90,14 @@ All users are Requesters at minimum; the legacy Viewer role has been merged into
 Use `atms/02-design/UI_DESIGN_SYSTEM.md` for visual and interaction standards.
 Product behavior, workflows, roles, and permissions remain authoritative over
 visual references and component examples.
+
+## Key Documents
+
+| Document | Purpose |
+|----------|---------|
+| `atms/04-frontend/VPS_FRONTEND_ISSUES.md` | Live issue tracker for frontend bugs found during VPS deployment testing |
+| `03-backend/NOTIFICATIONS.md` | Power Automate notification integration — payload contract, triggers, implementation |
+| `05-delivery/TDL.md` | Task Delivery List — items blocked on external dependencies or pending decisions |
+| `PHASE_1_GAP_ANALYSIS.md` | Phase 1 code gaps discovered during audit |
+| `atms/04-technical/BACKEND_API_REFERENCE.md` | Backend API reference for ATMS |
+| `atms/04-technical/BACKEND_API_HANDOFF.md` | Backend-to-frontend API handoff document |

@@ -1,124 +1,76 @@
-# Session State — 2026-06-27
+# Session State — 2026-06-28
 
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
 ## Last Session Accomplished
 
-- **VPS login/CSRF loop — ROOT-CAUSED & FIXED (2026-06-28):**
-  - **Symptom (prod, demo VPS):** login succeeded but the next click bounced to `/login`; a second login then 419'd. Confirmed via DB evidence: a valid, persisted session cookie sent on a 2nd `/sanctum/csrf-cookie` call returned a brand-new session ID **never written to the `sessions` table**.
-  - **Root cause (2 compounding issues in `backend/bootstrap/app.php`):**
-    1. **No `trustProxies`** behind the Cloudflare → Caddy → nginx (Docker) → PHP-FPM chain. `request()->ip()` resolved to `172.18.0.1` (Docker bridge), `isSecure()` was wrong, and session/XSRF cookie `Secure` attributes were inconsistent.
-    2. **Double `StartSession` on `/sanctum/csrf-cookie`.** Sanctum registers that route `->middleware('web')` (which already includes `StartSession`); a redundant global `$middleware->append(StartSession::class)` ran it a second time, racing the shared `SessionManager` singleton → minted un-persisted session IDs. This was the actual regeneration bug.
-  - **Fix (commit `260e784`, pushed):**
-    1. Added `$middleware->trustProxies(at: '*')` (safe: only public ingress is Caddy; container `:8080` bound to `127.0.0.1`).
-    2. **Removed** the global `append(StartSession::class)`. `StartSession` now runs exactly once per request: `/sanctum/csrf-cookie` via the `web` group; SPA auth routes via `statefulApi()` (`EnsureFrontendRequestsAreStateful::frontendMiddleware()` injects the full session pipeline for first-party `Origin`-matched requests); M2M bearer calls get none.
-  - **Side effect (beneficial):** API auth routes now run Sanctum's full pipeline **including `ValidateCsrfToken`** (previously had session without CSRF — a latent login-CSRF gap, now closed). SPA already sends `X-XSRF-TOKEN`, so prod unaffected.
-  - **Test changes:** the 4 session-dependent auth tests (`AuthTest`: login×2, logout; `AuthSecurityTest`: deactivated-login) now send `->withHeaders(['Origin' => config('app.url')])` to exercise the stateful path. CSRF verification disabled in `tests/TestCase::setUp()` (no test asserts 419).
-  - **Verified in prod by the user (2026-06-28):** "all fixed."
-  - **Lesson / canonical answer:** Sanctum's "first-party" detection (`EnsureFrontendRequestsAreStateful::fromFrontend`, vendor) is based solely on `Referer`/`Origin` matched against `sanctum.stateful`. `/login` IS first-party (SPA cross-origin fetch auto-sends `Origin`). `statefulApi()` alone covers session/CSRF for it — **never** add a global `StartSession` append alongside `statefulApi()`; it double-runs.
-  - Commits: `d420f5a` (trustProxies), `260e784` (remove global StartSession + tests), `2e53ea1` (AGENTS.md no-initiative rules).
+- **VPS Frontend Testing — Bug Tracker (2026-06-28): ALL 9 ISSUES RESOLVED.**
+  - `docs/atms/04-frontend/VPS_FRONTEND_ISSUES.md` — live tracker for frontend bugs
+    found during VPS deployment testing.
+  - **MR (5):** MR-01 case-insensitive asset search ✅ (backend `LOWER(col) LIKE`);
+    MR-02 list refresh after create ✅; MR-03 attachments open in new tab ✅ (blob +
+    object URL — API forces `Content-Disposition: attachment`); MR-04 layout +
+    "Approved by" ✅; MR-05 delete attachments ✅ (backend policy allows owner-delete
+    while `pending_review`; frontend gates per-attachment via `canDeleteAttachment(a)`
+    using a backend `can_delete` flag with Admin/Manager fallback).
+  - **WO (3):** WO-01 layout ✅; WO-02 assign-at-approval ✅ (atomic — `/approve`
+    accepts `assignee_id`); WO-03 assign/reassign ✅ (reassign while `in_progress`;
+    picker lists active Technicians **and** Managers; backend `AssignWorkOrder` +
+    `StartWorkOrder` accept both via `User::isWorkOrderAssignee()`). Also fixed a
+    pre-existing bug: pickers called `/users` (404) → now `/admin/users`. Assign
+    control is an icon button in the WO Details card header.
+  - **Asset (1):** AS-01 location "#undefined" ✅ (frontend consumes
+    `from_location`/`to_location` objects directly; backend eager-loads them).
+  - **Only optional leftover:** policy-driven `can_delete` boolean on
+    `AttachmentResource` to *surface* the owner Delete button in the UI (action is
+    already permitted server-side; frontend already consumes the flag).
 
-- **Asset Booking feature — COMPLETE (2026-06-27):**
-  - New `is_booked` boolean on `assets` table (default `false`). Availability marker for Operations to reserve an asset for a specific Job/Project. Auto-releases on location change or asset deactivation/inactivation. Does NOT gate MR/WO/PM.
-  - `ToggleAssetBooking` action with audit log (`asset.booked` / `asset.unbooked`), idempotency guards, inactive-asset block. `AssetBookingController` (`POST /assets/{id}/book`, `POST /assets/{id}/unbook`).
-  - `AssetPolicy::toggleBooking()` — Admin, Manager, Logistics.
-  - Auto-clear on location change: `UpdateAssetLocation::execute()` sets `is_booked = false`.
-  - Auto-clear on inactivation: `Asset::updating()` listener clears `is_booked` when `is_active → false` or `maintenance_status → Inactive`.
-  - MOC doc: `docs/atms/01-product/ASSET_BOOKING.md` (implemented, with rationale). Docs synced: STATUS_MODEL, RBAC, ROLES_AND_PERMISSIONS, ASSET_STATUS, BACKEND_API_REFERENCE (new Asset Booking section + `is_booked` in AssetResource table).
-  - **Test suite: 372 passed (951 assertions).** 14 new tests (`AssetBookingTest`).
-  - Commits: `673ca87` (booking + docs).
+- **Power Automate Notification Integration — DOCUMENTED (2026-06-28):**
+  - Created `docs/03-backend/NOTIFICATIONS.md` — full spec for email delivery via
+    company-standard Microsoft Power Automate.
+  - Architecture: ATMS event → queued job → HTTP POST (JSON) → Power Automate
+    HTTP trigger → email. No DB polling, push-based.
+  - 5 notification triggers documented with full payload contracts:
+    - Phase 1: MR Created, WO Assigned/Reassigned
+    - Phase 2: SM Order Submitted, SM Order Approved, SM Order Rejected
+  - Laravel implementation: `SendNotificationToPowerAutomate` queued job, event
+    listeners, retry/failure handling.
+  - Power Automate setup checklist.
 
-- **P0 — Employee Directory from CSV (no DB import) — COMPLETE (2026-06-27):**
-  - `CsvEmployeeDirectorySource` reads `employee.csv` (94 employees) in-memory — zero DB rows until provisioning.
-  - `GET /api/admin/employees` now reads from CSV source, with search, sort, pagination, and `emp_ids` filter.
-  - Config-based whitelist via `EMPLOYEE_VISIBLE_EMP_IDS=45,6,18,29,23,60,37,3,9` — only those 9 appear by default.
-  - `POST /api/admin/employees/provision-user` changed: accepts `{emp_id, role_id}` in body (no route-model binding). Flow: find in CSV → upsert single Employee record → provision User → queue activation notification.
-  - Provisioning emails: backend only (`UserActivationNotification` → `AccountEmailChannel` → `AccountEmailTransport`). Currently `fake` transport (in-memory capture). Real transport is `PowerAutomateAccountEmailTransport` (Entra ID OAuth → MS Graph).
-  - Dirty users (demo accounts) deleted — only `system@atms.internal` and `admin@atms.local` remain.
-  - **Test suite: 358 passed (921 assertions).** 7 new tests (EmployeeIndexTest, emp_ids filter tests, updated EmployeeProvisioningTest).
-  - Commits: `56ff747` (P0 employee CSV + frontend provision fix).
+- **Docs README Updated (2026-06-28):**
+  - `docs/README.md` — updated folder structure to include new files, replaced old
+    activation-only Power Automate line with full notification integration summary,
+    added "Key Documents" table with new entries.
 
-- **PM Rules 1:1 → M:N refactor (backend) — COMPLETE (2026-06-26):**
-  - `PmRule` is now a reusable schedule **template** (no `asset_id`); new `asset_pm_assignments` pivot (`AssetPmAssignment`) carries each asset's own `last_triggered_date`/`_reading`/`is_active`.
-  - Two-layer RBAC: template lifecycle (create/edit/deactivate/reactivate) Admin-only (`PmRulePolicy`); assignment assign/evaluate/deactivate/reactivate Admin **+ Manager** (`AssetPmAssignmentPolicy`). `SERVICE` retained for view endpoints.
-  - `PmDueCalculator`, `EvaluatePmRule`, `EvaluatePmRulesJob`, `OverduePmQuery`, `CloseWorkOrder` operate on assignments and double-gate on **both** assignment and template `is_active` (a retired template stops all PM work without cascade-deactivating assignments).
-  - New routes: `/assets/{asset}/pm-assignments/*` (scoped binding), `/pm-rules/{rule}/assignments` (coverage), `/pm-rules/evaluate-all` (structured `{evaluated, generated}`); removed `/pm-rules/{rule}/evaluate` and `/pm-rules/evaluate`. Dashboard key `overdue_pm_rules` → `overdue_pm_assignments`.
-  - Assignment deactivation clears still-effective suppression windows (date+reading → null) so reactivation isn't blocked by pre-deactivation windows (deviation from plan §7.8: null instead of `now()`, since the calculator uses `>= today`).
-  - WO closure resets the originating assignment's baselines + lower-level sibling assignments on the same asset (cumulative reset).
-  - **Test suite: 351 passed (891 assertions)** (was 327; 4 rewritten suites + 3 new test files).
-  - Docs synced: `CLAUDE.md`, `RBAC`, `SCOPE_CHANGE`, `BACKEND_API_REFERENCE`/`HANDOFF`, `JOBS_AND_SCHEDULER`, `ROLES_AND_PERMISSIONS`, `WORKFLOWS`, `SCREEN_INVENTORY`, `NAVIGATION`, `ROUTES`. Plan: `.kilo/plans/1782413031648-pm-rules-mn-refactor.md`.
-  - **Note:** frontend (views/composable/Asset Detail PM section) was implemented in the same session but is now out of the agent's scope — review/integration of frontend is the user's / frontend team's call.
-
-- **Locations Sidebar Backend Dependency — COMPLETE (2026-06-25):**
-  - Implemented `GET /api/locations` read-only endpoint: active locations only (`is_active = true`), sorted by name, authorized for Admin/Manager/Logistics.
-  - `LocationPolicy::viewAny()`, `LocationController@index`, route `GET /api/locations` (outside admin prefix — distinct from `GET /api/admin/locations` which is Admin-only/all-status).
-  - 5 feature tests in `tests/Feature/Locations/ListActiveLocationsTest.php` (role auth 200/403/401, active-only filter, name sort, response shape).
-  - Docs synced: `LOCATION_SIDEBAR_CHANGE.md` (status → resolved, added Backend Implementation section), `BACKEND_API_REFERENCE.md` (removed ⚠️ warning).
-  - **Test suite: 316 passed (808 assertions)** — no regressions.
-
-- **Phase 1 Backend Cleanup & ATMS Core Features — COMPLETE:**
-  - Purged `SyncErpAssetsJob`, `erp_asset_id` column, `MockErpHttpSource`, Viewer role
-  - Asset registry with tags (`L-BBB-CCC-XXXX`) + `AssetTagService` generation algorithm
-  - Maintenance status (`Active`/`Inactive`) gating MR creation, WO assignment, PM evaluation
-  - API bearer tokens (M2M auth via `TokenController` + `EnsureTokenAbilities` middleware)
-  - Real ERP adapter (`LdcErpHttpSource`) with Entra ID OAuth, dynamic token TTL
-  - 5(+1) role RBAC: Admin, Manager, Tech, Logistics, Requester + SERVICE (non-user, M2M only)
-  - `FaSubclassTypeCode` admin CRUD for asset tag type-code lookup
-  - QR-code asset lookup via `GET /api/assets/by-tag?tag=...`
-  - PM suppression dual-boundary validation (date + reading)
-
-- **Code review (2 rounds) — 13 findings → all resolved:**
-  - 3 critical: missing Collection import, zero test coverage, stale .env.example
-  - 4 medium: silent lifecycle drop → 403, null tag clearing, hardcoded TTL, tag collision race
-  - 6 additional fixes found during test writing (see plan doc Post-Review Fixes section)
-
-- **Test suite: 316 tests passing** (was 304 baseline; 5 new in `ListActiveLocationsTest` for `GET /api/locations`, plus location workflow tests)
-
-- **Documentation updated:**
-  - `.kilo/plans/1782388457617-phase1-backend-cleanup-and-features.md` — Post-Review Fixes appendix
-  - `CLAUDE.md` — updated for Phase 1 complete, 6 roles, stale warnings removed
-  - `docs/03-backend/ARCHITECTURE.md` — removed stale sync job/erp_asset_id notes
-  - `backend/.env.example` — fixed `MOCK_ERP_*` → `LDC_ERP_*` variables
-
-- **SPA auth "save → kicked to login" investigation (2026-06-26):**
-  - Symptom: intermittent **401 on mutations** (MR/WO/PM/User) → redirect to `/login`.
-  - Root cause: **SPA-side concurrency races**, NOT backend. `initCsrf()` (api.ts) wasn't single-flight → N parallel `/sanctum/csrf-cookie` calls racing each other's `Set-Cookie`; the router guard skipped an in-flight `fetchCurrentUser()` and redirected prematurely. Backend auth is correct and stable for sequential requests (verified via curl: login → GET×5 = all 200).
-  - **Frontend team fixed it** (single-flight `initCsrf` + `fetchCurrentUser`, router guard). Backend **unchanged**; `SANCTUM_STATEFUL_DOMAINS=localhost`.
-  - **⚠️ Do NOT re-add `:5173` to `SANCTUM_STATEFUL_DOMAINS`.** Tried it (made `localhost:5173` stateful) → exposed `AuthenticateSession`/session instability → *every* navigation 401'd. Reverted. That config is the wrong lever.
-  - If 401s recur post-deploy → the backend lever is the **DB session driver concurrent-write (last-write-wins)**: `session.block` / `session.block_seconds` (tradeoff: serialized latency). Investigate then.
-  - **⚠️ UPDATE (2026-06-28):** The recurring-login-loop cause was **NOT** the DB concurrent-write lever above. It was the **double-`StartSession`** from the global `append(StartSession::class)` + `statefulApi()` running `StartSession` twice on `/sanctum/csrf-cookie`, plus missing `trustProxies`. Both fixed in commit `260e784`. See the "VPS login/CSRF loop" entry at the top of this file for the full root cause. **Do NOT re-add a global `StartSession` append.**
-  - **Config gotcha:** `SANCTUM_STATEFUL_DOMAINS`/`SESSION_DOMAIN`/`APP_URL` are injected by `compose.yaml` from the **root `.env`** (`atms/.env`) — they **override** `backend/.env`. Edit the root `.env`, then `docker compose up -d api`.
-  - **Operational:** `admin@atms.local` password was reset to `Password123!` during offline curl testing.
-- **Git state (2026-06-28):** On `main`, up to date with `origin/main`. Latest commits: `260e784` (fix(auth): remove global StartSession append — VPS CSRF loop), `2e53ea1` (AGENTS.md no-initiative rules), `d420f5a` (fix(auth): trustProxies), `673ca87` (asset booking + docs), `56ff747` (P0 employee CSV + provision fix). All pushed. `.env` is gitignored.
-
-## Next Steps — Prioritized Execution Order (2026-06-27)
+## Next Steps — Prioritized Execution Order (2026-06-28)
 
 Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 (team), ⏳ = blocked on an external dependency.
 
-### ~~P0 — Employee → System User provisioning~~ ✅ COMPLETE (2026-06-27)
-- Backend done (CSV directory + provision by emp_id). Frontend UsersView +
-  useUsers updated for new endpoint. 9 real employees whitelisted.
-- **Remaining (F):** Frontend needs UI polish — booking book/unbook buttons on
-  Asset Detail + Asset List (backend ready, frontend not wired). Also: provision
-  UX to actually invoke provision-user on the 9 whitelisted employees once the
-  client confirms role assignments per person.
+### ✅ DONE — VPS Frontend Fixes + WO Assignment (2026-06-28)
 
-### P1 — Work Order Assign 🔓
-- **Goal:** assign a Technician to an open WO.
-- **Backend — EXISTS:** `POST /work-orders/{wo}/assign` → `AssignWorkOrder`.
-- **Needed:** **(F)** WO detail "Assign" action (technician picker). **(B)** verify
-  policy + audit on the existing endpoint.
+- **VPS issues (MR-01..05, WO-01..03, AS-01):** all resolved (see "Last Session
+  Accomplished"). Frontend changes need a **rebuild/redeploy** to appear on the VPS.
+- **WO Assign + Assign-at-approval:** both shipped (atomic `/approve` w/ `assignee_id`;
+  WO detail assign/reassign; Technician OR Manager assignable).
+- **Optional leftover (B):** add `can_delete` boolean to `AttachmentResource`
+  (`$request->user()?->can('delete', $this->resource)`) to surface the owner Delete
+  button. Frontend already consumes it with an Admin/Manager fallback.
 
-### P1 — Assign at MR → WO conversion 🔓
-- **Goal:** when a Manager approves an MR (converting it to a WO), optionally
-  assign the Technician right then instead of after.
-- **Backend — TO BUILD (B):** extend `ApproveMaintenanceRequestAndCreateWorkOrder`
-  to accept an optional `assigned_to_user_id` (+ assign timestamp) and persist it
-  on the created WO. Add validation + policy check + tests.
-- **Needed:** **(F)** "Assign" option in the MR review/approve flow, just before
-  conversion.
+### Remaining Frontend Builds (F) — stub views with backend already implemented
+- **Parts Management UI** — `PartsView.vue` + `PartDetailView.vue` are "coming soon"
+  stubs. Backend done (`GET /parts`, `PATCH /parts/{part}`, attachments). *(Catalogue
+  data is ERP-blocked, but the UI can be built now.)* **Highest-value next piece.**
+- **System Settings** — `SystemSettingsView.vue` stub; backend done.
+- **Audit Logs** — `AuditLogsView.vue` stub; backend done.
+- **Manager → Admin-area access** — decided but not implemented: `AppSidebar.vue`
+  Admin items still `visibleTo: isAdmin` (lines 86, 93); router still has
+  `requiresAdmin` guards (lines 118, 127). Grant Managers access (see Open Follow-ups).
+
+### Notification Testing (2026-06-29)
+- Test Power Automate webhook integration: POST sample payloads from ATMS queue
+  worker → verify email arrives via Power Automate flow.
 
 ### Asset Booking — Frontend wiring (F) 🔓
 - Backend complete (`POST /assets/{id}/book` + `/unbook`, `is_booked` in
@@ -143,17 +95,17 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 - #7 Create `sm/` and `am/` Vue 3 scaffolds (Phase 8/9).
 
 ### Suggested execution order
-**~~P0 (employees/users)~~ ✅ → P1 (WO assign verify) → P1 (MR→WO assign build)
-→ Asset Booking frontend → P2 (parts, when ERP replies).** #6 / #7 anytime.
+**Parts Management UI → System Settings + Audit Logs views → Manager admin-area
+access → Asset Booking frontend → Notification testing → P2 (parts data, when ERP
+replies).** Optional `can_delete` flag (B) + #6 / #7 anytime.
 
 ---
 
 ## Phase 1 pending review
-Phase 1 core is **COMPLETE** (see note below). The remaining "Backend Team
-(future)" items (#6 rename, #7 scaffolds) are infra/Phase 8–9, not feature gaps.
-The feature work above (P0–P2) is the real next iteration; P0 and P1 are
-unblocked and mostly backend-complete (need the client CSV for P0 and small
-backend additions for the MR-assign item). P2 is fully blocked on the ERP team.
+Phase 1 core is **COMPLETE**. VPS bug fixes and WO assignment enhancements are
+**done** (2026-06-28). Remaining: stub-view frontend builds (Parts UI, System
+Settings, Audit Logs), Manager admin-area access, Asset Booking frontend, and
+notification integration testing.
 
 ---
 
@@ -180,6 +132,8 @@ backend additions for the MR-assign item). P2 is fully blocked on the ERP team.
 | Mock ERP | Fully deleted. `LdcErpHttpSource` skips sync gracefully when `LDC_ERP_PARTS_API` is empty. |
 | API token abilities | Read-only (`['read']`) blocked on POST/PUT/PATCH/DELETE → 403. Write (`['read','write']`) allowed all. SPA session never blocked. |
 | Git commit convention | When the user says "commit ALL" (capitalized), use `git add .` — stage everything including untracked files, then commit. |
+| Notifications / Email | All transactional emails delivered via Microsoft Power Automate (company standard). ATMS dispatches queued job → HTTP POST → Power Automate HTTP trigger → email. Not Laravel's native mail driver. (2026-06-28) |
+| WO assignable roles | Admin/Manager can assign WO to active Technician OR Maintenance Manager (small teams, overloaded tech). Assignment authority remains solely Admin/Manager. (2026-06-28) |
 
 ## Pending — Blocked on ERP Team 🔴
 
@@ -194,8 +148,6 @@ backend additions for the MR-assign item). P2 is fully blocked on the ERP team.
 
 | # | Item |
 |---|---|
-| 4 | ~~Remove 4 Mock ERP PHP files~~ ✅ Done (Phase 1) |
-| 5 | ~~Sync `CLAUDE.md` with new docs structure~~ ✅ Done (Phase 1) |
 | 6 | Rename `frontend/` → `atms/` + update Docker/nginx |
 | 7 | Create `sm/` and `am/` Vue 3 scaffolds |
 
@@ -210,17 +162,20 @@ backend additions for the MR-assign item). P2 is fully blocked on the ERP team.
 1. Read this file first.
 2. Check `.kilo/TLD.md` for active tasks, deferred items, and cross-team awareness.
 3. Check `docs/05-delivery/TDL.md` for external blocker details.
-4. The authoritative source-of-truth is `docs/00-project-rules/authoritative-sources.md`.
-5. Key docs map:
+4. Check `docs/atms/04-frontend/VPS_FRONTEND_ISSUES.md` for open frontend bugs.
+5. The authoritative source-of-truth is `docs/00-project-rules/authoritative-sources.md`.
+6. Key docs map:
    - ATMS product: `docs/atms/01-product/`
    - Backend: `docs/03-backend/`
    - Frontend: `docs/atms/04-frontend/`
    - API: `docs/atms/04-technical/`
+   - Notifications: `docs/03-backend/NOTIFICATIONS.md`
    - ERP: `docs/03-backend/ERP_SYNC.md`
    - Assembly: `docs/atms/01-product/ASSET_ASSEMBLY.md`
    - Tags: `docs/atms/01-product/ASSET_TAG.md`
    - Phase 1 plan: `.kilo/plans/1782388457617-phase1-backend-cleanup-and-features.md`
-6. ERP test: source `backend/.env`, then the curl commands commented in that file.
+   - VPS issues: `docs/atms/04-frontend/VPS_FRONTEND_ISSUES.md`
+7. ERP test: source `backend/.env`, then the curl commands commented in that file.
 
 ## Implementation Phases (2026-06-24)
 
@@ -280,4 +235,3 @@ with a placeholder parts picker using demo data if VJ hasn't replied by then.
   scope. **Frontend work — out of the backend agent's scope.** Canonical note:
   `docs/03-backend/RBAC.md` (Known gap). Pointers in SCREEN_INVENTORY.md §7c and
   NAVIGATION.md §7.
-

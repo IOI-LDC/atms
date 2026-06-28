@@ -43,7 +43,11 @@ export function useMaintenanceRequestDetail() {
   // backend enhancement — keep this gate aligned with what the API allows.
   const deleteAttachmentTarget  = ref<Attachment | null>(null)
   const deleteAttachmentLoading = ref(false)
-  const canDeleteAttachments    = computed(() => auth.isAdminOrManager)
+  // Per-attachment, policy-driven. Prefer the backend `can_delete` flag; fall
+  // back to Admin/Manager until that flag ships so behaviour is unchanged.
+  function canDeleteAttachment(attachment: Attachment): boolean {
+    return attachment.can_delete ?? auth.isAdminOrManager
+  }
 
   // ── Workflow-action state ───────────────────────────────────────────────────
   const approveOpen    = ref(false)
@@ -258,7 +262,7 @@ export function useMaintenanceRequestDetail() {
     record, loading, error, notFound, forbidden,
     editing, saving, editError, draft, validationErrors,
     attachments, attachmentsLoading,
-    deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachments,
+    deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachment,
     openDeleteAttachment, closeDeleteAttachment, doDeleteAttachment,
     isPending, isTerminal,
     canEdit, canApprove, canReject, canCancel,
