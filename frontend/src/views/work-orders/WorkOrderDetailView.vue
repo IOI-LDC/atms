@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { ArrowLeftIcon, PaperclipIcon } from '@lucide/vue'
+import { ArrowLeftIcon, PaperclipIcon, UserPlusIcon, UserPenIcon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,9 +15,10 @@ import {
 } from '@/components/ui/select'
 import { FileInput } from '@/components/ui/file-input'
 import { useWorkOrderDetail } from '@/composables/useWorkOrderDetail'
+import { openAttachmentInNewTab } from '@/lib/attachments'
 import {
   woStatusClass, woStatusLabel, priorityClass, priorityLabel, mrTypeLabel,
-  operationalStatusLabel, fmtDate, formatBytes,
+  operationalStatusLabel, fmtDate, formatBytes, roleLabel,
 } from '@/lib/displayHelpers'
 
 const route = useRoute()
@@ -126,6 +127,17 @@ watch(id, async (newId) => {
           <div class="data-card-header">
             <h2 class="data-card-title">Details</h2>
             <div class="detail-card-actions">
+              <Button
+                v-if="canAssign && !editing"
+                size="icon-sm"
+                variant="outline"
+                :title="record.assigned_to ? 'Reassign work order' : 'Assign work order'"
+                :aria-label="record.assigned_to ? 'Reassign work order' : 'Assign work order'"
+                @click="openAssign"
+              >
+                <UserPenIcon v-if="record.assigned_to" />
+                <UserPlusIcon v-else />
+              </Button>
               <Button v-if="canEdit && !editing" size="sm" variant="outline" @click="startEdit">Edit</Button>
               <Button v-if="editing" size="sm" variant="outline" :disabled="saving" @click="cancelEdit">Cancel</Button>
               <Button v-if="editing" size="sm" :disabled="saving" @click="saveEdit">
@@ -136,7 +148,7 @@ watch(id, async (newId) => {
           <div class="detail-card-content">
             <div v-if="editError" class="error-state" role="alert">{{ editError }}</div>
             <div class="detail-grid">
-              <div class="detail-field">
+              <div class="detail-field detail-field-block">
                 <span class="detail-field-label">Asset</span>
                 <p class="detail-field-value">
                   {{ record.asset.name }}
@@ -331,17 +343,21 @@ watch(id, async (newId) => {
               <li v-for="a in attachments" :key="a.id" class="attachment-item">
                 <span class="attachment-name">{{ a.file_name }}</span>
                 <span class="attachment-size">{{ formatBytes(a.size_bytes) }}</span>
-                <a v-if="a.download_url" class="attachment-download" :href="a.download_url" target="_blank" rel="noopener">Download</a>
+                <Button
+                  v-if="a.download_url"
+                  variant="link"
+                  size="sm"
+                  class="attachment-download"
+                  @click="openAttachmentInNewTab(a.download_url, a.file_name)"
+                >Open</Button>
               </li>
             </ul>
           </div>
         </div>
 
         <!-- Workflow actions -->
-        <div v-if="!isTerminal && (canAssign || canStart || canComplete || canClose || canCancel)" class="detail-actions">
+        <div v-if="!isTerminal && (canStart || canComplete || canClose || canCancel)" class="detail-actions">
           <Button v-if="canCancel" variant="outline" @click="openCancel">Cancel</Button>
-          <Button v-if="canAssign && !record.assigned_to" @click="openAssign">Assign…</Button>
-          <Button v-if="canAssign && record.assigned_to" variant="outline" @click="openAssign">Reassign…</Button>
           <Button v-if="canStart" :disabled="startLoading" @click="doStart">
             {{ startLoading ? 'Starting…' : 'Start' }}
           </Button>
@@ -358,16 +374,18 @@ watch(id, async (newId) => {
     <Dialog v-model:open="assignOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Assign technician</DialogTitle>
-          <DialogDescription>Select a technician to assign this work order to.</DialogDescription>
+          <DialogTitle>Assign work order</DialogTitle>
+          <DialogDescription>Select an active Technician or Maintenance Manager to assign this work order to.</DialogDescription>
         </DialogHeader>
         <div class="form-field">
-          <Label for="wo-tech">Technician</Label>
-          <div v-if="techniciansLoading" class="loading-state">Loading technicians…</div>
+          <Label for="wo-tech">Assignee</Label>
+          <div v-if="techniciansLoading" class="loading-state">Loading assignees…</div>
           <Select v-else v-model="selectedTechIdStr">
-            <SelectTrigger id="wo-tech"><SelectValue placeholder="Select a technician" /></SelectTrigger>
+            <SelectTrigger id="wo-tech"><SelectValue placeholder="Select an assignee" /></SelectTrigger>
             <SelectContent>
-              <SelectItem v-for="t in technicians" :key="t.id" :value="String(t.id)">{{ t.name }}</SelectItem>
+              <SelectItem v-for="t in technicians" :key="t.id" :value="String(t.id)">
+                {{ t.name }} <span class="select-item-meta">{{ roleLabel(t.role) }}</span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

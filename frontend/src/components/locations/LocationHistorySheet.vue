@@ -6,7 +6,7 @@ import {
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
 import { fmtDate } from '@/lib/displayHelpers'
-import type { Asset, AssetLocationHistoryItem, Location } from '@/types'
+import type { Asset, AssetLocationHistoryItem } from '@/types'
 
 const props = defineProps<{
   asset: Asset
@@ -26,23 +26,12 @@ watch(() => props.open, (nowOpen) => {
 async function loadHistory() {
   loading.value = true
   try {
+    // The API returns resolved `from_location` / `to_location` objects
+    // ({ id, name }) directly — consume them as-is.
     const res = await api.get<{ data: AssetLocationHistoryItem[] }>(
       `/assets/${props.asset.id}/location-history`,
     )
-    const items = res.data ?? []
-
-    // Resolve location IDs to names; silently falls back for non-Admin roles.
-    try {
-      const locRes = await api.get<{ data: Location[] }>('/admin/locations')
-      const locMap = new Map((locRes.data ?? []).map((l) => [l.id, l]))
-      history.value = items.map((h) => ({
-        ...h,
-        from_location: h.from_location_id != null ? (locMap.get(h.from_location_id) ?? null) : null,
-        to_location: locMap.get(h.to_location_id) ?? null,
-      }))
-    } catch {
-      history.value = items
-    }
+    history.value = res.data ?? []
   } catch {
     history.value = []
   } finally {
@@ -83,10 +72,10 @@ async function loadHistory() {
             <tr v-for="h in history" :key="h.id" class="detail-table-row">
               <td class="detail-table-cell detail-field-muted">{{ fmtDate(h.effective_at) }}</td>
               <td class="detail-table-cell detail-field-muted">
-                {{ h.from_location?.name ?? (h.from_location_id ? `Location #${h.from_location_id}` : '—') }}
+                {{ h.from_location?.name ?? '—' }}
               </td>
               <td class="detail-table-cell">
-                {{ h.to_location?.name ?? `Location #${h.to_location_id}` }}
+                {{ h.to_location?.name ?? '—' }}
               </td>
               <td class="detail-table-cell">{{ h.reason ?? '—' }}</td>
             </tr>

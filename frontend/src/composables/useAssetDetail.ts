@@ -137,22 +137,13 @@ export function useAssetDetail() {
   async function loadLocationHistory(id: number | string) {
     locationHistoryLoading.value = true
     try {
+      // The API returns the resolved `from_location` / `to_location` objects
+      // ({ id, name }) directly — consume them as-is. (Earlier code tried to
+      // re-resolve names from the Admin-only /admin/locations endpoint using
+      // location-id fields the response doesn't expose, which both 403'd for
+      // non-admins and clobbered the real objects → "Location #undefined".)
       const res = await api.get<{ data: AssetLocationHistoryItem[] }>(`/assets/${id}/location-history`)
-      const items = res.data ?? []
-
-      // Resolve location IDs to names using the admin endpoint.
-      // Silently ignored for non-Admin roles (403).
-      try {
-        const locRes = await api.get<{ data: Location[] }>('/admin/locations')
-        const locMap = new Map((locRes.data ?? []).map((l) => [l.id, l]))
-        locationHistory.value = items.map((h) => ({
-          ...h,
-          from_location: h.from_location_id != null ? (locMap.get(h.from_location_id) ?? null) : null,
-          to_location: locMap.get(h.to_location_id) ?? null,
-        }))
-      } catch {
-        locationHistory.value = items
-      }
+      locationHistory.value = res.data ?? []
     } catch {
       locationHistory.value = []
     } finally {

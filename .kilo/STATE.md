@@ -5,6 +5,20 @@
 
 ## Last Session Accomplished
 
+- **VPS login/CSRF loop — ROOT-CAUSED & FIXED (2026-06-28):**
+  - **Symptom (prod, demo VPS):** login succeeded but the next click bounced to `/login`; a second login then 419'd. Confirmed via DB evidence: a valid, persisted session cookie sent on a 2nd `/sanctum/csrf-cookie` call returned a brand-new session ID **never written to the `sessions` table**.
+  - **Root cause (2 compounding issues in `backend/bootstrap/app.php`):**
+    1. **No `trustProxies`** behind the Cloudflare → Caddy → nginx (Docker) → PHP-FPM chain. `request()->ip()` resolved to `172.18.0.1` (Docker bridge), `isSecure()` was wrong, and session/XSRF cookie `Secure` attributes were inconsistent.
+    2. **Double `StartSession` on `/sanctum/csrf-cookie`.** Sanctum registers that route `->middleware('web')` (which already includes `StartSession`); a redundant global `$middleware->append(StartSession::class)` ran it a second time, racing the shared `SessionManager` singleton → minted un-persisted session IDs. This was the actual regeneration bug.
+  - **Fix (commit `260e784`, pushed):**
+    1. Added `$middleware->trustProxies(at: '*')` (safe: only public ingress is Caddy; container `:8080` bound to `127.0.0.1`).
+    2. **Removed** the global `append(StartSession::class)`. `StartSession` now runs exactly once per request: `/sanctum/csrf-cookie` via the `web` group; SPA auth routes via `statefulApi()` (`EnsureFrontendRequestsAreStateful::frontendMiddleware()` injects the full session pipeline for first-party `Origin`-matched requests); M2M bearer calls get none.
+  - **Side effect (beneficial):** API auth routes now run Sanctum's full pipeline **including `ValidateCsrfToken`** (previously had session without CSRF — a latent login-CSRF gap, now closed). SPA already sends `X-XSRF-TOKEN`, so prod unaffected.
+  - **Test changes:** the 4 session-dependent auth tests (`AuthTest`: login×2, logout; `AuthSecurityTest`: deactivated-login) now send `->withHeaders(['Origin' => config('app.url')])` to exercise the stateful path. CSRF verification disabled in `tests/TestCase::setUp()` (no test asserts 419).
+  - **Verified in prod by the user (2026-06-28):** "all fixed."
+  - **Lesson / canonical answer:** Sanctum's "first-party" detection (`EnsureFrontendRequestsAreStateful::fromFrontend`, vendor) is based solely on `Referer`/`Origin` matched against `sanctum.stateful`. `/login` IS first-party (SPA cross-origin fetch auto-sends `Origin`). `statefulApi()` alone covers session/CSRF for it — **never** add a global `StartSession` append alongside `statefulApi()`; it double-runs.
+  - Commits: `d420f5a` (trustProxies), `260e784` (remove global StartSession + tests), `2e53ea1` (AGENTS.md no-initiative rules).
+
 - **Asset Booking feature — COMPLETE (2026-06-27):**
   - New `is_booked` boolean on `assets` table (default `false`). Availability marker for Operations to reserve an asset for a specific Job/Project. Auto-releases on location change or asset deactivation/inactivation. Does NOT gate MR/WO/PM.
   - `ToggleAssetBooking` action with audit log (`asset.booked` / `asset.unbooked`), idempotency guards, inactive-asset block. `AssetBookingController` (`POST /assets/{id}/book`, `POST /assets/{id}/unbook`).
@@ -73,9 +87,10 @@
   - **Frontend team fixed it** (single-flight `initCsrf` + `fetchCurrentUser`, router guard). Backend **unchanged**; `SANCTUM_STATEFUL_DOMAINS=localhost`.
   - **⚠️ Do NOT re-add `:5173` to `SANCTUM_STATEFUL_DOMAINS`.** Tried it (made `localhost:5173` stateful) → exposed `AuthenticateSession`/session instability → *every* navigation 401'd. Reverted. That config is the wrong lever.
   - If 401s recur post-deploy → the backend lever is the **DB session driver concurrent-write (last-write-wins)**: `session.block` / `session.block_seconds` (tradeoff: serialized latency). Investigate then.
+  - **⚠️ UPDATE (2026-06-28):** The recurring-login-loop cause was **NOT** the DB concurrent-write lever above. It was the **double-`StartSession`** from the global `append(StartSession::class)` + `statefulApi()` running `StartSession` twice on `/sanctum/csrf-cookie`, plus missing `trustProxies`. Both fixed in commit `260e784`. See the "VPS login/CSRF loop" entry at the top of this file for the full root cause. **Do NOT re-add a global `StartSession` append.**
   - **Config gotcha:** `SANCTUM_STATEFUL_DOMAINS`/`SESSION_DOMAIN`/`APP_URL` are injected by `compose.yaml` from the **root `.env`** (`atms/.env`) — they **override** `backend/.env`. Edit the root `.env`, then `docker compose up -d api`.
   - **Operational:** `admin@atms.local` password was reset to `Password123!` during offline curl testing.
-- **Git state (2026-06-27):** On `main`. Latest commits: `673ca87` (asset booking + docs), `56ff747` (P0 employee CSV + provision fix). Both pushed to working tree, not yet pushed to remote. `.env` is gitignored.
+- **Git state (2026-06-28):** On `main`, up to date with `origin/main`. Latest commits: `260e784` (fix(auth): remove global StartSession append — VPS CSRF loop), `2e53ea1` (AGENTS.md no-initiative rules), `d420f5a` (fix(auth): trustProxies), `673ca87` (asset booking + docs), `56ff747` (P0 employee CSV + provision fix). All pushed. `.env` is gitignored.
 
 ## Next Steps — Prioritized Execution Order (2026-06-27)
 

@@ -426,6 +426,24 @@
   font-size: 0.8125rem;
 }
 
+/* Right-aligned cluster of per-attachment actions (Open / Delete). */
+.attachment-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.attachment-delete {
+  color: var(--destructive);
+}
+
+/* Secondary metadata inside a select option (e.g. the role beside a name). */
+.select-item-meta {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
 @media (max-width: 640px) {
   .detail-grid {
     grid-template-columns: 1fr;

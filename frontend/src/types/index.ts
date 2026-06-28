@@ -31,6 +31,9 @@ export interface AssetRef { id: number; name: string; erp_asset_code: string; op
 /** Minimal user reference. `email` only visible to Admin/Manager. */
 export interface UserRef { id: number; name: string; email?: string }
 
+/** A Work Order assignee candidate (active Technician or Maintenance Manager). */
+export interface Assignee { id: number; name: string; role: string }
+
 export interface LocationRef { id: number; name: string; type?: string }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

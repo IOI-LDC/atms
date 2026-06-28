@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
-import type { MaintenanceRequest, Attachment, Priority } from '@/types'
+import type { MaintenanceRequest, Attachment, Priority, Assignee } from '@/types'
 
 /**
  * Owns the state and actions for a single Maintenance Request detail page.
@@ -38,10 +38,22 @@ export function useMaintenanceRequestDetail() {
   // ── Attachments ─────────────────────────────────────────────────────────────
   const attachments       = ref<Attachment[]>([])
   const attachmentsLoading = ref(false)
+  // Backend policy currently authorises attachment deletion for Admin/Manager
+  // only (any attachment, any status). Owner-deletes-while-pending is a pending
+  // backend enhancement — keep this gate aligned with what the API allows.
+  const deleteAttachmentTarget  = ref<Attachment | null>(null)
+  const deleteAttachmentLoading = ref(false)
+  const canDeleteAttachments    = computed(() => auth.isAdminOrManager)
 
   // ── Workflow-action state ───────────────────────────────────────────────────
   const approveOpen    = ref(false)
   const approveLoading = ref(false)
+  // Optional technician assignment performed at approval time (WO-02): the WO is
+  // created by /approve, then assigned in a follow-up call. null = leave the new
+  // work order unassigned.
+  const approveTechnicians        = ref<Assignee[]>([])
+  const approveTechniciansLoading = ref(false)
+  const selectedApproveTechId     = ref<number | null>(null)
   const rejectOpen     = ref(false)
   const rejectLoading  = ref(false)
   const rejectReason   = ref('')
@@ -97,6 +109,32 @@ export function useMaintenanceRequestDetail() {
     }
   }
 
+  function openDeleteAttachment(attachment: Attachment) {
+    deleteAttachmentTarget.value = attachment
+  }
+
+  function closeDeleteAttachment() {
+    deleteAttachmentTarget.value = null
+  }
+
+  async function doDeleteAttachment() {
+    const target = deleteAttachmentTarget.value
+    if (!target || !record.value) {
+      return
+    }
+    deleteAttachmentLoading.value = true
+    try {
+      await api.delete(`/attachments/${target.id}`)
+      toast.success('Attachment deleted.')
+      deleteAttachmentTarget.value = null
+      await loadAttachments(record.value.id)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to delete attachment.')
+    } finally {
+      deleteAttachmentLoading.value = false
+    }
+  }
+
   // ── Edit ────────────────────────────────────────────────────────────────────
   function startEdit() {
     if (!record.value) return
@@ -139,18 +177,46 @@ export function useMaintenanceRequestDetail() {
   }
 
   // ── Workflow actions (refresh the record on success) ────────────────────────
-  function openApprove() { approveOpen.value = true }
+  function openApprove() {
+    selectedApproveTechId.value = null
+    approveOpen.value = true
+    void loadApproveTechnicians()
+  }
   function openReject() { rejectReason.value = ''; rejectOpen.value = true }
   function openCancel() { cancelReason.value = ''; cancelOpen.value = true }
+
+  async function loadApproveTechnicians() {
+    if (approveTechnicians.value.length > 0 || approveTechniciansLoading.value) return
+    approveTechniciansLoading.value = true
+    try {
+      const res = await api.get<{ data: { id: number; name: string; role?: { code: string }; is_active: boolean }[] }>('/admin/users')
+      approveTechnicians.value = (res.data ?? [])
+        .filter((u) => u.is_active && (u.role?.code === 'technician' || u.role?.code === 'maintenance_manager'))
+        .map((u) => ({ id: u.id, name: u.name, role: u.role?.code ?? '' }))
+    } catch {
+      approveTechnicians.value = []
+    } finally {
+      approveTechniciansLoading.value = false
+    }
+  }
 
   async function doApprove() {
     if (!record.value) return
     approveLoading.value = true
+    const assigneeId = selectedApproveTechId.value
     try {
-      await api.post(`/maintenance-requests/${record.value.id}/approve`)
-      toast.success('Request approved — work order created.')
+      // Atomic approve + optional assign: the backend creates the WO and assigns
+      // it inside one transaction, rolling back the MR conversion if the assignee
+      // is ineligible. Omitting assignee_id keeps the WO unassigned.
+      await api.post(
+        `/maintenance-requests/${record.value.id}/approve`,
+        assigneeId ? { assignee_id: assigneeId } : undefined,
+      )
       approveOpen.value = false
       await load(record.value.id)
+      toast.success(assigneeId
+        ? 'Request approved — work order created and assigned.'
+        : 'Request approved — work order created.')
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to approve request.')
     } finally {
@@ -192,10 +258,13 @@ export function useMaintenanceRequestDetail() {
     record, loading, error, notFound, forbidden,
     editing, saving, editError, draft, validationErrors,
     attachments, attachmentsLoading,
+    deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachments,
+    openDeleteAttachment, closeDeleteAttachment, doDeleteAttachment,
     isPending, isTerminal,
     canEdit, canApprove, canReject, canCancel,
     load, startEdit, cancelEdit, saveEdit,
     approveOpen, approveLoading, openApprove, doApprove,
+    approveTechnicians, approveTechniciansLoading, selectedApproveTechId,
     rejectOpen, rejectLoading, rejectReason, openReject, doReject,
     cancelOpen, cancelLoading, cancelReason, openCancel, doCancel,
   }

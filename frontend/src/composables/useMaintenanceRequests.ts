@@ -23,7 +23,7 @@ function useFetchList<T>(endpoint: string, baseParams: Record<string, string | n
     }
   }
 
-  return { rows, loading, load }
+  return { rows, loading, loaded, load }
 }
 
 export function useMaintenanceRequests() {
@@ -88,7 +88,14 @@ export function useMaintenanceRequests() {
       toast.success('Maintenance request submitted.')
       confirmCreateOpen.value = false
       closeCreate()
-      await myRequests.load(true) // refresh My Requests so the new one appears
+      // Refresh every slice the user has already opened so the new request shows
+      // up immediately on whichever tab is active — not just "My Requests".
+      // A new corrective MR belongs in My Requests, Pending Approval, and All.
+      await Promise.all(
+        [myRequests, awaiting, allRequests]
+          .filter((slice) => slice.loaded.value)
+          .map((slice) => slice.load(true)),
+      )
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) {
         const first = Object.values(e.validationErrors)[0]?.[0]

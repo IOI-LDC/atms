@@ -13,8 +13,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useMaintenanceRequestDetail } from '@/composables/useMaintenanceRequestDetail'
+import { openAttachmentInNewTab } from '@/lib/attachments'
 import {
-  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, mrTypeLabel, fmtDate, formatBytes,
+  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, mrTypeLabel, fmtDate, formatBytes, roleLabel,
 } from '@/lib/displayHelpers'
 
 const route = useRoute()
@@ -32,12 +33,22 @@ const {
   record, loading, error, notFound, forbidden,
   editing, saving, editError, draft, validationErrors,
   attachments, attachmentsLoading,
+  deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachments,
+  openDeleteAttachment, closeDeleteAttachment, doDeleteAttachment,
   isTerminal, canEdit, canApprove, canReject, canCancel,
   load, startEdit, cancelEdit, saveEdit,
   approveOpen, approveLoading, openApprove, doApprove,
+  approveTechnicians, approveTechniciansLoading, selectedApproveTechId,
   rejectOpen, rejectLoading, rejectReason, openReject, doReject,
   cancelOpen, cancelLoading, cancelReason, openCancel, doCancel,
 } = useMaintenanceRequestDetail()
+
+// shadcn-vue Select emits string values; the composable holds a numeric id or
+// null. '__none__' is the explicit "leave unassigned" sentinel.
+const selectedApproveTechIdStr = computed({
+  get: () => selectedApproveTechId.value !== null ? String(selectedApproveTechId.value) : '__none__',
+  set: (v: string | undefined) => { selectedApproveTechId.value = (!v || v === '__none__') ? null : Number(v) },
+})
 
 watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
 </script>
@@ -93,7 +104,7 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
 
             <!-- Field grid: short read-only meta + editable priority -->
             <div class="detail-grid">
-              <div class="detail-field">
+              <div class="detail-field detail-field-block">
                 <span class="detail-field-label">Asset</span>
                 <p class="detail-field-value">
                   {{ record.asset.name }}
@@ -109,7 +120,7 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
                 <p class="detail-field-value">{{ fmtDate(record.created_at) }}</p>
               </div>
               <div class="detail-field">
-                <span class="detail-field-label">Reviewed by</span>
+                <span class="detail-field-label">Approved by</span>
                 <p class="detail-field-value">{{ record.reviewed_by?.name ?? '—' }}</p>
               </div>
 
@@ -211,7 +222,21 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
               <li v-for="a in attachments" :key="a.id" class="attachment-item">
                 <span class="attachment-name">{{ a.file_name }}</span>
                 <span class="attachment-size">{{ formatBytes(a.size_bytes) }}</span>
-                <a v-if="a.download_url" class="attachment-download" :href="a.download_url" target="_blank" rel="noopener">Download</a>
+                <div class="attachment-actions">
+                  <Button
+                    v-if="a.download_url"
+                    variant="link"
+                    size="sm"
+                    @click="openAttachmentInNewTab(a.download_url, a.file_name)"
+                  >Open</Button>
+                  <Button
+                    v-if="canDeleteAttachments"
+                    variant="link"
+                    size="sm"
+                    class="attachment-delete"
+                    @click="openDeleteAttachment(a)"
+                  >Delete</Button>
+                </div>
               </li>
             </ul>
           </div>
@@ -227,6 +252,24 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
 
     </div>
 
+    <!-- Delete attachment confirmation -->
+    <Dialog :open="!!deleteAttachmentTarget" @update:open="(v) => { if (!v) closeDeleteAttachment() }">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete attachment?</DialogTitle>
+          <DialogDescription>
+            <strong>{{ deleteAttachmentTarget?.file_name }}</strong> will be permanently removed from this request. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" :disabled="deleteAttachmentLoading" @click="closeDeleteAttachment">Back</Button>
+          <Button variant="destructive" :disabled="deleteAttachmentLoading" @click="doDeleteAttachment">
+            {{ deleteAttachmentLoading ? 'Deleting…' : 'Delete Attachment' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <!-- Approve confirmation -->
     <Dialog v-model:open="approveOpen">
       <DialogContent>
@@ -236,6 +279,19 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
             Approving converts this request into a Work Order. This cannot be undone.
           </DialogDescription>
         </DialogHeader>
+        <div class="form-field">
+          <Label for="approve-tech">Assign to <span class="field-optional">— optional</span></Label>
+          <div v-if="approveTechniciansLoading" class="loading-state">Loading assignees…</div>
+          <Select v-else v-model="selectedApproveTechIdStr">
+            <SelectTrigger id="approve-tech"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Leave unassigned</SelectItem>
+              <SelectItem v-for="t in approveTechnicians" :key="t.id" :value="String(t.id)">
+                {{ t.name }} <span class="select-item-meta">{{ roleLabel(t.role) }}</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <DialogFooter>
           <Button variant="outline" :disabled="approveLoading" @click="approveOpen = false">Back</Button>
           <Button :disabled="approveLoading" @click="doApprove">

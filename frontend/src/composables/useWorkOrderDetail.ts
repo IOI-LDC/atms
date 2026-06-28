@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
-import type { WorkOrder, UserRef, Attachment } from '@/types'
+import type { WorkOrder, Assignee, Attachment } from '@/types'
 
 /**
  * Owns the state and actions for a single Work Order detail page.
@@ -20,7 +20,7 @@ import type { WorkOrder, UserRef, Attachment } from '@/types'
  *  POST   /work-orders/{id}/asset-status     -> { data: asset }       { operational_status }  [NEW — backend prerequisite]
  *  GET    /work-orders/{id}/attachments      -> { data: Attachment[] }
  *  POST   /work-orders/{id}/attachments      -> attachment            (multipart upload)
- *  GET    /users                             -> { data: User[] }      (technician picker)
+ *  GET    /admin/users                       -> { data: User[] }      (assignee picker; Admin/Manager)
  *  GET    /usage-reading-types               -> { data: Type[] }
  *  GET    /parts?search=                     -> cursor page           (parts picker)
  *  GET    /assets/{id}/meter-readings        -> { data: Reading[] }
@@ -52,7 +52,9 @@ export function useWorkOrderDetail() {
 
   // Permissions (client UX hints — backend gate remains authoritative)
   const canEdit   = computed(() => !!record.value && !isTerminal.value && !isCompleted.value && (auth.isAdminOrManager || isAssignedToMe.value))
-  const canAssign = computed(() => !!record.value && isOpen.value && auth.isAdminOrManager)
+  // Assign while open; reassign while in progress too (the backend permits
+  // assigning any non-closed/cancelled WO). Closed/cancelled stay locked.
+  const canAssign = computed(() => !!record.value && (isOpen.value || isInProgress.value) && auth.isAdminOrManager)
   const canStart  = computed(() => !!record.value && isOpen.value && !!record.value.assigned_to && (auth.isAdminOrManager || isAssignedToMe.value))
   const canComplete = computed(() => !!record.value && isInProgress.value && (auth.isAdminOrManager || isAssignedToMe.value))
   const canClose  = computed(() => !!record.value && isCompleted.value && auth.isAdminOrManager)
@@ -69,7 +71,7 @@ export function useWorkOrderDetail() {
   // ── Assign state ─────────────────────────────────────────────────────────
   const assignOpen      = ref(false)
   const assignLoading   = ref(false)
-  const technicians     = ref<UserRef[]>([])
+  const technicians     = ref<Assignee[]>([])
   const techniciansLoading = ref(false)
   const selectedTechId  = ref<number | null>(null)
 
@@ -210,10 +212,10 @@ export function useWorkOrderDetail() {
     if (technicians.value.length === 0 && !techniciansLoading.value) {
       techniciansLoading.value = true
       try {
-        const res = await api.get<{ data: { id: number; name: string; role?: { code: string }; is_active: boolean }[] }>('/users')
+        const res = await api.get<{ data: { id: number; name: string; role?: { code: string }; is_active: boolean }[] }>('/admin/users')
         technicians.value = (res.data ?? [])
-          .filter((u) => u.role?.code === 'technician' && u.is_active)
-          .map((u) => ({ id: u.id, name: u.name }))
+          .filter((u) => u.is_active && (u.role?.code === 'technician' || u.role?.code === 'maintenance_manager'))
+          .map((u) => ({ id: u.id, name: u.name, role: u.role?.code ?? '' }))
       } catch {
         technicians.value = []
       } finally {
