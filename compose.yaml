@@ -78,6 +78,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
+      target: app
     container_name: atms-queue
     working_dir: /var/www/html
     command: php artisan queue:work --tries=3
@@ -118,6 +119,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
+      target: app
     container_name: atms-scheduler
     working_dir: /var/www/html
     command: php artisan schedule:work
