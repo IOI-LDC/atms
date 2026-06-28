@@ -123,6 +123,31 @@ class EmployeeIndexTest extends TestCase
             ->assertJsonPath('data.0.emp_id', 'E3001');
     }
 
+    public function test_employee_list_search_is_case_insensitive(): void
+    {
+        // Regression for case-sensitive search on PostgreSQL: plain LIKE is
+        // case-sensitive there (and case-insensitive on SQLite, which masked
+        // the bug). Locks the case-insensitive contract for name and emp_id.
+        $admin = $this->createAdmin();
+
+        $this->injectFakeDirectory([
+            ['sharepoint_item_id' => 'sp-1', 'emp_id' => 'E3001', 'name' => 'Alice Smith', 'email' => 'a@e.com'],
+            ['sharepoint_item_id' => 'sp-2', 'emp_id' => 'E3002', 'name' => 'Bob Anderson', 'email' => 'b@e.com'],
+        ]);
+
+        // uppercase term against Title Case name.
+        $byUpper = $this->actingAs($admin)->getJson('/api/admin/employees?search=ALICE');
+        $byUpper->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.emp_id', 'E3001');
+
+        // lowercase term against uppercase emp_id.
+        $byCode = $this->actingAs($admin)->getJson('/api/admin/employees?search=e3002');
+        $byCode->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.emp_id', 'E3002');
+    }
+
     public function test_employee_list_supports_sort_descending(): void
     {
         $admin = $this->createAdmin();

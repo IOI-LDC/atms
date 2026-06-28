@@ -228,4 +228,26 @@ class AssetBookingTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('data.0.is_booked', true);
     }
+
+    public function test_asset_search_is_case_insensitive(): void
+    {
+        // Regression for case-sensitive search on PostgreSQL: plain LIKE is
+        // case-sensitive there (and case-insensitive on SQLite, which masked
+        // the bug). Reproduces the reported "motor" vs "Motor" symptom.
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createAsset(['name' => 'Motor Assembly', 'erp_asset_code' => 'AST-MTR-01']);
+        $this->createAsset(['name' => 'Conveyor Belt', 'erp_asset_code' => 'AST-CNV-01']);
+
+        $byLower = $this->actingAs($admin)->getJson('/api/assets?search=motor');
+        $byLower->assertOk();
+        $this->assertContains('Motor Assembly', collect($byLower->json('data'))->pluck('name'));
+
+        $byUpper = $this->actingAs($admin)->getJson('/api/assets?search=ASSEMBLY');
+        $byUpper->assertOk();
+        $this->assertContains('Motor Assembly', collect($byUpper->json('data'))->pluck('name'));
+
+        $byCode = $this->actingAs($admin)->getJson('/api/assets?search=ast-mtr');
+        $byCode->assertOk();
+        $this->assertContains('Motor Assembly', collect($byCode->json('data'))->pluck('name'));
+    }
 }

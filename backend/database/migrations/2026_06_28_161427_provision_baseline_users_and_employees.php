@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -27,6 +28,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Baseline provisioning for dev/prod only. Never run during tests: it
+        // seeds real user/employee rows (e.g. system@atms.internal) that collide
+        // with test fixtures and pollute assertions. Guard keys on the testing
+        // env and the dedicated "testing" connection name so it is reliable even
+        // when container OS env vars shadow phpunit.xml <env> values (e.g. APP_ENV).
+        if (App::environment('testing') || DB::connection()->getName() === 'testing') {
+            return;
+        }
+
         $now = now();
 
         // Ensure the required roles exist (roles table has no timestamps).
@@ -128,6 +138,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (App::environment('testing') || DB::connection()->getName() === 'testing') {
+            return;
+        }
+
         DB::table('users')->whereIn('email', [
             'service@atms.internal',
             'admin@atms.local',

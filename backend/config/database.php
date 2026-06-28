@@ -99,6 +99,29 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        // Dedicated test connection. Switched on via DB_CONNECTION=testing in
+        // phpunit.xml. We use a separate connection (rather than overriding
+        // DB_DATABASE) because container/deployed environments inject DB_DATABASE
+        // as a real OS env var, which shadows phpunit.xml <env> values and would
+        // otherwise point the test suite at the live application database.
+        // Host/credentials reuse DB_* so no extra secrets are required; only the
+        // database name differs (DB_TEST_DATABASE, default atms_testing) and must
+        // exist as an empty database separate from the application database.
+        'testing' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_TEST_DATABASE', 'atms_testing'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

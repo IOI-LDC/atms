@@ -1,12 +1,24 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
+        // This migration seeds real baseline data for dev/prod databases. It must
+        // never run during tests: its PostgreSQL-only syntax breaks the suite on
+        // other drivers, and its explicit-ID inserts + table resets corrupt the
+        // test database (sequence gaps, count pollution). Tests own their own
+        // fixtures via factories/seeders. The guard keys on both the testing env
+        // and the dedicated "testing" connection name so it is reliable even when
+        // container OS env vars shadow phpunit.xml <env> values (e.g. APP_ENV).
+        if (App::environment('testing') || DB::connection()->getName() === 'testing') {
+            return;
+        }
+
         DB::statement(
             'TRUNCATE TABLE roles, employees, users, locations, fa_subclass_type_codes, '
             .'usage_reading_types, assets, pm_rules, asset_pm_assignments, '
@@ -540,6 +552,10 @@ BASELINE_REAL_DATA_SQL
 
     public function down(): void
     {
+        if (App::environment('testing') || DB::connection()->getName() === 'testing') {
+            return;
+        }
+
         foreach ([
             'asset_location_histories', 'asset_pm_assignments', 'pm_rules', 'assets',
             'usage_reading_types', 'fa_subclass_type_codes', 'locations', 'users',

@@ -156,4 +156,29 @@ class PartResourceTest extends TestCase
         $this->assertContains('Bearing 6205', $names);
         $this->assertNotContains('Seal Kit', $names);
     }
+
+    public function test_search_is_case_insensitive(): void
+    {
+        // Regression for case-sensitive search on PostgreSQL: plain LIKE is
+        // case-sensitive there (and case-insensitive on SQLite, which masked
+        // the bug). Search with differing case against mixed-case stored data.
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createPart(['name' => 'Motor Pump 12kW', 'erp_part_id' => 'ERP-MTR', 'erp_part_code' => 'PC-MTR']);
+        $this->createPart(['name' => 'Seal Kit', 'erp_part_id' => 'ERP-SKL', 'erp_part_code' => 'PC-SKL']);
+
+        // lowercase term against Title Case name.
+        $lower = $this->actingAs($admin)->getJson('/api/parts?search=motor');
+        $lower->assertStatus(200);
+        $this->assertContains('Motor Pump 12kW', collect($lower->json('data'))->pluck('name'));
+
+        // uppercase term against Title Case name.
+        $upper = $this->actingAs($admin)->getJson('/api/parts?search=PUMP');
+        $upper->assertStatus(200);
+        $this->assertContains('Motor Pump 12kW', collect($upper->json('data'))->pluck('name'));
+
+        // mixed-case term against the code column.
+        $byCode = $this->actingAs($admin)->getJson('/api/parts?search=pc-mtr');
+        $byCode->assertStatus(200);
+        $this->assertContains('Motor Pump 12kW', collect($byCode->json('data'))->pluck('name'));
+    }
 }

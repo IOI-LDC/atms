@@ -38,8 +38,11 @@ class PartIndexQuery
     protected function applyFilters($query, Request $request): void
     {
         if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('erp_part_code', 'like', "%{$search}%"));
+            // LOWER() on both sides keeps matching case-insensitive on every
+            // supported driver. Plain LIKE is case-sensitive on PostgreSQL;
+            // ILIKE is not valid on SQLite. See ticket: case-sensitive search.
+            $term = '%'.strtolower($request->input('search')).'%';
+            $query->where(fn ($q) => $q->whereRaw('LOWER(name) LIKE ?', [$term])->orWhereRaw('LOWER(erp_part_code) LIKE ?', [$term]));
         }
     }
 

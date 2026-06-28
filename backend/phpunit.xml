@@ -24,9 +24,18 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
+        <!-- Tests run on PostgreSQL to match production. The suite cannot use
+             SQLite: the baseline data migration issues PostgreSQL-only syntax
+             (TRUNCATE ... RESTART IDENTITY CASCADE, public.* schema). Running on
+             the same engine as production also prevents driver-specific bugs
+             (e.g. case-sensitive LIKE) from being masked by SQLite's behavior.
+             We switch to a dedicated "testing" connection (see config/database.php)
+             that targets a separate database (DB_TEST_DATABASE, default
+             atms_testing) so RefreshDatabase never touches the application
+             database. Using a connection name (not DB_DATABASE) is intentional:
+             containers inject DB_DATABASE as an OS env var that shadows this
+             <env> value. The test database must exist and be empty. -->
+        <env name="DB_CONNECTION" value="testing"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
