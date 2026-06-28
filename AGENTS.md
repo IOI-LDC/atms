@@ -168,3 +168,10 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
 
 </laravel-boost-guidelines>
+
+# User Interaction Rules (mandatory)
+
+- Do NOT take initiative. Do only exactly what is explicitly requested.
+- When the user asks a question, answer the question and STOP. Do not start implementing, editing, or investigating beyond what is needed to answer. Wait for the next instruction.
+- Do not chain follow-up actions (commits, pushes, refactors, "while I'm at it" changes) unless explicitly told to.
+- If an answer requires running a command, run only that, then report and wait.
