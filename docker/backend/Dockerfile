@@ -27,6 +27,11 @@ RUN composer dump-autoload --optimize --no-scripts
 FROM php:8.4-fpm-alpine AS app
 RUN apk add --no-cache postgresql-dev shadow \
     && docker-php-ext-install pdo_pgsql pgsql
+# Production tuning: FPM pool (replaces stock www.conf, max_children 5 → 35)
+# and OPcache ini (validate_timestamps=0, sized for Laravel).
+# See docker/backend/php/*.conf for rationale.
+COPY docker/backend/php/atms-fpm-pool.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/backend/php/zz-atms.ini         /usr/local/etc/php/conf.d/zz-atms.ini
 COPY --from=composer-stage /app /var/www/html
 RUN chown -R www-data:www-data /var/www/html \
     && mkdir -p /var/www/html/storage/app/attachments \

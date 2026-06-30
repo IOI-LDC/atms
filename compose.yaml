@@ -60,6 +60,23 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: atms-postgres
+    # Tuned for 6 vCPU / 12 GB RAM / NVMe (see docs/03-backend).
+    # shared_buffers=2GB reserves a dedicated RAM share for Postgres; the
+    # remaining ~8GB is left to the OS page cache (effective_cache_size tells
+    # the planner how much cache is available, guiding index/seq-scan choices).
+    # random_page_cost=1.1 + effective_io_concurrency=200 reflect NVMe
+    # (random reads cost ~the same as sequential; planner stops avoiding them).
+    command: >
+      postgres
+      -c shared_buffers=2GB
+      -c effective_cache_size=8GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=512MB
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c max_connections=100
     environment:
       POSTGRES_DB: "${DB_DATABASE:-atms}"
       POSTGRES_USER: "${DB_USERNAME:-atms}"
