@@ -51,8 +51,8 @@ export const useAuthStore = defineStore('auth', () => {
     return inflight
   }
 
-  async function login(email: string, password: string): Promise<void> {
-    const data = await api.post<{ user: User }>('/auth/login', { email, password })
+  async function login(email: string, password: string, remember = false): Promise<void> {
+    const data = await api.post<{ user: User }>('/auth/login', { email, password, remember })
     user.value = data.user
   }
 

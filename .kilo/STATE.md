@@ -12,8 +12,9 @@
     MR-02 list refresh after create ✅; MR-03 attachments open in new tab ✅ (blob +
     object URL — API forces `Content-Disposition: attachment`); MR-04 layout +
     "Approved by" ✅; MR-05 delete attachments ✅ (backend policy allows owner-delete
-    while `pending_review`; frontend gates per-attachment via `canDeleteAttachment(a)`
-    using a backend `can_delete` flag with Admin/Manager fallback).
+    while `pending_review`; `AttachmentResource` exposes an unconditional policy-driven
+    `can_delete` flag (+ `attachable` eager-load); frontend gates per-attachment via
+    `canDeleteAttachment(a)`).
   - **WO (3):** WO-01 layout ✅; WO-02 assign-at-approval ✅ (atomic — `/approve`
     accepts `assignee_id`); WO-03 assign/reassign ✅ (reassign while `in_progress`;
     picker lists active Technicians **and** Managers; backend `AssignWorkOrder` +
@@ -22,9 +23,7 @@
     control is an icon button in the WO Details card header.
   - **Asset (1):** AS-01 location "#undefined" ✅ (frontend consumes
     `from_location`/`to_location` objects directly; backend eager-loads them).
-  - **Only optional leftover:** policy-driven `can_delete` boolean on
-    `AttachmentResource` to *surface* the owner Delete button in the UI (action is
-    already permitted server-side; frontend already consumes the flag).
+  - **No leftovers** — all 9 VPS issues fully resolved (frontend + backend).
 
 - **Power Automate Notification Integration — DOCUMENTED (2026-06-28):**
   - Created `docs/03-backend/NOTIFICATIONS.md` — full spec for email delivery via
@@ -54,14 +53,16 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
   Accomplished"). Frontend changes need a **rebuild/redeploy** to appear on the VPS.
 - **WO Assign + Assign-at-approval:** both shipped (atomic `/approve` w/ `assignee_id`;
   WO detail assign/reassign; Technician OR Manager assignable).
-- **Optional leftover (B):** add `can_delete` boolean to `AttachmentResource`
-  (`$request->user()?->can('delete', $this->resource)`) to surface the owner Delete
-  button. Frontend already consumes it with an Admin/Manager fallback.
+- **MR-05 `can_delete` flag:** ✅ shipped (unconditional policy-driven flag +
+  `attachable` eager-load + tests). Frontend already consumes it — owner Delete
+  buttons now surface automatically.
 
 ### Remaining Frontend Builds (F) — stub views with backend already implemented
 - **Parts Management UI** — `PartsView.vue` + `PartDetailView.vue` are "coming soon"
-  stubs. Backend done (`GET /parts`, `PATCH /parts/{part}`, attachments). *(Catalogue
-  data is ERP-blocked, but the UI can be built now.)* **Highest-value next piece.**
+  stubs. Backend done (`GET /parts`, `PATCH /parts/{part}`, attachments).
+  ⏸️ **PARKED (2026-06-30)** — client hasn't finalised Parts scope and the ERP Parts
+  schema isn't available yet. Do **not** start until both land. (Data side already
+  ERP-blocked — see P2.)
 - **System Settings** — `SystemSettingsView.vue` stub; backend done.
 - **Audit Logs** — `AuditLogsView.vue` stub; backend done.
 - **Manager → Admin-area access** — decided but not implemented: `AppSidebar.vue`
@@ -95,9 +96,9 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 - #7 Create `sm/` and `am/` Vue 3 scaffolds (Phase 8/9).
 
 ### Suggested execution order
-**Parts Management UI → System Settings + Audit Logs views → Manager admin-area
-access → Asset Booking frontend → Notification testing → P2 (parts data, when ERP
-replies).** Optional `can_delete` flag (B) + #6 / #7 anytime.
+**System Settings + Audit Logs views → Manager admin-area access → Asset Booking
+frontend → Notification testing.** Parts Management UI is ⏸️ PARKED (client scope +
+ERP schema). P2 parts data stays ERP-blocked. #6 / #7 anytime.
 
 ---
 

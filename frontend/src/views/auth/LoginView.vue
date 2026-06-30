@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { ApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -13,6 +14,7 @@ const auth   = useAuthStore()
 
 const email    = ref('')
 const password = ref('')
+const remember = ref(false)
 const error    = ref<string | null>(null)
 const loading  = ref(false)
 
@@ -20,7 +22,7 @@ async function handleSubmit() {
   error.value = null
   loading.value = true
   try {
-    await auth.login(email.value, password.value)
+    await auth.login(email.value, password.value, remember.value)
     const redirect = (route.query.redirect as string) || '/dashboard'
     router.push(redirect)
   } catch (err) {
@@ -74,6 +76,11 @@ async function handleSubmit() {
             required
             :disabled="loading"
           />
+        </div>
+
+        <div class="atms-auth-remember">
+          <Checkbox id="remember" v-model="remember" :disabled="loading" />
+          <Label for="remember">Remember me</Label>
         </div>
 
         <div v-if="error" class="error-state" role="alert">

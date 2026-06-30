@@ -47,7 +47,7 @@ class AuthController extends Controller
 
         RateLimiter::clear($key);
 
-        auth()->login($user);
+        auth()->login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
         app(AuditLogger::class)->log('auth.login', $user);

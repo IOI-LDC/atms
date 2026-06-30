@@ -2064,6 +2064,17 @@
   gap: 0.5rem;
 }
 
+.atms-auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.atms-auth-remember label {
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
 .atms-auth-link {
   font-size: 0.8125rem;
   color: var(--primary);

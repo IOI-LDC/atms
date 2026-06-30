@@ -10,13 +10,12 @@
 
 | Module           | Issues | Fixed (frontend) | Needs backend |
 |------------------|--------|------------------|---------------|
-| Material Request | 5      | 4                | 0 (1 optional*) |
+| Material Request | 5      | 4                | 0             |
 | Work Order       | 3      | 3                | 0             |
 | Asset            | 1      | 1                | 0             |
 
-\* All reported issues are resolved. The only outstanding item is an **optional** backend nicety for
-MR-05: a policy-driven `can_delete` flag on `AttachmentResource` so the Delete button is *surfaced*
-to non-admin owners (the backend already permits the action).
+**All 9 reported issues are fully resolved (frontend + backend).** Frontend changes need a
+rebuild/redeploy to appear on the VPS.
 
 ---
 
@@ -58,7 +57,7 @@ to non-admin owners (the backend already permits the action).
 
 ---
 
-### [x] MR-05 — Delete attachments — **RESOLVED (backend); 1 tiny backend nicety for owner-delete UI**
+### [x] MR-05 — Delete attachments — **RESOLVED (frontend + backend)**
 
 - **Location:** MR detail → Attachments section
 - **Actual (before):** No delete button existed at any stage.
@@ -73,13 +72,12 @@ to non-admin owners (the backend already permits the action).
   `MaintenanceRequestDetailView.vue`)
 - **Backend done:** `AttachmentPolicy::delete` now allows the uploader to delete while the parent MR
   is `pending_review` (Admin/Manager still any time).
-- **Frontend:** the Delete button is now per-attachment via `canDeleteAttachment(a)`, which prefers a
-  backend `can_delete` flag and falls back to Admin/Manager until that flag ships.
+- **Backend done (2):** `AttachmentResource` now exposes an unconditional policy-driven `can_delete`
+  boolean; all four attachment index endpoints eager-load `['uploadedBy', 'attachable']` (no N+1).
+  Tested with a 4-case `can_delete` matrix.
+- **Frontend done:** the Delete button is per-attachment via `canDeleteAttachment(a) = a.can_delete ??
+  auth.isAdminOrManager` — now purely policy-driven (owner sees Delete only while the MR is pending).
   (`useMaintenanceRequestDetail.ts`, `MaintenanceRequestDetailView.vue`)
-- **Remaining nicety (backend, to surface owner-delete in the UI):** add a policy-driven
-  `can_delete` boolean to `AttachmentResource` (`$request->user()?->can('delete', $this->resource)`).
-  Until then, a non-admin owner won't *see* the Delete button (the payload doesn't expose ownership),
-  though the backend permits the action.
 
 ---
 

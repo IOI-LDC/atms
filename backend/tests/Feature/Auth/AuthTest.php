@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use App\Notifications\PasswordResetNotification;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -63,6 +64,43 @@ class AuthTest extends TestCase
         $cookies = $response->headers->getCookies();
         $this->assertNotEmpty($cookies, 'Expected at least one cookie on login response.');
         $this->assertNull($response->json('token'));
+    }
+
+    public function test_login_with_remember_sets_remember_cookie(): void
+    {
+        $user = $this->createActiveUser();
+
+        $response = $this->withHeaders(['Origin' => config('app.url')])
+            ->postJson('/api/auth/login', [
+                'email' => $user->email,
+                'password' => 'password123',
+                'remember' => true,
+            ]);
+
+        $response->assertOk();
+
+        $recaller = 'remember_web_'.sha1(SessionGuard::class);
+        $hasRememberCookie = collect($response->headers->getCookies())
+            ->contains(fn ($cookie) => $cookie->getName() === $recaller);
+        $this->assertTrue($hasRememberCookie, 'Expected remember_web_* cookie on login response.');
+    }
+
+    public function test_login_without_remember_does_not_set_remember_cookie(): void
+    {
+        $user = $this->createActiveUser();
+
+        $response = $this->withHeaders(['Origin' => config('app.url')])
+            ->postJson('/api/auth/login', [
+                'email' => $user->email,
+                'password' => 'password123',
+                'remember' => false,
+            ]);
+
+        $response->assertOk();
+
+        $hasRememberCookie = collect($response->headers->getCookies())
+            ->contains(fn ($cookie) => str_starts_with($cookie->getName(), 'remember_web_'));
+        $this->assertFalse($hasRememberCookie, 'Did not expect a remember_web_* cookie without remember=true.');
     }
 
     public function test_logout_invalidates_session(): void
