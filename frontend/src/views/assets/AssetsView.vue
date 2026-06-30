@@ -136,7 +136,10 @@ function goDetail(payload: { row: Asset }) {
             </span>
 
             <span v-else-if="column.field === 'name'" class="table-cell-stack">
-              <span class="table-cell-primary">{{ row.name }}</span>
+              <span class="table-cell-primary">
+                {{ row.name }}
+                <span v-if="row.is_booked" class="status-badge status-booked">Booked</span>
+              </span>
               <span class="table-cell-secondary">{{ row.erp_asset_code }}</span>
             </span>
 

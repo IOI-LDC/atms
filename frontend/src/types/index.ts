@@ -70,6 +70,7 @@ export interface Asset {
   maintenance_sub_status: AssetMaintenanceSubStatus | null
   asset_kind: AssetKind | null
   asset_tag: string | null
+  is_booked?: boolean                     // availability marker — reserved for a Job/Project
   parent_asset_id: number | null
   child_assets_count?: number
   current_location?: LocationRef | null

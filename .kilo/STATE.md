@@ -73,11 +73,14 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 - Test Power Automate webhook integration: POST sample payloads from ATMS queue
   worker → verify email arrives via Power Automate flow.
 
-### Asset Booking — Frontend wiring (F) 🔓
+### ✅ Asset Booking — Frontend wiring (F) DONE (2026-06-30)
 - Backend complete (`POST /assets/{id}/book` + `/unbook`, `is_booked` in
   AssetResource, auto-release on move/inactivation).
-- **Needed (F):** Book/Unbook toggle UI on Asset Detail + "Booked" badge in
-  Asset List. See `docs/atms/01-product/ASSET_BOOKING.md`.
+- **Frontend shipped:** Book/Unbook button + amber "Booked" badge in the Asset
+  Detail header (gated Admin/Manager/Logistics via `canToggleBooking`); confirm
+  dialog before toggle; 409 handled via toast. Inline "Booked" badge in the Asset
+  List Name cell. (`useAssetDetail.ts`, `AssetDetailView.vue`, `AssetsView.vue`,
+  `types`, `style.css` `.status-booked`.) Rebuild/redeploy to see it.
 
 ### P2 — Parts catalogue from ERP ⏳ BLOCKED
 - **Goal:** populate the parts list (SM-owned) from BC, the same way Assets are
@@ -96,9 +99,9 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 - #7 Create `sm/` and `am/` Vue 3 scaffolds (Phase 8/9).
 
 ### Suggested execution order
-**System Settings + Audit Logs views → Manager admin-area access → Asset Booking
-frontend → Notification testing.** Parts Management UI is ⏸️ PARKED (client scope +
-ERP schema). P2 parts data stays ERP-blocked. #6 / #7 anytime.
+**System Settings + Audit Logs views → Manager admin-area access → Notification
+testing.** Asset Booking frontend ✅ done. Parts Management UI is ⏸️ PARKED (client
+scope + ERP schema). P2 parts data stays ERP-blocked. #6 / #7 anytime.
 
 ---
 

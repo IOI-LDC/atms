@@ -37,7 +37,8 @@ const id = computed(() => Number(route.params.assetId))
 const {
   record, loading, error, notFound, forbidden,
   load, loadLocationHistory, loadMaintenanceHistory, loadReadings, loadAttachments,
-  canEdit, canViewSensitive,
+  canEdit, canViewSensitive, canToggleBooking,
+  bookingConfirmOpen, bookingLoading, requestToggleBooking, closeBookingConfirm, doToggleBooking,
   editOpen, confirmEditOpen, saving, editError, validationErrors, draft,
   locations, locationsLoading,
   openEdit, closeEdit, requestSave, doSave,
@@ -137,6 +138,13 @@ watch(
             <span :class="operationalStatusClass(record.operational_status)">
               {{ operationalStatusLabel(record.operational_status) }}
             </span>
+            <span v-if="record.is_booked" class="status-badge status-booked">Booked</span>
+            <Button
+              v-if="canToggleBooking"
+              size="sm"
+              variant="outline"
+              @click="requestToggleBooking"
+            >{{ record.is_booked ? 'Unbook' : 'Book' }}</Button>
             <Button v-if="canEdit" size="sm" @click="openEdit">Edit Asset</Button>
           </div>
         </div>
@@ -660,6 +668,28 @@ watch(
     </Sheet>
 
     <!-- ── Confirm Edit dialog ─────────────────────────────────────────────── -->
+    <Dialog :open="bookingConfirmOpen" @update:open="(v) => { if (!v) closeBookingConfirm() }">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ record?.is_booked ? 'Unbook this asset?' : 'Book this asset?' }}</DialogTitle>
+          <DialogDescription>
+            <template v-if="record?.is_booked">
+              This releases the reservation on <strong>{{ record?.name }}</strong>, making it freely available again.
+            </template>
+            <template v-else>
+              This reserves <strong>{{ record?.name }}</strong> for a Job/Project. It stays available for maintenance, and the booking auto-releases if the asset is moved or deactivated.
+            </template>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" :disabled="bookingLoading" @click="closeBookingConfirm">Back</Button>
+          <Button :disabled="bookingLoading" @click="doToggleBooking">
+            {{ bookingLoading ? 'Saving…' : (record?.is_booked ? 'Unbook Asset' : 'Book Asset') }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <Dialog v-model:open="confirmEditOpen">
       <DialogContent>
         <DialogHeader>

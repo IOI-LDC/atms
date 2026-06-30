@@ -62,8 +62,14 @@ export function useAssetDetail() {
 
   // ── Permissions (client UX hints — backend gate remains authoritative) ────
   const canEdit          = computed(() => auth.isAdminOrManager)
+  // Booking is togglable by Admin, Manager, and Logistics (backend gate authoritative).
+  const canToggleBooking = computed(() => auth.isAdminOrManager || auth.isLogistics)
   // Logistics cannot see ERP reference fields or maintenance history (API 403)
   const canViewSensitive = computed(() => !auth.isLogistics)
+
+  // ── Booking state ───────────────────────────────────────────────────────────
+  const bookingConfirmOpen = ref(false)
+  const bookingLoading     = ref(false)
 
   // ── Edit state ────────────────────────────────────────────────────────────
   const editOpen         = ref(false)
@@ -369,12 +375,36 @@ export function useAssetDetail() {
     }
   }
 
+  // ── Booking actions ─────────────────────────────────────────────────────────
+  function requestToggleBooking() { bookingConfirmOpen.value = true }
+  function closeBookingConfirm() { bookingConfirmOpen.value = false }
+
+  async function doToggleBooking() {
+    if (!record.value) {
+      return
+    }
+    bookingLoading.value = true
+    const endpoint = record.value.is_booked ? 'unbook' : 'book'
+    try {
+      const res = await api.post<{ data: Asset }>(`/assets/${record.value.id}/${endpoint}`)
+      record.value = res.data
+      bookingConfirmOpen.value = false
+      toast.success(endpoint === 'book' ? 'Asset booked.' : 'Asset unbooked.')
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to update booking.')
+    } finally {
+      bookingLoading.value = false
+    }
+  }
+
   return {
     // Load
     record, loading, error, notFound, forbidden,
     load, loadLocationHistory, loadMaintenanceHistory, loadReadings, loadAttachments,
     // Permissions
-    canEdit, canViewSensitive,
+    canEdit, canViewSensitive, canToggleBooking,
+    // Booking
+    bookingConfirmOpen, bookingLoading, requestToggleBooking, closeBookingConfirm, doToggleBooking,
     // Edit
     editOpen, confirmEditOpen, saving, editError, validationErrors, draft,
     locations, locationsLoading,
