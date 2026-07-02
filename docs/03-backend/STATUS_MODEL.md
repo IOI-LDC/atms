@@ -87,7 +87,7 @@ another status.
 
 ## Asset Operational Statuses
 
-These should be configurable as master data. Suggested defaults:
+These are Enum-backed state machine values (`OperationalStatus`), not configurable master data:
 
 - Active
 - Under Maintenance

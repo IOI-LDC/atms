@@ -165,6 +165,7 @@ Two things from VJ, framed as outcomes (not BC internals — VJ owns the "how"):
 | G-10 | `sinceLastService` hardcoded null on WO detail | 🟢 Low | `useWorkOrderDetail.ts:110-111` | 0.25d |
 | G-11 | Dashboard missing "Recently updated assets" widget | 🟢 Low | `DashboardController` / `DashboardView` | 0.5d |
 | G-12 | Resend activation email not implemented | 🟢 Low | `ProvisionUserDialog.vue:74-75` | 0.25d |
+| G-13 | Lists & Dropdowns — 6/8 groups decorative no-ops; priority hardcoded in 4 spots (MR create/edit, MR/WO filters) + backend `in:` rule; `master_data_items` table empty & unread by app runtime. Backend + frontend fix implemented (uncommitted). See `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. | 🔴 High | `useLists.ts`, `mrColumns.ts`, `woColumns.ts`, `WorkOrdersView.vue`, `MaintenanceRequestDetailView.vue` | — |
 
 ### Internal — Backend Defect
 

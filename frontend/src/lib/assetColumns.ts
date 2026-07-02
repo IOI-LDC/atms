@@ -1,5 +1,5 @@
 import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
-import type { Asset, AssetMaintenanceStatus, AssetKind } from '@/types'
+import type { Asset, AssetMaintenanceStatus, AssetKind, FaSubclassTypeCode } from '@/types'
 import { assetKindLabel, assetMaintenanceStatusLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
 
@@ -59,34 +59,49 @@ export const assetColumns: ColumnDef<Asset>[] = [
 ]
 
 /**
- * All 18 known ERP FA subclass codes, sourced from the fa_subclass_type_codes
- * table. Used for the column header select filter AND the edit form's ERP Class
- * selector.
+ * Friendly display labels for known ERP FA subclass codes. The live
+ * fa_subclass_type_codes table (fetched via useListOptions().loadFaSubclasses)
+ * is the source of truth for which codes exist — this map only formats them
+ * for display. Codes without a curated entry (e.g. a code the ERP adds later)
+ * fall back to the raw code via `faSubclassLabel()`.
  */
-export const FA_SUBCLASS_OPTIONS: FilterOption[] = [
-  { value: 'MUD MOTOR', label: 'Mud Motor' },
-  { value: 'MWD/LWD', label: 'MWD/LWD' },
-  { value: 'DHT', label: 'DHT' },
-  { value: 'NMDC', label: 'NMDC' },
-  { value: 'MACHEQ', label: 'Machinery & Equipment' },
-  { value: 'WHIPSTOCK', label: 'Whipstock' },
-  { value: 'JARS', label: 'Jars' },
-  { value: 'WIRELINE', label: 'Wireline' },
-  { value: 'SHOCK SUBS', label: 'Shock Subs' },
-  { value: 'COMPLETION', label: 'Completion' },
-  { value: 'FURNOFF', label: 'Furnoff' },
-  { value: 'RTM', label: 'RTM' },
-  { value: 'GYRO', label: 'Gyro' },
-  { value: 'ORGEXP', label: 'Org Exp' },
-  { value: 'PROPPLT', label: 'Propplt' },
-  { value: 'VEH', label: 'Vehicle' },
-  { value: 'COMPPER', label: 'Completion Perforating' },
-  { value: 'HOLEOPENER', label: 'Hole Opener' },
-]
+const FA_SUBCLASS_LABELS: Record<string, string> = {
+  'MUD MOTOR': 'Mud Motor',
+  'MWD/LWD': 'MWD/LWD',
+  DHT: 'DHT',
+  NMDC: 'NMDC',
+  MACHEQ: 'Machinery & Equipment',
+  WHIPSTOCK: 'Whipstock',
+  JARS: 'Jars',
+  WIRELINE: 'Wireline',
+  'SHOCK SUBS': 'Shock Subs',
+  COMPLETION: 'Completion',
+  FURNOFF: 'Furnoff',
+  RTM: 'RTM',
+  GYRO: 'Gyro',
+  ORGEXP: 'Org Exp',
+  PROPPLT: 'Propplt',
+  VEH: 'Vehicle',
+  COMPPER: 'Completion Perforating',
+  HOLEOPENER: 'Hole Opener',
+}
 
-/** Fixed select-filter option lists. Labels reuse displayHelpers (single source of truth). */
+export function faSubclassLabel(code: string): string {
+  return FA_SUBCLASS_LABELS[code] ?? code
+}
+
+/** Maps the live fa_subclass_type_codes list into select-filter options. */
+export function toFaSubclassFilterOptions(codes: FaSubclassTypeCode[]): FilterOption[] {
+  return codes.map((c) => ({ value: c.fa_subclass_code, label: faSubclassLabel(c.fa_subclass_code) }))
+}
+
+/**
+ * Fixed select-filter option lists for fields with a small closed set of
+ * values. `fa_subclass_code` is NOT included here — it's live data, so views
+ * merge `toFaSubclassFilterOptions(faSubclasses.value)` into a computed at
+ * runtime instead. Labels reuse displayHelpers (single source of truth).
+ */
 export const assetFilterOptions: Record<string, FilterOption[]> = {
-  fa_subclass_code: FA_SUBCLASS_OPTIONS,
   asset_kind: (['asset', 'package', 'component'] as AssetKind[]).map((v) => ({
     value: v,
     label: assetKindLabel(v),

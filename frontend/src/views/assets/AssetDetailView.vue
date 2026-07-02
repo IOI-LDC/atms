@@ -17,8 +17,9 @@ import {
 } from '@/components/ui/dialog'
 import { FileInput } from '@/components/ui/file-input'
 import { useAssetDetail } from '@/composables/useAssetDetail'
+import { useListOptions } from '@/composables/useListOptions'
 import { openAttachmentInNewTab } from '@/lib/attachments'
-import { FA_SUBCLASS_OPTIONS } from '@/lib/assetColumns'
+import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
 import {
   assetMaintenanceStatusClass, assetMaintenanceStatusLabel,
   assetMaintenanceSubStatusLabel,
@@ -52,6 +53,9 @@ const {
   openUpload, addUploadFiles, removeUploadFile, doUpload,
   deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
 } = useAssetDetail()
+
+const { faSubclasses, loadFaSubclasses } = useListOptions()
+const faSubclassOptions = computed(() => toFaSubclassFilterOptions(faSubclasses.value))
 
 // FileInput primitive — its open() method is triggered via ref.
 const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
@@ -104,6 +108,7 @@ watch(
     void loadLocationHistory(newId)
     void loadReadings(newId)
     void loadAttachments(newId)
+    void loadFaSubclasses()
     // Logistics receives 403 on maintenance-history — the composable handles it silently.
     if (!auth.isLogistics) void loadMaintenanceHistory(newId)
   },
@@ -538,7 +543,7 @@ watch(
                 <SelectContent>
                   <SelectItem value="__none__">Not classified</SelectItem>
                   <SelectItem
-                    v-for="opt in FA_SUBCLASS_OPTIONS"
+                    v-for="opt in faSubclassOptions"
                     :key="opt.value"
                     :value="opt.value"
                   >{{ opt.label }}</SelectItem>

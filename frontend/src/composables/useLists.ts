@@ -3,7 +3,10 @@ import api, { ApiError } from '@/lib/api'
 import type { MasterDataItem, UsageReadingType, FaSubclassTypeCode } from '@/types'
 
 // ── Group registry ────────────────────────────────────────────────────────────
-// Three backing data sources, surfaced as eight selectable groups in the rail.
+// Two backing data sources, surfaced as three selectable groups in the rail.
+// WO/asset/sub-statuses and the two dead category groups were removed here —
+// they're Enum-backed state machines or unbacked concepts, not configurable
+// vocab. See .kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md.
 export type ListKind = 'master_data' | 'reading_types' | 'fa_subclass'
 
 export interface ListGroup {
@@ -16,12 +19,7 @@ export interface ListGroup {
 export type ListItem = MasterDataItem | UsageReadingType | FaSubclassTypeCode
 
 export const LIST_GROUPS: ListGroup[] = [
-  { key: 'asset_categories',              label: 'Asset Categories',        section: 'Master Data',   kind: 'master_data' },
-  { key: 'maintenance_categories',        label: 'Maintenance Categories',  section: 'Master Data',   kind: 'master_data' },
   { key: 'maintenance_priorities',        label: 'Maintenance Priorities',  section: 'Master Data',   kind: 'master_data' },
-  { key: 'asset_statuses',                label: 'Asset Statuses',          section: 'Master Data',   kind: 'master_data' },
-  { key: 'asset_maintenance_sub_statuses', label: 'Asset Sub-statuses',      section: 'Master Data',   kind: 'master_data' },
-  { key: 'work_order_statuses',           label: 'Work Order Statuses',     section: 'Master Data',   kind: 'master_data' },
   { key: 'usage_reading_types',           label: 'Usage Reading Types',     section: 'Reading Types', kind: 'reading_types' },
   { key: 'fa_subclass_type_codes',        label: 'FA Subclass Type Codes',  section: 'ERP Reference', kind: 'fa_subclass' },
 ]

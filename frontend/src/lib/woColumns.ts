@@ -1,6 +1,6 @@
 import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
-import type { Priority, WorkOrder, WorkOrderStatus } from '@/types'
-import { priorityLabel, woStatusLabel } from '@/lib/displayHelpers'
+import type { WorkOrder, WorkOrderStatus } from '@/types'
+import { woStatusLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
 
 /**
@@ -27,13 +27,11 @@ export const woColumns: ColumnDef<WorkOrder>[] = [
 /**
  * Fixed option lists for the WO select filters, consumed by the view's
  * `#header-filter` slot. Labels reuse displayHelpers (single source of truth).
+ * `priority` is NOT included here — it's live data (Admin-configurable), so
+ * the view merges `useListOptions().priorities` into a computed at runtime.
  */
 export const woFilterOptions: Record<string, FilterOption[]> = {
   status: (['open', 'in_progress', 'completed', 'closed', 'cancelled'] as WorkOrderStatus[]).map(
     (v) => ({ value: v, label: woStatusLabel(v) }),
   ),
-  priority: (['low', 'medium', 'high', 'critical'] as Priority[]).map((v) => ({
-    value: v,
-    label: priorityLabel(v),
-  })),
 }

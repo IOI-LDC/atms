@@ -18,10 +18,11 @@ import {
 } from '@/components/ui/select'
 import { useAuthStore } from '@/stores/auth.store'
 import { useMaintenanceRequests } from '@/composables/useMaintenanceRequests'
+import { useListOptions } from '@/composables/useListOptions'
 import { mrColumns, mrFilterOptions } from '@/lib/mrColumns'
 import type { MaintenanceRequest } from '@/types'
 import {
-  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, mrTypeLabel, fmtDate, formatBytes,
+  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, priorityPickerLabel, mrTypeLabel, fmtDate, formatBytes,
 } from '@/lib/displayHelpers'
 
 const route  = useRoute()
@@ -36,6 +37,12 @@ const {
   canCreate,
   requestCreate, doCreate, closeCreate,
 } = useMaintenanceRequests()
+
+const { priorities, loadPriorities } = useListOptions()
+loadPriorities()
+
+// Static filter options + the live priorities list (Admin-configurable).
+const mergedFilterOptions = computed(() => ({ ...mrFilterOptions, priority: priorities.value }))
 
 const fileInput = ref<InstanceType<typeof FileInput> | null>(null)
 
@@ -118,7 +125,7 @@ function goDetail(payload: { row: MaintenanceRequest }) {
         :key="activeTab"
         :rows="activeSlice.rows"
         :columns="mrColumns"
-        :filter-options="mrFilterOptions"
+        :filter-options="mergedFilterOptions"
         :empty-text="activeSlice.emptyText"
         :loading="activeSlice.loading"
         :label="activeSlice.label"
@@ -182,10 +189,11 @@ function goDetail(payload: { row: MaintenanceRequest }) {
           <Select v-model="createPriority">
             <SelectTrigger id="priority"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="critical">Critical — immediate attention required</SelectItem>
+              <SelectItem
+                v-for="opt in priorities"
+                :key="opt.value"
+                :value="opt.value"
+              >{{ priorityPickerLabel(opt) }}</SelectItem>
             </SelectContent>
           </Select>
         </div>

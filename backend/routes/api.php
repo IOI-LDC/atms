@@ -20,6 +20,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\ListOptionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\PartController;
@@ -45,6 +46,10 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
     Route::get('/locations', [LocationController::class, 'index']);
+
+    // Public (auth-only) read path for dropdown vocabulary. Admin writes remain
+    // under the admin-prefixed master-data CRUD above.
+    Route::get('/list-options/{group}', [ListOptionController::class, 'index']);
 
     Route::prefix('admin')->group(function () {
         Route::get('/company-settings', [CompanySettingController::class, 'show']);

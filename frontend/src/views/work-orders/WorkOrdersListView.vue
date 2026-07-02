@@ -5,6 +5,7 @@ import AppLayout from '@/components/app/AppLayout.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWorkOrders } from '@/composables/useWorkOrders'
+import { useListOptions } from '@/composables/useListOptions'
 import { woColumns, woFilterOptions } from '@/lib/woColumns'
 import type { WorkOrder } from '@/types'
 import { woStatusClass, woStatusLabel, priorityClass, priorityLabel, fmtDate } from '@/lib/displayHelpers'
@@ -14,6 +15,10 @@ const router = useRouter()
 const auth   = useAuthStore()
 
 const { myWorkOrders, all, open, inProgress, completed, closed } = useWorkOrders()
+const { priorities, loadPriorities } = useListOptions()
+
+// Static filter options + the live priorities list (Admin-configurable).
+const mergedFilterOptions = computed(() => ({ ...woFilterOptions, priority: priorities.value }))
 
 // ── Tabs (role-based) ─────────────────────────────────────────────────────────
 
@@ -49,6 +54,7 @@ watch(activeTab, (tab) => {
   if (tab && route.query.tab !== tab) router.replace({ path: route.path, query: { tab } })
 })
 watch(activeTab, () => { activeSlice.value.load() }, { immediate: true })
+loadPriorities()
 
 function goDetail(payload: { row: WorkOrder }) {
   router.push(`/work-orders/${payload.row.id}`)
@@ -81,7 +87,7 @@ function goDetail(payload: { row: WorkOrder }) {
         :key="activeTab"
         :rows="activeSlice.rows"
         :columns="woColumns"
-        :filter-options="woFilterOptions"
+        :filter-options="mergedFilterOptions"
         :empty-text="activeSlice.emptyText"
         :loading="activeSlice.loading"
         :label="activeSlice.label"

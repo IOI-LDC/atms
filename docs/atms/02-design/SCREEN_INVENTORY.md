@@ -261,13 +261,20 @@ Tabs:
 
 ### 7b. Lists & Dropdowns
 - **Visible to:** Admin only.
-- Manage all configurable dropdown values used across the system.
-- Includes: asset statuses, asset maintenance sub-statuses, maintenance
-  priorities, usage reading types, work order statuses, maintenance categories,
-  and other master-data / lookup values.
-- **Note:** Locations are also managed here alongside the dedicated
-  "Manage Locations" tab in §6b. Both views operate on the same `locations`
-  table.
+- Manage genuinely-configurable dropdown vocab only: **Maintenance Priorities**
+  (master data), **Usage Reading Types**, and **FA Subclass Type Codes** (ERP
+  reference).
+- Asset/WO/sub-statuses (`OperationalStatus`, `WorkOrderStatus`,
+  `MaintenanceSubStatus`) are **not** here — they're Enum-backed state machines
+  that drive workflow transitions, not configurable vocab. Free-text CRUD there
+  would break the state machines. Asset categories and maintenance categories
+  were also removed — dead/unbacked concepts (see
+  `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`).
+- Locations are **not** managed here — they live solely under the dedicated
+  "Manage Locations" tab in §6b.
+- Non-Admin consumers (MR priority pickers/filters, Assets FA-subclass filter)
+  read active-only rows via `GET /api/list-options/{group}`, a public
+  (auth-only, non-Admin-gated) read path separate from this tab's Admin CRUD.
 
 ### 7c. PM Rules (templates)
 - **Visible to:** Admin only for configuration. (Maintenance Managers may view templates; assignment management happens on Asset Detail.)

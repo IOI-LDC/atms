@@ -56,6 +56,11 @@ export function priorityLabel(p: string): string {
   return p.charAt(0).toUpperCase() + p.slice(1)
 }
 
+/** Priority picker label — appends the urgency hint on the critical option only. */
+export function priorityPickerLabel(opt: { value: string; label: string }): string {
+  return opt.value === 'critical' ? `${opt.label} — immediate attention required` : opt.label
+}
+
 export function mrTypeLabel(t: string): string {
   return t === 'preventive' ? 'Preventive' : 'Corrective'
 }

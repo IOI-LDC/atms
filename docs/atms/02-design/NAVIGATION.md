@@ -159,10 +159,11 @@ Eight primary sidebar items.
 
 - **"Users & Access" tab** — Employee directory import, user provisioning,
   fixed-role assignment, activation/deactivation, password resets.
-- **"Lists & Dropdowns" tab** — Manage all configurable dropdown values
-  including locations, asset statuses, maintenance priorities, usage reading
-  types, work order statuses, asset maintenance sub-statuses, and other
-  master-data items used across the system. **Note:** Locations formerly lived
+- **"Lists & Dropdowns" tab** — Manage genuinely-configurable dropdown vocab
+  only: Maintenance Priorities (master data), Usage Reading Types, and FA
+  Subclass Type Codes (ERP reference). Asset/WO/sub-statuses are Enum-backed
+  state machines, not configurable vocab. Locations live under the dedicated
+  Locations sidebar item (§6). **Note:** Locations formerly lived
   exclusively here; they now also have a dedicated sidebar item (§6) with a
   "Manage Locations" tab that provides the same CRUD capability in a
   location-focused context.

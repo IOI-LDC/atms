@@ -135,9 +135,14 @@ Location Update" tab links to this drill-down from each asset row.
 
 - **`users`** — Employee directory import, user provisioning, fixed-role
   assignment, activation/deactivation, password resets.
-- **`lists`** — All configurable dropdown values including locations, asset
-  statuses, maintenance priorities, usage reading types, work order statuses,
-  asset maintenance sub-statuses, and other master-data items.
+- **`lists`** — Genuinely configurable dropdown vocab only: Maintenance
+  Priorities (master data), Usage Reading Types, and FA Subclass Type Codes
+  (ERP reference). Asset/WO/sub-statuses are **not** here — they're Enum-backed
+  state machines (`OperationalStatus`, `WorkOrderStatus`, `MaintenanceSubStatus`)
+  that drive workflow transitions, not configurable vocab; free-text CRUD there
+  would break the state machines. Locations live under the dedicated Locations
+  sidebar item, not this tab. See
+  `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`.
 - **`wo-forms`** — WO Form template management: create, edit, deactivate, and reactivate form templates per FA subclass. Field builder within each template (label, type, unit, has_pre_post, required, sort order). Admin only.
 - **`pm-rules`** — PM **template** management (Admin): create/edit/deactivate/
   reactivate reusable maintenance schedule templates. Templates are asset-agnostic;

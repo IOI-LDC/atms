@@ -478,6 +478,7 @@ Do not add: labor hours/rates/costs/timesheets, category-level or template-level
 | `PATCH` | `/maintenance-requests/{mr}` | Admin, Manager, Tech/Requester (own corrective only) | Edit MR while `pending_review`; immutable once converted/rejected/cancelled |
 | `PATCH` | `/admin/users/{user}` | Admin | Update user details; self-update rejected with 422 |
 | `POST` | `/admin/users/{user}/reset-password` | Admin | Force-reset password, invalidates all sessions/tokens; self-reset rejected |
+| `GET` | `/list-options/{group}` | Everyone (auth-only, not Admin-gated) | Active-only dropdown options for `maintenance_priorities`, `usage_reading_types`, `fa_subclass_type_codes`. Unknown group → 404. Added 2026-07-02 to unblock non-Admin consumers (MR priority pickers, Assets FA-subclass filter) without exposing the Admin-gated `/admin/master-data/*` CRUD endpoints. See `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. |
 
 Full request/response shapes: `docs/atms/04-technical/BACKEND_API_REFERENCE.md`.
 

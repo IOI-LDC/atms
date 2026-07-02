@@ -182,10 +182,13 @@ reading types, preventive maintenance rules, ERP parts sync configuration
 
 ## 19. Dropdown / Master Data Management
 
-Administrators will be able to manage configurable dropdown values used in the
-system, such as locations, asset statuses, maintenance priorities, usage reading
-types, work order statuses, maintenance categories, asset maintenance
-sub-statuses, and other lookup values required for the workflow.
+Administrators will be able to manage genuinely-configurable dropdown values:
+Maintenance Priorities (urgency levels), Usage Reading Types (meter/reading
+types), and FA Subclass Type Codes (ERP classification). Asset/WO/sub-statuses
+are Enum-backed state machines — configurable vocab; free-form editing there
+would break workflow transitions. Locations are managed under the dedicated
+Locations sidebar item, not here. See
+`.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`.
 
 ## 20. SharePoint Portal Link
 

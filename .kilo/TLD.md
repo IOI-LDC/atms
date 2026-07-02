@@ -35,6 +35,7 @@
 | 2026-06-24 | Asset Assembly model decided. 5 API endpoints defined: `install`, `remove`, `swap`, `assembly-history`, `children`. | Frontend (new routes), Backend (new actions) | ⚠️ Unacknowledged |
 | 2026-06-24 | Asset tag format `L-BBB-CCC-XXXX` decided. New `asset_tag` column added to spec. | Frontend (create/edit forms, QR), Backend (migration, validation) | ⚠️ Unacknowledged |
 | 2026-06-24 | Mock ERP deprecated. Real ERP auth + URL pattern documented in `ERP_SYNC.md`. | Backend (4 PHP files to clean up) | ⚠️ Unacknowledged |
+| 2026-07-02 | Admin Lists & Dropdowns cleaned — removed 5 decorative/Enum-backed groups (`asset_categories`, `maintenance_categories`, `asset_statuses`, `asset_maintenance_sub_statuses`, `work_order_statuses`). Tab now 3 live groups: Maintenance Priorities (new dynamic CRUD), Usage Reading Types, FA Subclass Type Codes. Fixed priority hardcoding (was in 4 spots + backend `in:` rule). New public `GET /api/list-options/{group}` endpoint for non-Admin consumers. FA-subclass drift fixed (hardcoded 18 → DB 20). See `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. | Frontend (admin tab changed), Backend (new controller + seed migration) | ⚠️ Unacknowledged |
 
 ---
 

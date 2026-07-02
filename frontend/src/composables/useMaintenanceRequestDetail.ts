@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
-import type { MaintenanceRequest, Attachment, Priority, Assignee } from '@/types'
+import type { MaintenanceRequest, Attachment, Assignee } from '@/types'
 
 /**
  * Owns the state and actions for a single Maintenance Request detail page.
@@ -32,7 +32,9 @@ export function useMaintenanceRequestDetail() {
   const editing   = ref(false)
   const saving    = ref(false)
   const editError = ref<string | null>(null)
-  const draft     = ref<{ description: string; priority: Priority }>({ description: '', priority: 'medium' })
+  // priority is a plain string (not the Priority union) — the edit Select is
+  // bound to the live, Admin-configurable maintenance_priorities list.
+  const draft     = ref<{ description: string; priority: string }>({ description: '', priority: 'medium' })
   const validationErrors = ref<Record<string, string[]> | null>(null)
 
   // ── Attachments ─────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
-import type { MaintenanceRequest, MaintenanceRequestStatus, MrType, Priority } from '@/types'
-import { mrStatusLabel, mrTypeLabel, priorityLabel } from '@/lib/displayHelpers'
+import type { MaintenanceRequest, MaintenanceRequestStatus, MrType } from '@/types'
+import { mrStatusLabel, mrTypeLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
 
 export type { FilterOption }
@@ -36,15 +36,13 @@ export const mrColumns: ColumnDef<MaintenanceRequest>[] = [
 /**
  * Fixed option lists for the MR select filters, consumed by AppDataTable's
  * `#header-filter` slot. Labels reuse displayHelpers (single source of truth).
+ * `priority` is NOT included here — it's live data (Admin-configurable), so
+ * views merge `useListOptions().priorities` into a computed at runtime.
  */
 export const mrFilterOptions: Record<string, FilterOption[]> = {
   status: (
     ['pending_review', 'rejected', 'converted', 'cancelled'] as MaintenanceRequestStatus[]
   ).map((v) => ({ value: v, label: mrStatusLabel(v) })),
-  priority: (['low', 'medium', 'high', 'critical'] as Priority[]).map((v) => ({
-    value: v,
-    label: priorityLabel(v),
-  })),
   type: (['corrective', 'preventive'] as MrType[]).map((v) => ({
     value: v,
     label: mrTypeLabel(v),

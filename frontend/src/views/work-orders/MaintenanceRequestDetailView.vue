@@ -13,9 +13,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useMaintenanceRequestDetail } from '@/composables/useMaintenanceRequestDetail'
+import { useListOptions } from '@/composables/useListOptions'
 import { openAttachmentInNewTab } from '@/lib/attachments'
 import {
-  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, mrTypeLabel, fmtDate, formatBytes, roleLabel,
+  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, priorityPickerLabel, mrTypeLabel, fmtDate, formatBytes, roleLabel,
 } from '@/lib/displayHelpers'
 
 const route = useRoute()
@@ -42,6 +43,9 @@ const {
   rejectOpen, rejectLoading, rejectReason, openReject, doReject,
   cancelOpen, cancelLoading, cancelReason, openCancel, doCancel,
 } = useMaintenanceRequestDetail()
+
+const { priorities, loadPriorities } = useListOptions()
+loadPriorities()
 
 // shadcn-vue Select emits string values; the composable holds a numeric id or
 // null. '__none__' is the explicit "leave unassigned" sentinel.
@@ -134,10 +138,11 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
                 <Select v-else v-model="draft.priority">
                   <SelectTrigger id="mr-priority"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="critical">Critical — immediate attention required</SelectItem>
+                    <SelectItem
+                      v-for="opt in priorities"
+                      :key="opt.value"
+                      :value="opt.value"
+                    >{{ priorityPickerLabel(opt) }}</SelectItem>
                   </SelectContent>
                 </Select>
                 <p v-if="editing && validationErrors?.priority" class="form-error">

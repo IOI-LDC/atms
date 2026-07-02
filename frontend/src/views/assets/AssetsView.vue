@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/select'
 import { useAuthStore } from '@/stores/auth.store'
 import { useAssets } from '@/composables/useAssets'
-import { assetColumns, assetFilterOptions } from '@/lib/assetColumns'
+import { useListOptions } from '@/composables/useListOptions'
+import { assetColumns, assetFilterOptions, toFaSubclassFilterOptions } from '@/lib/assetColumns'
 import type { Asset } from '@/types'
 import {
   assetMaintenanceStatusClass, assetMaintenanceStatusLabel,
@@ -21,6 +22,14 @@ const router = useRouter()
 const auth   = useAuthStore()
 
 const { all, locations, loadLocations } = useAssets()
+const { faSubclasses, loadFaSubclasses } = useListOptions()
+
+// Static filter options + the live FA-subclass list (readable by every role,
+// unlike the Admin/Manager-gated location filter above).
+const mergedFilterOptions = computed(() => ({
+  ...assetFilterOptions,
+  fa_subclass_code: toFaSubclassFilterOptions(faSubclasses.value),
+}))
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
@@ -44,6 +53,7 @@ watch(
     if (tab === 'all-assets') {
       all.load()
       if (auth.isAdminOrManager) loadLocations()
+      loadFaSubclasses()
     }
   },
   { immediate: true },
@@ -123,7 +133,7 @@ function goDetail(payload: { row: Asset }) {
           :key="activeTab"
           :rows="filteredRows"
           :columns="assetColumns"
-          :filter-options="assetFilterOptions"
+          :filter-options="mergedFilterOptions"
           empty-text="No assets found."
           label="Assets"
           :loading="all.loading.value"
