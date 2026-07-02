@@ -75,7 +75,7 @@ docs/
 | **Asset sync** | Assets synced from ERP (`SyncErpAssetsJob`, `erp_asset_id`) | Assets managed fully in ATMS. No ERP asset sync. |
 | **Parts ownership** | Parts referenced from ERP within ATMS | Parts owned by SM. ERP syncs parts into SM tables. ATMS reads SM parts to populate WO part-request forms. |
 | **Location ownership** | ATMS tracked location and location history | AM owns location and movement workflow. ATMS reads current location from AM tables for display only. |
-| **Asset Maintenance Status** | Simple active/inactive | Active / Inactive with informational sub-statuses: LIH, DBR, Disposed, Scrapped, Other |
+| **Asset Maintenance Status** | Simple active/inactive | `enrolled` / `withdrawn` with informational sub-statuses: `lih`, `dbr`, `disposed`, `scrapped`, `other` (renamed 2026-07-02 from `Active`/`Inactive`) |
 | **PM Rule assets** | "ERP-linked assets" | "ATMS-managed assets" |
 | **Asset Assembly** | Not in scope | Asset Package/Component model — assets composed of other assets with independent maintenance lifecycles |
 

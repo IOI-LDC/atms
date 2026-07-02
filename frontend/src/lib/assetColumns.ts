@@ -1,6 +1,6 @@
 import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
 import type { Asset, AssetMaintenanceStatus, AssetKind } from '@/types'
-import { assetKindLabel } from '@/lib/displayHelpers'
+import { assetKindLabel, assetMaintenanceStatusLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
 
 /**
@@ -91,8 +91,8 @@ export const assetFilterOptions: Record<string, FilterOption[]> = {
     value: v,
     label: assetKindLabel(v),
   })),
-  maintenance_status: (['Active', 'Inactive'] as AssetMaintenanceStatus[]).map((v) => ({
+  maintenance_status: (['enrolled', 'withdrawn'] as AssetMaintenanceStatus[]).map((v) => ({
     value: v,
-    label: v,
+    label: assetMaintenanceStatusLabel(v),
   })),
 }

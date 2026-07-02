@@ -6,6 +6,7 @@
 
 ## Session — 2026-07-02
 
+- **Asset status enum rename — DONE (backend + frontend).** `maintenance_status` `Active`/`Inactive`→`enrolled`/`withdrawn`; `maintenance_sub_status` PascalCase→lowercase (`installed`,`ready`,`lih`,`dbr`,`disposed`,`scrapped`,`other`). Reason: kill the `operational_status='active'` collision. Rolled out as 3 plans (`.kilo/plans/1782944404943/44/45`). Backend done: both enums, `LegacyAssetStatusNormalizer` (`normalize`+`normalizeSubStatus`, both `?string`; validation accepts both cases), 2 migrations. Frontend done: 6 files (`types/index.ts`, `useAssetDetail.ts` L83+L227, `AssetDetailView.vue`, `displayHelpers.ts`, `assetColumns.ts`, `content/user-manual.md`) — type-check + build green, sweep clean. Display labels: enrolled→"In maintenance program", withdrawn→"Withdrawn". **Ordering: backend-shim-first (NOT atomic)** — shim decouples FE/BE timing. **PENDING: Plan 3** (`1782944404945`) removes both shims ~14 days after Plan 2 deploy (≈mid-July 2026); un-skips `legacy→422` test stubs. Untouched: `operational_status`, `is_active`.
 - **WO Detail frontend review:** reading-type URL fixed (`/admin/usage-reading-types`), WorkOrderResource now ships `asset.operational_status`, upload dialog has `.dialog-md` (user prefers wrap/trim — pending). Mock parts catalogue (8 items) in `src/lib/__mockParts.ts` + `// MOCK(PARTS)` blocks — **remove** when Parts API ships.
 - **WO Form layout**: Sheet (A) vs tighter-card (B) — recommended Sheet. Pending user decision.
 - **Attachment delete**: `DELETE /api/attachments/{id}` (generic, not WO-scoped). `can_delete` shipped by AttachmentResource.
@@ -139,7 +140,7 @@ notification integration testing.
 | ERP field boundary | Sync writes ERP columns only. Local fields never touched. |
 | Asset tag format | `L-BBB-CCC-XXXX` (final 2026-06-25) — 4 segments with dashes. Size code truncated to 3 chars rightmost. RTR/STR detected by description keyword. Immutable after create (Admin override with reason allowed, clearing forbidden). |
 | Asset tag ownership codes | `L` = LDC (we maintain), `X` = External (we don't) |
-| Asset maintenance status | `Active`/`Inactive` — gates MR/WO/PM workflows. Sub-statuses informational only. |
+| Asset maintenance status | `enrolled`/`withdrawn` (renamed from `Active`/`Inactive` to kill the `operational_status='active'` collision) — gates MR/WO/PM workflows. Sub-statuses `installed`/`ready`/`lih`/`dbr`/`disposed`/`scrapped`/`other` (lowercased), informational only. Display labels: enrolled→"In maintenance program", withdrawn→"Withdrawn". Input shims (`LegacyAssetStatusNormalizer`) accept both cases until Plan 3 removes them. (2026-07-02) |
 | Asset operational status | Separate axis from maintenance_status — informational only, no workflow gating. |
 | Asset booking (`is_booked`) | Availability marker for Operations to reserve an asset for a Job/Project. Boolean, no job reference stored. Auto-releases on location change or deactivation/inactivation. Does NOT gate MR/WO/PM. Toggled by Admin/Manager/Logistics. (2026-06-27) |
 | Employee directory source | CSV-backed (`CsvEmployeeDirectorySource`, `EMPLOYEE_CSV_PATH`), not DB import. `EMPLOYEE_VISIBLE_EMP_IDS` whitelist controls who appears in the list. Provisioning upserts a single Employee row to DB. (2026-06-27) |

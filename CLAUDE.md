@@ -316,7 +316,7 @@ Actions live under `app/Actions/` grouped by domain. Use an Action for every imp
 
 **Work Order:** `open` → `in_progress` → `completed` → `closed` (terminal) | any non-closed → `cancelled` (terminal). Closed WOs are permanently immutable.
 
-**Asset Maintenance Status:** Active (Standalone / Installed / Ready) and Inactive (LIH, DBR, Disposed, Scrapped, Other). Sub-statuses are purely informational with no workflow triggers. Asset status is independent of ERP disposal/financial treatment.
+**Asset Maintenance Status:** `enrolled` (standalone / `installed` / `ready`) and `withdrawn` (`lih`, `dbr`, `disposed`, `scrapped`, `other`) — renamed 2026-07-02 from `Active`/`Inactive` + PascalCase sub-statuses to kill the `operational_status='active'` collision. UI labels: enrolled→"In maintenance program", withdrawn→"Withdrawn". Sub-statuses are purely informational with no workflow triggers. Asset status is independent of ERP disposal/financial treatment. A temporary input shim (`LegacyAssetStatusNormalizer`) accepts both old+new cases until Plan 3 (`.kilo/plans/1782944404945`) removes it (~mid-July 2026).
 
 Statuses are defined as PHP-backed Enums in `app/Enums/`.
 
@@ -512,7 +512,7 @@ Key findings future sessions must know:
 | `docs/atms/01-product/ROLES_AND_PERMISSIONS.md` | Detailed five-role permission specification |
 | `docs/atms/01-product/WORKFLOWS.md` | Maintenance and asset management workflows |
 | `docs/atms/01-product/ASSET_ASSEMBLY.md` | Assembly model: parent/child, install/remove/swap |
-| `docs/atms/01-product/ASSET_STATUS.md` | Asset Maintenance Status (Active/Inactive + sub-statuses) |
+| `docs/atms/01-product/ASSET_STATUS.md` | Asset Maintenance Status (`enrolled`/`withdrawn` + sub-statuses) |
 | `docs/atms/01-product/ASSET_TAG.md` | Asset tag format spec (`L-BBB-CCC-XXXX`) |
 | `docs/atms/02-design/UI_DESIGN_SYSTEM.md` | Design tokens, semantic classes, component rules |
 | `docs/atms/02-design/NAVIGATION.md` | Navigation structure and role visibility |

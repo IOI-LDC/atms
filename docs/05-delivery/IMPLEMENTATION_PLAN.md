@@ -37,7 +37,7 @@ and AM. All three subsystems share one Laravel backend and PostgreSQL database.
 
 - Asset list
 - Asset detail
-- Asset Maintenance Status (Active / Inactive + sub-statuses)
+- Asset Maintenance Status (`enrolled` / `withdrawn` + sub-statuses)
 - Asset usage readings
 - Asset location display (read from AM tables, once AM is implemented)
 - Asset attachments
@@ -48,7 +48,7 @@ and AM. All three subsystems share one Laravel backend and PostgreSQL database.
 - `asset_kind` enum (`asset` / `package` / `component`) on assets table
 - `parent_asset_id` FK (nullable, self-referencing to assets.id)
 - `asset_assembly_history` table (migration, model, API)
-- Asset Maintenance Status Active sub-statuses (`Installed`, `Ready`)
+- Asset Maintenance Status enrolled sub-statuses (`installed`, `ready`)
 - Install Component, Remove Component, Swap Component backend Actions
 - Component operating hours derivation from parent readings + install timestamps
 - Cycle prevention validation on parent assignment

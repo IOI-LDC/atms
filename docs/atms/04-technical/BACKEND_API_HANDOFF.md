@@ -401,7 +401,7 @@ export type MeterReadingSource = 'user' | 'manual'
 export type ErpSyncStatus = 'running' | 'success' | 'partial' | 'failed'
 
 export type AssetKind = 'asset' | 'package' | 'component'
-export type AssetMaintenanceStatus = 'active' | 'inactive'
+export type AssetMaintenanceStatus = 'enrolled' | 'withdrawn'
 export type AssetMaintenanceSubStatus = 'installed' | 'ready' | 'lih' | 'dbr' | 'disposed' | 'scrapped' | 'other' | null
 
 // ---------- Shared fragments ----------

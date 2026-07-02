@@ -22,7 +22,7 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
     {
         $asset = $maintenanceRequest->asset;
 
-        if ($asset && $asset->maintenance_status === MaintenanceStatus::INACTIVE) {
+        if ($asset && $asset->maintenance_status === MaintenanceStatus::WITHDRAWN) {
             throw new DomainException('Cannot approve a maintenance request for an inactive asset.');
         }
 

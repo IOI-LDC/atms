@@ -66,7 +66,7 @@ class Asset extends Model
         static::updating(function (Asset $asset) {
             if ($asset->is_booked && (
                 ($asset->isDirty('is_active') && ! $asset->is_active)
-                || ($asset->isDirty('maintenance_status') && $asset->maintenance_status === MaintenanceStatus::INACTIVE)
+                || ($asset->isDirty('maintenance_status') && $asset->maintenance_status === MaintenanceStatus::WITHDRAWN)
             )) {
                 $asset->is_booked = false;
             }

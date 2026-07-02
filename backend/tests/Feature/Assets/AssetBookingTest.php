@@ -200,19 +200,19 @@ class AssetBookingTest extends TestCase
         ]);
     }
 
-    public function test_setting_maintenance_status_inactive_clears_booking(): void
+    public function test_setting_maintenance_status_withdrawn_clears_booking(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $asset = $this->createAsset(['is_booked' => true]);
 
         $this->actingAs($admin)
-            ->patchJson("/api/assets/{$asset->id}", ['maintenance_status' => 'Inactive'])
+            ->patchJson("/api/assets/{$asset->id}", ['maintenance_status' => 'withdrawn'])
             ->assertOk();
 
         $this->assertDatabaseHas('assets', [
             'id' => $asset->id,
             'is_booked' => false,
-            'maintenance_status' => 'Inactive',
+            'maintenance_status' => 'withdrawn',
         ]);
     }
 

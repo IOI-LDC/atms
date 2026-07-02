@@ -12,7 +12,7 @@ already promised to a client/job.
 
 Operations may **book** an asset to guarantee its availability for a specific Job
 or Project. A booked asset is physically available (`operational_status = active`)
-and in the maintenance program (`maintenance_status = Active`), but is earmarked —
+and in the maintenance program (`maintenance_status = enrolled`), but is earmarked —
 it should not be reassigned or relocated without explicit unbooking.
 
 Booking is purely an availability marker. It is **not** a maintenance or physical
@@ -118,5 +118,5 @@ Both endpoints require the `toggleBooking` gate (Admin, Manager, Logistics).
 - Policy: `AssetPolicy::toggleBooking()` — Admin, Manager, Logistics
 - Controller: `App\Http\Controllers\AssetBookingController` — `book()` / `unbook()` returning `AssetResource`
 - Auto-clear on location change: `UpdateAssetLocation::execute()` sets `is_booked = false` when location differs
-- Auto-clear on inactivation: `Asset` model `static::updating()` listener clears `is_booked` when `is_active` becomes `false` or `maintenance_status` becomes `Inactive`
+- Auto-clear on inactivation: `Asset` model `static::updating()` listener clears `is_booked` when `is_active` becomes `false` or `maintenance_status` becomes `withdrawn`
 - Tests: `tests/Feature/Assets/AssetBookingTest.php` — 14 tests (auth, behaviour, auto-release, inactivation, non-interference)

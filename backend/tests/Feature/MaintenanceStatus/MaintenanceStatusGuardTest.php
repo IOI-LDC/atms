@@ -32,7 +32,7 @@ class MaintenanceStatusGuardTest extends TestCase
         ]);
     }
 
-    private function createAsset(MaintenanceStatus $status = MaintenanceStatus::ACTIVE): Asset
+    private function createAsset(MaintenanceStatus $status = MaintenanceStatus::ENROLLED): Asset
     {
         return Asset::create([
             'erp_asset_code' => 'AST-MS-'.uniqid(),
@@ -48,12 +48,12 @@ class MaintenanceStatusGuardTest extends TestCase
         $asset = $this->createAsset();
 
         $this->actingAs($admin)->patchJson("/api/assets/{$asset->id}", [
-            'maintenance_status' => 'Inactive',
-            'maintenance_sub_status' => 'Disposed',
+            'maintenance_status' => 'withdrawn',
+            'maintenance_sub_status' => 'disposed',
         ])->assertOk();
 
         $asset->refresh();
-        $this->assertEquals(MaintenanceStatus::INACTIVE, $asset->maintenance_status);
+        $this->assertEquals(MaintenanceStatus::WITHDRAWN, $asset->maintenance_status);
     }
 
     public function test_technician_cannot_change_maintenance_status(): void
@@ -62,14 +62,14 @@ class MaintenanceStatusGuardTest extends TestCase
         $asset = $this->createAsset();
 
         $this->actingAs($tech)->patchJson("/api/assets/{$asset->id}", [
-            'maintenance_status' => 'Inactive',
+            'maintenance_status' => 'withdrawn',
         ])->assertForbidden();
     }
 
     public function test_inactive_asset_rejects_corrective_mr_creation(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
-        $asset = $this->createAsset(MaintenanceStatus::INACTIVE);
+        $asset = $this->createAsset(MaintenanceStatus::WITHDRAWN);
 
         $this->actingAs($requester)->postJson('/api/maintenance-requests/corrective', [
             'asset_id' => $asset->id,
@@ -83,7 +83,7 @@ class MaintenanceStatusGuardTest extends TestCase
     {
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $tech = $this->createUser(RoleCode::TECHNICIAN);
-        $asset = $this->createAsset(MaintenanceStatus::INACTIVE);
+        $asset = $this->createAsset(MaintenanceStatus::WITHDRAWN);
 
         $mr = MaintenanceRequest::create([
             'number' => 'MR-'.uniqid(),
@@ -113,7 +113,7 @@ class MaintenanceStatusGuardTest extends TestCase
     public function test_inactive_asset_rejects_mr_approval(): void
     {
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
-        $asset = $this->createAsset(MaintenanceStatus::INACTIVE);
+        $asset = $this->createAsset(MaintenanceStatus::WITHDRAWN);
 
         $mr = MaintenanceRequest::create([
             'number' => 'MR-'.uniqid(),
@@ -129,5 +129,27 @@ class MaintenanceStatusGuardTest extends TestCase
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")
             ->assertStatus(409)
             ->assertJsonPath('message', 'Cannot approve a maintenance request for an inactive asset.');
+    }
+
+    // ── Legacy input rejected (shims removed) ──────────────────────────────────
+
+    public function test_legacy_maintenance_status_input_is_rejected(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $this->actingAs($admin)->patchJson("/api/assets/{$asset->id}", [
+            'maintenance_status' => 'Active',
+        ])->assertStatus(422);
+    }
+
+    public function test_legacy_maintenance_sub_status_input_is_rejected(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $this->actingAs($admin)->patchJson("/api/assets/{$asset->id}", [
+            'maintenance_sub_status' => 'Disposed',
+        ])->assertStatus(422);
     }
 }

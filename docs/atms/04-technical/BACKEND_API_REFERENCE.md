@@ -1986,13 +1986,15 @@ Used in maintenance requests and work orders: `low`, `medium`, `high`, `critical
 
 ### AssetMaintenanceStatus
 
-| Value | Description |---|---| `active` | Asset in operational use. PM/CM/WO active. | `inactive` | Asset not in service. All maintenance flows blocked. |
+Renamed 2026-07-02 (was `active`/`inactive`) to avoid the `operational_status='active'` collision. UI labels: `enrolled`→"In maintenance program", `withdrawn`→"Withdrawn".
 
-### AssetMaintenanceSubStatus (Active)
+| Value | Description |---|---| `enrolled` | Asset in operational use. PM/CM/WO active. | `withdrawn` | Asset not in service. All maintenance flows blocked. |
+
+### AssetMaintenanceSubStatus (Enrolled)
 
 | Value | Applies to | Description |---|---|---| *(none)* | `asset` | Default for standalone assets | `installed` | `component`, `package` | Installed in a parent | `ready` | `component`, `package` | Spare, available |
 
-### AssetMaintenanceSubStatus (Inactive)
+### AssetMaintenanceSubStatus (Withdrawn)
 
 | Value | Description |---|---| `lih` | Lost in Hole | `dbr` | Damaged Beyond Repair | `disposed` | Formally disposed | `scrapped` | Sold for scrap / removed | `other` | Other reason (free-text note) |
 

@@ -154,7 +154,7 @@ class ImportErpAssetsCommand extends Command
             'manufacturer' => trim($row['vendorNo'] ?? '') ?: null,
             'operational_status' => $underMaintenance ? 'under_maintenance' : 'active',
             'is_active' => ! $inactive,
-            'maintenance_status' => 'Active',
+            'maintenance_status' => 'enrolled',
             'asset_kind' => 'asset',
             'created_at' => now(),
             'updated_at' => now(),

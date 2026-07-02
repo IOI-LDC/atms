@@ -250,10 +250,10 @@ workflow.
 - **Assembly Operations:** Same as Administrator — install, remove, swap
   components, change asset kind, set parent relationships, create MRs for child
   components from parent WO screen.
-- **PM Rules:** View PM rule templates, assign templates to assets, evaluate and
-  deactivate/reactivate assignments. **PM rule template creation and editing is
-  currently Administrator-only.** Manager access to template management has been
-  decided but is pending UI implementation.
+- **PM Rules:** Assign templates to assets and evaluate, deactivate, or
+  reactivate assignments — all managed from the **Asset Detail → PM Rules**
+  section. **PM rule template creation and editing is Administrator-only by
+  design;** Managers work with assignments rather than the template library.
 - **ERP Sync:** Trigger manual ERP parts sync runs. Cannot change ERP connection
   settings or schedule.
 - **Parts:** View parts catalogue. Update local part fields. Cannot edit
@@ -268,7 +268,7 @@ workflow.
 - View raw ERP payloads (receives mapped reference fields only).
 - View technical audit logs.
 - Manage ERP sync settings or schedule.
-- Create or edit PM rule templates (pending UI change).
+- Create or edit PM rule templates (Administrator-only by design).
 
 ### 3.3 Technician
 
@@ -332,9 +332,6 @@ Movement) frontend. Within ATMS, Logistics has a focused set of capabilities.
 - Manage users, employees, locations definitions, master data, or company
   settings.
 - View technical audit logs.
-- Book or unbook assets (despite having location update permission, booking
-  toggle is restricted to Admin, Manager, and Logistics as per the booking spec
-  — however the RBAC matrix shows Logistics CAN book/unbook).
 
 ### 3.5 Requester
 
@@ -454,7 +451,7 @@ deployment. Each asset carries:
 
 - **Operational data:** name, description, category, serial number, model,
   manufacturer.
-- **Maintenance status:** Active or Inactive, with optional sub-statuses.
+- **Maintenance status:** Enrolled ("In maintenance program") or Withdrawn, with optional sub-statuses.
 - **Usage readings:** operating hours, kilometers, or other meter values.
 - **Physical location:** current location (owned by AM, displayed by ATMS).
 - **Attachments:** user manuals, datasheets, certificates, photos.
@@ -521,53 +518,60 @@ L - BBB - CCC - XXXX
 Each asset has an **Asset Maintenance Status** that represents its
 maintenance-service state. This status is completely independent of ERP
 disposal, financial treatment, capitalization, or depreciation. An asset can be
-Inactive (Disposed) in ATMS while still appearing in ERP financial records.
+Withdrawn (`disposed`) in ATMS while still appearing in ERP financial records.
 
-#### Active
+> The two states are stored as `enrolled` and `withdrawn`. They are displayed in
+> the UI as **"In maintenance program"** (`enrolled`) and **"Withdrawn"**
+> (`withdrawn`). (These were renamed from the former "Active"/"Inactive" so that
+> maintenance status is never confused with an asset's separate *operational*
+> status, which has its own "active" value.)
+
+#### Enrolled — displayed as "In maintenance program"
 
 The asset is in operational use and eligible for maintenance workflows:
 
-- PM rules evaluate against active assets.
-- Corrective MRs can be created for active assets.
-- Work Orders can be created against active assets.
+- PM rules evaluate against enrolled assets.
+- Corrective MRs can be created for enrolled assets.
+- Work Orders can be created against enrolled assets.
 
-**Active sub-statuses** (for components and packages only):
+**Enrolled sub-statuses** (for components and packages only):
 
 | Sub-status | Meaning |
 |---|---|
 | *(none)* | Default for standalone assets. Normal operation. |
-| **Installed** | Component is currently installed inside a parent. `parent_asset_id` is set. |
-| **Ready** | Component is fully maintained and available for installation. Not currently installed (`parent_asset_id` is null). A spare. |
+| **Installed** (`installed`) | Component is currently installed inside a parent. `parent_asset_id` is set. |
+| **Ready** (`ready`) | Component is fully maintained and available for installation. Not currently installed (`parent_asset_id` is null). A spare. |
 
-#### Inactive
+#### Withdrawn — displayed as "Withdrawn"
 
 The asset is not in active maintenance service. PM rules do not evaluate against
-inactive assets. CM and WO creation are blocked. The asset remains viewable in
+withdrawn assets. CM and WO creation are blocked. The asset remains viewable in
 the registry and its full maintenance history is preserved.
 
-**Inactive sub-statuses** (purely informational — no workflow triggers):
+**Withdrawn sub-statuses** (purely informational — no workflow triggers):
 
 | Sub-status | Meaning |
 |---|---|
-| **LIH** | Lost in Hole — physically inaccessible (e.g., downhole equipment that cannot be retrieved). |
-| **DBR** | Damaged Beyond Repair — repair is not economically or technically feasible. |
-| **Disposed** | Formally disposed per organizational policy (independent of ERP disposal accounting). |
-| **Scrapped** | Dismantled, sold for scrap, or otherwise removed from the operational pool. |
-| **Other** | Any other reason, with a free-text note for context. |
+| **Lost in Hole** (`lih`) | Physically inaccessible (e.g., downhole equipment that cannot be retrieved). |
+| **Damaged Beyond Repair** (`dbr`) | Repair is not economically or technically feasible. |
+| **Disposed** (`disposed`) | Formally disposed per organizational policy (independent of ERP disposal accounting). |
+| **Scrapped** (`scrapped`) | Dismantled, sold for scrap, or otherwise removed from the operational pool. |
+| **Other** (`other`) | Any other reason, with a free-text note for context. |
 
 **Key rules:**
 
 - Only Administrator or Maintenance Manager may change an asset's maintenance
   status. All status changes are explicit — there are no automatic transitions
   based on maintenance events, readings, or time.
-- Sub-statuses carry no business logic. "LIH" does not block PM evaluation (the
-  Inactive parent state already does that). "DBR" does not trigger any workflow.
-- Inactive assets may be reactivated at any time by Admin or Manager.
-- `Installed` requires `parent_asset_id` to be set; `Ready` requires
+- Sub-statuses carry no business logic. "Lost in Hole" does not block PM
+  evaluation (the Withdrawn parent state already does that). "Damaged Beyond
+  Repair" does not trigger any workflow.
+- Withdrawn assets may be re-enrolled at any time by Admin or Manager.
+- `installed` requires `parent_asset_id` to be set; `ready` requires
   `parent_asset_id` to be null. These sub-statuses only apply to `asset_kind =
   component` or `package`.
-- Swapping a component auto-updates its sub-status: Ready → Installed on
-  install; Installed → Ready on removal (or to an Inactive sub-status if
+- Swapping a component auto-updates its sub-status: `ready` → `installed` on
+  install; `installed` → `ready` on removal (or to a Withdrawn sub-status if
   decommissioned).
 
 ### 5.5 Asset Booking
@@ -590,7 +594,7 @@ reassigned or relocated.
 - Booking auto-clears (`is_booked = false`) when:
   - The asset's location changes (via any path).
   - The asset is deactivated (`is_active = false`).
-  - The asset's maintenance status becomes Inactive.
+  - The asset's maintenance status becomes Withdrawn (`withdrawn`).
 - Booking survives maintenance events (WO creation, completion, closure) — only
   location change or inactivation releases it.
 
@@ -645,7 +649,7 @@ Motor (Package, Root)
 - Cycle prevention: a component's parent cannot be itself or any of its own
   descendants. Enforced in application logic.
 - Spare components: a component with `parent_asset_id = null` and
-  `maintenance_sub_status = Ready` is available for installation.
+  `maintenance_sub_status = ready` is available for installation.
 
 **How assembly interacts with maintenance:**
 
@@ -1232,8 +1236,8 @@ The "All Assets" tab displays the full asset registry with search and filters.
 
 **Visible to:** Admin, Manager, Technician, Logistics.
 
-**Columns:** asset tag, name, category, maintenance status badge (Active/Inactive
-with sub-status), current location, latest confirmed usage reading, PM status
+**Columns:** asset tag, name, category, maintenance status badge ("In maintenance
+program" / "Withdrawn" with sub-status), current location, latest confirmed usage reading, PM status
 indicator, asset kind badge (Asset / Package / Component), parent asset reference
 (for components).
 
@@ -1289,9 +1293,9 @@ Clicking an asset row opens the full-page Asset Detail screen.
 
 - Component list with PM status indicators (green 🟢 / yellow 🟡 / red 🔴).
 - **Install Component** action — side sheet to search and select a spare
-  component (must be `Active/Ready`, `parent_asset_id IS NULL`).
+  component (must be enrolled with sub-status `ready`, `parent_asset_id IS NULL`).
 - **Remove Component** action — dialog with reason field and post-removal
-  disposition (Ready, DBR, Disposed, Scrapped).
+  disposition (`ready`, or a Withdrawn sub-status: `dbr`, `disposed`, `scrapped`).
 - **Swap Component** action — remove old + install new in one atomic operation.
 - **"Create MR for Component"** action — available for yellow/red components on
   parent WO screen (Admin/Manager only).
@@ -1610,10 +1614,11 @@ The PM Rules tab lives under the Admin sidebar item:
 | Deactivate/Reactivate | Admin only | Toggle for individual templates. |
 | Evaluate All | Admin only | Runs evaluation against every active assignment. |
 
-**Note:** Maintenance Managers hold `view` and `viewAny` permissions for PM
-templates but currently have no UI path to view templates because the Admin
-sidebar item is hidden for non-Administrators. The agreed direction is to grant
-Managers access to the full Admin area, but this is pending UI implementation.
+**Note:** Creating and editing PM rule *templates* is Administrator-only by
+design. Maintenance Managers do not manage the template library; instead they
+assign templates to assets and manage each asset's PM *assignments* (assign,
+evaluate, deactivate, reactivate) directly from the **Asset Detail → PM Rules**
+section.
 
 ---
 
@@ -1867,16 +1872,16 @@ Attachments can be uploaded against four parent types:
 
 ### Asset Maintenance Status
 
-| Parent State | Sub-Status | Applies To | PM Eligible |
+| Parent State (`value`) | Sub-Status | Applies To | PM Eligible |
 |---|---|---|---|
-| **Active** | *(none)* | `asset_kind = asset` (standalone) | Yes |
-| **Active** | Installed | `asset_kind = component` or `package` | Yes |
-| **Active** | Ready | `asset_kind = component` or `package` | Yes |
-| **Inactive** | LIH | Any | No |
-| **Inactive** | DBR | Any | No |
-| **Inactive** | Disposed | Any | No |
-| **Inactive** | Scrapped | Any | No |
-| **Inactive** | Other | Any | No |
+| **Enrolled** (`enrolled`) — "In maintenance program" | *(none)* | `asset_kind = asset` (standalone) | Yes |
+| **Enrolled** (`enrolled`) | `installed` | `asset_kind = component` or `package` | Yes |
+| **Enrolled** (`enrolled`) | `ready` | `asset_kind = component` or `package` | Yes |
+| **Withdrawn** (`withdrawn`) | `lih` | Any | No |
+| **Withdrawn** (`withdrawn`) | `dbr` | Any | No |
+| **Withdrawn** (`withdrawn`) | `disposed` | Any | No |
+| **Withdrawn** (`withdrawn`) | `scrapped` | Any | No |
+| **Withdrawn** (`withdrawn`) | `other` | Any | No |
 
 ### Asset Kinds
 
@@ -1954,9 +1959,10 @@ Attachments can be uploaded against four parent types:
 
 ## Appendix C: Glossary
 
-**Active (asset maintenance status):** The asset is in operational use and
-eligible for maintenance workflows. PM rules evaluate against active assets; CMs
-and WOs can be created.
+**Enrolled (asset maintenance status, `enrolled`):** Displayed as "In maintenance
+program". The asset is in operational use and eligible for maintenance workflows;
+PM rules evaluate against enrolled assets; CMs and WOs can be created. (Renamed
+from the former "Active" to avoid confusion with the separate operational status.)
 
 **Active (Work Order status):** A tab filter in the WO list showing WOs with
 status `open` or `in_progress`.
@@ -1999,11 +2005,12 @@ L1-L4 levels.
 financial asset management, procurement, and parts master data. ATMS reads parts
 from ERP (via SM) but does not write back.
 
-**Inactive (asset maintenance status):** The asset is not in active maintenance
-service. PM evaluation, CM creation, and WO creation are blocked.
+**Withdrawn (asset maintenance status, `withdrawn`):** The asset is not in active
+maintenance service. PM evaluation, CM creation, and WO creation are blocked.
+(Renamed from the former "Inactive".)
 
-**Installed:** A sub-status indicating a component is currently installed in a
-parent (`parent_asset_id` is set).
+**Installed (`installed`):** A sub-status indicating a component is currently
+installed in a parent (`parent_asset_id` is set).
 
 **Maintenance history:** A read-model view assembled from an asset's MRs, WOs,
 parts used, readings, and location changes. Not stored in a duplicate table —
@@ -2033,8 +2040,8 @@ request that was rejected or cancelled. Defines `suppressed_until_date` and/or
 **Power Automate:** Microsoft Power Automate, used as the email transport for
 account activation and password-reset emails.
 
-**Ready:** A sub-status indicating a component is fully maintained and available
-for installation (`parent_asset_id` is null). A spare.
+**Ready (`ready`):** A sub-status indicating a component is fully maintained and
+available for installation (`parent_asset_id` is null). A spare.
 
 **Root:** A package with no parent — sits at the top of an assembly tree.
 

@@ -182,4 +182,32 @@ class AssetResourceTest extends TestCase
         $names = collect($response->json('data'))->pluck('name');
         $this->assertContains('Inactive', $names);
     }
+
+    public function test_default_maintenance_status_serializes_as_enrolled(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createAsset();
+
+        $response = $this->actingAs($admin)->getJson('/api/assets');
+
+        $response->assertStatus(200);
+        $this->assertSame('enrolled', $response->json('data.0.maintenance_status'));
+    }
+
+    public function test_set_maintenance_sub_status_serializes_lowercase(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $location = Location::create(['name' => 'Loc', 'type' => 'building']);
+        Asset::create([
+            'erp_asset_code' => 'A-SUB-001',
+            'name' => 'Sub-status Asset',
+            'maintenance_sub_status' => 'disposed',
+            'current_location_id' => $location->id,
+        ]);
+
+        $response = $this->actingAs($admin)->getJson('/api/assets');
+
+        $response->assertStatus(200);
+        $this->assertSame('disposed', $response->json('data.0.maintenance_sub_status'));
+    }
 }

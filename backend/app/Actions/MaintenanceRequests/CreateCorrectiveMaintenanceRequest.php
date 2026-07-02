@@ -23,7 +23,7 @@ class CreateCorrectiveMaintenanceRequest
         ?string $description = null,
         ?array $meterReading = null
     ): MaintenanceRequest {
-        if ($asset->maintenance_status === MaintenanceStatus::INACTIVE) {
+        if ($asset->maintenance_status === MaintenanceStatus::WITHDRAWN) {
             throw new DomainException('Cannot create a maintenance request for an inactive asset.');
         }
 

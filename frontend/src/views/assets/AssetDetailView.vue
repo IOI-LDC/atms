@@ -65,27 +65,27 @@ const locationIdStr = computed({
 /**
  * Available maintenance sub-statuses depend on the draft's maintenance_status
  * and asset_kind (per ASSET_STATUS.md):
- * - Active + component/package  → Installed, Ready
- * - Active + standalone asset   → (none — sub-status hidden)
- * - Inactive                    → LIH, DBR, Disposed, Scrapped, Other
+ * - enrolled + component/package  → installed, ready
+ * - enrolled + standalone asset   → (none — sub-status hidden)
+ * - withdrawn                     → lih, dbr, disposed, scrapped, other
  */
 const availableSubStatuses = computed<{ value: string; label: string }[]>(() => {
-  if (draft.value.maintenance_status === 'Inactive') {
+  if (draft.value.maintenance_status === 'withdrawn') {
     return [
-      { value: 'LIH',      label: 'Lost in Hole' },
-      { value: 'DBR',      label: 'Damaged Beyond Repair' },
-      { value: 'Disposed', label: 'Disposed' },
-      { value: 'Scrapped', label: 'Scrapped' },
-      { value: 'Other',    label: 'Other' },
+      { value: 'lih',      label: 'Lost in Hole' },
+      { value: 'dbr',      label: 'Damaged Beyond Repair' },
+      { value: 'disposed', label: 'Disposed' },
+      { value: 'scrapped', label: 'Scrapped' },
+      { value: 'other',    label: 'Other' },
     ]
   }
   if (draft.value.asset_kind === 'package' || draft.value.asset_kind === 'component') {
     return [
-      { value: 'Installed', label: 'Installed' },
-      { value: 'Ready',     label: 'Ready (spare)' },
+      { value: 'installed', label: 'Installed' },
+      { value: 'ready',     label: 'Ready (spare)' },
     ]
   }
-  return []  // Active standalone asset → no sub-status
+  return []  // enrolled standalone asset → no sub-status
 })
 
 // Attachment deletion uses its target id as open state (same pattern as WO).
@@ -603,14 +603,14 @@ watch(
               </Select>
             </div>
 
-            <!-- Maintenance Status (Active/Inactive) -->
+            <!-- Maintenance Status (enrolled/withdrawn) -->
             <div class="form-field">
               <Label for="edit-maint-status">Maintenance Status</Label>
               <Select v-model="draft.maintenance_status">
                 <SelectTrigger id="edit-maint-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Active">Active — eligible for maintenance workflows</SelectItem>
-                  <SelectItem value="Inactive">Inactive — excluded from all workflows</SelectItem>
+                  <SelectItem value="enrolled">In maintenance program — eligible for maintenance workflows</SelectItem>
+                  <SelectItem value="withdrawn">Withdrawn — excluded from all workflows</SelectItem>
                 </SelectContent>
               </Select>
             </div>

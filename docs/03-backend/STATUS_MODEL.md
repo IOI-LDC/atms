@@ -153,7 +153,7 @@ for the full specification.
 - Booking does not belong to `operational_status` or `maintenance_status` — it is a separate, independent axis.
 - Booking does NOT gate MR creation, WO creation, or PM evaluation. An asset can be booked and still be maintained.
 - Booking auto-clears (`is_booked = false`) on any location change (`UpdateAssetLocation`).
-- Booking auto-clears when an asset is deactivated (`is_active = false`) or its `maintenance_status` becomes `Inactive`. A decommissioned asset cannot remain booked.
+- Booking auto-clears when an asset is deactivated (`is_active = false`) or its `maintenance_status` becomes `withdrawn`. A decommissioned asset cannot remain booked.
 - Booking survives maintenance events (WO open/start/complete/close) — only location change or inactivation releases it.
 - No Job/Project/client reference is stored in ATMS; the booking is purely a binary availability flag.
 - Only Administrator, Maintenance Manager, and Logistics may toggle booking.

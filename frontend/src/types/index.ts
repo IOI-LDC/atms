@@ -15,11 +15,11 @@ export type Priority                 = 'low' | 'medium' | 'high' | 'critical'
 export type MrType                   = 'corrective' | 'preventive'
 export type MeterReadingSource       = 'user' | 'manual'
 export type ErpSyncStatus            = 'running' | 'success' | 'partial' | 'failed'
-export type AssetMaintenanceStatus   = 'Active' | 'Inactive'
+export type AssetMaintenanceStatus   = 'enrolled' | 'withdrawn'
 export type AssetKind                = 'asset' | 'package' | 'component'
 export type AssetMaintenanceSubStatus =
-  | 'Installed' | 'Ready'                             // Active sub-statuses (component/package)
-  | 'LIH' | 'DBR' | 'Disposed' | 'Scrapped' | 'Other' // Inactive sub-statuses
+  | 'installed' | 'ready'                             // enrolled sub-statuses (component/package)
+  | 'lih' | 'dbr' | 'disposed' | 'scrapped' | 'other' // withdrawn sub-statuses
 export type WoFormFieldType = 'boolean' | 'numeric' | 'text'
 
 // ── Shared fragments ──────────────────────────────────────────────────────────

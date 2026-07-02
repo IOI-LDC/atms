@@ -80,7 +80,7 @@ export function useAssetDetail() {
   const draft            = ref<AssetEditDraft>({
     name: '', description: '', fa_subclass_code: '', serial_number: '',
     model: '', manufacturer: '', operational_status: 'active',
-    maintenance_status: 'Active', maintenance_sub_status: '',
+    maintenance_status: 'enrolled', maintenance_sub_status: '',
     is_active: true, current_location_id: null, location_notes: '',
     asset_kind: 'asset', asset_tag: '', asset_tag_override_reason: '',
   })
@@ -224,7 +224,7 @@ export function useAssetDetail() {
       model:                   record.value.model ?? '',
       manufacturer:            record.value.manufacturer ?? '',
       operational_status:      record.value.operational_status ?? 'active',
-      maintenance_status:      record.value.maintenance_status ?? 'Active',
+      maintenance_status:      record.value.maintenance_status ?? 'enrolled',
       maintenance_sub_status:  record.value.maintenance_sub_status ?? '',
       is_active:               record.value.is_active ?? true,
       current_location_id:     record.value.current_location?.id ?? null,

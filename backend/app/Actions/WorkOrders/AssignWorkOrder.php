@@ -17,7 +17,7 @@ class AssignWorkOrder
     {
         $asset = $workOrder->asset;
 
-        if ($asset && $asset->maintenance_status === MaintenanceStatus::INACTIVE) {
+        if ($asset && $asset->maintenance_status === MaintenanceStatus::WITHDRAWN) {
             throw new DomainException('Cannot assign a work order for an inactive asset.');
         }
 

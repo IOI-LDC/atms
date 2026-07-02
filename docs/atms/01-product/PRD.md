@@ -44,7 +44,7 @@ ATMS owns:
 
 - Asset master records (fully managed in ATMS — no ERP asset source)
 - Asset usage readings
-- Asset maintenance status (Active / Inactive with sub-statuses)
+- Asset maintenance status (`enrolled` / `withdrawn` with sub-statuses)
 - Asset assembly (Package / Component)
 - Asset tagging (physical label format: L-BBB-CCC-XXXX) for identification and QR support
 - Preventive maintenance rules
@@ -82,7 +82,7 @@ and tab structure.
 ## In-Scope Summary
 
 - Manual asset registry (create, update, manage locally)
-- Asset maintenance status (Active / Inactive with sub-statuses: LIH, DBR, Disposed, Scrapped, Other)
+- Asset maintenance status (`enrolled` / `withdrawn` with sub-statuses: `lih`, `dbr`, `disposed`, `scrapped`, `other`)
 - Asset assembly (Package / Component)
 - Asset tagging (physical label format: L-BBB-CCC-XXXX) for identification and QR support
 - Asset usage tracking

@@ -4,6 +4,6 @@ namespace App\Enums;
 
 enum MaintenanceStatus: string
 {
-    case ACTIVE = 'Active';
-    case INACTIVE = 'Inactive';
+    case ENROLLED = 'enrolled';
+    case WITHDRAWN = 'withdrawn';
 }

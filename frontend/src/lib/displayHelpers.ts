@@ -87,8 +87,8 @@ export function operationalStatusClass(s: string | null | undefined): string {
 export function assetMaintenanceStatusLabel(s: string | null | undefined): string {
   if (!s) return '—'
   const m: Record<string, string> = {
-    Active:   'Active',
-    Inactive: 'Inactive',
+    enrolled:  'In maintenance program',
+    withdrawn: 'Withdrawn',
   }
   return m[s] ?? s
 }
@@ -96,8 +96,8 @@ export function assetMaintenanceStatusLabel(s: string | null | undefined): strin
 export function assetMaintenanceStatusClass(s: string | null | undefined): string {
   // Reuses the same .status-active / .status-inactive added for operational status
   const m: Record<string, string> = {
-    Active:   'status-badge status-active',
-    Inactive: 'status-badge status-inactive',
+    enrolled:  'status-badge status-active',
+    withdrawn: 'status-badge status-inactive',
   }
   return m[s ?? ''] ?? 'status-badge'
 }
@@ -105,13 +105,13 @@ export function assetMaintenanceStatusClass(s: string | null | undefined): strin
 export function assetMaintenanceSubStatusLabel(s: string | null | undefined): string {
   if (!s) return '—'
   const m: Record<string, string> = {
-    Installed: 'Installed',
-    Ready:     'Ready',
-    LIH:       'Lost in Hole',
-    DBR:       'Damaged Beyond Repair',
-    Disposed:  'Disposed',
-    Scrapped:  'Scrapped',
-    Other:     'Other',
+    installed: 'Installed',
+    ready:     'Ready',
+    lih:       'Lost in Hole',
+    dbr:       'Damaged Beyond Repair',
+    disposed:  'Disposed',
+    scrapped:  'Scrapped',
+    other:     'Other',
   }
   return m[s] ?? s
 }

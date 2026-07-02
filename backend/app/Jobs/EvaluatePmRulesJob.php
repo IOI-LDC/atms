@@ -30,7 +30,7 @@ class EvaluatePmRulesJob implements ShouldBeUnique, ShouldQueue
 
         $assignments = AssetPmAssignment::where('is_active', true)
             ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
-            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', MaintenanceStatus::ACTIVE))
+            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', MaintenanceStatus::ENROLLED))
             ->with('pmRule')
             ->get();
         $generated = 0;
