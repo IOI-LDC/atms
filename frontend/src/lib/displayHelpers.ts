@@ -256,3 +256,11 @@ export function woFormFieldTypeLabel(t: string): string {
   const m: Record<string, string> = { boolean: 'Yes/No', numeric: 'Numeric', text: 'Text' }
   return m[t] ?? t
 }
+
+export function partStatusLabel(isActive: boolean): string {
+  return isActive ? 'Active' : 'Inactive'
+}
+
+export function partStatusClass(isActive: boolean): string {
+  return isActive ? 'status-badge status-active' : 'status-badge status-inactive'
+}

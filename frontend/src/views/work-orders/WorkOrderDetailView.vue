@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { ArrowLeftIcon, PaperclipIcon, PencilIcon, UserPlusIcon, UserPenIcon, EyeIcon, Trash2Icon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
+import PartCombobox from '@/components/app/PartCombobox.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -42,7 +43,7 @@ const {
   completeOpen, completeLoading, completionNotes, openComplete, doComplete,
   closeLoading, doClose,
   cancelOpen, cancelLoading, cancelReason, cancelAssetStatus, openCancel, doCancel,
-  addPartOpen, addPartLoading, partDraft, partsSearch, partsResults, partsSearchLoading, searchParts, openAddPart, doAddPart,
+  addPartOpen, addPartLoading, partDraft, selectedPart, openAddPart, doAddPart,
   removeTarget, removeLoading, openRemovePart, doRemovePart, parts,
   readingTypes, recordReadingOpen, readingLoading, readingDraft, assetReadings, readingsLoading, sinceLastService, openRecordReading, doRecordReading, loadAssetReadings,
   canManageReadings, editReadingOpen, editReadingLoading, editReadingDraft, openEditReading, doEditReading, deleteReadingTarget, deleteReadingLoading, openDeleteReading, doDeleteReading,
@@ -718,20 +719,8 @@ watch(id, async (newId) => {
           <DialogDescription>Search the parts catalogue and record the quantity used.</DialogDescription>
         </DialogHeader>
         <div class="form-field">
-          <Label for="wo-part-search">Part</Label>
-          <Input
-            id="wo-part-search" :model-value="partsSearch" placeholder="Search by name or code…"
-            @update:model-value="(v) => searchParts(String(v))"
-          />
-          <div v-if="partsSearchLoading" class="table-cell-secondary">Searching…</div>
-          <ul v-if="partsResults.length > 0" class="file-list">
-            <li v-for="r in partsResults" :key="r.id" class="file-list-item">
-              <span class="file-list-name">{{ r.name }} <span class="table-cell-secondary">{{ r.erp_part_code }}</span></span>
-              <Button type="button" size="sm" :variant="partDraft.partId === r.id ? 'default' : 'outline'" @click="partDraft.partId = r.id">
-                {{ partDraft.partId === r.id ? 'Selected' : 'Select' }}
-              </Button>
-            </li>
-          </ul>
+          <Label for="part">Part</Label>
+          <PartCombobox v-model="selectedPart" input-id="part" />
         </div>
         <div class="form-field">
           <Label for="wo-part-qty">Quantity <span class="field-required">*</span></Label>
@@ -743,7 +732,7 @@ watch(id, async (newId) => {
         </div>
         <DialogFooter>
           <Button variant="outline" :disabled="addPartLoading" @click="addPartOpen = false">Back</Button>
-          <Button :disabled="addPartLoading || partDraft.partId === null" @click="doAddPart">
+          <Button :disabled="addPartLoading || !selectedPart" @click="doAddPart">
             {{ addPartLoading ? 'Adding…' : 'Add Part' }}
           </Button>
         </DialogFooter>

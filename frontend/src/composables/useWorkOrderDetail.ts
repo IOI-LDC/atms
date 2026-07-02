@@ -3,8 +3,6 @@ import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
 import type { WorkOrder, WorkOrderPart, Assignee, Attachment, AssetMeterReading, MissingField, WoFormFieldValue } from '@/types'
-// MOCK(PARTS) — temporary; see src/lib/__mockParts.ts for removal checklist.
-import { MOCK_PARTS, isMockPartId, isMockLineId, MOCK_LINE_ID_FLOOR } from '@/lib/__mockParts'
 
 /**
  * Owns the state and actions for a single Work Order detail page.
@@ -126,25 +124,13 @@ export function useWorkOrderDetail() {
   // ── Parts state ──────────────────────────────────────────────────────────
   const addPartOpen    = ref(false)
   const addPartLoading = ref(false)
-  const partDraft = ref<{ partId: number | null; quantity: number; notes: string }>({
-    partId: null, quantity: 1, notes: '',
-  })
-  const partsSearch   = ref('')
-  const partsResults   = ref<{ id: number; name: string; erp_part_code: string; unit_of_measure: string | null }[]>([])
-  const partsSearchLoading = ref(false)
+  const partDraft = ref<{ quantity: number; notes: string }>({ quantity: 1, notes: '' })
+  // Bound to <PartCombobox v-model>; selection shape { id, label }.
+  const selectedPart  = ref<{ id: number; label: string } | null>(null)
   const removeTarget  = ref<number | null>(null)
   const removeLoading = ref(false)
 
-  // MOCK(PARTS): in-memory part lines added against the mock catalogue. They
-  // merge with the real `record.parts` for display only and never hit the API.
-  // Reset whenever we load a different WO (see load()).
-  const mockAddedParts = ref<WorkOrderPart[]>([])
-  let mockLineSeq = MOCK_LINE_ID_FLOOR
-  // Display list = real backend lines + local mock lines.
-  const parts = computed<WorkOrderPart[]>(() => [
-    ...(record.value?.parts ?? []),
-    ...mockAddedParts.value,
-  ])
+  const parts = computed<WorkOrderPart[]>(() => record.value?.parts ?? [])
 
   // ── Readings state ───────────────────────────────────────────────────────
   const readingTypes = ref<{ id: number; name: string; unit: string }[]>([])
@@ -218,12 +204,6 @@ export function useWorkOrderDetail() {
     if (isNewRecord) {
       syncDeferred.value = false
       missingFields.value = new Set()
-      // MOCK(PARTS): pre-seed two sample lines so the Parts-used table is
-      // populated for layout review. Reset on every WO switch.
-      mockAddedParts.value = [
-        { id: ++mockLineSeq, part: { ...MOCK_PARTS[0]!, unit_of_measure: MOCK_PARTS[0]!.unit_of_measure }, quantity: 4, notes: null },
-        { id: ++mockLineSeq, part: { ...MOCK_PARTS[3]!, unit_of_measure: MOCK_PARTS[3]!.unit_of_measure }, quantity: 2, notes: 'Replaced during service' },
-      ]
     }
     try {
       const res = await api.get<{ data: WorkOrder }>(`/work-orders/${id}`)
@@ -415,57 +395,17 @@ export function useWorkOrderDetail() {
   //  Parts
   // ══════════════════════════════════════════════════════════════════════════
   function openAddPart() {
-    partDraft.value = { partId: null, quantity: 1, notes: '' }
-    partsSearch.value = ''
-    partsResults.value = []
+    partDraft.value = { quantity: 1, notes: '' }
+    selectedPart.value = null
     addPartOpen.value = true
   }
 
-  async function searchParts(q: string) {
-    partsSearch.value = q
-    if (q.length < 2) { partsResults.value = []; return }
-    partsSearchLoading.value = true
-    try {
-      const res = await api.get<{ data: { id: number; name: string; erp_part_code: string; unit_of_measure: string | null }[] }>('/parts', { search: q })
-      let hits = (res.data ?? []).slice(0, 10)
-      // MOCK(PARTS): until `GET /parts` ships real rows, fall back to the mock
-      // catalogue filtered by the current query so the picker is usable.
-      if (hits.length === 0) {
-        const needle = q.trim().toLowerCase()
-        hits = MOCK_PARTS
-          .filter((p) => p.name.toLowerCase().includes(needle) || p.erp_part_code.toLowerCase().includes(needle))
-          .slice(0, 10)
-          .map((p) => ({ ...p }))
-      }
-      partsResults.value = hits
-    } catch {
-      partsResults.value = []
-    } finally {
-      partsSearchLoading.value = false
-    }
-  }
-
   async function doAddPart() {
-    if (!record.value || !partDraft.value.partId) return
-    // MOCK(PARTS): mock-catalogue parts have no backend row — keep them in memory.
-    if (isMockPartId(partDraft.value.partId)) {
-      const p = MOCK_PARTS.find((x) => x.id === partDraft.value.partId)
-      if (p) {
-        mockAddedParts.value.push({
-          id: ++mockLineSeq,
-          part: { id: p.id, name: p.name, erp_part_code: p.erp_part_code, unit_of_measure: p.unit_of_measure },
-          quantity: partDraft.value.quantity,
-          notes: partDraft.value.notes || null,
-        })
-      }
-      toast.success('Part added.')
-      addPartOpen.value = false
-      return
-    }
+    if (!record.value || !selectedPart.value) return
     addPartLoading.value = true
     try {
       await api.post(`/work-orders/${record.value.id}/parts`, {
-        part_id: partDraft.value.partId,
+        part_id: selectedPart.value.id,
         quantity: partDraft.value.quantity,
         notes: partDraft.value.notes || null,
       })
@@ -482,13 +422,6 @@ export function useWorkOrderDetail() {
   function openRemovePart(partLineId: number) { removeTarget.value = partLineId }
   async function doRemovePart() {
     if (!record.value || !removeTarget.value) return
-    // MOCK(PARTS): remove an in-memory mock line without calling the API.
-    if (isMockLineId(removeTarget.value)) {
-      mockAddedParts.value = mockAddedParts.value.filter((p) => p.id !== removeTarget.value)
-      toast.success('Part removed.')
-      removeTarget.value = null
-      return
-    }
     removeLoading.value = true
     try {
       await api.delete(`/work-orders/${record.value.id}/parts/${removeTarget.value}`)
@@ -746,8 +679,7 @@ export function useWorkOrderDetail() {
     closeLoading, doClose,
     cancelOpen, cancelLoading, cancelReason, cancelAssetStatus, openCancel, doCancel,
     // Parts
-    // Parts
-    addPartOpen, addPartLoading, partDraft, partsSearch, partsResults, partsSearchLoading, searchParts, openAddPart, doAddPart, removeTarget, removeLoading, openRemovePart, doRemovePart, parts,
+    addPartOpen, addPartLoading, partDraft, selectedPart, openAddPart, doAddPart, removeTarget, removeLoading, openRemovePart, doRemovePart, parts,
     // Readings
     readingTypes, recordReadingOpen, readingLoading, readingDraft, assetReadings, readingsLoading, sinceLastService, openRecordReading, doRecordReading, loadAssetReadings,
     canManageReadings, editReadingOpen, editReadingLoading, editReadingDraft, openEditReading, doEditReading, deleteReadingTarget, deleteReadingLoading, openDeleteReading, doDeleteReading,
