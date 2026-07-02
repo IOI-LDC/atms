@@ -101,7 +101,7 @@ Tabs:
 ### Drill-down: Work Order Detail
 - Full-page view for execution and closure.
 - Sections: overview, related MR, work notes, parts used, attachments, updated
-  readings, final asset status/condition.
+  readings, final asset status/condition, **WO Form** (pre/post maintenance values, sync-to-latest banner when template has changed).
 - Close action available when all requirements are met.
 
 ---
@@ -298,6 +298,14 @@ Tabs:
   baseline (one grace interval before first PM).
 - Default view: active assignments; a toggle reveals inactive ones so they
   remain reachable for reactivation.
+
+### 7d. WO Forms
+- **Visible to:** Admin only.
+- List of form templates with columns: name, FA subclass, field count, active/inactive.
+- Create/edit via side sheet: template name, FA subclass (select from active subclasses).
+- Field builder within the template: label, type (boolean/numeric/text), unit (numeric only, optional), `has_pre_post` toggle, required toggle, sort order.
+- Deactivate (not delete) for retired templates. Deactivation prevents new WOs from snapshotting the template.
+- Inactive templates remain visible and can be reactivated.
 
 ---
 

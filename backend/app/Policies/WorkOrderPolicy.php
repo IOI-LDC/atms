@@ -19,6 +19,20 @@ class WorkOrderPolicy
         return true;
     }
 
+    /**
+     * Reading the WO's form is allowed for Admin, Manager, or the assigned
+     * Technician — even on terminal WOs (unlike updateExecution). Used by the
+     * dedicated GET /work-orders/{wo}/form endpoint.
+     */
+    public function viewForm(User $user, WorkOrder $workOrder): bool
+    {
+        if ($user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
+            return true;
+        }
+
+        return $user->hasRole(RoleCode::TECHNICIAN) && $workOrder->assigned_to_user_id === $user->id;
+    }
+
     public function assign(User $user): bool
     {
         return $user->hasRole(RoleCode::ADMINISTRATOR)

@@ -130,6 +130,7 @@ Location Update" tab links to this drill-down from each asset row.
 |--------------------|------------|
 | `users`            | Admin only |
 | `lists`            | Admin only |
+| `wo-forms`         | Admin only |
 | `pm-rules`         | Admin only |
 
 - **`users`** — Employee directory import, user provisioning, fixed-role
@@ -137,6 +138,7 @@ Location Update" tab links to this drill-down from each asset row.
 - **`lists`** — All configurable dropdown values including locations, asset
   statuses, maintenance priorities, usage reading types, work order statuses,
   asset maintenance sub-statuses, and other master-data items.
+- **`wo-forms`** — WO Form template management: create, edit, deactivate, and reactivate form templates per FA subclass. Field builder within each template (label, type, unit, has_pre_post, required, sort order). Admin only.
 - **`pm-rules`** — PM **template** management (Admin): create/edit/deactivate/
   reactivate reusable maintenance schedule templates. Templates are asset-agnostic;
   they are assigned to assets from the Asset Detail screen (PM Rules section).

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Assets\ConfirmMeterReading;
+use App\Actions\Assets\DeleteMeterReading;
 use App\Actions\Assets\RecordMeterReading;
+use App\Actions\Assets\UpdateMeterReading;
 use App\Models\Asset;
 use App\Models\AssetMeterReading;
 use App\Models\UsageReadingType;
@@ -62,6 +64,62 @@ class AssetMeterReadingController extends Controller
             $reading = $action->execute($reading, $request->user()->id);
 
             return response()->json(['message' => 'Meter reading confirmed.', 'data' => $reading]);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    public function update(Request $request, Asset $asset, AssetMeterReading $reading, UpdateMeterReading $action): JsonResponse
+    {
+        Gate::authorize('update', $reading);
+
+        if ($reading->asset_id !== $asset->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'reading_value' => ['required', 'numeric'],
+            'reading_at' => ['required', 'date'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        if (! $asset->is_active) {
+            return response()->json(['message' => 'Cannot edit readings for an inactive asset.'], 422);
+        }
+
+        $readingType = $reading->readingType()->first();
+        if (! $readingType || ! $readingType->is_active) {
+            return response()->json(['message' => 'Cannot edit readings for an inactive reading type.'], 422);
+        }
+
+        try {
+            $reading = $action->execute(
+                $reading,
+                $asset,
+                $readingType,
+                (float) $validated['reading_value'],
+                Carbon::parse($validated['reading_at']),
+                $validated['notes'] ?? null
+            );
+
+            return response()->json(['message' => 'Meter reading updated.', 'data' => $reading]);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    public function delete(Request $request, Asset $asset, AssetMeterReading $reading, DeleteMeterReading $action): JsonResponse
+    {
+        Gate::authorize('delete', $reading);
+
+        if ($reading->asset_id !== $asset->id) {
+            abort(404);
+        }
+
+        try {
+            $action->execute($reading);
+
+            return response()->json(['message' => 'Meter reading deleted.']);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }

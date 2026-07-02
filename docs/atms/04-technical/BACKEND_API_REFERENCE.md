@@ -26,6 +26,8 @@
 - [Admin: ERP Sync](#admin-erp-sync)
 - [Admin: Audit Logs](#admin-audit-logs)
 - [Admin: Company Settings](#admin-company-settings)
+- [Admin: WO Forms](#admin-wo-forms)
+- [Work Order Forms](#work-order-forms)
 - [Admin: Locations](#admin-locations)
 - [Admin: Master Data](#admin-master-data)
 - [Admin: Usage Reading Types](#admin-usage-reading-types)
@@ -533,6 +535,70 @@ Confirm an unverified meter reading. Idempotent — confirming an already-confir
 **Error `409`:** Domain error (e.g., reading value decreased).
 
 ---
+### PATCH `/api/assets/{asset}/meter-readings/{reading}`
+
+Update an **unconfirmed** meter reading. Read-only after confirmation (see Errors).
+
+**Auth:** Required (Administrator, Maintenance Manager, or Technician)
+
+**Request Body:**
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `reading_value` | numeric | required |
+| `reading_at` | datetime string | required, valid date |
+| `notes` | string? | nullable |
+
+**Response `200`:**
+```json
+{
+  "message": "Meter reading updated.",
+  "data": {
+    "id": 1,
+    "asset_id": 1,
+    "usage_reading_type_id": 1,
+    "reading_value": "1550.00",
+    "reading_at": "2026-06-09T12:00:00Z",
+    "source": "manual",
+    "entered_by_user_id": 2,
+    "confirmed_by_user_id": null,
+    "confirmed_at": null,
+    "notes": "Corrected value"
+  }
+}
+```
+
+**Errors:**
+| Status | Condition |
+|--------|-----------|
+| `403` | Not Admin, Manager, or Technician |
+| `404` | Reading not found or does not belong to this asset |
+| `409` | Reading is already confirmed — immutable |
+| `422` | Validation failure |
+
+---
+
+### DELETE `/api/assets/{asset}/meter-readings/{reading}`
+
+Delete an **unconfirmed** meter reading. Implemented as a soft-delete (`deleted_at` timestamp); the reading is removed from all listings and an audit event `meter_reading.deleted` is logged.
+
+**Auth:** Required (Administrator, Maintenance Manager, or Technician)
+
+**Response `200`:**
+```json
+{
+  "message": "Meter reading deleted."
+}
+```
+
+**Errors:**
+| Status | Condition |
+|--------|-----------|
+| `403` | Not Admin, Manager, or Technician |
+| `404` | Reading not found or does not belong to this asset |
+| `409` | Reading is already confirmed — immutable |
+
+---
 
 ## Asset Location
 
@@ -937,6 +1003,7 @@ Mark the work order as completed. Only the assigned technician, a Maintenance Ma
 **Auth:** Required (assigned Technician, Maintenance Manager, or Administrator)
 **Precondition:** WO must be `in_progress`.
 **Error `409`:** WO is not in `in_progress` status.
+**Error `422`:** Required WO Form fields are unfilled (completion gate — see [WO_FORMS.md](../01-product/WO_FORMS.md) §7). The response includes field-level details indicating which required fields are missing pre or post values.
 **Error `403`:** Non-assigned technician attempting to complete (when no manager override applies).
 
 **Request Body:**
@@ -1551,6 +1618,216 @@ Update company settings.
 **Response `200`:** `{ "timezone": "Africa/Tripoli" }`
 
 ---
+
+## Work Order Forms
+
+### GET `/api/work-orders/{workOrder}/form`
+
+Get the WO's attached form instance (if any), including all field values.
+
+**Auth:** Required (assigned Technician, Maintenance Manager, or Administrator)
+
+**Response `200`:**
+```json
+{
+  "data": {
+    "id": 1,
+    "work_order_id": 5,
+    "form_template_id": 2,
+    "snapshotted_at": "2026-07-01T10:00:00Z",
+    "template_is_stale": false,
+    "fields": [
+      {
+        "id": 1,
+        "uuid": "a1b2c3d4-...",
+        "label": "Hours reading",
+        "field_type": "numeric",
+        "has_pre_post": true,
+        "unit": "hours",
+        "is_required": true,
+        "sort_order": 1,
+        "pre_value": "1500.00",
+        "post_value": null,
+        "notes": null
+      }
+    ]
+  }
+}
+```
+**Error `404`:** No form attached to this WO.
+
+### PATCH `/api/work-orders/{workOrder}/form/fields/{field}`
+
+Update a single form field value (pre or post).
+
+**Auth:** Required (assigned Technician, Maintenance Manager, or Administrator)
+**Precondition:** WO must be in `in_progress` or `completed` (non-closed, non-cancelled).
+
+**Request Body:**
+
+| Field | Type | Rules |
+|---|---|---|
+| `pre_value` | string? | nullable. Only accepted when the field's `has_pre_post = true`. |
+| `post_value` | string? | nullable. Required for single-value fields at completion. |
+| `notes` | string? | nullable |
+
+**Response `200`:** `{ "data": { /* updated field */ } }`
+**Error `409`:** WO is in a status that prevents form edits (closed/cancelled).
+**Error `422`:** Attempting to set `pre_value` on a field with `has_pre_post = false`.
+
+### POST `/api/work-orders/{workOrder}/form/sync`
+
+Sync the WO's form to the latest template version. Merge rules: match by field
+`uuid`, preserve filled values on matched fields, append new fields empty, drop
+removed fields.
+
+**Auth:** Required (assigned Technician, Maintenance Manager, or Administrator)
+**Precondition:** WO must be in `open` or `in_progress`.
+
+**Response `200`:**
+```json
+{
+  "message": "Form synced to latest template version.",
+  "data": { /* updated form with fields */ }
+}
+```
+**Error `409`:** WO is in a terminal state, or no newer template version exists.
+
+### POST `/api/work-orders/{workOrder}/form/defer-sync`
+
+Defer the sync-to-latest prompt for the current session.
+
+**Auth:** Required (assigned Technician, Maintenance Manager, or Administrator)
+
+**Response `200`:** `{ "message": "Sync deferred." }`
+
+## Admin: WO Forms
+
+### GET `/api/admin/wo-forms/templates`
+
+List all form templates with cursor pagination.
+
+**Auth:** Administrator only
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `is_active` | boolean | Filter by active status |
+| `search` | string | Search by template name |
+| `fa_subclass_code` | string | Filter by FA subclass code |
+| `sort` | string | `name`, `fa_subclass_code`, `created_at` (default: `created_at:desc`) |
+| `per_page` | int | Default 25, max 100 |
+| `cursor` | string | Pagination cursor |
+
+**Response `200`:** Cursor-paginated list of form templates with field count.
+
+### POST `/api/admin/wo-forms/templates`
+
+Create a new form template.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|---|---|---|
+| `name` | string | required, max:255 |
+| `fa_subclass_code` | string | required, exists in `fa_subclass_type_codes`. Must not already have an active template. |
+
+**Response `201`:** `{ "data": { /* template */ } }`
+**Error `422`:** An active template already exists for this FA subclass.
+
+### GET `/api/admin/wo-forms/templates/{template}`
+
+Show a single template with all its fields.
+
+**Auth:** Administrator only
+
+**Response `200`:** Template with fields ordered by `sort_order`.
+
+### PATCH `/api/admin/wo-forms/templates/{template}`
+
+Update a template's metadata.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|---|---|---|
+| `name` | string? | nullable, max:255 |
+
+**Response `200`:** `{ "data": { /* template */ } }`
+
+### POST `/api/admin/wo-forms/templates/{template}/deactivate`
+
+Deactivate a template. Prevents new WOs from snapshotting it.
+
+**Auth:** Administrator only
+
+**Response `200`:** `{ "message": "Form template deactivated.", "data": { /* template */ } }`
+**Error `409`:** Template is already inactive.
+
+### POST `/api/admin/wo-forms/templates/{template}/reactivate`
+
+Reactivate a previously deactivated template.
+
+**Auth:** Administrator only
+
+**Response `200`:** `{ "message": "Form template reactivated.", "data": { /* template */ } }`
+**Error `409`:** Template is already active, or another active template exists for this FA subclass.
+
+### POST `/api/admin/wo-forms/templates/{template}/fields`
+
+Add a field to a template.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|---|---|---|
+| `label` | string | required, max:255 |
+| `field_type` | string | required, one of: `boolean`, `numeric`, `text` |
+| `has_pre_post` | boolean | required |
+| `unit` | string? | nullable. Only meaningful for `numeric` type. |
+| `is_required` | boolean | defaults to false |
+| `sort_order` | int | defaults to end of list |
+
+**Response `201`:** `{ "data": { /* field with generated uuid */ } }`
+
+### PATCH `/api/admin/wo-forms/templates/{template}/fields/{field}`
+
+Update a field's metadata.
+
+**Auth:** Administrator only
+
+**Request Body:** Same as create (label, field_type, has_pre_post, unit, is_required, sort_order), all optional.
+
+**Response `200`:** `{ "data": { /* updated field */ } }`
+
+### DELETE `/api/admin/wo-forms/templates/{template}/fields/{field}`
+
+Remove a field from a template.
+
+**Auth:** Administrator only
+
+**Response `200`:** `{ "message": "Field removed." }`
+
+### POST `/api/admin/wo-forms/templates/{template}/fields/reorder`
+
+Reorder fields within a template.
+
+**Auth:** Administrator only
+
+**Request Body:**
+
+| Field | Type | Rules |
+|---|---|---|
+| `field_ids` | int[] | required, array of field IDs in the desired order |
+
+**Response `200`:** `{ "data": { /* fields in new order */ } }`
 
 ## Admin: Locations
 

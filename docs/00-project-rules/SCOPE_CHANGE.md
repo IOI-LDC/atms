@@ -19,6 +19,7 @@
 | **Timeline** | 18 working days (4 phases) | Expanded — to be estimated |
 | **RBAC roles** | 4 (Administrator, Manager, Technician, Viewer) | 5 (Administrator, Maintenance Manager, Technician, Logistics, Requester). Viewer merged into Requester. |
 | **ERP direction** | Read-only pull (assets + parts) | Read-only pull for parts (SM-owned). No ERP asset sync. Write-back for parts GR under discussion. |
+| **Checklist scope** | Excluded (simple completion note only) | Configurable WO Execution Forms added (client-requested); advanced checklist items (photos, scoring) remain excluded. |
 
 ---
 
@@ -58,6 +59,7 @@
 | 24 | Parts Consumption Write-Back | When SM completes a Goods Receipt (item issued to requester, exits store), SM pushes the consumption transaction (stock decrement) to LDC ERP. ERP reflects updated inventory. | Client needs ERP to know when store stock is consumed so inventory records stay accurate across systems. |
 | 25 | Virtual Store (Workshop Stock) | Workshop locations with bins for staging parts during a shift. Daily transfer-in → consumption → return cycle. End-of-day auto-flagging. Manager-approved overnight holds (must consume next day, else auto-return). | Technicians need parts at hand in the workshop without walking to the main store for every item. Accountability: stock cannot sit indefinitely in the workshop. |
 | 26 | Component PM Cross-Check | When a parent WO is open, child components show 🟢🟡🔴 PM status indicators. Manual "Create MR for Component" action for yellow/red items. | Improves workshop efficiency — catch component issues while the parent is already in for service. |
+| 27 | WO Execution Forms | Configurable boolean/numeric/text forms with optional units, pre/post-maintenance value capture, mapped 1:1 to FA subclass (`fa_subclass_code`), snapshot-on-WO-create, sync-to-latest, completion gate. Admin-only template management. | Client needs structured pre/post-maintenance data capture per asset type during WO execution; overrides the prior "Advanced Checklist Management" exclusion. |
 
 ### 2.3 Removed / Changed Constraints
 

@@ -1,8 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn-vue/tailwind.css';
 @import 'vue-sonner/style.css';
+
+@custom-variant dark (&:is(.dark *));
 
 /* NOTE: `@custom-variant dark` and the `.dark { … }` block are intentionally
    absent — ATMS is light-theme only. Do not re-add them. */
@@ -139,6 +143,7 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+  --font-heading: var(--font-sans);
 }
 
 @layer base {
@@ -392,6 +397,207 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Detail pages — shared command bar + two-column layout (Approach A)
+   Used by Work Order and Asset detail. Page-specific content inside the
+   shell (WO lifecycle stepper / assignee / checklist) keeps its own wo-* names.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Sticky command bar: identity + status + primary actions, always reachable
+   while scrolling. WO adds a lifecycle stepper + assignee row inside it. */
+.detail-command-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Row 1: identity + primary/secondary actions. Row 2: lifecycle + assignee. */
+.detail-command-top,
+.detail-command-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.detail-command-bottom {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.detail-command-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.detail-command-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.detail-command-number {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.detail-command-subtitle {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+/* Lifecycle stepper */
+.wo-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.wo-step {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.wo-step:not(:first-child)::before {
+  content: "";
+  width: 1.25rem;
+  height: 1px;
+  background: var(--border);
+}
+
+.wo-step-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--background);
+  flex-shrink: 0;
+}
+
+.wo-step-label {
+  white-space: nowrap;
+}
+
+.wo-step[data-state="done"] .wo-step-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.wo-step[data-state="done"] .wo-step-label {
+  color: var(--foreground);
+}
+
+.wo-step[data-state="current"] .wo-step-dot {
+  border-color: var(--primary);
+  border-width: 2px;
+}
+
+.wo-step[data-state="current"] .wo-step-label {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.wo-stepper-cancelled {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--destructive);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wo-command-assignee {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wo-command-assignee-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.wo-command-assignee-name {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.detail-command-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Two-column execution layout: wide main surface + narrow context rail. */
+.detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.detail-main,
+.detail-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.detail-rail-grid {
+  grid-template-columns: 1fr;
+}
+
+/* Completion-checklist progress count (shown in the WO form card header) */
+.wo-checklist-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.wo-checklist-count[data-complete="true"] {
+  color: var(--primary);
+}
+
+/* Collapse to one column; the context rail drops below the execution surface. */
+@media (max-width: 1024px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .wo-stepper {
+    display: none;
+  }
 }
 
 .attachment-list {
@@ -2318,6 +2524,19 @@
   background: var(--background);
 }
 
+/* ── Dialog width variants ──────────────────────────────────────────────────
+   Override the DialogContent default (Tailwind sm:max-w-sm). Use these on
+   <DialogContent class="dialog-md"> in feature files when a dialog holds
+   tables / file lists that need more room than the default narrow dialog.
+   !important mirrors the .create-sheet override pattern. */
+.dialog-md {
+  max-width: 36rem !important;
+}
+
+.dialog-lg {
+  max-width: 52rem !important;
+}
+
 /* Optional label marker */
 .field-optional {
   font-size: 0.75rem;
@@ -2373,9 +2592,9 @@
 .file-list-name {
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Long, space-less filenames must break rather than dictate the row's
+     min-content width — otherwise they push the whole dialog wide. */
+  overflow-wrap: anywhere;
   color: var(--foreground);
 }
 
@@ -2435,10 +2654,23 @@
 .detail-table-cell {
   padding: 0.5rem 0.75rem;
   vertical-align: middle;
+  /* Long, space-less values (filenames, part notes) break inside the cell
+     rather than forcing the table wider than its card. */
+  overflow-wrap: anywhere;
 }
 
 .detail-table-remove {
   opacity: 0.5;
+}
+
+/* Cluster of per-row icon actions in a table cell (e.g. view / delete).
+   Block-level + flex-end so every action column (parts / readings / attachments)
+   right-aligns its icons consistently. */
+.detail-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -2764,11 +2996,155 @@
   }
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
+/* ═══════════════════════════════════════════════════════════════════
+   WO Forms — template fields manager + WO detail execution section
+   ═══════════════════════════════════════════════════════════════════ */
+
+.wo-form-fields-dialog {
+  max-width: 42rem;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.wo-form-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wo-form-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.wo-form-field-row-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.wo-form-field-row-flags {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.wo-form-field-row-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wo-form-field-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wo-form-add-field-btn {
+  align-self: flex-start;
+}
+
+/* Sync-to-latest banner — same amber "pending" treatment reused across
+   status-pending / priority-medium / status-activation-pending. */
+.wo-form-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border: 1px solid oklch(0.7 0.155 75 / 0.25);
+  border-radius: var(--radius);
+  background: oklch(0.7 0.155 75 / 0.12);
+  color: oklch(0.5 0.13 75);
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
+}
+
+.wo-form-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* WO Form checklist table — one aligned row per field so heights stay uniform
+   (the earlier card grid produced ragged, uneven cells). Reuses the
+   .detail-table look for consistency with Parts / Readings / Attachments. */
+.wo-form-table-scroll {
+  overflow-x: auto;
+}
+
+.wo-form-table {
+  table-layout: fixed;
+}
+
+.wo-form-col-slot {
+  width: 8rem;
+}
+
+.wo-form-col-notes {
+  width: 32%;
+}
+
+.wo-form-field-cell {
+  font-weight: 500;
+}
+
+.wo-form-field-name {
+  color: var(--foreground);
+}
+
+/* Missing required field — flag the whole row. */
+.wo-form-row-missing {
+  background: oklch(0.577 0.245 27 / 0.05);
+}
+
+.wo-form-row-missing .wo-form-field-name,
+.wo-form-row-missing .field-required {
+  color: var(--destructive);
+}
+
+/* Stacked layout on narrow screens — a 4-column form grid can't fit a phone.
+   Rows become bordered blocks and each control is prefixed with its column
+   name via the data-label attribute. */
+@media (max-width: 640px) {
+  .wo-form-table,
+  .wo-form-table tbody,
+  .wo-form-table tr,
+  .wo-form-table td {
+    display: block;
+    width: auto;
   }
-  body {
-    @apply bg-background text-foreground;
+
+  .wo-form-table thead {
+    display: none;
+  }
+
+  .wo-form-table .detail-table-row {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .wo-form-table .detail-table-cell {
+    padding: 0.375rem 0;
+  }
+
+  .wo-form-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    margin-bottom: 0.25rem;
   }
 }

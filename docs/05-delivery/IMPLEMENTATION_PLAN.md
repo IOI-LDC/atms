@@ -74,6 +74,7 @@ and AM. All three subsystems share one Laravel backend and PostgreSQL database.
 - WO detail
 - Parts used on WO (populated from SM parts catalogue)
 - WO attachments
+- WO Form execution (pre/post-maintenance value capture, completion gate)
 - WO closure
 - Reflect closed Work Orders in the derived maintenance history
 - Closed WO list
@@ -81,6 +82,7 @@ and AM. All three subsystems share one Laravel backend and PostgreSQL database.
 ## Phase 5 — ATMS PM Rules and Scheduler
 
 - PM rule management (applied to individual ATMS-managed assets)
+- WO Form template management (Admin: create/edit/deactivate/reactive per FA subclass, field builder)
 - Usage/date-based trigger logic
 - Scheduled PM evaluation
 - Automatic preventive MR generation

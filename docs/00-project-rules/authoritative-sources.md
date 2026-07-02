@@ -6,6 +6,7 @@ Known screenshot conflicts:
 - “Chain of Custody” should be interpreted only as asset location history. Logistics, gate passes, shipment documents, custody workflows, and transfer approvals are out of scope.
 - Category-level PM rules are not part of the locked MVP unless explicitly added to the PRD.
 - Any advanced governance, audit campaign, inventory wallet, labor tracking, or checklist-engine behaviour shown or implied visually is out of scope unless present in the written PRD.
+- **WO Forms boundary:** The configurable WO Form is in scope (client-requested) but is limited to: boolean/numeric/text field types with optional display units, a single active form per FA subclass (`fa_subclass_code`), pre/post-maintenance value capture, snapshot-on-WO-create, and sync-to-latest. Mandatory photo checklists, pass/fail scoring, checklist versioning approvals, and checklist-based defect generation remain out of scope. See `docs/atms/01-product/WO_FORMS.md`.
 
 Locked MVP boundaries:
 - Labor tracking is excluded. Do not add technician hour logs, labor rates, labor costs, timesheets, or productivity reporting.

@@ -14,8 +14,10 @@ role may create a Corrective Maintenance Request.
 5. If approved, the system creates a Work Order.
 6. The Work Order stores the Maintenance Request priority as it existed at conversion.
 7. Technician or assigned user performs the work.
+7a. If the Work Order has an attached WO Form (the asset's `fa_subclass_code` has an active FormTemplate), the Technician captures **pre-maintenance form values** for all `has_pre_post = true` fields.
 8. Parts used are recorded against the Work Order using parts from the SM catalogue.
 9. Asset readings and status are updated where applicable.
+9a. If the Work Order has an attached WO Form, the Technician captures **post-maintenance form values** (and single values for `has_pre_post = false` fields). The completion gate applies: the WO cannot transition to `completed` unless all required form fields are filled (both pre and post per `has_pre_post`).
 10. Technician marks the Work Order as completed.
 11. Maintenance Manager or Administrator reviews and closes the Work Order.
 12. The closed Work Order appears in the asset maintenance history read model.
@@ -37,8 +39,10 @@ Preventive Maintenance is system-initiated.
 7. If approved, the system creates a Work Order.
 8. The Work Order stores the Maintenance Request priority as it existed at conversion.
 9. Technician or assigned user performs the work.
+9a. If the Work Order has an attached WO Form (the asset's `fa_subclass_code` has an active FormTemplate), the Technician captures **pre-maintenance form values** for all `has_pre_post = true` fields.
 10. Parts used are recorded against the Work Order using parts from the SM catalogue.
 11. Asset readings and status are updated where applicable.
+11a. If the Work Order has an attached WO Form, the Technician captures **post-maintenance form values** (and single values for `has_pre_post = false` fields). The completion gate applies: the WO cannot transition to `completed` unless all required form fields are filled (both pre and post per `has_pre_post`).
 12. Technician marks the Work Order as completed.
 13. Maintenance Manager or Administrator reviews and closes the Work Order.
 14. The originating **assignment's** baseline is updated using closure date and/or latest reading.

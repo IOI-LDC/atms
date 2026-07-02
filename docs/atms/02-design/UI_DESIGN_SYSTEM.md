@@ -108,6 +108,17 @@ Use a shared dense data-table pattern with:
 Do not show physical delete actions where ATMS uses cancellation,
 deactivation, account deactivation, or immutable history.
 
+Row action icons (view, edit, delete) render in the table's last column,
+clustered with `.detail-table-actions` and **right-aligned** to the column's
+trailing edge. Rules:
+
+- Icon-only ghost buttons (`size="icon-sm"`); each carries an `aria-label` and
+  `title`.
+- Destructive actions (delete/remove) use the `.attachment-delete` modifier for
+  the destructive color.
+- Hide a row's action icons when the row is immutable (e.g. confirmed meter
+  readings) rather than disabling them.
+
 ## Forms and Overlays
 
 - Use side sheets for ordinary create and edit forms.

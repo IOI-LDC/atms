@@ -61,8 +61,11 @@ following are explicitly excluded and remain in other systems:
 - **Handover management** — shift and crew handovers are excluded.
 - **Advanced governance / audit campaigns** — a lightweight technical audit log
   exists, but a full governance module is excluded.
-- **Advanced checklist management** — simple completion notes are captured, but
-  configurable checklists are excluded.
+- **Advanced checklist management** — configurable **Work Order Execution Forms**
+  (WO Forms) with boolean, numeric, and text fields, pre/post-maintenance
+  capture per FA subclass, snapshot and sync-to-latest are now included. Advanced
+  items such as mandatory photo checklists, pass/fail scoring, and
+  checklist-based defect generation remain excluded.
 - **Full document management system** — basic attachments are supported, but
   versioning, approvals, and document lifecycle management are excluded.
 - **Native mobile application** — the system is a responsive web application.
@@ -1076,6 +1079,70 @@ automatically suppress future PM occurrences — the PM assignment continues to 
 evaluated normally. To suppress PM, the MR must be rejected or cancelled before
 WO creation, creating a suppression record.
 
+### 8.6a Work Order Execution Form (WO Form)
+
+When a Work Order is created for an asset, the system checks whether the asset's
+FA subclass (`fa_subclass_code`) has an active **FormTemplate**. If so, the
+template is snapshotted (copied) into the WO as a **WO Form**. If no active
+template exists, the WO has no form and execution proceeds normally.
+
+**What the form captures:**
+
+The form contains fields of three types: **boolean** (true/false), **numeric**
+(with an optional display unit such as PSI, °C, or hours), and **text**. Each
+field has a `has_pre_post` flag:
+
+- **`has_pre_post = true`** — captures a **pre-maintenance value** (entered when
+  work starts, at `in_progress`) and a **post-maintenance value** (entered at
+  completion). Example: "Mud motor hours reading" — record hours before and
+  after work.
+- **`has_pre_post = false`** — captures a **single value** (entered during
+  execution). Example: "Did you clean the item thoroughly?"
+
+Some fields are marked **required** (`is_required = true`). These fields must be
+filled before the WO can be completed.
+
+**When pre and post values are captured:**
+
+- **Pre-maintenance values** are filled when the WO transitions to `in_progress`
+  (after the Technician starts work). Only fields with `has_pre_post = true`
+  have a pre-value input.
+- **Post-maintenance values** are filled at completion time (before transitioning
+  to `completed`). For `has_pre_post = true` fields, a post-value input appears
+  alongside the already-filled pre value. For `has_pre_post = false` fields, the
+  single value is entered here.
+
+**Who can fill the form:**
+
+| Role | Can fill pre/post values? |
+|---|---|
+| Administrator | Yes — any WO |
+| Maintenance Manager | Yes — any WO |
+| Technician | Yes — assigned WO only |
+| Logistics | No |
+| Requester | No |
+
+**Sync-to-latest:**
+
+If an Administrator updates the FormTemplate after the WO's form was snapshotted,
+the WO detail screen displays a **"Sync to latest"** banner. You can accept (the
+WO's form is merged with the latest template: matching fields keep their values,
+new fields appear empty, removed fields are dropped) or defer (the banner stays;
+you can act later).
+
+**Completion gate:**
+
+The WO **cannot** transition from `in_progress` to `completed` unless all
+required form fields are filled:
+
+- For `has_pre_post = true` fields: both pre and post values must be present.
+- For `has_pre_post = false` fields: the single (post) value must be present.
+
+Optional fields (`is_required = false`) may be left empty. The gate applies only
+when the WO has an attached form — WOs without a form are unaffected.
+
+After the WO transitions to `completed`, all form fields become read-only.
+
 ### 8.7 Work Order Status Summary
 
 | Status | Meaning | Editable By | Terminal? |
@@ -1607,14 +1674,52 @@ Manage all configurable dropdown values used across the system:
 Each list supports full CRUD through side sheets. Values are never physically
 deleted — they are deactivated when no longer needed.
 
-### 13.3 PM Rules Tab
+### 13.3 WO Forms Tab
+
+**Visible to:** Admin only.
+
+Manage Work Order execution form templates per FA subclass. Templates define
+the form fields that Technicians fill during WO execution.
+
+**Template list:** Shows all form templates with name, FA subclass, field count,
+and active/inactive status. Create, edit, and deactivate/reactivate actions are
+available.
+
+**Creating a template:**
+
+1. Select "Create Template".
+2. Enter a template name (e.g., "Mud Motor Inspection").
+3. Select the FA subclass (e.g., MTR for Mud Motor) — only subclasses without an
+   existing active template are shown.
+4. Add fields to the template:
+   - **Label** — what the Technician sees (e.g., "Hours reading").
+   - **Type** — boolean, numeric, or text.
+   - **Unit** — for numeric fields only (e.g., "hours", "PSI"). Display only.
+   - **Pre/Post** — toggle whether the field captures both pre and post values.
+   - **Required** — toggle whether the field must be filled before WO completion.
+   - **Order** — display order in the form.
+5. Save the template.
+
+**Editing a template:**
+
+- Add, edit, remove, or reorder fields at any time.
+- Existing Work Orders keep their snapshotted version. The "Sync to latest"
+  prompt allows Technicians to update individual WO forms on demand.
+
+**Deactivating a template:**
+
+- Deactivate to prevent new WOs from snapshotting the template.
+- Inactive templates remain visible and can be reactivated.
+- Deactivation does not affect existing WO forms already snapshotted.
+
+### 13.4 PM Rules Tab
 
 **Visible to:** Admin only.
 
 Full template management as described in Section 12. Template creation, editing,
 deactivation, reactivation, and bulk evaluation.
 
-### 13.4 Design Rationale for Administration
+### 13.5 Design Rationale for Administration
 
 **Why are roles immutable system data?**
 The five human roles (plus Service) represent the client's agreed organizational

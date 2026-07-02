@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AssetMeterReading extends Model
 {
-    const UPDATED_AT = null; // As per migration
+    use SoftDeletes;
 
     protected $fillable = [
         'asset_id',
@@ -26,6 +27,7 @@ class AssetMeterReading extends Model
         'reading_value' => 'decimal:2',
         'reading_at' => 'datetime',
         'confirmed_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function asset(): BelongsTo

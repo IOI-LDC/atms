@@ -20,6 +20,7 @@ export type AssetKind                = 'asset' | 'package' | 'component'
 export type AssetMaintenanceSubStatus =
   | 'Installed' | 'Ready'                             // Active sub-statuses (component/package)
   | 'LIH' | 'DBR' | 'Disposed' | 'Scrapped' | 'Other' // Inactive sub-statuses
+export type WoFormFieldType = 'boolean' | 'numeric' | 'text'
 
 // ── Shared fragments ──────────────────────────────────────────────────────────
 
@@ -188,6 +189,61 @@ export interface WorkOrder {
   cancellation_reason?: string | null
   has_attachments?: number          // Admin/Manager/Tech
   maintenance_request?: MaintenanceRequest | null
+  form?: WoFormInstance | null      // Admin/Manager/Tech — present when the WO has an attached form
+}
+
+// ── WO Forms ──────────────────────────────────────────────────────────────────
+
+export interface WoFormTemplateField {
+  id: number
+  uuid: string
+  label: string
+  field_type: WoFormFieldType
+  has_pre_post: boolean
+  unit: string | null
+  is_required: boolean
+  sort_order: number
+}
+
+export interface WoFormTemplate {
+  id: number
+  name: string
+  fa_subclass_code: string
+  is_active: boolean
+  fields?: WoFormTemplateField[]
+  fields_count?: number
+  created_at: string
+}
+
+/** Self-contained snapshot field — copies template metadata plus captured values. */
+export interface WoFormFieldValue {
+  id: number
+  uuid: string
+  label: string
+  field_type: WoFormFieldType
+  has_pre_post: boolean
+  unit: string | null
+  is_required: boolean
+  sort_order: number
+  pre_value: string | null
+  post_value: string | null
+  notes: string | null
+}
+
+export interface WoFormInstance {
+  id: number
+  form_template_id: number | null
+  snapshotted_at: string
+  template_is_stale?: boolean
+  sync_dismissed_at?: string | null
+  fields: WoFormFieldValue[]
+}
+
+/** 422 completion-gate payload entry — one per unfilled required field/slot. */
+export interface MissingField {
+  uuid: string
+  label: string
+  missing: ('pre' | 'post')[]
 }
 
 // ── PM Rules ──────────────────────────────────────────────────────────────────
@@ -259,7 +315,7 @@ export interface Attachment {
   created_at: string
   download_url?: string            // absent for Viewer
   uploaded_by?: UserRef | null     // Admin/Manager only
-  can_delete?: boolean             // policy-driven; absent until backend ships the flag
+  can_delete?: boolean             // policy-driven (AttachmentResource); true when the current user may delete
 }
 
 // ── Admin resources ───────────────────────────────────────────────────────────

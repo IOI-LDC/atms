@@ -33,6 +33,9 @@ asset_kind, and set parent_asset_id.
 May book and unbook assets (reserving them for a Job/Project); booking is
 released automatically when the asset is moved or deactivated.
 
+Manages Work Order execution form templates (create, edit,
+deactivate, reactivate) per FA subclass. See [WO_FORMS.md](./WO_FORMS.md).
+
 
 ### Maintenance Manager
 
@@ -51,6 +54,9 @@ parent Work Order screen.
 May book and unbook assets (reserving them for a Job/Project); booking is
 released automatically when the asset is moved or deactivated.
 
+May fill pre-maintenance and post-maintenance values on WO Forms for any
+Work Order.
+
 
 ### Technician
 
@@ -62,6 +68,9 @@ but cannot close them.
 May perform component install, remove, or swap as part of executing an assigned,
 non-terminal Work Order. May create Corrective Maintenance Requests for removed
 components that require refurbishment.
+
+Fills pre-maintenance and post-maintenance values on WO Forms for assigned
+Work Orders only.
 
 
 ### Logistics
@@ -117,6 +126,8 @@ component detail screens.
 - Parts reference data is owned by SM. ATMS reads parts from SM tables for work order part-request forms.
 - Assets are managed fully within ATMS — there is no ERP asset source.
 - Technicians can mark only their assigned Work Orders as completed.
+- **WO Form completion gate:** When a Work Order has an attached WO Form, the WO cannot transition `in_progress → completed` unless all required form fields are fully filled (both pre & post for `has_pre_post = true` fields, post value for `has_pre_post = false` fields).
+- **WO Form template management** (create, edit, deactivate, reactivate) is Administrator-only. Filling pre/post values on WO Forms is performed by the assigned Technician, Maintenance Manager, or Administrator.
 
 - Only Administrator or Maintenance Manager may change asset_kind.
 - Only Administrator or Maintenance Manager may directly set parent_asset_id outside of a Work Order.

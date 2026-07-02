@@ -19,6 +19,13 @@
 - Attachments
 - ERP Sync
 - ERP Reference Data
+- Form (WO Form — pre/post-maintenance execution form)
+- Pre-maintenance Value
+- Post-maintenance Value
+- FA Subclass (`fa_subclass_code`)
+- FormTemplate (snapshotted into the WO on creation)
+- Snapshot (copy of template frozen at WO creation time)
+- Sync to Latest (merge WO form with current template version)
 
 ## Avoided Terms
 

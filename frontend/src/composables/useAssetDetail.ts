@@ -112,6 +112,10 @@ export function useAssetDetail() {
   const uploadLoading      = ref(false)
   const uploadFiles        = ref<File[]>([])
 
+  // ── Attachment delete ─────────────────────────────────────────────────────
+  const deleteAttachmentTarget  = ref<number | null>(null)
+  const deleteAttachmentLoading = ref(false)
+
   // ══════════════════════════════════════════════════════════════════════════
   //  Primary load
   // ══════════════════════════════════════════════════════════════════════════
@@ -375,6 +379,25 @@ export function useAssetDetail() {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  //  Attachment delete  (generic by id: DELETE /attachments/{id})
+  // ══════════════════════════════════════════════════════════════════════════
+  function openDeleteAttachment(id: number) { deleteAttachmentTarget.value = id }
+  async function doDeleteAttachment() {
+    if (!record.value || deleteAttachmentTarget.value === null) return
+    deleteAttachmentLoading.value = true
+    try {
+      await api.delete(`/attachments/${deleteAttachmentTarget.value}`)
+      toast.success('Attachment deleted.')
+      deleteAttachmentTarget.value = null
+      await loadAttachments(record.value.id)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to delete attachment.')
+    } finally {
+      deleteAttachmentLoading.value = false
+    }
+  }
+
   // ── Booking actions ─────────────────────────────────────────────────────────
   function requestToggleBooking() { bookingConfirmOpen.value = true }
   function closeBookingConfirm() { bookingConfirmOpen.value = false }
@@ -421,5 +444,6 @@ export function useAssetDetail() {
     attachments, attachmentsLoading,
     uploadOpen, uploadLoading, uploadFiles,
     openUpload, addUploadFiles, removeUploadFile, doUpload,
+    deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
   }
 }

@@ -154,6 +154,7 @@ Eight primary sidebar items.
 |---|---|
 | Users & Access | Admin only |
 | Lists & Dropdowns | Admin only |
+| WO Forms | Admin only |
 | PM Rules | Admin only |
 
 - **"Users & Access" tab** — Employee directory import, user provisioning,
@@ -165,6 +166,7 @@ Eight primary sidebar items.
   exclusively here; they now also have a dedicated sidebar item (§6) with a
   "Manage Locations" tab that provides the same CRUD capability in a
   location-focused context.
+- **"WO Forms" tab** — Manage Work Order execution form templates per FA subclass (create, edit, deactivate). Field builder: add/edit/reorder fields with label, type (boolean/numeric/text), unit, `has_pre_post` toggle, required toggle, sort order. See [WO_FORMS.md](../01-product/WO_FORMS.md).
 - **"PM Rules" tab** — Manage reusable PM **templates** (schedule definitions,
   asset-agnostic). Rule types: calendar interval, operating hours, kilometers, or
   other usage readings. Templates are assigned to assets from the Asset Detail PM

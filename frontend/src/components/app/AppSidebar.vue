@@ -82,7 +82,7 @@ const navItems: NavItemDef[] = [
     label: 'Admin',
     icon: Shield,
     to: () => '/admin/lists',
-    isActiveFor: (p) => p === '/admin/lists' || p === '/admin/users' || p.startsWith('/admin/pm-rules'),
+    isActiveFor: (p) => p === '/admin/lists' || p === '/admin/users' || p.startsWith('/admin/pm-rules') || p.startsWith('/admin/wo-forms'),
     visibleTo: (r) => r.isAdmin,
   },
   {

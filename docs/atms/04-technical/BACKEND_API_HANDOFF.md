@@ -942,6 +942,34 @@ Parent WO component PM cross-check:
   GET  /api/assets/{asset}/children
        → { data: Asset[] }  (includes each child's PM status indicator)
 
+### 6.7 WO Forms — Template Management & Execution
+
+Template management (Admin only):
+  GET    /api/admin/wo-forms/templates              → list templates
+  POST   /api/admin/wo-forms/templates              → create template { name, fa_subclass_code }
+  GET    /api/admin/wo-forms/templates/{template}   → show template with fields
+  PATCH  /api/admin/wo-forms/templates/{template}   → update template name
+  POST   /api/admin/wo-forms/templates/{template}/deactivate
+  POST   /api/admin/wo-forms/templates/{template}/reactivate
+  POST   /api/admin/wo-forms/templates/{template}/fields   → add field
+  PATCH  /api/admin/wo-forms/templates/{template}/fields/{field}
+  DELETE /api/admin/wo-forms/templates/{template}/fields/{field}
+  POST   /api/admin/wo-forms/templates/{template}/fields/reorder  → { field_ids: [...] }
+
+Snapshot happens automatically on WO creation (no separate endpoint).
+
+WO Form execution (assigned Technician / Manager / Admin):
+  GET    /api/work-orders/{wo}/form                    → form with fields + values
+  PATCH  /api/work-orders/{wo}/form/fields/{field}     → update pre_value / post_value / notes
+
+Sync-to-latest (assigned Technician / Manager / Admin):
+  POST   /api/work-orders/{wo}/form/sync               → merge by field uuid
+  POST   /api/work-orders/{wo}/form/defer-sync         → dismiss banner
+
+Completion gate: POST /api/work-orders/{wo}/complete rejects with 422 if any
+required form fields are unfilled (pre & post for has_pre_post fields, post for
+single-value fields). The error includes field-level details.
+
 ---
 
 ## 7. Frontend Integration Patterns
@@ -1172,6 +1200,15 @@ see [`BACKEND_API_REFERENCE.md`](./BACKEND_API_REFERENCE.md).
 | GET | `/api/attachments/{attachment}/download` | same as list for parent | binary stream |
 | DELETE | `/api/attachments/{attachment}` | Admin/Mgr | soft-delete |
 
+### WO Forms
+
+| Method | Endpoint | Role | Notes |
+|---|---|---|---|
+| GET | `/api/work-orders/{wo}/form` | Tech(assigned)/Admin/Mgr | Form instance + field values |
+| PATCH | `/api/work-orders/{wo}/form/fields/{field}` | Tech(assigned)/Admin/Mgr | Update pre/post value |
+| POST | `/api/work-orders/{wo}/form/sync` | Tech(assigned)/Admin/Mgr | Sync to latest template |
+| POST | `/api/work-orders/{wo}/form/defer-sync` | Tech(assigned)/Admin/Mgr | Defer sync prompt |
+
 ### Admin
 
 | Method | Endpoint | Role |
@@ -1190,6 +1227,8 @@ see [`BACKEND_API_REFERENCE.md`](./BACKEND_API_REFERENCE.md).
 | POST | `/api/admin/erp/sync-assets` · `/sync-parts` | Admin/Mgr |
 | GET | `/api/admin/audit-logs` | Admin |
 | GET / PATCH | `/api/admin/company-settings` | Admin |
+| GET / POST / PATCH | `/api/admin/wo-forms/templates…` | Admin |
+| GET / POST / PATCH / DELETE | `/api/admin/wo-forms/templates/{t}/fields…` | Admin |
 | GET / POST / PATCH | `/api/admin/locations…` | Admin |
 | GET / POST | `/api/admin/master-data/{group}` · PATCH `…/items/{item}` | Admin |
 | GET / POST / PATCH | `/api/admin/usage-reading-types…` | Admin |

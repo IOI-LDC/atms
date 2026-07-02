@@ -3,6 +3,17 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
+
+## Session — 2026-07-02
+
+- **WO Detail frontend review:** reading-type URL fixed (`/admin/usage-reading-types`), WorkOrderResource now ships `asset.operational_status`, upload dialog has `.dialog-md` (user prefers wrap/trim — pending). Mock parts catalogue (8 items) in `src/lib/__mockParts.ts` + `// MOCK(PARTS)` blocks — **remove** when Parts API ships.
+- **WO Form layout**: Sheet (A) vs tighter-card (B) — recommended Sheet. Pending user decision.
+- **Attachment delete**: `DELETE /api/attachments/{id}` (generic, not WO-scoped). `can_delete` shipped by AttachmentResource.
+- **Meter reading edit/delete**: backend shipped + frontend wired. PATCH/DELETE under `/assets/{asset}/meter-readings/{reading}`, Admin/Manager/Tech, confirmed-locked (409). Frontend: `useWorkOrderDetail.ts` (`canManageReadings`, `openEditReading/doEditReading`, `openDeleteReading/doDeleteReading`) + `WorkOrderDetailView.vue` readings-table actions column + Edit/Delete dialogs. Editable fields: value, read_at, notes (type read-only). Actions hidden for confirmed readings.
+- **Environment**: PHP not on PATH; pint/tests require `php` binary.
+- **Asset operational status → AUTOMATIC (replaces Option A suggestion approach)**. Backend-driven via `ApplyWorkOrderAssetStatusTransition` action (audit `asset.status_updated` w/ `source=work_order_lifecycle`). Mapping: CM MR approved → `down` (skip if already `under_maintenance`); PM approved → no change; WO start → `under_maintenance` (forced, all WOs); WO close → `active` (only if currently down/UM — never un-retire `inactive`); WO cancel → caller chooses `down`|`active` (new `asset_status` param on `POST /work-orders/{id}/cancel`). Hooks: `ApproveMaintenanceRequestAndCreateWorkOrder`, `StartWorkOrder`, `CloseWorkOrder`, `CancelWorkOrder` (+ controller). Frontend cancel dialog now requires the Down/Active choice. Manual 'Update status…' setter remains as override. **Reverted** the earlier suggestion-banner code. Backend tests + pint NOT run (no PHP on PATH) — needs `vendor/bin/pint` + WorkOrderLifecycleTest updates.
+
+
 ## Last Session Accomplished
 
 - **VPS Frontend Testing — Bug Tracker (2026-06-28): ALL 9 ISSUES RESOLVED.**

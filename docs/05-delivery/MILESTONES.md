@@ -20,6 +20,10 @@ Users can create Corrective Maintenance Requests. Maintenance Manager can approv
 
 Users can view active Work Orders, update notes, record parts used, add attachments, and close Work Orders.
 
+## Milestone 5a — WO Execution Forms Ready
+
+WO Form templates are configurable by Admin per FA subclass with boolean/numeric/text fields, pre/post value capture, snapshot-on-WO-create, sync-to-latest, and completion gate enforcement.
+
 ## Milestone 6 — Preventive Maintenance Ready
 
 Admins define reusable PM templates; templates are assigned to assets (Admin/Manager). The system evaluates active assignments and generates Preventive Maintenance Requests when due.

@@ -64,6 +64,9 @@ rules.
 | Mark assigned WO completed | Yes | Yes | Assigned only | No | No |
 | Close completed WO | Yes | Yes | No | No | No |
 | Cancel non-closed WO | Yes | Yes | No | No | No |
+| Manage WO Form templates (create/edit/deactivate/reactivate) | Yes | No | No | No | No |
+| Fill WO Form pre/post values (own/any WO) | Yes | Yes | Assigned only | No | No |
+| Sync WO Form to latest template version | Yes | Yes | Assigned only | No | No |
 | Manage PM templates (create/edit/deactivate/reactivate) | Yes | No | No | No | No |
 | View PM templates | Yes | Yes | No | No | No |
 | Assign PM templates to assets; deactivate/reactivate/evaluate assignments | Yes | Yes | No | No | No |
@@ -105,6 +108,7 @@ rules.
 - Technicians may mark eligible assigned Work Orders as completed.
 - Only Maintenance Managers and Administrators may close completed Work Orders.
 - Completed Work Orders are locked against Technician execution edits.
+- **WO Form completion gate:** When a Work Order has an attached WO Form instance, the WO cannot transition `in_progress → completed` unless all required form fields are fully filled: for `has_pre_post = true` fields both pre and post values must be present; for single-value fields (`has_pre_post = false`) the post value must be present. Only fields with `is_required = true` are enforced. Template management (create/edit/deactivate/reactivate) is Administrator-only. Filling pre/post values is the role of the assigned Technician, Maintenance Manager, or Administrator.
 - Closed Work Orders are permanently immutable and cannot be reopened.
 - Administrator and Maintenance Manager may cancel `open`, `in_progress`, or `completed` Work Orders with a required reason.
 - Technicians cannot cancel Work Orders.

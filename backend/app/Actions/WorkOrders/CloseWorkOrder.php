@@ -2,6 +2,8 @@
 
 namespace App\Actions\WorkOrders;
 
+use App\Actions\WorkOrders\ApplyWorkOrderAssetStatusTransition;
+use App\Enums\OperationalStatus;
 use App\Enums\PmTriggerType;
 use App\Enums\WorkOrderStatus;
 use App\Models\AssetMeterReading;
@@ -31,6 +33,12 @@ class CloseWorkOrder
             ]);
             $after = $workOrder->fresh()->toArray();
             $logger->log('work_order.closed', $locked, $before, $after);
+
+            // Revert the asset to ACTIVE on close - but only from a workflow
+            // state (DOWN / UNDER_MAINTENANCE). Never un-retire INACTIVE and
+            // no-op if already ACTIVE.
+            app(ApplyWorkOrderAssetStatusTransition::class)
+                ->execute($locked, OperationalStatus::ACTIVE, [OperationalStatus::ACTIVE, OperationalStatus::INACTIVE]);
 
             $mr = $locked->maintenanceRequest;
             if ($mr && $mr->pm_rule_id) {

@@ -4,8 +4,11 @@ namespace App\Actions\MaintenanceRequests;
 
 use App\Enums\MaintenanceRequestStatus;
 use App\Enums\MaintenanceStatus;
+use App\Enums\OperationalStatus;
 use App\Enums\WorkOrderStatus;
+use App\Actions\WorkOrders\ApplyWorkOrderAssetStatusTransition;
 use App\Actions\WorkOrders\AssignWorkOrder;
+use App\Actions\WorkOrders\SnapshotFormTemplateIntoWorkOrder;
 use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
 use App\Models\WorkOrder;
@@ -49,6 +52,19 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
                 'priority' => $locked->priority,
                 'description' => $locked->description,
             ]);
+
+            // WO Forms: snapshot the asset's active FormTemplate (if any) into
+            // the new Work Order. Self-contained copy; no-op when no template.
+            app(SnapshotFormTemplateIntoWorkOrder::class)->execute($workOrder);
+
+            // Asset operational status: a corrective order reports a fault -
+            // mark the asset DOWN unless it is already UNDER_MAINTENANCE (e.g.
+            // a concurrent PM). Preventive orders change nothing here; the asset
+            // goes UNDER_MAINTENANCE when the WO is started.
+            if (! $locked->is_preventive) {
+                app(ApplyWorkOrderAssetStatusTransition::class)
+                    ->execute($workOrder, OperationalStatus::DOWN, [OperationalStatus::UNDER_MAINTENANCE]);
+            }
 
             // WO-02: optionally assign in the same transaction so approval and
             // assignment are atomic. Reuses AssignWorkOrder for the role rule

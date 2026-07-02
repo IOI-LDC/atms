@@ -2,7 +2,9 @@ import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
-import type { WorkOrder, Assignee, Attachment } from '@/types'
+import type { WorkOrder, WorkOrderPart, Assignee, Attachment, AssetMeterReading, MissingField, WoFormFieldValue } from '@/types'
+// MOCK(PARTS) — temporary; see src/lib/__mockParts.ts for removal checklist.
+import { MOCK_PARTS, isMockPartId, isMockLineId, MOCK_LINE_ID_FLOOR } from '@/lib/__mockParts'
 
 /**
  * Owns the state and actions for a single Work Order detail page.
@@ -21,10 +23,13 @@ import type { WorkOrder, Assignee, Attachment } from '@/types'
  *  GET    /work-orders/{id}/attachments      -> { data: Attachment[] }
  *  POST   /work-orders/{id}/attachments      -> attachment            (multipart upload)
  *  GET    /admin/users                       -> { data: User[] }      (assignee picker; Admin/Manager)
- *  GET    /usage-reading-types               -> { data: Type[] }
+ *  GET    /admin/usage-reading-types        -> { data: Type[] }
  *  GET    /parts?search=                     -> cursor page           (parts picker)
  *  GET    /assets/{id}/meter-readings        -> { data: Reading[] }
  *  POST   /assets/{id}/meter-readings        -> { message, data }     (record reading)
+ *  PATCH  /work-orders/{id}/form/fields/{f}  -> { data: field }        { pre_value?, post_value?, notes? }
+ *  POST   /work-orders/{id}/form/sync        -> { message, data }     (accept sync-to-latest)
+ *  POST   /work-orders/{id}/form/defer-sync  -> { message }           (dismiss for this session)
  */
 export function useWorkOrderDetail() {
   const auth = useAuthStore()
@@ -45,6 +50,34 @@ export function useWorkOrderDetail() {
   const isInProgress = computed(() => record.value?.status === 'in_progress')
   const isCompleted  = computed(() => record.value?.status === 'completed')
   const isTerminal   = computed(() => !!record.value && (record.value.status === 'closed' || record.value.status === 'cancelled'))
+  const isCancelled  = computed(() => record.value?.status === 'cancelled')
+
+  // Lifecycle stepper model for the command bar. `cancelled` is off the linear
+  // open→closed track, so the view renders a distinct marker instead (isCancelled)
+  // and this collapses every step to `upcoming`.
+  const lifecycleSteps = computed<{ key: string; label: string; state: 'done' | 'current' | 'upcoming' }[]>(() => {
+    const order = ['open', 'in_progress', 'completed', 'closed']
+    const labels: Record<string, string> = { open: 'Open', in_progress: 'In progress', completed: 'Completed', closed: 'Closed' }
+    const currentIdx = record.value ? order.indexOf(record.value.status) : -1
+    return order.map((key, i) => ({
+      key,
+      label: labels[key] ?? key,
+      state: currentIdx < 0 ? 'upcoming' : i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'upcoming',
+    }))
+  })
+
+  // Live completion-gate status for the sidebar checklist. Mirrors the backend
+  // gate exactly (WorkOrder::missingRequiredFields): only required fields count;
+  // has_pre_post needs BOTH slots filled; a value is "filled" when non-null and
+  // not whitespace (so a boolean stored as '0' counts as filled).
+  const requiredFieldStatus = computed<{ total: number; done: number; complete: boolean; items: { uuid: string; label: string; done: boolean }[] }>(() => {
+    const fields: WoFormFieldValue[] = record.value?.form?.fields ?? []
+    const isEmpty = (v: string | null | undefined) => v == null || String(v).trim() === ''
+    const isFilled = (f: WoFormFieldValue) => (f.has_pre_post ? (!isEmpty(f.pre_value) && !isEmpty(f.post_value)) : !isEmpty(f.post_value))
+    const items = fields.filter((f) => f.is_required).map((f) => ({ uuid: f.uuid, label: f.label, done: isFilled(f) }))
+    const done = items.filter((i) => i.done).length
+    return { total: items.length, done, complete: items.length > 0 && done === items.length, items }
+  })
 
   const isAssignedToMe = computed(() =>
     !!record.value?.assigned_to && record.value.assigned_to.id === auth.user?.id
@@ -60,6 +93,9 @@ export function useWorkOrderDetail() {
   const canClose  = computed(() => !!record.value && isCompleted.value && auth.isAdminOrManager)
   const canCancel = computed(() => !!record.value && !isTerminal.value && auth.isAdminOrManager)
   const canSetAssetStatus = computed(() => !!record.value && !isTerminal.value && (auth.isAdminOrManager || isAssignedToMe.value))
+  // Stricter than the backend (which also allows edits while `completed`) —
+  // matches FORM_REQUIREMENTS.md "read-only after completion".
+  const canEditWoForm = computed(() => !!record.value && !isTerminal.value && !isCompleted.value && (auth.isAdminOrManager || isAssignedToMe.value))
 
   // ── Edit state ────────────────────────────────────────────────────────────
   const editing   = ref(false)
@@ -84,6 +120,8 @@ export function useWorkOrderDetail() {
   const cancelOpen    = ref(false)
   const cancelLoading = ref(false)
   const cancelReason  = ref('')
+  // Caller-chosen asset status on cancel: 'down' (still faulty) | 'active' (false alarm).
+  const cancelAssetStatus = ref<'down' | 'active' | null>(null)
 
   // ── Parts state ──────────────────────────────────────────────────────────
   const addPartOpen    = ref(false)
@@ -97,6 +135,17 @@ export function useWorkOrderDetail() {
   const removeTarget  = ref<number | null>(null)
   const removeLoading = ref(false)
 
+  // MOCK(PARTS): in-memory part lines added against the mock catalogue. They
+  // merge with the real `record.parts` for display only and never hit the API.
+  // Reset whenever we load a different WO (see load()).
+  const mockAddedParts = ref<WorkOrderPart[]>([])
+  let mockLineSeq = MOCK_LINE_ID_FLOOR
+  // Display list = real backend lines + local mock lines.
+  const parts = computed<WorkOrderPart[]>(() => [
+    ...(record.value?.parts ?? []),
+    ...mockAddedParts.value,
+  ])
+
   // ── Readings state ───────────────────────────────────────────────────────
   const readingTypes = ref<{ id: number; name: string; unit: string }[]>([])
   const recordReadingOpen  = ref(false)
@@ -104,8 +153,23 @@ export function useWorkOrderDetail() {
   const readingDraft = ref<{ typeId: number | null; value: number | null; readAt: string; notes: string }>({
     typeId: null, value: null, readAt: new Date().toISOString().slice(0, 10), notes: '',
   })
-  const assetReadings = ref<{ id: number; usage_reading_type_id: number; reading_value: number; reading_at: string; confirmed_at: string | null }[]>([])
+  const assetReadings = ref<AssetMeterReading[]>([])
   const readingsLoading = ref(false)
+
+  // Edit + delete are role-gated (Admin/Manager/Technician). Confirmed readings
+  // are immutable on the backend (409), so the UI hides actions for them.
+  const canManageReadings = computed(() => auth.isAdminOrManager || auth.isTechnician)
+  const editReadingOpen = ref(false)
+  const editReadingLoading = ref(false)
+  const editReadingDraft = ref<{
+    id: number | null
+    usage_reading_type_id: number | null
+    value: number | null
+    readAt: string
+    notes: string
+  }>({ id: null, usage_reading_type_id: null, value: null, readAt: new Date().toISOString().slice(0, 10), notes: '' })
+  const deleteReadingTarget = ref<number | null>(null)
+  const deleteReadingLoading = ref(false)
 
   // Derived: "since last service" for PM-sourced WOs. Null until PM rule data
   // is available; the view populates this when the WO's source MR carries a
@@ -122,14 +186,45 @@ export function useWorkOrderDetail() {
   const uploadLoading = ref(false)
   const uploadFiles   = ref<File[]>([])
 
+  // ── Attachment delete state ──────────────────────────────────────────────
+  const deleteAttachmentTarget  = ref<number | null>(null)
+  const deleteAttachmentLoading = ref(false)
+
+  // ── WO Form state ────────────────────────────────────────────────────────
+  const syncDeferred  = ref(false)                 // session-scoped: hides the sync banner until reload
+  const missingFields = ref<Set<string>>(new Set()) // uuids from the last 422 completion-gate response
+
   // ══════════════════════════════════════════════════════════════════════════
   //  Load
   // ══════════════════════════════════════════════════════════════════════════
-  async function load(id: number | string) {
-    loading.value = true
+  // `silent` refreshes the record in place without flipping `loading`, which
+  // would otherwise swap the whole view out for the loading state and remount
+  // it — resetting scroll to the top. Post-mutation reloads (field autosave,
+  // workflow transitions) pass silent:true; the initial mount / route change
+  // leaves it false so the spinner still shows on first load.
+  async function load(id: number | string, { silent = false }: { silent?: boolean } = {}) {
+    // Only reset WO Form session state when switching to a different WO — a
+    // reload of the *same* WO happens after every field autosave/sync/defer,
+    // and resetting unconditionally would immediately undo that action's own
+    // state change (e.g. defer setting syncDeferred=true) or wipe still-valid
+    // missing-field highlights the user hasn't addressed yet.
+    const isNewRecord = record.value === null || String(record.value.id) !== String(id)
+    if (!silent) {
+      loading.value = true
+    }
     error.value = null
     notFound.value = false
     forbidden.value = false
+    if (isNewRecord) {
+      syncDeferred.value = false
+      missingFields.value = new Set()
+      // MOCK(PARTS): pre-seed two sample lines so the Parts-used table is
+      // populated for layout review. Reset on every WO switch.
+      mockAddedParts.value = [
+        { id: ++mockLineSeq, part: { ...MOCK_PARTS[0]!, unit_of_measure: MOCK_PARTS[0]!.unit_of_measure }, quantity: 4, notes: null },
+        { id: ++mockLineSeq, part: { ...MOCK_PARTS[3]!, unit_of_measure: MOCK_PARTS[3]!.unit_of_measure }, quantity: 2, notes: 'Replaced during service' },
+      ]
+    }
     try {
       const res = await api.get<{ data: WorkOrder }>(`/work-orders/${id}`)
       record.value = res.data
@@ -183,13 +278,16 @@ export function useWorkOrderDetail() {
     validationErrors.value = null
     editError.value = null
     try {
-      const res = await api.patch<{ data: WorkOrder }>(
+      await api.patch(
         `/work-orders/${record.value.id}`,
         { description: draft.value.description || null },
       )
-      record.value = res.data
       editing.value = false
       toast.success('Changes saved.')
+      // Reload the full record rather than trusting the PATCH response, which
+      // omits eager-loaded relations (asset, maintenance_request, …) and would
+      // otherwise blank them out and crash the template.
+      await load(record.value.id, { silent: true })
     } catch (e) {
       if (e instanceof ApiError) {
         if (e.validationErrors) validationErrors.value = e.validationErrors
@@ -231,7 +329,7 @@ export function useWorkOrderDetail() {
       await api.post(`/work-orders/${record.value.id}/assign`, { user_id: selectedTechId.value })
       toast.success('Work order assigned.')
       assignOpen.value = false
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to assign work order.')
     } finally {
@@ -248,7 +346,7 @@ export function useWorkOrderDetail() {
     try {
       await api.post(`/work-orders/${record.value.id}/start`)
       toast.success('Work order started.')
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to start work order.')
     } finally {
@@ -266,9 +364,15 @@ export function useWorkOrderDetail() {
       })
       toast.success('Work order marked completed.')
       completeOpen.value = false
-      await load(record.value.id)
+      missingFields.value = new Set()
+      await load(record.value.id, { silent: true })
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : 'Failed to complete work order.')
+      if (e instanceof ApiError && e.status === 422 && Array.isArray(e.data?.missing)) {
+        missingFields.value = new Set((e.data.missing as MissingField[]).map((m) => m.uuid))
+        toast.error('Complete required form fields first.')
+      } else {
+        toast.error(e instanceof ApiError ? e.message : 'Failed to complete work order.')
+      }
     } finally {
       completeLoading.value = false
     }
@@ -280,7 +384,7 @@ export function useWorkOrderDetail() {
     try {
       await api.post(`/work-orders/${record.value.id}/close`)
       toast.success('Work order closed.')
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to close work order.')
     } finally {
@@ -288,15 +392,18 @@ export function useWorkOrderDetail() {
     }
   }
 
-  function openCancel() { cancelReason.value = ''; cancelOpen.value = true }
+  function openCancel() { cancelReason.value = ''; cancelAssetStatus.value = null; cancelOpen.value = true }
   async function doCancel() {
-    if (!record.value || !cancelReason.value.trim()) return
+    if (!record.value || !cancelReason.value.trim() || cancelAssetStatus.value === null) return
     cancelLoading.value = true
     try {
-      await api.post(`/work-orders/${record.value.id}/cancel`, { reason: cancelReason.value.trim() })
+      await api.post(`/work-orders/${record.value.id}/cancel`, {
+        reason: cancelReason.value.trim(),
+        asset_status: cancelAssetStatus.value,
+      })
       toast.success('Work order cancelled.')
       cancelOpen.value = false
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to cancel work order.')
     } finally {
@@ -320,7 +427,17 @@ export function useWorkOrderDetail() {
     partsSearchLoading.value = true
     try {
       const res = await api.get<{ data: { id: number; name: string; erp_part_code: string; unit_of_measure: string | null }[] }>('/parts', { search: q })
-      partsResults.value = (res.data ?? []).slice(0, 10)
+      let hits = (res.data ?? []).slice(0, 10)
+      // MOCK(PARTS): until `GET /parts` ships real rows, fall back to the mock
+      // catalogue filtered by the current query so the picker is usable.
+      if (hits.length === 0) {
+        const needle = q.trim().toLowerCase()
+        hits = MOCK_PARTS
+          .filter((p) => p.name.toLowerCase().includes(needle) || p.erp_part_code.toLowerCase().includes(needle))
+          .slice(0, 10)
+          .map((p) => ({ ...p }))
+      }
+      partsResults.value = hits
     } catch {
       partsResults.value = []
     } finally {
@@ -330,6 +447,21 @@ export function useWorkOrderDetail() {
 
   async function doAddPart() {
     if (!record.value || !partDraft.value.partId) return
+    // MOCK(PARTS): mock-catalogue parts have no backend row — keep them in memory.
+    if (isMockPartId(partDraft.value.partId)) {
+      const p = MOCK_PARTS.find((x) => x.id === partDraft.value.partId)
+      if (p) {
+        mockAddedParts.value.push({
+          id: ++mockLineSeq,
+          part: { id: p.id, name: p.name, erp_part_code: p.erp_part_code, unit_of_measure: p.unit_of_measure },
+          quantity: partDraft.value.quantity,
+          notes: partDraft.value.notes || null,
+        })
+      }
+      toast.success('Part added.')
+      addPartOpen.value = false
+      return
+    }
     addPartLoading.value = true
     try {
       await api.post(`/work-orders/${record.value.id}/parts`, {
@@ -339,7 +471,7 @@ export function useWorkOrderDetail() {
       })
       toast.success('Part added.')
       addPartOpen.value = false
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to add part.')
     } finally {
@@ -350,12 +482,19 @@ export function useWorkOrderDetail() {
   function openRemovePart(partLineId: number) { removeTarget.value = partLineId }
   async function doRemovePart() {
     if (!record.value || !removeTarget.value) return
+    // MOCK(PARTS): remove an in-memory mock line without calling the API.
+    if (isMockLineId(removeTarget.value)) {
+      mockAddedParts.value = mockAddedParts.value.filter((p) => p.id !== removeTarget.value)
+      toast.success('Part removed.')
+      removeTarget.value = null
+      return
+    }
     removeLoading.value = true
     try {
       await api.delete(`/work-orders/${record.value.id}/parts/${removeTarget.value}`)
       toast.success('Part removed.')
       removeTarget.value = null
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to remove part.')
     } finally {
@@ -369,12 +508,7 @@ export function useWorkOrderDetail() {
   async function openRecordReading() {
     readingDraft.value = { typeId: null, value: null, readAt: new Date().toISOString().slice(0, 10), notes: '' }
     recordReadingOpen.value = true
-    if (readingTypes.value.length === 0) {
-      try {
-        const res = await api.get<{ data: { id: number; name: string; unit: string }[] }>('/usage-reading-types')
-        readingTypes.value = (res.data ?? []).filter((t) => t.name)
-      } catch { /* silent */ }
-    }
+    void ensureReadingTypes()
   }
 
   async function doRecordReading() {
@@ -402,14 +536,81 @@ export function useWorkOrderDetail() {
     if (!record.value) return
     readingsLoading.value = true
     try {
-      const res = await api.get<{ data: { id: number; usage_reading_type_id: number; reading_value: number; reading_at: string; confirmed_at: string | null }[] }>(
-        `/assets/${record.value.asset.id}/meter-readings`
+      const res = await api.get<{ data: AssetMeterReading[] }>(
+        `/assets/${record.value.asset.id}/meter-readings`,
       )
       assetReadings.value = res.data ?? []
     } catch {
       assetReadings.value = []
     } finally {
       readingsLoading.value = false
+    }
+  }
+
+  // Shared lazy loader for the reading-type catalogue — needed by both the
+  // Record and Edit dialogs to render the type name.
+  async function ensureReadingTypes() {
+    if (readingTypes.value.length > 0) return
+    try {
+      // Reading types live under the admin namespace (GET /admin/usage-reading-types).
+      const res = await api.get<{ data: { id: number; name: string; unit: string }[] }>('/admin/usage-reading-types')
+      readingTypes.value = (res.data ?? []).filter((t) => t.name)
+    } catch { /* silent */ }
+  }
+
+  function openEditReading(r: AssetMeterReading) {
+    editReadingDraft.value = {
+      id: r.id,
+      usage_reading_type_id: r.usage_reading_type_id,
+      value: r.reading_value == null ? null : Number(r.reading_value),
+      readAt: (r.reading_at ?? '').slice(0, 10),
+      notes: r.notes ?? '',
+    }
+    editReadingOpen.value = true
+    void ensureReadingTypes()
+  }
+
+  async function doEditReading() {
+    if (!record.value || editReadingDraft.value.id === null) return
+    editReadingLoading.value = true
+    try {
+      await api.patch(`/assets/${record.value.asset.id}/meter-readings/${editReadingDraft.value.id}`, {
+        reading_value: editReadingDraft.value.value,
+        reading_at: editReadingDraft.value.readAt,
+        notes: editReadingDraft.value.notes || null,
+      })
+      toast.success('Meter reading updated.')
+      editReadingOpen.value = false
+      await loadAssetReadings()
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        toast.error('Confirmed readings cannot be changed.')
+      } else {
+        toast.error(e instanceof ApiError ? e.message : 'Failed to update meter reading.')
+      }
+    } finally {
+      editReadingLoading.value = false
+    }
+  }
+
+  function openDeleteReading(id: number) { deleteReadingTarget.value = id }
+
+  async function doDeleteReading() {
+    if (!record.value || deleteReadingTarget.value === null) return
+    deleteReadingLoading.value = true
+    try {
+      await api.delete(`/assets/${record.value.asset.id}/meter-readings/${deleteReadingTarget.value}`)
+      toast.success('Meter reading deleted.')
+      deleteReadingTarget.value = null
+      await loadAssetReadings()
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        toast.error('Confirmed readings cannot be deleted.')
+      } else {
+        toast.error(e instanceof ApiError ? e.message : 'Failed to delete meter reading.')
+      }
+    } finally {
+      deleteReadingLoading.value = false
     }
   }
 
@@ -430,11 +631,53 @@ export function useWorkOrderDetail() {
       })
       toast.success('Asset status updated.')
       assetStatusOpen.value = false
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to update asset status.')
     } finally {
       assetStatusLoading.value = false
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  WO Form
+  // ══════════════════════════════════════════════════════════════════════════
+  async function updateFieldValue(
+    fieldId: number,
+    uuid: string,
+    payload: { pre_value?: string | null; post_value?: string | null; notes?: string | null },
+  ) {
+    if (!record.value) return
+    try {
+      await api.patch(`/work-orders/${record.value.id}/form/fields/${fieldId}`, payload)
+      missingFields.value.delete(uuid)
+      await load(record.value.id, { silent: true })
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to save form field.')
+    }
+  }
+
+  async function syncForm() {
+    if (!record.value) return
+    try {
+      await api.post(`/work-orders/${record.value.id}/form/sync`)
+      toast.success('Form synced to latest template version.')
+      syncDeferred.value = false
+      missingFields.value = new Set()
+      await load(record.value.id, { silent: true })
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to sync form.')
+    }
+  }
+
+  async function deferFormSync() {
+    if (!record.value) return
+    try {
+      await api.post(`/work-orders/${record.value.id}/form/defer-sync`)
+      syncDeferred.value = true
+      await load(record.value.id, { silent: true })
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to defer sync.')
     }
   }
 
@@ -458,11 +701,30 @@ export function useWorkOrderDetail() {
       uploadOpen.value = false
       uploadFiles.value = []
       await loadAttachments(record.value.id)
-      await load(record.value.id)
+      await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to upload attachments.')
     } finally {
       uploadLoading.value = false
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  Attachment delete  (generic by id: DELETE /attachments/{id})
+  // ══════════════════════════════════════════════════════════════════════════
+  function openDeleteAttachment(id: number) { deleteAttachmentTarget.value = id }
+  async function doDeleteAttachment() {
+    if (!record.value || deleteAttachmentTarget.value === null) return
+    deleteAttachmentLoading.value = true
+    try {
+      await api.delete(`/attachments/${deleteAttachmentTarget.value}`)
+      toast.success('Attachment deleted.')
+      deleteAttachmentTarget.value = null
+      await loadAttachments(record.value.id)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to delete attachment.')
+    } finally {
+      deleteAttachmentLoading.value = false
     }
   }
 
@@ -471,8 +733,9 @@ export function useWorkOrderDetail() {
     record, loading, error, notFound, forbidden,
     attachments, attachmentsLoading,
     // Derived + permissions
-    isOpen, isInProgress, isCompleted, isTerminal, isAssignedToMe,
-    canEdit, canAssign, canStart, canComplete, canClose, canCancel, canSetAssetStatus,
+    isOpen, isInProgress, isCompleted, isTerminal, isCancelled, isAssignedToMe,
+    lifecycleSteps, requiredFieldStatus,
+    canEdit, canAssign, canStart, canComplete, canClose, canCancel, canSetAssetStatus, canEditWoForm,
     // Edit
     editing, saving, editError, draft, validationErrors, startEdit, cancelEdit, saveEdit,
     // Assign
@@ -481,15 +744,21 @@ export function useWorkOrderDetail() {
     startLoading, doStart,
     completeOpen, completeLoading, completionNotes, openComplete, doComplete,
     closeLoading, doClose,
-    cancelOpen, cancelLoading, cancelReason, openCancel, doCancel,
+    cancelOpen, cancelLoading, cancelReason, cancelAssetStatus, openCancel, doCancel,
     // Parts
-    addPartOpen, addPartLoading, partDraft, partsSearch, partsResults, partsSearchLoading, searchParts, openAddPart, doAddPart, removeTarget, removeLoading, openRemovePart, doRemovePart,
+    // Parts
+    addPartOpen, addPartLoading, partDraft, partsSearch, partsResults, partsSearchLoading, searchParts, openAddPart, doAddPart, removeTarget, removeLoading, openRemovePart, doRemovePart, parts,
     // Readings
     readingTypes, recordReadingOpen, readingLoading, readingDraft, assetReadings, readingsLoading, sinceLastService, openRecordReading, doRecordReading, loadAssetReadings,
+    canManageReadings, editReadingOpen, editReadingLoading, editReadingDraft, openEditReading, doEditReading, deleteReadingTarget, deleteReadingLoading, openDeleteReading, doDeleteReading,
     // Asset status
     assetStatusOpen, assetStatusLoading, selectedStatus, openSetAssetStatus, doSetAssetStatus,
     // Upload
     uploadOpen, uploadLoading, uploadFiles, openUpload, addFiles, removeFile, doUpload,
+    // Attachment delete
+    deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
+    // WO Form
+    syncDeferred, missingFields, updateFieldValue, syncForm, deferFormSync,
     // Init
     load, loadAttachments,
   }

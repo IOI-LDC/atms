@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CompanySettingController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\ErpSyncController;
 use App\Http\Controllers\Admin\FaSubclassTypeCodeController;
+use App\Http\Controllers\Admin\FormTemplateController;
 use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
@@ -88,6 +89,17 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
         Route::get('/usage-reading-types', [MasterDataController::class, 'indexUsageReadingTypes']);
         Route::post('/usage-reading-types', [MasterDataController::class, 'storeUsageReadingType']);
         Route::patch('/usage-reading-types/{type}', [MasterDataController::class, 'updateUsageReadingType']);
+
+        Route::get('/wo-forms/templates', [FormTemplateController::class, 'index']);
+        Route::post('/wo-forms/templates', [FormTemplateController::class, 'store']);
+        Route::get('/wo-forms/templates/{template}', [FormTemplateController::class, 'show']);
+        Route::patch('/wo-forms/templates/{template}', [FormTemplateController::class, 'update']);
+        Route::post('/wo-forms/templates/{template}/deactivate', [FormTemplateController::class, 'deactivate']);
+        Route::post('/wo-forms/templates/{template}/reactivate', [FormTemplateController::class, 'reactivate']);
+        Route::post('/wo-forms/templates/{template}/fields', [FormTemplateController::class, 'addField']);
+        Route::patch('/wo-forms/templates/{template}/fields/{field}', [FormTemplateController::class, 'updateField']);
+        Route::delete('/wo-forms/templates/{template}/fields/{field}', [FormTemplateController::class, 'deleteField']);
+        Route::post('/wo-forms/templates/{template}/fields/reorder', [FormTemplateController::class, 'reorderFields']);
     });
 
     Route::get('/assets/by-tag', [AssetController::class, 'byTag']);
@@ -107,6 +119,8 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::post('/assets/{asset}/unbook', [AssetBookingController::class, 'unbook']);
     Route::post('/assets/{asset}/meter-readings', [AssetMeterReadingController::class, 'store']);
     Route::post('/assets/{asset}/meter-readings/{reading}/confirm', [AssetMeterReadingController::class, 'confirm']);
+    Route::patch('/assets/{asset}/meter-readings/{reading}', [AssetMeterReadingController::class, 'update']);
+    Route::delete('/assets/{asset}/meter-readings/{reading}', [AssetMeterReadingController::class, 'delete']);
 
     Route::get('/assets/{asset}/pm-assignments', [AssetPmAssignmentController::class, 'index']);
     Route::post('/assets/{asset}/pm-assignments', [AssetPmAssignmentController::class, 'store']);
@@ -142,6 +156,10 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::post('/work-orders/{workOrder}/parts', [WorkOrderController::class, 'addPart']);
     Route::delete('/work-orders/{workOrder}/parts/{partLine}', [WorkOrderController::class, 'removePart']);
     Route::post('/work-orders/{workOrder}/asset-status', [WorkOrderController::class, 'setAssetStatus']);
+    Route::get('/work-orders/{workOrder}/form', [WorkOrderController::class, 'showForm']);
+    Route::patch('/work-orders/{workOrder}/form/fields/{field}', [WorkOrderController::class, 'updateFormField']);
+    Route::post('/work-orders/{workOrder}/form/sync', [WorkOrderController::class, 'syncForm']);
+    Route::post('/work-orders/{workOrder}/form/defer-sync', [WorkOrderController::class, 'deferFormSync']);
     Route::get('/work-orders/{workOrder}/attachments', [AttachmentController::class, 'indexForWorkOrder']);
     Route::post('/work-orders/{workOrder}/attachments', [AttachmentController::class, 'uploadForWorkOrder']);
 

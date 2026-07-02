@@ -246,3 +246,8 @@ export function locationTypeLabel(type: string | null | undefined): string {
   }
   return m[type] ?? type.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
+
+export function woFormFieldTypeLabel(t: string): string {
+  const m: Record<string, string> = { boolean: 'Yes/No', numeric: 'Numeric', text: 'Text' }
+  return m[t] ?? t
+}

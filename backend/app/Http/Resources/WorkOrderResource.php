@@ -23,6 +23,7 @@ class WorkOrderResource extends JsonResource
         $canSeeParts = $isAdmin || $isManager || $isTech || $isRequester;
         $canSeeTimestamps = $isAdmin || $isManager || $isTech || $isRequester;
         $canSeeAttachments = $isAdmin || $isManager || $isTech;
+        $canSeeForm = $isAdmin || $isManager || $isTech;
 
         $data = [
             'id' => $this->id,
@@ -34,6 +35,9 @@ class WorkOrderResource extends JsonResource
                 'id' => $this->asset?->id,
                 'name' => $this->asset?->name,
                 'erp_asset_code' => $this->asset?->erp_asset_code,
+                // Required so the WO detail "Asset status" card reflects updates
+                // made via POST /work-orders/{id}/asset-status.
+                'operational_status' => $this->asset?->operational_status?->value,
             ]),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
@@ -71,6 +75,10 @@ class WorkOrderResource extends JsonResource
 
         if ($canSeeAttachments) {
             $data['has_attachments'] = $this->whenLoaded('attachments', fn () => $this->attachments->count());
+        }
+
+        if ($canSeeForm) {
+            $data['form'] = $this->whenLoaded('workOrderForm', fn () => new WorkOrderFormResource($this->workOrderForm));
         }
 
         return $data;

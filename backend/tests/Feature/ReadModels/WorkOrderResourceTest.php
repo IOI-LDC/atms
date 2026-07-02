@@ -66,6 +66,7 @@ class WorkOrderResourceTest extends TestCase
         $this->assertArrayHasKey('assigned_by', $data);
         $this->assertArrayHasKey('parts', $data);
         $this->assertArrayHasKey('has_attachments', $data);
+        $this->assertArrayHasKey('operational_status', $data['asset']);
     }
 
     public function test_technician_sees_assigned_to_name_no_email(): void

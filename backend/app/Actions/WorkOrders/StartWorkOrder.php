@@ -2,6 +2,8 @@
 
 namespace App\Actions\WorkOrders;
 
+use App\Actions\WorkOrders\ApplyWorkOrderAssetStatusTransition;
+use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\User;
@@ -38,6 +40,10 @@ class StartWorkOrder
             ]);
             $after = $workOrder->fresh()->toArray();
             $logger->log('work_order.started', $locked, $before, $after);
+
+            // Force the asset UNDER_MAINTENANCE once work begins (all work orders).
+            app(ApplyWorkOrderAssetStatusTransition::class)
+                ->execute($locked, OperationalStatus::UNDER_MAINTENANCE);
 
             return $locked->fresh();
         });

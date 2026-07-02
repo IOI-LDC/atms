@@ -4,6 +4,7 @@ namespace App\Actions\WorkOrders;
 
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
+use App\Exceptions\WorkOrderFormIncompleteException;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Services\Audit\AuditLogger;
@@ -29,14 +30,27 @@ class CompleteWorkOrder
                 }
             }
 
-            $before = $workOrder->toArray();
+            // WO Forms completion gate: if the WO has an attached form, every
+            // required field must be filled before it can transition to
+            // completed. Throws a typed exception (caught before the generic
+            // DomainException handler) carrying the missing-field list.
+            $locked->load('workOrderForm.fields');
+            if ($locked->workOrderForm && ! $locked->isFormComplete()) {
+                throw new WorkOrderFormIncompleteException($locked->missingRequiredFields());
+            }
+
+            // Audit from the locked row (authoritative pre-update state), not
+            // the route-bound parameter, which may be stale relative to the
+            // row we hold under FOR UPDATE. Aligns with the Form Template
+            // actions' pattern.
+            $before = $locked->toArray();
             $locked->update([
                 'status' => WorkOrderStatus::COMPLETED,
                 'completed_by_user_id' => $completedByUserId,
                 'completed_at' => now(),
                 'completion_notes' => $completionNotes,
             ]);
-            $after = $workOrder->fresh()->toArray();
+            $after = $locked->fresh()->toArray();
             $logger->log('work_order.completed', $locked, $before, $after);
 
             return $locked->fresh();

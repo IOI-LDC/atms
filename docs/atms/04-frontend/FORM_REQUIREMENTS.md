@@ -233,3 +233,77 @@ Available to: Maintenance Manager, Administrator
 Context:
 - Opened from the parent WO detail screen for a yellow/red PM status component
 - Pre-populates asset (the component), description, and references the parent WO
+
+## WO Form Builder (Admin)
+
+Available to: Administrator only.
+
+Accessible from: Admin → WO Forms tab.
+
+**Template form fields:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| Template name | string | Yes | Display name (e.g., "Mud Motor Inspection") |
+| FA subclass | select | Yes | Select from active `fa_subclass_type_codes`. One active template per subclass. |
+
+**Field builder (within a template):**
+
+| Field | Control | Required | Notes |
+|---|---|---|---|
+| Label | text input | Yes | Display label shown to the Technician |
+| Type | select | Yes | `boolean`, `numeric`, `text` |
+| Unit | text input | No | Display-only unit for numeric fields (e.g., "PSI", "°C", "hours") |
+| `has_pre_post` | toggle | Yes | `true` = captures both pre and post values; `false` = single value |
+| Required | toggle | Yes | Whether this field must be filled before the WO can be completed |
+| Sort order | number | Yes | Display order in the form |
+
+**Actions:**
+
+- Add field — appends a new field row to the template.
+- Edit field — updates label, type, unit, has_pre_post, required, sort order.
+- Remove field — removes the field from the template. The field's `uuid` is retired.
+- Reorder fields — drag-and-drop or up/down buttons to adjust sort order.
+- Deactivate template — sets `is_active = false`. Prevents new WOs from snapshotting this template. Inactive templates remain visible and can be reactivated.
+- Reactivate template — sets `is_active = true`. Available for snapshot on new WOs again.
+
+Each field receives a stable `uuid` on creation. When a template is edited and
+WOs are later synced to the latest version, the `uuid` is used to match fields
+(new fields appended, removed fields dropped, unchanged fields preserve filled
+values). See [WO_FORMS.md](../01-product/WO_FORMS.md) §6.
+
+## WO Form Execution (Pre/Post Values)
+
+Available to: Assigned Technician, Maintenance Manager, Administrator.
+
+Accessible from: Work Order Detail screen → WO Form section.
+
+**Pre-maintenance values:** Filled when the WO transitions to `in_progress`
+(after work starts). Only fields with `has_pre_post = true` display a pre-value
+input. Values are saved individually or as a batch.
+
+**Post-maintenance values:** Filled at completion time (before the WO transitions
+to `completed`). For `has_pre_post = true` fields, a post-value input appears
+alongside the already-filled pre value. For `has_pre_post = false` fields, a
+single value input appears.
+
+**Sync-to-latest prompt:** If the FormTemplate has been updated since the WO's
+form was snapshotted, a banner is displayed: "This form was snapshotted from an
+older template version. [Sync to latest] [Dismiss]." On accept, fields are merged
+by `uuid` — unchanged fields keep their values, new fields are appended empty,
+removed fields are dropped. On defer, the banner remains visible.
+
+**Read-only after completion:** Once the WO transitions to `completed`, all form
+fields become read-only. No further edits are allowed.
+
+**Completion gate:** The WO cannot transition to `completed` unless all required
+fields are filled. Required fields with `has_pre_post = true` need both pre and
+post values. Required fields with `has_pre_post = false` need the single value.
+The backend returns `422` with field-level details if the gate is not met.
+
+## Work Order Completion Form — WO Form Gate
+
+If the Work Order has an attached WO Form instance, completion also requires the
+form to be fully filled (see completion gate above). The standard completion form
+fields (work notes, parts used, readings, asset status, attachments) remain
+available alongside the form gate validation.

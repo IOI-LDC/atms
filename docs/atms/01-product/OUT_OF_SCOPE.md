@@ -52,11 +52,19 @@ management, compliance workflows, or advanced approval chains. A lightweight
 append-only technical audit log is included for security-sensitive and workflow
 actions, but a full audit/governance interface is excluded.
 
-## 10. Advanced Checklist Management
+## 10. Advanced Checklist Management (Revised — Client-Requested Reversal)
 
-Configurable checklist functionality is excluded from the initial scope unless specifically requested. This includes inspection checklist templates, mandatory photo checklists, pass/fail forms, scoring, checklist versioning, checklist approvals, and checklist-based defect generation.
+**A configurable Work Order execution form (WO Form) is now in scope** (client-requested). The WO Form feature provides boolean, numeric, and text fields with optional display units, pre/post-maintenance value capture, mapping by FA subclass (`fa_subclass_code`), snapshot-on-WO-create, and sync-to-latest. See [WO_FORMS.md](./WO_FORMS.md) for the full specification.
 
-A simple work order completion note can be included, but a full checklist engine is out of scope.
+The following advanced checklist capabilities remain **excluded**:
+
+- Mandatory photo checklists — forms contain typed values only.
+- Pass/fail scoring — boolean fields are simple true/false, not scored.
+- Checklist versioning approvals — template edits are direct Admin changes.
+- Checklist-based defect generation — form values do not auto-create MRs or trigger workflows.
+- Any form engine beyond the documented WO Form scope (single active form per subclass; no conditional logic, scoring, or multi-form stacking).
+
+A simple Work Order completion note remains available for all Work Orders regardless of whether a WO Form exists.
 
 ## 11. Full Document Management System
 

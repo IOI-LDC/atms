@@ -138,6 +138,12 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminView.vue'),
       meta: { requiresAdmin: true },
     },
+    {
+      path: '/admin/wo-forms',
+      name: 'admin-wo-forms',
+      component: () => import('@/views/admin/AdminView.vue'),
+      meta: { requiresAdmin: true },
+    },
 
     // ── Settings ──────────────────────────────────────────────────────────────
     {

@@ -131,6 +131,10 @@ After maintenance work is completed, the work order will be closed. Closure will
 capture final work notes, parts used, updated asset readings where applicable,
 and final asset condition/status.
 
+If the Work Order has an attached WO Form instance, all required form fields
+(both pre-maintenance and post-maintenance values per `has_pre_post`) must be
+filled before the WO can transition to completed. See [WO_FORMS.md](./WO_FORMS.md).
+
 ## 13. Asset Attachments
 
 The system will support attachments against assets. These may include user
@@ -190,3 +194,31 @@ separately hosted product web application. The SharePoint portal can remain
 available to all internal users, but portal access does not grant application
 access. The backend continues to require its own Laravel login and fixed-role
 authorization.
+
+## 21. Work Order Execution Forms
+
+Configurable pre/post-maintenance forms are captured during Work Order execution.
+Each form is mapped to the asset's `fa_subclass_code` (from the
+`fa_subclass_type_codes` master-data table). Forms are defined by an
+Administrator using a **FormTemplate** (one active template per FA subclass),
+featuring boolean, numeric (with optional display unit), and text field types.
+
+Fields may include a `has_pre_post` flag: `true` captures both a pre-maintenance
+value (entered when work starts) and a post-maintenance value (entered at
+completion); `false` captures a single value.
+
+On Work Order creation, the current template is **snapshotted (copied)** into the
+WO. If the template later changes, the WO detail screen offers a **"Sync to
+latest"** button with an accept/defer prompt — new fields are appended empty,
+removed fields are dropped, and unchanged fields (matched by a stable per-field
+`uuid`) keep their filled values.
+
+A **completion gate** prevents a WO from transitioning `in_progress → completed`
+unless all required fields are filled. For `has_pre_post` fields both pre and
+post are required; for single-value fields the single value is required. The gate
+applies only when a form instance exists.
+
+Only the **Administrator** manages form templates. Pre/post values are filled by
+the assigned Technician, Maintenance Manager, or Administrator.
+
+See [WO_FORMS.md](./WO_FORMS.md) for the full specification.

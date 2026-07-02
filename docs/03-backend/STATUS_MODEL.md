@@ -46,8 +46,16 @@ assigned to an active user with the Technician role.
 
 The assigned Technician has submitted all required completion information.
 Technician execution fields, parts used, readings, and attachments are locked
-after this transition. The Work Order awaits final review by a Maintenance
-Manager or Administrator.
+after this transition.
+
+When the Work Order has an attached WO Form instance (the asset's
+`fa_subclass_code` has an active FormTemplate), all required form fields must be
+fully filled before this transition is allowed: for `has_pre_post = true` fields
+both pre-maintenance and post-maintenance values must be present; for single-value
+fields (`has_pre_post = false`) the value must be present. Only fields with
+`is_required = true` are checked. See [WO_FORMS.md](../atms/01-product/WO_FORMS.md).
+
+The Work Order awaits final review by a Maintenance Manager or Administrator.
 
 ### closed
 

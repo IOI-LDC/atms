@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeftIcon, PaperclipIcon } from '@lucide/vue'
+import { ArrowLeftIcon, PaperclipIcon, EyeIcon, Trash2Icon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import AssetPmSection from '@/components/assets/AssetPmSection.vue'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { FileInput } from '@/components/ui/file-input'
 import { useAssetDetail } from '@/composables/useAssetDetail'
+import { openAttachmentInNewTab } from '@/lib/attachments'
 import { FA_SUBCLASS_OPTIONS } from '@/lib/assetColumns'
 import {
   assetMaintenanceStatusClass, assetMaintenanceStatusLabel,
@@ -49,6 +50,7 @@ const {
   attachments, attachmentsLoading,
   uploadOpen, uploadLoading, uploadFiles,
   openUpload, addUploadFiles, removeUploadFile, doUpload,
+  deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
 } = useAssetDetail()
 
 // FileInput primitive — its open() method is triggered via ref.
@@ -84,6 +86,12 @@ const availableSubStatuses = computed<{ value: string; label: string }[]>(() => 
     ]
   }
   return []  // Active standalone asset → no sub-status
+})
+
+// Attachment deletion uses its target id as open state (same pattern as WO).
+const deleteAttachmentOpen = computed({
+  get: () => deleteAttachmentTarget.value !== null,
+  set: (open: boolean) => { if (!open) deleteAttachmentTarget.value = null },
 })
 
 function goBack() { router.back() }
@@ -122,32 +130,41 @@ watch(
 
       <template v-else-if="record">
 
-        <!-- ── Page header ──────────────────────────────────────────────── -->
-        <div class="page-header">
-          <div class="page-heading">
-            <h1 class="page-title">{{ record.name }}</h1>
-            <p class="page-subtitle">
-              <span class="atms-erp-code">{{ record.asset_tag ?? record.erp_asset_code }}</span>
-              · {{ assetKindLabel(record.asset_kind) }}
-            </p>
-          </div>
-          <div class="page-actions">
-            <span :class="assetMaintenanceStatusClass(record.maintenance_status)">
-              {{ assetMaintenanceStatusLabel(record.maintenance_status) }}
-            </span>
-            <span :class="operationalStatusClass(record.operational_status)">
-              {{ operationalStatusLabel(record.operational_status) }}
-            </span>
-            <span v-if="record.is_booked" class="status-badge status-booked">Booked</span>
-            <Button
-              v-if="canToggleBooking"
-              size="sm"
-              variant="outline"
-              @click="requestToggleBooking"
-            >{{ record.is_booked ? 'Unbook' : 'Book' }}</Button>
-            <Button v-if="canEdit" size="sm" @click="openEdit">Edit Asset</Button>
+        <!-- ── Sticky command bar (identity + status + actions; no lifecycle) ── -->
+        <div class="detail-command-bar">
+          <div class="detail-command-top">
+            <div class="detail-command-identity">
+              <div class="detail-command-heading">
+                <h1 class="detail-command-number">{{ record.name }}</h1>
+                <span :class="assetMaintenanceStatusClass(record.maintenance_status)">
+                  {{ assetMaintenanceStatusLabel(record.maintenance_status) }}
+                </span>
+                <span :class="operationalStatusClass(record.operational_status)">
+                  {{ operationalStatusLabel(record.operational_status) }}
+                </span>
+                <span v-if="record.is_booked" class="status-badge status-booked">Booked</span>
+              </div>
+              <p class="detail-command-subtitle">
+                <span class="atms-erp-code">{{ record.asset_tag ?? record.erp_asset_code }}</span>
+                · {{ assetKindLabel(record.asset_kind) }}
+              </p>
+            </div>
+
+            <div class="detail-command-actions">
+              <Button
+                v-if="canToggleBooking"
+                size="sm"
+                variant="outline"
+                @click="requestToggleBooking"
+              >{{ record.is_booked ? 'Unbook' : 'Book' }}</Button>
+              <Button v-if="canEdit" size="sm" @click="openEdit">Edit Asset</Button>
+            </div>
           </div>
         </div>
+
+        <!-- ── Main (details + histories) + reference rail ──────────────────── -->
+        <div class="detail-layout">
+          <div class="detail-main">
 
         <!-- ── Overview card ─────────────────────────────────────────── -->
         <div class="data-card">
@@ -230,31 +247,6 @@ watch(
               <div v-if="record.description" class="detail-field detail-field-block">
                 <span class="detail-field-label">Description</span>
                 <p class="detail-field-value detail-field-prose">{{ record.description }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── ERP Reference card (not Logistics) ────────────────────── -->
-        <div v-if="canViewSensitive" class="data-card">
-          <div class="data-card-header">
-            <h2 class="data-card-title">ERP Reference</h2>
-          </div>
-          <div class="detail-card-content">
-            <div class="detail-grid">
-              <div class="detail-field">
-                <span class="detail-field-label">ERP Asset Code</span>
-                <p class="detail-field-value">
-                  <span class="atms-erp-code">{{ record.erp_asset_code }}</span>
-                </p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">ERP Status</span>
-                <p class="detail-field-value">{{ record.erp_status ?? '—' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Last ERP Sync</span>
-                <p class="detail-field-value">{{ fmtDate(record.erp_last_synced_at) }}</p>
               </div>
             </div>
           </div>
@@ -368,42 +360,99 @@ watch(
           </div>
         </div>
 
-        <!-- ── Attachments card ───────────────────────────────────────── -->
-        <div class="data-card">
-          <div class="data-card-header">
-            <h2 class="data-card-title">Attachments</h2>
-            <div class="detail-card-actions">
-              <Button size="sm" variant="outline" @click="openUpload">
-                <PaperclipIcon class="icon-sm" />
-                Upload…
-              </Button>
-            </div>
-          </div>
-          <div class="data-card-content">
-            <div v-if="attachmentsLoading" class="loading-state">Loading attachments…</div>
-            <div v-else-if="attachments.length === 0" class="empty-state">No attachments.</div>
-            <ul v-else class="attachment-list">
-              <li v-for="a in attachments" :key="a.id" class="attachment-item">
-                <span class="attachment-name">{{ a.file_name }}</span>
-                <span class="attachment-size">{{ formatBytes(a.size_bytes) }}</span>
-                <a
-                  v-if="a.download_url"
-                  class="attachment-download"
-                  :href="a.download_url"
-                  target="_blank"
-                  rel="noopener"
-                >Download</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-
         <!-- ── PM Rules (Admin / Manager) ───────────────────────────────────── -->
         <AssetPmSection
           v-if="auth.isAdminOrManager && record"
           :asset-id="record.id"
           :can-manage="auth.isAdminOrManager"
         />
+
+          </div>
+
+          <aside class="detail-rail">
+            <!-- ── ERP Reference (not Logistics) ────────────────────────── -->
+            <div v-if="canViewSensitive" class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">ERP Reference</h2>
+              </div>
+              <div class="detail-card-content">
+                <div class="detail-grid detail-rail-grid">
+                  <div class="detail-field">
+                    <span class="detail-field-label">ERP Asset Code</span>
+                    <p class="detail-field-value">
+                      <span class="atms-erp-code">{{ record.erp_asset_code }}</span>
+                    </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">ERP Status</span>
+                    <p class="detail-field-value">{{ record.erp_status ?? '—' }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Last ERP Sync</span>
+                    <p class="detail-field-value">{{ fmtDate(record.erp_last_synced_at) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Attachments ──────────────────────────────────────────── -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Attachments</h2>
+                <div class="detail-card-actions">
+                  <Button size="sm" variant="outline" @click="openUpload">
+                    <PaperclipIcon class="icon-sm" />
+                    Upload…
+                  </Button>
+                </div>
+              </div>
+              <div class="data-card-content">
+                <div v-if="attachmentsLoading" class="loading-state">Loading attachments…</div>
+                <div v-else-if="attachments.length === 0" class="empty-state">No attachments.</div>
+                <table v-else class="detail-table">
+                  <thead class="detail-table-head">
+                    <tr>
+                      <th>File</th>
+                      <th>Size</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="a in attachments" :key="a.id" class="detail-table-row">
+                      <td class="detail-table-cell">{{ a.file_name }}</td>
+                      <td class="detail-table-cell">{{ formatBytes(a.size_bytes) }}</td>
+                      <td class="detail-table-cell">
+                        <div class="detail-table-actions">
+                          <Button
+                            v-if="a.download_url"
+                            variant="ghost"
+                            size="icon-sm"
+                            :title="`View ${a.file_name}`"
+                            :aria-label="`View ${a.file_name}`"
+                            @click="openAttachmentInNewTab(a.download_url, a.file_name)"
+                          >
+                            <EyeIcon />
+                          </Button>
+                          <Button
+                            v-if="a.can_delete"
+                            variant="ghost"
+                            size="icon-sm"
+                            class="attachment-delete"
+                            :title="`Delete ${a.file_name}`"
+                            :aria-label="`Delete ${a.file_name}`"
+                            @click="openDeleteAttachment(a.id)"
+                          >
+                            <Trash2Icon />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </aside>
+        </div>
 
       </template>
     </div>
@@ -759,6 +808,22 @@ watch(
             @click="doUpload(id)"
           >
             {{ uploadLoading ? 'Uploading…' : 'Upload' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- ── Delete attachment dialog ──────────────────────────────────────── -->
+    <Dialog v-model:open="deleteAttachmentOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete attachment?</DialogTitle>
+          <DialogDescription>This permanently deletes the file. This cannot be undone.</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" :disabled="deleteAttachmentLoading" @click="deleteAttachmentOpen = false">Back</Button>
+          <Button variant="destructive" :disabled="deleteAttachmentLoading" @click="doDeleteAttachment">
+            {{ deleteAttachmentLoading ? 'Deleting…' : 'Delete' }}
           </Button>
         </DialogFooter>
       </DialogContent>

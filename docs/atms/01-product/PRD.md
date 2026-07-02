@@ -52,6 +52,7 @@ ATMS owns:
 - Maintenance Manager approval
 - Work orders
 - Attachments
+- Work Order execution forms (configurable pre/post-maintenance forms mapped by FA subclass)
 - Maintenance history
 
 ## Core Workflow
@@ -92,6 +93,7 @@ and tab structure.
 - Work order management
 - Parts usage recording against work orders (parts read from SM)
 - Work order closure
+- Work Order execution forms (configurable pre/post-maintenance forms, mapped by FA subclass)
 - Asset attachments
 - Maintenance history (reads current location from AM tables, parts data from SM tables)
 - Dashboard and basic reporting
@@ -111,7 +113,7 @@ and tab structure.
 - Gate passes, shipments, transport documents (owned by AM)
 - Handover management
 - Advanced governance/audit module
-- Advanced checklist management
+- Advanced checklist management (excludes the in-scope configurable WO Form — see [OUT_OF_SCOPE.md](./OUT_OF_SCOPE.md) §10 for the revised boundary)
 - Full document management system
 - Native mobile application
 - QR/barcode scanning

@@ -21,4 +21,18 @@ class AssetMeterReadingPolicy
             || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $user->hasRole(RoleCode::TECHNICIAN);
     }
+
+    public function update(User $user): bool
+    {
+        return $user->hasRole(RoleCode::ADMINISTRATOR)
+            || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
+            || $user->hasRole(RoleCode::TECHNICIAN);
+    }
+
+    public function delete(User $user): bool
+    {
+        return $user->hasRole(RoleCode::ADMINISTRATOR)
+            || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)
+            || $user->hasRole(RoleCode::TECHNICIAN);
+    }
 }
