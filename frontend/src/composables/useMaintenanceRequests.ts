@@ -47,18 +47,21 @@ export function useMaintenanceRequests() {
   // ── Create ────────────────────────────────────────────────────────────────────
 
   // Bound to <AssetCombobox v-model>; selection shape { id, label }.
-  const selectedAsset     = ref<{ id: number; label: string } | null>(null)
-  const createOpen        = ref(false)
+  const selectedAsset = ref<{ id: number; label: string } | null>(null)
+  const createOpen = ref(false)
   const confirmCreateOpen = ref(false)
-  const createLoading     = ref(false)
-  const createPriority    = ref('medium')
+  const createLoading = ref(false)
+  const createPriority = ref('medium')
   const createDescription = ref('')
-  const attachFiles       = ref<File[]>([])
+  const attachFiles = ref<File[]>([])
 
   const canCreate = computed(() => !!auth.user)
 
   function requestCreate() {
-    if (!selectedAsset.value) { toast.error('Please select an asset.'); return }
+    if (!selectedAsset.value) {
+      toast.error('Please select an asset.')
+      return
+    }
     confirmCreateOpen.value = true
   }
 
@@ -75,8 +78,8 @@ export function useMaintenanceRequests() {
     createLoading.value = true
     try {
       const res = await api.post<{ data: MaintenanceRequest }>('/maintenance-requests/corrective', {
-        asset_id:    selectedAsset.value.id,
-        priority:    createPriority.value,
+        asset_id: selectedAsset.value.id,
+        priority: createPriority.value,
         description: createDescription.value || null,
       })
       const mrId = res.data.id
@@ -103,24 +106,36 @@ export function useMaintenanceRequests() {
       } else {
         toast.error(e instanceof ApiError ? e.message : 'Failed to submit request.')
       }
-    } finally { createLoading.value = false }
+    } finally {
+      createLoading.value = false
+    }
   }
 
   function closeCreate() {
-    createOpen.value        = false
+    createOpen.value = false
     confirmCreateOpen.value = false
-    createPriority.value    = 'medium'
+    createPriority.value = 'medium'
     createDescription.value = ''
-    attachFiles.value       = []
-    selectedAsset.value     = null
+    attachFiles.value = []
+    selectedAsset.value = null
   }
 
   return {
-    myRequests, awaiting, allRequests,
+    myRequests,
+    awaiting,
+    allRequests,
     selectedAsset,
-    createOpen, confirmCreateOpen, createLoading, createPriority, createDescription,
-    attachFiles, addFiles, removeFile,
+    createOpen,
+    confirmCreateOpen,
+    createLoading,
+    createPriority,
+    createDescription,
+    attachFiles,
+    addFiles,
+    removeFile,
     canCreate,
-    requestCreate, doCreate, closeCreate,
+    requestCreate,
+    doCreate,
+    closeCreate,
   }
 }

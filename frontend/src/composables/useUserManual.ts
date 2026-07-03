@@ -18,10 +18,7 @@ interface RenderedManual {
 }
 
 function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 function slugify(value: string): string {
@@ -41,7 +38,10 @@ function renderInline(text: string): string {
   return escapeHtml(text)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, '<img src="$2" alt="$1" />')
-    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(
+      /\[([^\]]+)\]\(([^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    )
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
     .replace(/_([^_]+)_/g, '<em>$1</em>')
@@ -115,7 +115,9 @@ function renderManual(source: string): RenderedManual {
       const title = rawTitle.trim()
       if (level === 2 || level === 3) {
         const id = uniqueId(slugify(title))
-        html.push(`<h${level} id="${id}" class="manual-h${level}">${renderInline(title)}</h${level}>`)
+        html.push(
+          `<h${level} id="${id}" class="manual-h${level}">${renderInline(title)}</h${level}>`,
+        )
         const node: ManualHeading = { id, title, level, children: [] }
         const parent = toc[toc.length - 1]
         if (level === 3 && parent) {
@@ -149,7 +151,11 @@ function renderManual(source: string): RenderedManual {
     }
 
     // Table (header row followed by a `---|---` separator)
-    if (line.includes('|') && i + 1 < lines.length && /^\s*\|?[\s:|-]*-[\s:|-]*\|[\s:|-]*$/.test(lineAt(i + 1))) {
+    if (
+      line.includes('|') &&
+      i + 1 < lines.length &&
+      /^\s*\|?[\s:|-]*-[\s:|-]*\|[\s:|-]*$/.test(lineAt(i + 1))
+    ) {
       const headers = splitTableRow(line)
       i += 2 // consume header + separator
       const rows: string[][] = []
@@ -161,7 +167,9 @@ function renderManual(source: string): RenderedManual {
       const body = rows
         .map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`)
         .join('')
-      html.push(`<div class="manual-table-wrap"><table class="manual-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`)
+      html.push(
+        `<div class="manual-table-wrap"><table class="manual-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`,
+      )
       continue
     }
 

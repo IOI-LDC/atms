@@ -6,10 +6,19 @@ import WoFormForm from '@/components/wo-forms/WoFormForm.vue'
 import WoFormFieldsSheet from '@/components/wo-forms/WoFormFieldsSheet.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { useWoForms } from '@/composables/useWoForms'
 import { faSubclassLabel } from '@/lib/displayHelpers'
@@ -19,12 +28,28 @@ import type { WoFormTemplate } from '@/types'
 import type { WoFormTemplatePayload, WoFormFieldPayload } from '@/composables/useWoForms'
 
 const {
-  templates, templatesLoading, templatesError, loadTemplates,
-  template, templateLoading, loadTemplate,
-  faSubclasses, loadFaSubclasses,
-  saving, validationErrors, createTemplate, updateTemplate,
-  acting, deactivateTemplate, reactivateTemplate,
-  fieldSaving, fieldErrors, addField, updateField, deleteField, reorderFields,
+  templates,
+  templatesLoading,
+  templatesError,
+  loadTemplates,
+  template,
+  templateLoading,
+  loadTemplate,
+  faSubclasses,
+  loadFaSubclasses,
+  saving,
+  validationErrors,
+  createTemplate,
+  updateTemplate,
+  acting,
+  deactivateTemplate,
+  reactivateTemplate,
+  fieldSaving,
+  fieldErrors,
+  addField,
+  updateField,
+  deleteField,
+  reorderFields,
 } = useWoForms()
 
 // ── Status filter ─────────────────────────────────────────────────────────────
@@ -38,11 +63,11 @@ const filteredTemplates = computed<WoFormTemplate[]>(() => {
 
 // ── Columns ───────────────────────────────────────────────────────────────────
 const columns: AppColumnDef<WoFormTemplate>[] = [
-  { field: 'name',             header: 'Template',     sortable: true, minWidth: 200 },
-  { field: 'fa_subclass_code', header: 'Asset Class',  sortable: true },
-  { field: 'fields_count',     header: 'Fields',       sortable: false, align: 'center' },
-  { field: 'is_active',        header: 'Active',       sortable: true, align: 'center' },
-  { field: 'actions',          header: '',             sortable: false, align: 'center', minWidth: 180 },
+  { field: 'name', header: 'Template', sortable: true, minWidth: 200 },
+  { field: 'fa_subclass_code', header: 'Asset Class', sortable: true },
+  { field: 'fields_count', header: 'Fields', sortable: false, align: 'center' },
+  { field: 'is_active', header: 'Active', sortable: true, align: 'center' },
+  { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 180 },
 ]
 
 onMounted(() => {
@@ -208,7 +233,8 @@ async function onReorderFields(fieldIds: number[]) {
         <span
           v-else-if="column.field === 'is_active'"
           :class="row.is_active ? 'status-badge status-active' : 'status-badge status-inactive'"
-        >{{ row.is_active ? 'Active' : 'Inactive' }}</span>
+          >{{ row.is_active ? 'Active' : 'Inactive' }}</span
+        >
 
         <div v-else-if="column.field === 'actions'" class="table-row-actions">
           <Button variant="outline" size="sm" @click="openManageFields(row)">Manage Fields</Button>
@@ -264,11 +290,15 @@ async function onReorderFields(fieldIds: number[]) {
     <Dialog v-model:open="toggleOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{ toggleTarget?.is_active ? 'Deactivate Form Template' : 'Reactivate Form Template' }}</DialogTitle>
+          <DialogTitle>{{
+            toggleTarget?.is_active ? 'Deactivate Form Template' : 'Reactivate Form Template'
+          }}</DialogTitle>
           <DialogDescription v-if="toggleTarget">
-            {{ toggleTarget.is_active
-              ? `Deactivate "${toggleTarget.name}"? New work orders for ${faSubclassLabel(toggleTarget.fa_subclass_code)} assets will no longer snapshot this form. Existing work order forms are unaffected.`
-              : `Reactivate "${toggleTarget.name}"? It becomes available for new work order snapshots again. Blocked if another active template already covers ${faSubclassLabel(toggleTarget.fa_subclass_code)}.` }}
+            {{
+              toggleTarget.is_active
+                ? `Deactivate "${toggleTarget.name}"? New work orders for ${faSubclassLabel(toggleTarget.fa_subclass_code)} assets will no longer snapshot this form. Existing work order forms are unaffected.`
+                : `Reactivate "${toggleTarget.name}"? It becomes available for new work order snapshots again. Blocked if another active template already covers ${faSubclassLabel(toggleTarget.fa_subclass_code)}.`
+            }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -278,7 +308,7 @@ async function onReorderFields(fieldIds: number[]) {
             :disabled="acting"
             @click="confirmToggle"
           >
-            {{ acting ? 'Working…' : (toggleTarget?.is_active ? 'Deactivate' : 'Reactivate') }}
+            {{ acting ? 'Working…' : toggleTarget?.is_active ? 'Deactivate' : 'Reactivate' }}
           </Button>
         </DialogFooter>
       </DialogContent>

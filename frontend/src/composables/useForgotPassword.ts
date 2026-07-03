@@ -2,10 +2,10 @@ import { ref } from 'vue'
 import api, { ApiError } from '@/lib/api'
 
 export function useForgotPassword() {
-  const email   = ref('')
+  const email = ref('')
   const loading = ref(false)
-  const error   = ref<string | null>(null)
-  const sent    = ref(false)
+  const error = ref<string | null>(null)
+  const sent = ref(false)
 
   async function submit() {
     error.value = null

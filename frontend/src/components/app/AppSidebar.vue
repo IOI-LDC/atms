@@ -3,13 +3,25 @@ import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import type { Component } from 'vue'
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { useAuthStore } from '@/stores/auth.store'
 import {
-  LayoutDashboard, ClipboardList, Wrench, HardDrive, Package, Settings,
-  Shield, MapPin,
+  LayoutDashboard,
+  ClipboardList,
+  Wrench,
+  HardDrive,
+  Package,
+  Settings,
+  Shield,
+  MapPin,
 } from '@lucide/vue'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -46,14 +58,15 @@ const navItems: NavItemDef[] = [
   {
     label: 'Maintenance Requests',
     icon: ClipboardList,
-    to: (r) => r.isAdminOrManager ? '/maintenance?tab=all-requests' : '/maintenance?tab=my-requests',
+    to: (r) =>
+      r.isAdminOrManager ? '/maintenance?tab=all-requests' : '/maintenance?tab=my-requests',
     isActiveFor: (p) => p === '/maintenance' || p.startsWith('/maintenance/'),
     visibleTo: () => true,
   },
   {
     label: 'Work Orders',
     icon: Wrench,
-    to: (r) => r.isAdminOrManager ? '/work-orders?tab=all' : '/work-orders?tab=my-work-orders',
+    to: (r) => (r.isAdminOrManager ? '/work-orders?tab=all' : '/work-orders?tab=my-work-orders'),
     isActiveFor: (p) => p === '/work-orders' || p.startsWith('/work-orders/'),
     visibleTo: (r) => r.isAdminOrManager || r.isTechnician,
   },
@@ -82,7 +95,11 @@ const navItems: NavItemDef[] = [
     label: 'Admin',
     icon: Shield,
     to: () => '/admin/lists',
-    isActiveFor: (p) => p === '/admin/lists' || p === '/admin/users' || p.startsWith('/admin/pm-rules') || p.startsWith('/admin/wo-forms'),
+    isActiveFor: (p) =>
+      p === '/admin/lists' ||
+      p === '/admin/users' ||
+      p.startsWith('/admin/pm-rules') ||
+      p.startsWith('/admin/wo-forms'),
     visibleTo: (r) => r.isAdmin,
   },
   {
@@ -120,7 +137,9 @@ function toLocation(to: string): string | { path: string; query: Record<string, 
   if (!to.includes('?')) return to
   const [path, qs] = to.split('?') as [string, string]
   const query: Record<string, string> = {}
-  new URLSearchParams(qs).forEach((v, k) => { query[k] = v })
+  new URLSearchParams(qs).forEach((v, k) => {
+    query[k] = v
+  })
   return { path, query }
 }
 </script>

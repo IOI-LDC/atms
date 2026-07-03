@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
@@ -18,10 +22,14 @@ const emit = defineEmits<{ close: [] }>()
 const history = ref<AssetLocationHistoryItem[]>([])
 const loading = ref(false)
 
-watch(() => props.open, (nowOpen) => {
-  if (nowOpen && props.asset?.id) loadHistory()
-  else history.value = []
-}, { immediate: true })
+watch(
+  () => props.open,
+  (nowOpen) => {
+    if (nowOpen && props.asset?.id) loadHistory()
+    else history.value = []
+  },
+  { immediate: true },
+)
 
 async function loadHistory() {
   loading.value = true

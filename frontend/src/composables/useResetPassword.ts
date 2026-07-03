@@ -3,18 +3,18 @@ import { useRoute, useRouter } from 'vue-router'
 import api, { ApiError } from '@/lib/api'
 
 export function useResetPassword() {
-  const route  = useRoute()
+  const route = useRoute()
   const router = useRouter()
 
   const token = route.query.token as string | undefined
   const email = route.query.email as string | undefined
 
-  const password        = ref('')
+  const password = ref('')
   const passwordConfirm = ref('')
-  const loading         = ref(false)
-  const error           = ref<string | null>(null)
-  const fieldErrors     = ref<Record<string, string[]>>({})
-  const success         = ref(false)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const fieldErrors = ref<Record<string, string[]>>({})
+  const success = ref(false)
 
   async function submit() {
     error.value = null
@@ -30,7 +30,7 @@ export function useResetPassword() {
       await api.post('/auth/reset-password', {
         token,
         email,
-        password:              password.value,
+        password: password.value,
         password_confirmation: passwordConfirm.value,
       })
       success.value = true

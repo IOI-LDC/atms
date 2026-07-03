@@ -9,9 +9,9 @@ import type { Asset, Location } from '@/types'
  * Matches the pattern established in useWorkOrders.ts.
  */
 function useFetchList<T>(endpoint: string, baseParams: Record<string, string | number>) {
-  const rows    = ref<T[]>([]) as Ref<T[]>
+  const rows = ref<T[]>([]) as Ref<T[]>
   const loading = ref(false)
-  const loaded  = ref(false)
+  const loaded = ref(false)
 
   async function load(force = false) {
     if (loaded.value && !force) return
@@ -41,11 +41,11 @@ export function useAssets() {
 
   // Locations — fetched on demand, only for Admin/Manager/Logistics (caller
   // must check role before invoking loadLocations).
-  const locations        = ref<Location[]>([])
+  const locations = ref<Location[]>([])
   const locationsLoading = ref(false)
 
   async function loadLocations() {
-    if (locations.value.length > 0) return  // already loaded
+    if (locations.value.length > 0) return // already loaded
     locationsLoading.value = true
     try {
       const res = await api.get<{ data: Location[] }>('/locations')

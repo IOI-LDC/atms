@@ -19,9 +19,24 @@ export interface ListGroup {
 export type ListItem = MasterDataItem | UsageReadingType | FaSubclassTypeCode
 
 export const LIST_GROUPS: ListGroup[] = [
-  { key: 'maintenance_priorities',        label: 'Maintenance Priorities',  section: 'Master Data',   kind: 'master_data' },
-  { key: 'usage_reading_types',           label: 'Usage Reading Types',     section: 'Reading Types', kind: 'reading_types' },
-  { key: 'fa_subclass_type_codes',        label: 'FA Subclass Type Codes',  section: 'ERP Reference', kind: 'fa_subclass' },
+  {
+    key: 'maintenance_priorities',
+    label: 'Maintenance Priorities',
+    section: 'Master Data',
+    kind: 'master_data',
+  },
+  {
+    key: 'usage_reading_types',
+    label: 'Usage Reading Types',
+    section: 'Reading Types',
+    kind: 'reading_types',
+  },
+  {
+    key: 'fa_subclass_type_codes',
+    label: 'FA Subclass Type Codes',
+    section: 'ERP Reference',
+    kind: 'fa_subclass',
+  },
 ]
 
 // Rail sections in display order.
@@ -44,17 +59,23 @@ export function useLists() {
 
   function collectionPath(group: ListGroup): string {
     switch (group.kind) {
-      case 'master_data':  return `/admin/master-data/${group.key}`
-      case 'reading_types': return '/admin/usage-reading-types'
-      case 'fa_subclass':   return '/admin/fa-subclass-type-codes'
+      case 'master_data':
+        return `/admin/master-data/${group.key}`
+      case 'reading_types':
+        return '/admin/usage-reading-types'
+      case 'fa_subclass':
+        return '/admin/fa-subclass-type-codes'
     }
   }
 
   function itemPath(group: ListGroup, item: ListItem): string {
     switch (group.kind) {
-      case 'master_data':  return `/admin/master-data/items/${(item as MasterDataItem).id}`
-      case 'reading_types': return `/admin/usage-reading-types/${(item as UsageReadingType).id}`
-      case 'fa_subclass':   return `/admin/fa-subclass-type-codes/${(item as FaSubclassTypeCode).fa_subclass_code}`
+      case 'master_data':
+        return `/admin/master-data/items/${(item as MasterDataItem).id}`
+      case 'reading_types':
+        return `/admin/usage-reading-types/${(item as UsageReadingType).id}`
+      case 'fa_subclass':
+        return `/admin/fa-subclass-type-codes/${(item as FaSubclassTypeCode).fa_subclass_code}`
     }
   }
 

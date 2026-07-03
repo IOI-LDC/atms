@@ -17,10 +17,10 @@ const activeTab = computed(() => {
 })
 
 const tabs = [
-  { key: 'lists',    label: 'Lists & Dropdowns', to: '/admin/lists' },
-  { key: 'pm-rules', label: 'PM Rules',           to: '/admin/pm-rules' },
-  { key: 'wo-forms', label: 'WO Forms',           to: '/admin/wo-forms' },
-  { key: 'users',    label: 'Users & Access',     to: '/admin/users' },
+  { key: 'lists', label: 'Lists & Dropdowns', to: '/admin/lists' },
+  { key: 'pm-rules', label: 'PM Rules', to: '/admin/pm-rules' },
+  { key: 'wo-forms', label: 'WO Forms', to: '/admin/wo-forms' },
+  { key: 'users', label: 'Users & Access', to: '/admin/users' },
 ]
 </script>
 
@@ -40,7 +40,8 @@ const tabs = [
           :key="tab.key"
           :to="tab.to"
           :class="['view-tab', activeTab === tab.key ? 'view-tab-active' : 'view-tab-normal']"
-        >{{ tab.label }}</RouterLink>
+          >{{ tab.label }}</RouterLink
+        >
       </nav>
 
       <template v-if="activeTab === 'lists'">

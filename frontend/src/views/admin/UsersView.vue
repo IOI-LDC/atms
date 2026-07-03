@@ -17,32 +17,47 @@ import type { Employee, User } from '@/types'
 const auth = useAuthStore()
 
 const {
-  assignableRoles, loadRoles,
-  employees, employeesLoading, employeesError, loadEmployees,
-  users, usersLoading, usersError, loadUsers,
+  assignableRoles,
+  loadRoles,
+  employees,
+  employeesLoading,
+  employeesError,
+  loadEmployees,
+  users,
+  usersLoading,
+  usersError,
+  loadUsers,
   provisionedEmpIds,
-  provisioning, provisionErrors, provisionUser,
-  saving, validationErrors, updateUser,
-  toggling, deactivateUser, reactivateUser,
-  resettingPassword, passwordErrors, resetPassword,
+  provisioning,
+  provisionErrors,
+  provisionUser,
+  saving,
+  validationErrors,
+  updateUser,
+  toggling,
+  deactivateUser,
+  reactivateUser,
+  resettingPassword,
+  passwordErrors,
+  resetPassword,
 } = useUsers()
 
 // ── Column definitions ────────────────────────────────────────────────────────
 const employeeColumns: AppColumnDef<Employee>[] = [
-  { field: 'name',       header: 'Name',        sortable: true },
-  { field: 'emp_id',     header: 'Employee ID',  sortable: true },
-  { field: 'email',      header: 'Email',        sortable: true },
-  { field: 'department', header: 'Department',   sortable: true },
-  { field: 'job_title',  header: 'Job Title',    sortable: true },
-  { field: 'actions',    header: '',             sortable: false, align: 'center', minWidth: 150 },
+  { field: 'name', header: 'Name', sortable: true },
+  { field: 'emp_id', header: 'Employee ID', sortable: true },
+  { field: 'email', header: 'Email', sortable: true },
+  { field: 'department', header: 'Department', sortable: true },
+  { field: 'job_title', header: 'Job Title', sortable: true },
+  { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 150 },
 ]
 
 const userColumns: AppColumnDef<User>[] = [
-  { field: 'name',    header: 'Name',    sortable: true },
-  { field: 'email',   header: 'Email',   sortable: true },
-  { field: 'role',    header: 'Role',    sortable: false },
-  { field: 'status',  header: 'Status',  sortable: false, align: 'center' },
-  { field: 'actions', header: '',        sortable: false, align: 'center', minWidth: 200 },
+  { field: 'name', header: 'Name', sortable: true },
+  { field: 'email', header: 'Email', sortable: true },
+  { field: 'role', header: 'Role', sortable: false },
+  { field: 'status', header: 'Status', sortable: false, align: 'center' },
+  { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 200 },
 ]
 
 // ── Initial load ──────────────────────────────────────────────────────────────
@@ -161,9 +176,7 @@ function closeStatus() {
 async function onStatusConfirm() {
   if (!statusTarget.value) return
   const user = statusTarget.value
-  const ok = user.is_active
-    ? await deactivateUser(user.id)
-    : await reactivateUser(user.id)
+  const ok = user.is_active ? await deactivateUser(user.id) : await reactivateUser(user.id)
   if (ok) {
     toast.success(user.is_active ? `${user.name} deactivated.` : `${user.name} reactivated.`)
     closeStatus()
@@ -218,7 +231,8 @@ async function onStatusConfirm() {
               <span
                 v-if="row.emp_id && provisionedEmpIds.has(row.emp_id)"
                 class="status-badge status-active"
-              >Provisioned</span>
+                >Provisioned</span
+              >
               <Button
                 v-else
                 variant="outline"

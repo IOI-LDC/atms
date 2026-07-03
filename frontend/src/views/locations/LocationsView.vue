@@ -11,9 +11,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const tabDefs = computed(() => {
-  const tabs = [
-    { key: 'asset-location-update', label: 'Asset Location Update' },
-  ]
+  const tabs = [{ key: 'asset-location-update', label: 'Asset Location Update' }]
   if (auth.isAdmin) {
     tabs.push({ key: 'manage-locations', label: 'Manage Locations' })
   }
@@ -49,7 +47,8 @@ watch(activeTab, (newTab) => {
           :key="tab.key"
           :to="{ query: { tab: tab.key } }"
           :class="['view-tab', activeTab === tab.key ? 'view-tab-active' : 'view-tab-normal']"
-        >{{ tab.label }}</RouterLink>
+          >{{ tab.label }}</RouterLink
+        >
       </nav>
 
       <template v-if="activeTab === 'asset-location-update'">

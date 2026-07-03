@@ -1,7 +1,12 @@
 import { ref } from 'vue'
 import api, { ApiError } from '@/lib/api'
 import { fetchList } from '@/lib/dataTableSource'
-import type { WoFormTemplate, WoFormTemplateField, WoFormFieldType, FaSubclassTypeCode } from '@/types'
+import type {
+  WoFormTemplate,
+  WoFormTemplateField,
+  WoFormFieldType,
+  FaSubclassTypeCode,
+} from '@/types'
 
 export interface WoFormTemplatePayload {
   name?: string
@@ -33,7 +38,9 @@ export function useWoForms() {
     templatesLoading.value = true
     templatesError.value = null
     try {
-      templates.value = await fetchList<WoFormTemplate>('/admin/wo-forms/templates', { sort: 'created_at:desc' })
+      templates.value = await fetchList<WoFormTemplate>('/admin/wo-forms/templates', {
+        sort: 'created_at:desc',
+      })
     } catch {
       templates.value = []
       templatesError.value = 'Failed to load WO Form templates.'
@@ -91,11 +98,17 @@ export function useWoForms() {
     }
   }
 
-  async function updateTemplate(id: number, payload: WoFormTemplatePayload): Promise<WoFormTemplate | null> {
+  async function updateTemplate(
+    id: number,
+    payload: WoFormTemplatePayload,
+  ): Promise<WoFormTemplate | null> {
     saving.value = true
     validationErrors.value = null
     try {
-      const res = await api.patch<{ data: WoFormTemplate }>(`/admin/wo-forms/templates/${id}`, payload)
+      const res = await api.patch<{ data: WoFormTemplate }>(
+        `/admin/wo-forms/templates/${id}`,
+        payload,
+      )
       return res.data
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) validationErrors.value = e.validationErrors
@@ -114,7 +127,10 @@ export function useWoForms() {
       await api.post(`/admin/wo-forms/templates/${id}/deactivate`)
       return { ok: true }
     } catch (e) {
-      return { ok: false, message: e instanceof ApiError ? e.message : 'Failed to deactivate template.' }
+      return {
+        ok: false,
+        message: e instanceof ApiError ? e.message : 'Failed to deactivate template.',
+      }
     } finally {
       acting.value = false
     }
@@ -126,7 +142,10 @@ export function useWoForms() {
       await api.post(`/admin/wo-forms/templates/${id}/reactivate`)
       return { ok: true }
     } catch (e) {
-      return { ok: false, message: e instanceof ApiError ? e.message : 'Failed to reactivate template.' }
+      return {
+        ok: false,
+        message: e instanceof ApiError ? e.message : 'Failed to reactivate template.',
+      }
     } finally {
       acting.value = false
     }
@@ -136,11 +155,17 @@ export function useWoForms() {
   const fieldSaving = ref(false)
   const fieldErrors = ref<Record<string, string[]> | null>(null)
 
-  async function addField(templateId: number, payload: WoFormFieldPayload): Promise<WoFormTemplateField | null> {
+  async function addField(
+    templateId: number,
+    payload: WoFormFieldPayload,
+  ): Promise<WoFormTemplateField | null> {
     fieldSaving.value = true
     fieldErrors.value = null
     try {
-      const res = await api.post<{ data: WoFormTemplateField }>(`/admin/wo-forms/templates/${templateId}/fields`, payload)
+      const res = await api.post<{ data: WoFormTemplateField }>(
+        `/admin/wo-forms/templates/${templateId}/fields`,
+        payload,
+      )
       return res.data
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) fieldErrors.value = e.validationErrors
@@ -150,11 +175,18 @@ export function useWoForms() {
     }
   }
 
-  async function updateField(templateId: number, fieldId: number, payload: WoFormFieldPayload): Promise<WoFormTemplateField | null> {
+  async function updateField(
+    templateId: number,
+    fieldId: number,
+    payload: WoFormFieldPayload,
+  ): Promise<WoFormTemplateField | null> {
     fieldSaving.value = true
     fieldErrors.value = null
     try {
-      const res = await api.patch<{ data: WoFormTemplateField }>(`/admin/wo-forms/templates/${templateId}/fields/${fieldId}`, payload)
+      const res = await api.patch<{ data: WoFormTemplateField }>(
+        `/admin/wo-forms/templates/${templateId}/fields/${fieldId}`,
+        payload,
+      )
       return res.data
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) fieldErrors.value = e.validationErrors
@@ -176,7 +208,10 @@ export function useWoForms() {
     }
   }
 
-  async function reorderFields(templateId: number, fieldIds: number[]): Promise<WoFormTemplateField[] | null> {
+  async function reorderFields(
+    templateId: number,
+    fieldIds: number[],
+  ): Promise<WoFormTemplateField[] | null> {
     fieldSaving.value = true
     try {
       const res = await api.post<{ data: WoFormTemplateField[] }>(
@@ -193,12 +228,28 @@ export function useWoForms() {
 
   return {
     // Templates
-    templates, templatesLoading, templatesError, loadTemplates,
-    template, templateLoading, loadTemplate,
-    faSubclasses, loadFaSubclasses,
-    saving, validationErrors, createTemplate, updateTemplate,
-    acting, deactivateTemplate, reactivateTemplate,
+    templates,
+    templatesLoading,
+    templatesError,
+    loadTemplates,
+    template,
+    templateLoading,
+    loadTemplate,
+    faSubclasses,
+    loadFaSubclasses,
+    saving,
+    validationErrors,
+    createTemplate,
+    updateTemplate,
+    acting,
+    deactivateTemplate,
+    reactivateTemplate,
     // Fields
-    fieldSaving, fieldErrors, addField, updateField, deleteField, reorderFields,
+    fieldSaving,
+    fieldErrors,
+    addField,
+    updateField,
+    deleteField,
+    reorderFields,
   }
 }

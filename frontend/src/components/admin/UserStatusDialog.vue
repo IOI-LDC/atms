@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import type { User } from '@/types'
@@ -28,10 +33,12 @@ const isDeactivating = () => props.user?.is_active ?? false
         </DialogTitle>
         <DialogDescription v-if="user">
           <template v-if="isDeactivating()">
-            Deactivate <strong>{{ user.name }}</strong>? Their account will be locked immediately.
+            Deactivate <strong>{{ user.name }}</strong
+            >? Their account will be locked immediately.
           </template>
           <template v-else>
-            Reactivate <strong>{{ user.name }}</strong>? They will be able to sign in again.
+            Reactivate <strong>{{ user.name }}</strong
+            >? They will be able to sign in again.
           </template>
         </DialogDescription>
       </DialogHeader>

@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useResetPassword } from '@/composables/useResetPassword'
 
-const { password, passwordConfirm, loading, error, fieldErrors, success, submit } = useResetPassword()
+const { password, passwordConfirm, loading, error, fieldErrors, success, submit } =
+  useResetPassword()
 </script>
 
 <template>

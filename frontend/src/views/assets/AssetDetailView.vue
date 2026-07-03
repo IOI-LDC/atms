@@ -9,11 +9,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { FileInput } from '@/components/ui/file-input'
 import { useAssetDetail } from '@/composables/useAssetDetail'
@@ -21,37 +36,81 @@ import { useListOptions } from '@/composables/useListOptions'
 import { openAttachmentInNewTab } from '@/lib/attachments'
 import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
 import {
-  assetMaintenanceStatusClass, assetMaintenanceStatusLabel,
+  assetMaintenanceStatusClass,
+  assetMaintenanceStatusLabel,
   assetMaintenanceSubStatusLabel,
-  assetKindClass, assetKindLabel,
-  operationalStatusClass, operationalStatusLabel,
-  priorityClass, priorityLabel,
-  mrTypeLabel, fmtDate, formatBytes, faSubclassLabel,
+  assetKindClass,
+  assetKindLabel,
+  operationalStatusClass,
+  operationalStatusLabel,
+  priorityClass,
+  priorityLabel,
+  mrTypeLabel,
+  fmtDate,
+  formatBytes,
+  faSubclassLabel,
 } from '@/lib/displayHelpers'
 import { useAuthStore } from '@/stores/auth.store'
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
-const auth   = useAuthStore()
+const auth = useAuthStore()
 
 const id = computed(() => Number(route.params.assetId))
 
 const {
-  record, loading, error, notFound, forbidden,
-  load, loadLocationHistory, loadMaintenanceHistory, loadReadings, loadAttachments,
-  canEdit, canViewSensitive, canToggleBooking,
-  bookingConfirmOpen, bookingLoading, requestToggleBooking, closeBookingConfirm, doToggleBooking,
-  editOpen, confirmEditOpen, saving, editError, validationErrors, draft,
-  locations, locationsLoading,
-  openEdit, closeEdit, requestSave, doSave,
-  suggestTagLoading, suggestTagCollision, suggestTag,
-  locationHistory, locationHistoryLoading,
-  maintenanceHistory, maintenanceHistoryLoading,
-  readings, readingsLoading,
-  attachments, attachmentsLoading,
-  uploadOpen, uploadLoading, uploadFiles,
-  openUpload, addUploadFiles, removeUploadFile, doUpload,
-  deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
+  record,
+  loading,
+  error,
+  notFound,
+  forbidden,
+  load,
+  loadLocationHistory,
+  loadMaintenanceHistory,
+  loadReadings,
+  loadAttachments,
+  canEdit,
+  canViewSensitive,
+  canToggleBooking,
+  bookingConfirmOpen,
+  bookingLoading,
+  requestToggleBooking,
+  closeBookingConfirm,
+  doToggleBooking,
+  editOpen,
+  confirmEditOpen,
+  saving,
+  editError,
+  validationErrors,
+  draft,
+  locations,
+  locationsLoading,
+  openEdit,
+  closeEdit,
+  requestSave,
+  doSave,
+  suggestTagLoading,
+  suggestTagCollision,
+  suggestTag,
+  locationHistory,
+  locationHistoryLoading,
+  maintenanceHistory,
+  maintenanceHistoryLoading,
+  readings,
+  readingsLoading,
+  attachments,
+  attachmentsLoading,
+  uploadOpen,
+  uploadLoading,
+  uploadFiles,
+  openUpload,
+  addUploadFiles,
+  removeUploadFile,
+  doUpload,
+  deleteAttachmentTarget,
+  deleteAttachmentLoading,
+  openDeleteAttachment,
+  doDeleteAttachment,
 } = useAssetDetail()
 
 const { faSubclasses, loadFaSubclasses } = useListOptions()
@@ -62,8 +121,11 @@ const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
 
 // shadcn-vue Select emits strings; draft holds numeric IDs.
 const locationIdStr = computed({
-  get:  () => draft.value.current_location_id !== null ? String(draft.value.current_location_id) : '__none__',
-  set:  (v: string) => { draft.value.current_location_id = v === '__none__' ? null : Number(v) },
+  get: () =>
+    draft.value.current_location_id !== null ? String(draft.value.current_location_id) : '__none__',
+  set: (v: string) => {
+    draft.value.current_location_id = v === '__none__' ? null : Number(v)
+  },
 })
 
 /**
@@ -76,29 +138,33 @@ const locationIdStr = computed({
 const availableSubStatuses = computed<{ value: string; label: string }[]>(() => {
   if (draft.value.maintenance_status === 'withdrawn') {
     return [
-      { value: 'lih',      label: 'Lost in Hole' },
-      { value: 'dbr',      label: 'Damaged Beyond Repair' },
+      { value: 'lih', label: 'Lost in Hole' },
+      { value: 'dbr', label: 'Damaged Beyond Repair' },
       { value: 'disposed', label: 'Disposed' },
       { value: 'scrapped', label: 'Scrapped' },
-      { value: 'other',    label: 'Other' },
+      { value: 'other', label: 'Other' },
     ]
   }
   if (draft.value.asset_kind === 'package' || draft.value.asset_kind === 'component') {
     return [
       { value: 'installed', label: 'Installed' },
-      { value: 'ready',     label: 'Ready (spare)' },
+      { value: 'ready', label: 'Ready (spare)' },
     ]
   }
-  return []  // enrolled standalone asset → no sub-status
+  return [] // enrolled standalone asset → no sub-status
 })
 
 // Attachment deletion uses its target id as open state (same pattern as WO).
 const deleteAttachmentOpen = computed({
   get: () => deleteAttachmentTarget.value !== null,
-  set: (open: boolean) => { if (!open) deleteAttachmentTarget.value = null },
+  set: (open: boolean) => {
+    if (!open) deleteAttachmentTarget.value = null
+  },
 })
 
-function goBack() { router.back() }
+function goBack() {
+  router.back()
+}
 
 watch(
   id,
@@ -119,7 +185,6 @@ watch(
 <template>
   <AppLayout>
     <div class="page-section">
-
       <Button variant="ghost" size="sm" class="detail-back" @click="goBack">
         <ArrowLeftIcon class="detail-back-icon" />
         Back
@@ -134,7 +199,6 @@ watch(
       <div v-else-if="error" class="error-state" role="alert">{{ error }}</div>
 
       <template v-else-if="record">
-
         <!-- ── Sticky command bar (identity + status + actions; no lifecycle) ── -->
         <div class="detail-command-bar">
           <div class="detail-command-top">
@@ -161,7 +225,8 @@ watch(
                 size="sm"
                 variant="outline"
                 @click="requestToggleBooking"
-              >{{ record.is_booked ? 'Unbook' : 'Book' }}</Button>
+                >{{ record.is_booked ? 'Unbook' : 'Book' }}</Button
+              >
               <Button v-if="canEdit" size="sm" @click="openEdit">Edit Asset</Button>
             </div>
           </div>
@@ -170,208 +235,222 @@ watch(
         <!-- ── Main (details + histories) + reference rail ──────────────────── -->
         <div class="detail-layout">
           <div class="detail-main">
-
-        <!-- ── Overview card ─────────────────────────────────────────── -->
-        <div class="data-card">
-          <div class="data-card-header">
-            <h2 class="data-card-title">Asset Details</h2>
-          </div>
-          <div class="detail-card-content">
-            <div class="detail-grid">
-              <div class="detail-field">
-                <span class="detail-field-label">Asset Tag</span>
-                <p class="detail-field-value">
-                  <span class="atms-erp-code">{{ record.asset_tag ?? '—' }}</span>
-                </p>
+            <!-- ── Overview card ─────────────────────────────────────────── -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Asset Details</h2>
               </div>
-              <div class="detail-field">
-                <span class="detail-field-label">ERP Asset Code</span>
-                <p class="detail-field-value">
-                  <span class="atms-erp-code">{{ record.erp_asset_code }}</span>
-                </p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Asset Class</span>
-                <p class="detail-field-value">{{ record.fa_subclass_code ? faSubclassLabel(record.fa_subclass_code) : '—' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Kind</span>
-                <p class="detail-field-value">
-                  <span :class="assetKindClass(record.asset_kind)">
-                    {{ assetKindLabel(record.asset_kind) }}
-                  </span>
-                </p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Manufacturer</span>
-                <p class="detail-field-value">{{ record.manufacturer ?? '—' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Model</span>
-                <p class="detail-field-value">{{ record.model ?? '—' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Serial Number</span>
-                <p class="detail-field-value">{{ record.serial_number ?? '—' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Operational Status</span>
-                <p class="detail-field-value">
-                  <span :class="operationalStatusClass(record.operational_status)">
-                    {{ operationalStatusLabel(record.operational_status) }}
-                  </span>
-                </p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Maintenance Status</span>
-                <p class="detail-field-value">
-                  <span :class="assetMaintenanceStatusClass(record.maintenance_status)">
-                    {{ assetMaintenanceStatusLabel(record.maintenance_status) }}
-                  </span>
-                  <span v-if="record.maintenance_sub_status" class="detail-field-muted">
-                    · {{ assetMaintenanceSubStatusLabel(record.maintenance_sub_status) }}
-                  </span>
-                </p>
-              </div>
-              <div v-if="auth.isAdminOrManager" class="detail-field">
-                <span class="detail-field-label">Record Active</span>
-                <p class="detail-field-value">{{ record.is_active ? 'Yes' : 'No' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Current Location</span>
-                <p class="detail-field-value">{{ record.current_location?.name ?? '—' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Created</span>
-                <p class="detail-field-value">{{ fmtDate(record.created_at) }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Last Updated</span>
-                <p class="detail-field-value">{{ fmtDate(record.updated_at) }}</p>
-              </div>
-              <div v-if="record.description" class="detail-field detail-field-block">
-                <span class="detail-field-label">Description</span>
-                <p class="detail-field-value detail-field-prose">{{ record.description }}</p>
+              <div class="detail-card-content">
+                <div class="detail-grid">
+                  <div class="detail-field">
+                    <span class="detail-field-label">Asset Tag</span>
+                    <p class="detail-field-value">
+                      <span class="atms-erp-code">{{ record.asset_tag ?? '—' }}</span>
+                    </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">ERP Asset Code</span>
+                    <p class="detail-field-value">
+                      <span class="atms-erp-code">{{ record.erp_asset_code }}</span>
+                    </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Asset Class</span>
+                    <p class="detail-field-value">
+                      {{ record.fa_subclass_code ? faSubclassLabel(record.fa_subclass_code) : '—' }}
+                    </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Kind</span>
+                    <p class="detail-field-value">
+                      <span :class="assetKindClass(record.asset_kind)">
+                        {{ assetKindLabel(record.asset_kind) }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Manufacturer</span>
+                    <p class="detail-field-value">{{ record.manufacturer ?? '—' }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Model</span>
+                    <p class="detail-field-value">{{ record.model ?? '—' }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Serial Number</span>
+                    <p class="detail-field-value">{{ record.serial_number ?? '—' }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Operational Status</span>
+                    <p class="detail-field-value">
+                      <span :class="operationalStatusClass(record.operational_status)">
+                        {{ operationalStatusLabel(record.operational_status) }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Maintenance Status</span>
+                    <p class="detail-field-value">
+                      <span :class="assetMaintenanceStatusClass(record.maintenance_status)">
+                        {{ assetMaintenanceStatusLabel(record.maintenance_status) }}
+                      </span>
+                      <span v-if="record.maintenance_sub_status" class="detail-field-muted">
+                        · {{ assetMaintenanceSubStatusLabel(record.maintenance_sub_status) }}
+                      </span>
+                    </p>
+                  </div>
+                  <div v-if="auth.isAdminOrManager" class="detail-field">
+                    <span class="detail-field-label">Record Active</span>
+                    <p class="detail-field-value">{{ record.is_active ? 'Yes' : 'No' }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Current Location</span>
+                    <p class="detail-field-value">{{ record.current_location?.name ?? '—' }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Created</span>
+                    <p class="detail-field-value">{{ fmtDate(record.created_at) }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Last Updated</span>
+                    <p class="detail-field-value">{{ fmtDate(record.updated_at) }}</p>
+                  </div>
+                  <div v-if="record.description" class="detail-field detail-field-block">
+                    <span class="detail-field-label">Description</span>
+                    <p class="detail-field-value detail-field-prose">{{ record.description }}</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- ── Location History card ──────────────────────────────────── -->
-        <div class="data-card">
-          <div class="data-card-header">
-            <h2 class="data-card-title">Location History</h2>
-          </div>
-          <div class="data-card-content">
-            <div v-if="locationHistoryLoading" class="loading-state">Loading location history…</div>
-            <div v-else-if="locationHistory.length === 0" class="empty-state">
-              No location changes recorded.
+            <!-- ── Location History card ──────────────────────────────────── -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Location History</h2>
+              </div>
+              <div class="data-card-content">
+                <div v-if="locationHistoryLoading" class="loading-state">
+                  Loading location history…
+                </div>
+                <div v-else-if="locationHistory.length === 0" class="empty-state">
+                  No location changes recorded.
+                </div>
+                <table v-else class="detail-table">
+                  <thead class="detail-table-head">
+                    <tr>
+                      <th>Effective Date</th>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="h in locationHistory" :key="h.id" class="detail-table-row">
+                      <td class="detail-table-cell">{{ fmtDate(h.effective_at) }}</td>
+                      <td class="detail-table-cell detail-field-muted">
+                        {{ h.from_location?.name ?? '—' }}
+                      </td>
+                      <td class="detail-table-cell">
+                        {{ h.to_location?.name ?? '—' }}
+                      </td>
+                      <td class="detail-table-cell">{{ h.reason ?? '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <table v-else class="detail-table">
-              <thead class="detail-table-head">
-                <tr>
-                  <th>Effective Date</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="h in locationHistory" :key="h.id" class="detail-table-row">
-                  <td class="detail-table-cell">{{ fmtDate(h.effective_at) }}</td>
-                  <td class="detail-table-cell detail-field-muted">
-                    {{ h.from_location?.name ?? '—' }}
-                  </td>
-                  <td class="detail-table-cell">
-                    {{ h.to_location?.name ?? '—' }}
-                  </td>
-                  <td class="detail-table-cell">{{ h.reason ?? '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <!-- ── Maintenance History card (not Logistics) ───────────────── -->
-        <div v-if="!auth.isLogistics" class="data-card">
-          <div class="data-card-header">
-            <h2 class="data-card-title">Maintenance History</h2>
-          </div>
-          <div class="data-card-content">
-            <div v-if="maintenanceHistoryLoading" class="loading-state">
-              Loading maintenance history…
+            <!-- ── Maintenance History card (not Logistics) ───────────────── -->
+            <div v-if="!auth.isLogistics" class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Maintenance History</h2>
+              </div>
+              <div class="data-card-content">
+                <div v-if="maintenanceHistoryLoading" class="loading-state">
+                  Loading maintenance history…
+                </div>
+                <div v-else-if="maintenanceHistory.length === 0" class="empty-state">
+                  No closed work orders on record.
+                </div>
+                <table v-else class="detail-table">
+                  <thead class="detail-table-head">
+                    <tr>
+                      <th>Date</th>
+                      <th>Work Order</th>
+                      <th>Type</th>
+                      <th>Priority</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="h in maintenanceHistory"
+                      :key="h.work_order_number"
+                      class="detail-table-row"
+                    >
+                      <td class="detail-table-cell">{{ fmtDate(h.closed_at) }}</td>
+                      <td class="detail-table-cell">
+                        <span class="atms-wo-number">{{ h.work_order_number }}</span>
+                      </td>
+                      <td class="detail-table-cell">{{ mrTypeLabel(h.type ?? 'corrective') }}</td>
+                      <td class="detail-table-cell">
+                        <span :class="priorityClass(h.priority)">{{
+                          priorityLabel(h.priority)
+                        }}</span>
+                      </td>
+                      <td class="detail-table-cell table-cell-truncate">
+                        {{ h.description ?? '—' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div v-else-if="maintenanceHistory.length === 0" class="empty-state">
-              No closed work orders on record.
+
+            <!-- ── Usage Readings card ────────────────────────────────────── -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Usage Readings</h2>
+              </div>
+              <div class="data-card-content">
+                <div v-if="readingsLoading" class="loading-state">Loading readings…</div>
+                <div v-else-if="readings.length === 0" class="empty-state">
+                  No meter readings recorded.
+                </div>
+                <table v-else class="detail-table">
+                  <thead class="detail-table-head">
+                    <tr>
+                      <th>Read At</th>
+                      <th>Value</th>
+                      <th>Source</th>
+                      <th>Confirmed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="r in readings" :key="r.id" class="detail-table-row">
+                      <td class="detail-table-cell">{{ fmtDate(r.reading_at) }}</td>
+                      <td class="detail-table-cell table-cell-primary">{{ r.reading_value }}</td>
+                      <td class="detail-table-cell">
+                        {{ r.source === 'manual' ? 'Manual' : 'User' }}
+                      </td>
+                      <td class="detail-table-cell">
+                        <span v-if="r.confirmed_at" class="status-badge status-active"
+                          >Confirmed</span
+                        >
+                        <span v-else class="status-badge status-inactive">Unverified</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <table v-else class="detail-table">
-              <thead class="detail-table-head">
-                <tr>
-                  <th>Date</th>
-                  <th>Work Order</th>
-                  <th>Type</th>
-                  <th>Priority</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="h in maintenanceHistory" :key="h.work_order_number" class="detail-table-row">
-                  <td class="detail-table-cell">{{ fmtDate(h.closed_at) }}</td>
-                  <td class="detail-table-cell">
-                    <span class="atms-wo-number">{{ h.work_order_number }}</span>
-                  </td>
-                  <td class="detail-table-cell">{{ mrTypeLabel(h.type ?? 'corrective') }}</td>
-                  <td class="detail-table-cell">
-                    <span :class="priorityClass(h.priority)">{{ priorityLabel(h.priority) }}</span>
-                  </td>
-                  <td class="detail-table-cell table-cell-truncate">{{ h.description ?? '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <!-- ── Usage Readings card ────────────────────────────────────── -->
-        <div class="data-card">
-          <div class="data-card-header">
-            <h2 class="data-card-title">Usage Readings</h2>
-          </div>
-          <div class="data-card-content">
-            <div v-if="readingsLoading" class="loading-state">Loading readings…</div>
-            <div v-else-if="readings.length === 0" class="empty-state">
-              No meter readings recorded.
-            </div>
-            <table v-else class="detail-table">
-              <thead class="detail-table-head">
-                <tr>
-                  <th>Read At</th>
-                  <th>Value</th>
-                  <th>Source</th>
-                  <th>Confirmed</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in readings" :key="r.id" class="detail-table-row">
-                  <td class="detail-table-cell">{{ fmtDate(r.reading_at) }}</td>
-                  <td class="detail-table-cell table-cell-primary">{{ r.reading_value }}</td>
-                  <td class="detail-table-cell">{{ r.source === 'manual' ? 'Manual' : 'User' }}</td>
-                  <td class="detail-table-cell">
-                    <span v-if="r.confirmed_at" class="status-badge status-active">Confirmed</span>
-                    <span v-else class="status-badge status-inactive">Unverified</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- ── PM Rules (Admin / Manager) ───────────────────────────────────── -->
-        <AssetPmSection
-          v-if="auth.isAdminOrManager && record"
-          :asset-id="record.id"
-          :can-manage="auth.isAdminOrManager"
-        />
-
+            <!-- ── PM Rules (Admin / Manager) ───────────────────────────────────── -->
+            <AssetPmSection
+              v-if="auth.isAdminOrManager && record"
+              :asset-id="record.id"
+              :can-manage="auth.isAdminOrManager"
+            />
           </div>
 
           <aside class="detail-rail">
@@ -458,7 +537,6 @@ watch(
             </div>
           </aside>
         </div>
-
       </template>
     </div>
 
@@ -466,13 +544,19 @@ watch(
          modal=false: prevents reka-ui's useHideOthers + focus-trap from blocking
          the portaled Location Select inside the sheet. Overlay/X/Esc still work.
          See ATMS_UI_RULES.md §8.3. -->
-    <Sheet :open="editOpen" :modal="false" @update:open="(v) => { if (!v) closeEdit() }">
+    <Sheet
+      :open="editOpen"
+      :modal="false"
+      @update:open="
+        (v) => {
+          if (!v) closeEdit()
+        }
+      "
+    >
       <SheetContent side="right" class="create-sheet">
         <SheetHeader class="create-sheet-header">
           <SheetTitle>Edit Asset</SheetTitle>
-          <SheetDescription>
-            Update operational details for {{ record?.name }}.
-          </SheetDescription>
+          <SheetDescription> Update operational details for {{ record?.name }}. </SheetDescription>
         </SheetHeader>
 
         <div class="create-sheet-body">
@@ -514,8 +598,8 @@ watch(
                 {{ validationErrors.asset_tag[0] }}
               </p>
               <p class="form-help">
-                Format: <span class="atms-erp-code">L-BBB-CCC-XXXX</span>.
-                Use "Suggest Tag" to generate from ERP data, or enter manually.
+                Format: <span class="atms-erp-code">L-BBB-CCC-XXXX</span>. Use "Suggest Tag" to
+                generate from ERP data, or enter manually.
               </p>
             </template>
           </div>
@@ -535,7 +619,12 @@ watch(
               <Label for="edit-fa-subclass">Asset Class</Label>
               <Select
                 :model-value="draft.fa_subclass_code || '__none__'"
-                @update:model-value="(v) => { const s = String(v); draft.fa_subclass_code = s === '__none__' ? '' : s }"
+                @update:model-value="
+                  (v) => {
+                    const s = String(v)
+                    draft.fa_subclass_code = s === '__none__' ? '' : s
+                  }
+                "
               >
                 <SelectTrigger id="edit-fa-subclass">
                   <SelectValue placeholder="Not classified" />
@@ -546,7 +635,8 @@ watch(
                     v-for="opt in faSubclassOptions"
                     :key="opt.value"
                     :value="opt.value"
-                  >{{ opt.label }}</SelectItem>
+                    >{{ opt.label }}</SelectItem
+                  >
                 </SelectContent>
               </Select>
               <p v-if="validationErrors?.fa_subclass_code" class="form-error">
@@ -559,14 +649,16 @@ watch(
               <Label for="edit-manufacturer">
                 Manufacturer <span class="field-optional">— optional</span>
               </Label>
-              <Input id="edit-manufacturer" v-model="draft.manufacturer" placeholder="e.g. Baker Hughes" />
+              <Input
+                id="edit-manufacturer"
+                v-model="draft.manufacturer"
+                placeholder="e.g. Baker Hughes"
+              />
             </div>
 
             <!-- Model -->
             <div class="form-field">
-              <Label for="edit-model">
-                Model <span class="field-optional">— optional</span>
-              </Label>
+              <Label for="edit-model"> Model <span class="field-optional">— optional</span> </Label>
               <Input id="edit-model" v-model="draft.model" placeholder="Model number or name" />
             </div>
 
@@ -614,7 +706,9 @@ watch(
               <Select v-model="draft.maintenance_status">
                 <SelectTrigger id="edit-maint-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="enrolled">In maintenance program — eligible for maintenance workflows</SelectItem>
+                  <SelectItem value="enrolled"
+                    >In maintenance program — eligible for maintenance workflows</SelectItem
+                  >
                   <SelectItem value="withdrawn">Withdrawn — excluded from all workflows</SelectItem>
                 </SelectContent>
               </Select>
@@ -628,16 +722,24 @@ watch(
               </Label>
               <Select
                 :model-value="draft.maintenance_sub_status || '__none__'"
-                @update:model-value="(v) => { const s = String(v); draft.maintenance_sub_status = s === '__none__' ? '' : s }"
+                @update:model-value="
+                  (v) => {
+                    const s = String(v)
+                    draft.maintenance_sub_status = s === '__none__' ? '' : s
+                  }
+                "
               >
-                <SelectTrigger id="edit-maint-sub"><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectTrigger id="edit-maint-sub"
+                  ><SelectValue placeholder="None"
+                /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
                   <SelectItem
                     v-for="opt in availableSubStatuses"
                     :key="opt.value"
                     :value="opt.value"
-                  >{{ opt.label }}</SelectItem>
+                    >{{ opt.label }}</SelectItem
+                  >
                 </SelectContent>
               </Select>
               <p v-if="validationErrors?.maintenance_sub_status" class="form-error">
@@ -650,7 +752,11 @@ watch(
               <Label for="edit-is-active">Record Status</Label>
               <Select
                 :model-value="draft.is_active ? 'true' : 'false'"
-                @update:model-value="(v) => { draft.is_active = v === 'true' }"
+                @update:model-value="
+                  (v) => {
+                    draft.is_active = v === 'true'
+                  }
+                "
               >
                 <SelectTrigger id="edit-is-active"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -673,11 +779,9 @@ watch(
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">No location</SelectItem>
-                <SelectItem
-                  v-for="loc in locations"
-                  :key="loc.id"
-                  :value="String(loc.id)"
-                >{{ loc.name }}</SelectItem>
+                <SelectItem v-for="loc in locations" :key="loc.id" :value="String(loc.id)">{{
+                  loc.name
+                }}</SelectItem>
               </SelectContent>
             </Select>
             <p v-if="validationErrors?.current_location_id" class="form-error">
@@ -722,23 +826,37 @@ watch(
     </Sheet>
 
     <!-- ── Confirm Edit dialog ─────────────────────────────────────────────── -->
-    <Dialog :open="bookingConfirmOpen" @update:open="(v) => { if (!v) closeBookingConfirm() }">
+    <Dialog
+      :open="bookingConfirmOpen"
+      @update:open="
+        (v) => {
+          if (!v) closeBookingConfirm()
+        }
+      "
+    >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{ record?.is_booked ? 'Unbook this asset?' : 'Book this asset?' }}</DialogTitle>
+          <DialogTitle>{{
+            record?.is_booked ? 'Unbook this asset?' : 'Book this asset?'
+          }}</DialogTitle>
           <DialogDescription>
             <template v-if="record?.is_booked">
-              This releases the reservation on <strong>{{ record?.name }}</strong>, making it freely available again.
+              This releases the reservation on <strong>{{ record?.name }}</strong
+              >, making it freely available again.
             </template>
             <template v-else>
-              This reserves <strong>{{ record?.name }}</strong> for a Job/Project. It stays available for maintenance, and the booking auto-releases if the asset is moved or deactivated.
+              This reserves <strong>{{ record?.name }}</strong> for a Job/Project. It stays
+              available for maintenance, and the booking auto-releases if the asset is moved or
+              deactivated.
             </template>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" :disabled="bookingLoading" @click="closeBookingConfirm">Back</Button>
+          <Button variant="outline" :disabled="bookingLoading" @click="closeBookingConfirm"
+            >Back</Button
+          >
           <Button :disabled="bookingLoading" @click="doToggleBooking">
-            {{ bookingLoading ? 'Saving…' : (record?.is_booked ? 'Unbook Asset' : 'Book Asset') }}
+            {{ bookingLoading ? 'Saving…' : record?.is_booked ? 'Unbook Asset' : 'Book Asset' }}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -749,8 +867,8 @@ watch(
         <DialogHeader>
           <DialogTitle>Save asset changes?</DialogTitle>
           <DialogDescription>
-            Update details for <strong>{{ record?.name }}</strong>.
-            This will overwrite the current values.
+            Update details for <strong>{{ record?.name }}</strong
+            >. This will overwrite the current values.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -800,7 +918,8 @@ watch(
                 class="file-list-remove"
                 aria-label="Remove file"
                 @click="removeUploadFile(i)"
-              >✕</Button>
+                >✕</Button
+              >
             </li>
           </ul>
         </div>
@@ -808,10 +927,7 @@ watch(
           <Button variant="outline" :disabled="uploadLoading" @click="uploadOpen = false">
             Back
           </Button>
-          <Button
-            :disabled="uploadLoading || uploadFiles.length === 0"
-            @click="doUpload(id)"
-          >
+          <Button :disabled="uploadLoading || uploadFiles.length === 0" @click="doUpload(id)">
             {{ uploadLoading ? 'Uploading…' : 'Upload' }}
           </Button>
         </DialogFooter>
@@ -823,16 +939,26 @@ watch(
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete attachment?</DialogTitle>
-          <DialogDescription>This permanently deletes the file. This cannot be undone.</DialogDescription>
+          <DialogDescription
+            >This permanently deletes the file. This cannot be undone.</DialogDescription
+          >
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" :disabled="deleteAttachmentLoading" @click="deleteAttachmentOpen = false">Back</Button>
-          <Button variant="destructive" :disabled="deleteAttachmentLoading" @click="doDeleteAttachment">
+          <Button
+            variant="outline"
+            :disabled="deleteAttachmentLoading"
+            @click="deleteAttachmentOpen = false"
+            >Back</Button
+          >
+          <Button
+            variant="destructive"
+            :disabled="deleteAttachmentLoading"
+            @click="doDeleteAttachment"
+          >
             {{ deleteAttachmentLoading ? 'Deleting…' : 'Delete' }}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
   </AppLayout>
 </template>

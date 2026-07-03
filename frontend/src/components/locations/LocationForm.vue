@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,14 +28,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  save: [payload: {
-    name: string
-    type: string
-    code: string | null
-    parent_id: number | null
-    description: string | null
-    is_active: boolean
-  }]
+  save: [
+    payload: {
+      name: string
+      type: string
+      code: string | null
+      parent_id: number | null
+      description: string | null
+      is_active: boolean
+    },
+  ]
 }>()
 
 // ── Form state ────────────────────────────────────────────────────────────────
@@ -50,26 +60,27 @@ function resetForm() {
   errorMessage.value = null
 }
 
-watch(() => props.open, (nowOpen) => {
-  if (!nowOpen) return
-  if (props.editing) {
-    isEdit.value = true
-    name.value = props.editing.name
-    locationType.value = props.editing.type
-    code.value = props.editing.code ?? ''
-    parentId.value = props.editing.parent_id ? String(props.editing.parent_id) : '__none__'
-    description.value = props.editing.description ?? ''
-  } else {
-    isEdit.value = false
-    resetForm()
-  }
-})
-
-const parentOptions = computed(() =>
-  props.locations.filter((l) => l.id !== props.editing?.id),
+watch(
+  () => props.open,
+  (nowOpen) => {
+    if (!nowOpen) return
+    if (props.editing) {
+      isEdit.value = true
+      name.value = props.editing.name
+      locationType.value = props.editing.type
+      code.value = props.editing.code ?? ''
+      parentId.value = props.editing.parent_id ? String(props.editing.parent_id) : '__none__'
+      description.value = props.editing.description ?? ''
+    } else {
+      isEdit.value = false
+      resetForm()
+    }
+  },
 )
 
-const title = computed(() => isEdit.value ? 'Edit Location' : 'Create Location')
+const parentOptions = computed(() => props.locations.filter((l) => l.id !== props.editing?.id))
+
+const title = computed(() => (isEdit.value ? 'Edit Location' : 'Create Location'))
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 function handleSave() {
@@ -139,11 +150,9 @@ function handleSave() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">No parent (top-level)</SelectItem>
-                <SelectItem
-                  v-for="loc in parentOptions"
-                  :key="loc.id"
-                  :value="String(loc.id)"
-                >{{ loc.name }}</SelectItem>
+                <SelectItem v-for="loc in parentOptions" :key="loc.id" :value="String(loc.id)">{{
+                  loc.name
+                }}</SelectItem>
               </SelectContent>
             </Select>
           </div>

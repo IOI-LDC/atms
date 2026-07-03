@@ -5,31 +5,63 @@ import { Button } from '@/components/ui/button'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  RefreshCw, ClipboardList, Wrench, CalendarClock,
-  Activity, Timer, TriangleAlert, ShieldCheck, FileClock, ClipboardCheck,
+  RefreshCw,
+  ClipboardList,
+  Wrench,
+  CalendarClock,
+  Activity,
+  Timer,
+  TriangleAlert,
+  ShieldCheck,
+  FileClock,
+  ClipboardCheck,
   ChevronRight,
 } from '@lucide/vue'
 import { useDashboard } from '@/composables/useDashboard'
 import { useDashboardKpis } from '@/composables/useDashboardKpis'
 import { useQuickActions } from '@/composables/useQuickActions'
 import {
-  woStatusClass, woStatusLabel,
-  priorityClass, priorityLabel, pmStatusClass, pmStatusLabel,
-  pmDueLabel, fmtDate, fmtDateTime, fmtKpiDays, fmtKpiHours, fmtKpiPercent,
+  woStatusClass,
+  woStatusLabel,
+  priorityClass,
+  priorityLabel,
+  pmStatusClass,
+  pmStatusLabel,
+  pmDueLabel,
+  fmtDate,
+  fmtDateTime,
+  fmtKpiDays,
+  fmtKpiHours,
+  fmtKpiPercent,
 } from '@/lib/displayHelpers'
 
 const router = useRouter()
 
 const {
-  data: dashData, loading: dashLoading, error: dashError, reload: reloadDash,
-  showPendingMr, showOpenWo, showOverduePm, showRecentlyClosed,
-  pendingMrItems, openWoItems, overduePmItems, closedWoItems,
+  data: dashData,
+  loading: dashLoading,
+  error: dashError,
+  reload: reloadDash,
+  showPendingMr,
+  showOpenWo,
+  showOverduePm,
+  showRecentlyClosed,
+  pendingMrItems,
+  openWoItems,
+  overduePmItems,
+  closedWoItems,
   hasActionRequired,
 } = useDashboard()
 
 const {
-  loading: kpisLoading, error: kpisError, reload: reloadKpis,
-  kpis, relocated, windowDays, windowLabel, windowRange,
+  loading: kpisLoading,
+  error: kpisError,
+  reload: reloadKpis,
+  kpis,
+  relocated,
+  windowDays,
+  windowLabel,
+  windowRange,
 } = useDashboardKpis()
 
 const { actions } = useQuickActions()
@@ -53,7 +85,9 @@ function refreshAll() {
       <div class="page-header">
         <div class="page-heading">
           <h1 class="page-title">Maintenance Control Center</h1>
-          <p class="page-subtitle">Central hub for scheduling, operations status, and asset reliability statistics.</p>
+          <p class="page-subtitle">
+            Central hub for scheduling, operations status, and asset reliability statistics.
+          </p>
         </div>
         <div class="page-actions">
           <span v-if="windowLabel" class="dashboard-window-note">
@@ -82,9 +116,24 @@ function refreshAll() {
               <div class="kpi-group">
                 <p class="kpi-group-label kpi-group-label-reliability">Reliability Performance</p>
                 <div class="kpi-grid-3 kpi-accent-reliability">
-                  <KpiTile :icon="Activity" title="MTBF" :value="fmtKpiDays(kpis.mtbf.days)" subtitle="Mean time between failures" />
-                  <KpiTile :icon="Timer" title="MTTR" :value="fmtKpiHours(kpis.mttr.hours)" subtitle="Mean time to repair" />
-                  <KpiTile :icon="TriangleAlert" title="Failure Rate" :value="kpis.failure_rate.failures" :subtitle="`${kpis.failure_rate.per_day.toFixed(3)}/day`" />
+                  <KpiTile
+                    :icon="Activity"
+                    title="MTBF"
+                    :value="fmtKpiDays(kpis.mtbf.days)"
+                    subtitle="Mean time between failures"
+                  />
+                  <KpiTile
+                    :icon="Timer"
+                    title="MTTR"
+                    :value="fmtKpiHours(kpis.mttr.hours)"
+                    subtitle="Mean time to repair"
+                  />
+                  <KpiTile
+                    :icon="TriangleAlert"
+                    title="Failure Rate"
+                    :value="kpis.failure_rate.failures"
+                    :subtitle="`${kpis.failure_rate.per_day.toFixed(3)}/day`"
+                  />
                 </div>
               </div>
 
@@ -92,18 +141,37 @@ function refreshAll() {
               <div class="kpi-group">
                 <p class="kpi-group-label kpi-group-label-process">Process Efficiency</p>
                 <div class="kpi-grid-3 kpi-accent-process">
-                  <KpiTile :icon="ShieldCheck" title="PM Compliance" :value="fmtKpiPercent(kpis.pm_compliance.percentage)" :subtitle="`${kpis.pm_compliance.compliant} / ${kpis.pm_compliance.total} on time`" />
-                  <KpiTile :icon="FileClock" title="Avg MR Duration" :value="fmtKpiHours(kpis.avg_mr_duration.hours)" subtitle="Created → resolved" />
-                  <KpiTile :icon="ClipboardCheck" title="Avg WO Duration" :value="fmtKpiHours(kpis.avg_wo_duration.hours)" subtitle="Created → closed" />
+                  <KpiTile
+                    :icon="ShieldCheck"
+                    title="PM Compliance"
+                    :value="fmtKpiPercent(kpis.pm_compliance.percentage)"
+                    :subtitle="`${kpis.pm_compliance.compliant} / ${kpis.pm_compliance.total} on time`"
+                  />
+                  <KpiTile
+                    :icon="FileClock"
+                    title="Avg MR Duration"
+                    :value="fmtKpiHours(kpis.avg_mr_duration.hours)"
+                    subtitle="Created → resolved"
+                  />
+                  <KpiTile
+                    :icon="ClipboardCheck"
+                    title="Avg WO Duration"
+                    :value="fmtKpiHours(kpis.avg_wo_duration.hours)"
+                    subtitle="Created → closed"
+                  />
                 </div>
               </div>
             </section>
 
             <!-- ── Detailed Data Lists Grid ─────────────────────────── -->
-            <div v-if="dashError && !dashData" class="error-state" role="alert">{{ dashError }}</div>
+            <div v-if="dashError && !dashData" class="error-state" role="alert">
+              {{ dashError }}
+            </div>
 
             <div
-              v-else-if="dashData && (hasActionRequired || showRecentlyClosed || relocated.length > 0)"
+              v-else-if="
+                dashData && (hasActionRequired || showRecentlyClosed || relocated.length > 0)
+              "
               :class="[hasActionRequired ? 'dashboard-grid-redesigned' : 'dashboard-grid-stacked']"
             >
               <!-- Column 1: Action Required -->
@@ -112,11 +180,19 @@ function refreshAll() {
                 <div v-if="showPendingMr" class="data-card">
                   <div class="data-card-header">
                     <h2 class="data-card-title">Pending Maintenance Requests</h2>
-                    <span class="data-card-count">{{ dashData.summary.pending_maintenance_requests ?? 0 }}</span>
+                    <span class="data-card-count">{{
+                      dashData.summary.pending_maintenance_requests ?? 0
+                    }}</span>
                   </div>
                   <div class="data-card-content">
-                    <div v-if="pendingMrItems.length === 0" class="widget-empty">No pending requests.</div>
+                    <div v-if="pendingMrItems.length === 0" class="widget-empty">
+                      No pending requests.
+                    </div>
                     <div v-else class="widget-list">
+                      <div class="widget-list-header">
+                        <span>Request / Asset</span>
+                        <span>Priority</span>
+                      </div>
                       <RouterLink
                         v-for="mr in pendingMrItems"
                         :key="mr.id"
@@ -124,11 +200,17 @@ function refreshAll() {
                         :class="['widget-list-item', 'widget-item-pending-mr']"
                       >
                         <span class="widget-item-main">
-                          <span class="widget-item-primary">{{ mr.number }} — {{ mr.asset.name }}</span>
-                          <span class="widget-item-secondary">{{ mr.created_by?.name ?? '—' }} · {{ fmtDate(mr.created_at) }}</span>
+                          <span class="widget-item-primary"
+                            >{{ mr.number }} — {{ mr.asset.name }}</span
+                          >
+                          <span class="widget-item-secondary"
+                            >{{ mr.created_by?.name ?? '—' }} · {{ fmtDate(mr.created_at) }}</span
+                          >
                         </span>
                         <span class="widget-item-meta">
-                          <span :class="priorityClass(mr.priority)">{{ priorityLabel(mr.priority) }}</span>
+                          <span :class="priorityClass(mr.priority)">{{
+                            priorityLabel(mr.priority)
+                          }}</span>
                         </span>
                       </RouterLink>
                     </div>
@@ -139,11 +221,19 @@ function refreshAll() {
                 <div v-if="showOpenWo" class="data-card">
                   <div class="data-card-header">
                     <h2 class="data-card-title">Open Work Orders</h2>
-                    <span class="data-card-count">{{ dashData.summary.open_work_orders ?? 0 }}</span>
+                    <span class="data-card-count">{{
+                      dashData.summary.open_work_orders ?? 0
+                    }}</span>
                   </div>
                   <div class="data-card-content">
-                    <div v-if="openWoItems.length === 0" class="widget-empty">No open work orders.</div>
+                    <div v-if="openWoItems.length === 0" class="widget-empty">
+                      No open work orders.
+                    </div>
                     <div v-else class="widget-list">
+                      <div class="widget-list-header">
+                        <span>Work Order / Asset</span>
+                        <span>Status</span>
+                      </div>
                       <RouterLink
                         v-for="wo in openWoItems"
                         :key="wo.id"
@@ -151,11 +241,17 @@ function refreshAll() {
                         :class="['widget-list-item', 'widget-item-open-wo']"
                       >
                         <span class="widget-item-main">
-                          <span class="widget-item-primary">{{ wo.number }} — {{ wo.asset.name }}</span>
-                          <span class="widget-item-secondary">{{ wo.assigned_to?.name ?? 'Unassigned' }}</span>
+                          <span class="widget-item-primary"
+                            >{{ wo.number }} — {{ wo.asset.name }}</span
+                          >
+                          <span class="widget-item-secondary">{{
+                            wo.assigned_to?.name ?? 'Unassigned'
+                          }}</span>
                         </span>
                         <span class="widget-item-meta">
-                          <span :class="woStatusClass(wo.status)">{{ woStatusLabel(wo.status) }}</span>
+                          <span :class="woStatusClass(wo.status)">{{
+                            woStatusLabel(wo.status)
+                          }}</span>
                         </span>
                       </RouterLink>
                     </div>
@@ -166,11 +262,19 @@ function refreshAll() {
                 <div v-if="showOverduePm" class="data-card">
                   <div class="data-card-header">
                     <h2 class="data-card-title">Overdue PM Assignments</h2>
-                    <span class="data-card-count">{{ dashData.summary.overdue_pm_assignments ?? 0 }}</span>
+                    <span class="data-card-count">{{
+                      dashData.summary.overdue_pm_assignments ?? 0
+                    }}</span>
                   </div>
                   <div class="data-card-content">
-                    <div v-if="overduePmItems.length === 0" class="widget-empty">No overdue PM assignments.</div>
+                    <div v-if="overduePmItems.length === 0" class="widget-empty">
+                      No overdue PM assignments.
+                    </div>
                     <div v-else class="widget-list">
+                      <div class="widget-list-header">
+                        <span>Asset / PM Rule</span>
+                        <span>Status</span>
+                      </div>
                       <RouterLink
                         v-for="a in overduePmItems"
                         :key="a.id"
@@ -179,10 +283,14 @@ function refreshAll() {
                       >
                         <span class="widget-item-main">
                           <span class="widget-item-primary">{{ a.asset?.name }}</span>
-                          <span class="widget-item-secondary">{{ a.rule.name }} · Due {{ pmDueLabel(a) }}</span>
+                          <span class="widget-item-secondary"
+                            >{{ a.rule.name }} · Due {{ pmDueLabel(a) }}</span
+                          >
                         </span>
                         <span class="widget-item-meta">
-                          <span :class="pmStatusClass(a.pm_status)">{{ pmStatusLabel(a.pm_status) }}</span>
+                          <span :class="pmStatusClass(a.pm_status)">{{
+                            pmStatusLabel(a.pm_status)
+                          }}</span>
                         </span>
                       </RouterLink>
                     </div>
@@ -203,6 +311,10 @@ function refreshAll() {
                       No asset relocations in the last {{ windowDays }} days.
                     </div>
                     <div v-else class="widget-list">
+                      <div class="widget-list-header">
+                        <span>Asset / Route</span>
+                        <span>Relocated At</span>
+                      </div>
                       <RouterLink
                         v-for="item in relocated"
                         :key="item.id"
@@ -218,7 +330,9 @@ function refreshAll() {
                           </span>
                         </span>
                         <span class="widget-item-meta">
-                          <span class="widget-item-secondary">{{ fmtDateTime(item.effective_at) }}</span>
+                          <span class="widget-item-secondary">{{
+                            fmtDateTime(item.effective_at)
+                          }}</span>
                         </span>
                       </RouterLink>
                     </div>
@@ -229,11 +343,19 @@ function refreshAll() {
                 <div v-if="showRecentlyClosed" class="data-card">
                   <div class="data-card-header">
                     <h2 class="data-card-title">Recently Closed Work Orders</h2>
-                    <span class="data-card-count">{{ dashData.summary.recently_closed_work_orders ?? 0 }}</span>
+                    <span class="data-card-count">{{
+                      dashData.summary.recently_closed_work_orders ?? 0
+                    }}</span>
                   </div>
                   <div class="data-card-content">
-                    <div v-if="closedWoItems.length === 0" class="widget-empty">No work orders closed in the last 30 days.</div>
+                    <div v-if="closedWoItems.length === 0" class="widget-empty">
+                      No work orders closed in the last 30 days.
+                    </div>
                     <div v-else class="widget-list">
+                      <div class="widget-list-header">
+                        <span>Work Order / Asset</span>
+                        <span>Closed Date</span>
+                      </div>
                       <RouterLink
                         v-for="wo in closedWoItems"
                         :key="wo.id"
@@ -241,11 +363,17 @@ function refreshAll() {
                         :class="['widget-list-item', 'widget-item-closed-wo']"
                       >
                         <span class="widget-item-main">
-                          <span class="widget-item-primary">{{ wo.number }} — {{ wo.asset.name }}</span>
-                          <span class="widget-item-secondary">{{ wo.assigned_to?.name ?? 'Unassigned' }}</span>
+                          <span class="widget-item-primary"
+                            >{{ wo.number }} — {{ wo.asset.name }}</span
+                          >
+                          <span class="widget-item-secondary">{{
+                            wo.assigned_to?.name ?? 'Unassigned'
+                          }}</span>
                         </span>
                         <span class="widget-item-meta">
-                          <span class="widget-item-secondary">Closed {{ fmtDate(wo.closed_at) }}</span>
+                          <span class="widget-item-secondary"
+                            >Closed {{ fmtDate(wo.closed_at) }}</span
+                          >
                         </span>
                       </RouterLink>
                     </div>

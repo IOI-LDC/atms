@@ -136,16 +136,28 @@ export function usePmRules() {
    */
   async function createRulesBatch(
     payloads: PmRulePayload[],
-  ): Promise<{ index: number; ok: boolean; errors?: Record<string, string[]>; message?: string }[]> {
+  ): Promise<
+    { index: number; ok: boolean; errors?: Record<string, string[]>; message?: string }[]
+  > {
     saving.value = true
-    const results: { index: number; ok: boolean; errors?: Record<string, string[]>; message?: string }[] = []
+    const results: {
+      index: number
+      ok: boolean
+      errors?: Record<string, string[]>
+      message?: string
+    }[] = []
     for (let i = 0; i < payloads.length; i++) {
       try {
         await api.post('/pm-rules', payloads[i])
         results.push({ index: i, ok: true })
       } catch (e) {
         if (e instanceof ApiError) {
-          results.push({ index: i, ok: false, errors: e.validationErrors ?? undefined, message: e.message })
+          results.push({
+            index: i,
+            ok: false,
+            errors: e.validationErrors ?? undefined,
+            message: e.message,
+          })
         } else {
           results.push({ index: i, ok: false, message: 'Failed to create rule.' })
         }
@@ -202,7 +214,11 @@ export function usePmRules() {
   // ── Evaluate all active assignments ─────────────────────────────────────────
   const evaluating = ref(false)
 
-  async function evaluateAll(): Promise<{ ok: boolean; message?: string; result?: EvaluateAllResult }> {
+  async function evaluateAll(): Promise<{
+    ok: boolean
+    message?: string
+    result?: EvaluateAllResult
+  }> {
     evaluating.value = true
     try {
       const res = await api.post<EvaluateAllResult>('/pm-rules/evaluate-all')
@@ -224,7 +240,9 @@ export function usePmRules() {
     assignmentsLoading.value = true
     assignmentsError.value = null
     try {
-      const params: Record<string, string | number | boolean> = opts.showInactive ? { is_active: 'all' } : {}
+      const params: Record<string, string | number | boolean> = opts.showInactive
+        ? { is_active: 'all' }
+        : {}
       assignments.value = await fetchList<AssetPmAssignment>(
         `/assets/${assetId}/pm-assignments`,
         params,
@@ -253,7 +271,10 @@ export function usePmRules() {
     }
   }
 
-  async function deactivateAssignment(assetId: number, assignmentId: number): Promise<ActionResult> {
+  async function deactivateAssignment(
+    assetId: number,
+    assignmentId: number,
+  ): Promise<ActionResult> {
     acting.value = true
     try {
       await api.post(`/assets/${assetId}/pm-assignments/${assignmentId}/deactivate`)
@@ -266,7 +287,10 @@ export function usePmRules() {
     }
   }
 
-  async function reactivateAssignment(assetId: number, assignmentId: number): Promise<ActionResult> {
+  async function reactivateAssignment(
+    assetId: number,
+    assignmentId: number,
+  ): Promise<ActionResult> {
     acting.value = true
     try {
       await api.post(`/assets/${assetId}/pm-assignments/${assignmentId}/reactivate`)
@@ -296,15 +320,40 @@ export function usePmRules() {
 
   return {
     // templates
-    rules, rulesLoading, rulesError, loadRules, loadActiveTemplates,
-    readingTypes, loadReadingTypes,
-    rule, ruleLoading, ruleError, notFound, forbidden, loadRule,
-    mrHistory, mrHistoryLoading, loadMrHistory,
-    saving, validationErrors, createRule, createRulesBatch, updateRule,
-    acting, deactivateRule, reactivateRule,
-    evaluating, evaluateAll,
+    rules,
+    rulesLoading,
+    rulesError,
+    loadRules,
+    loadActiveTemplates,
+    readingTypes,
+    loadReadingTypes,
+    rule,
+    ruleLoading,
+    ruleError,
+    notFound,
+    forbidden,
+    loadRule,
+    mrHistory,
+    mrHistoryLoading,
+    loadMrHistory,
+    saving,
+    validationErrors,
+    createRule,
+    createRulesBatch,
+    updateRule,
+    acting,
+    deactivateRule,
+    reactivateRule,
+    evaluating,
+    evaluateAll,
     // assignments
-    assignments, assignmentsLoading, assignmentsError, loadAssignments,
-    assignRule, deactivateAssignment, reactivateAssignment, evaluateAssignment,
+    assignments,
+    assignmentsLoading,
+    assignmentsError,
+    loadAssignments,
+    assignRule,
+    deactivateAssignment,
+    reactivateAssignment,
+    evaluateAssignment,
   }
 }

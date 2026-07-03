@@ -35,9 +35,12 @@ export function formatDayInterval(days: number): string {
 export function pmScheduleText(source: PmRule | AssetPmAssignment): string {
   // Normalise: an assignment carries its template under `rule`; a template has top-level fields.
   const rule = 'rule' in source ? source.rule : source
-  const datePart = rule.interval_days != null ? `Every ${formatDayInterval(rule.interval_days)}` : null
+  const datePart =
+    rule.interval_days != null ? `Every ${formatDayInterval(rule.interval_days)}` : null
   const readingPart =
-    rule.interval_reading != null ? `Every ${rule.interval_reading} ${rule.usage_reading_type?.name ?? 'Reading'}` : null
+    rule.interval_reading != null
+      ? `Every ${rule.interval_reading} ${rule.usage_reading_type?.name ?? 'Reading'}`
+      : null
 
   switch (rule.trigger_type) {
     case 'date':

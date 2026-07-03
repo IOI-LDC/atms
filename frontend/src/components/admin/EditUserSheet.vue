@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -73,7 +81,12 @@ function handleConfirm() {
 
           <div class="form-field">
             <Label for="edit-user-email">Email <span class="field-required">*</span></Label>
-            <Input id="edit-user-email" v-model="email" type="email" placeholder="email@example.com" />
+            <Input
+              id="edit-user-email"
+              v-model="email"
+              type="email"
+              placeholder="email@example.com"
+            />
             <p v-if="validationErrors?.email" class="form-error">
               {{ validationErrors.email[0] }}
             </p>
@@ -83,17 +96,19 @@ function handleConfirm() {
             <Label for="edit-user-role">Role <span class="field-required">*</span></Label>
             <Select
               :model-value="roleId"
-              @update:model-value="(v) => { roleId = v ? String(v) : '' }"
+              @update:model-value="
+                (v) => {
+                  roleId = v ? String(v) : ''
+                }
+              "
             >
               <SelectTrigger id="edit-user-role">
                 <SelectValue placeholder="Select a role…" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem
-                  v-for="role in roles"
-                  :key="role.id"
-                  :value="String(role.id)"
-                >{{ role.name }}</SelectItem>
+                <SelectItem v-for="role in roles" :key="role.id" :value="String(role.id)">{{
+                  role.name
+                }}</SelectItem>
               </SelectContent>
             </Select>
             <p v-if="validationErrors?.role_id" class="form-error">

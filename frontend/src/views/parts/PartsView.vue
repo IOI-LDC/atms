@@ -12,7 +12,9 @@ const router = useRouter()
 
 const { all } = useParts()
 
-onMounted(() => { all.load() })
+onMounted(() => {
+  all.load()
+})
 
 // Category options are live data (not hardcoded) — derived from whatever the
 // backend actually returns, so this stays correct once real ERP categories
@@ -29,7 +31,6 @@ function goDetail(payload: { row: Part }) {
 <template>
   <AppLayout>
     <div class="page-section">
-
       <div class="page-header">
         <div class="page-heading">
           <h1 class="page-title">Parts Reference</h1>
@@ -47,7 +48,6 @@ function goDetail(payload: { row: Part }) {
         @row-click="goDetail"
       >
         <template #cell="{ column, row }">
-
           <span v-if="column.field === 'erp_part_code'" class="atms-erp-code">
             {{ row.erp_part_code }}
           </span>
@@ -67,10 +67,8 @@ function goDetail(payload: { row: Part }) {
           <span v-else-if="column.field === 'is_active'" :class="partStatusClass(row.is_active)">
             {{ partStatusLabel(row.is_active) }}
           </span>
-
         </template>
       </AppDataTable>
-
     </div>
   </AppLayout>
 </template>

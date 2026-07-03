@@ -31,12 +31,24 @@ export function useWorkOrders() {
   // Each tab fetches its slice once (client mode); the table sorts/filters/
   // searches in memory. "Active" (open OR in_progress) is split into Open +
   // In Progress because the backend accepts only a single exact-match status.
-  const myWorkOrders = useFetchList<WorkOrder>('/work-orders', { assigned_to: me, sort: 'created_at:desc' })
-  const all         = useFetchList<WorkOrder>('/work-orders', { sort: 'created_at:desc' })
-  const open        = useFetchList<WorkOrder>('/work-orders', { status: 'open', sort: 'created_at:desc' })
-  const inProgress  = useFetchList<WorkOrder>('/work-orders', { status: 'in_progress', sort: 'created_at:desc' })
-  const completed   = useFetchList<WorkOrder>('/work-orders', { status: 'completed', sort: 'created_at:desc' })
-  const closed      = useFetchList<WorkOrder>('/work-orders', { status: 'closed', sort: 'created_at:desc' })
+  const myWorkOrders = useFetchList<WorkOrder>('/work-orders', {
+    assigned_to: me,
+    sort: 'created_at:desc',
+  })
+  const all = useFetchList<WorkOrder>('/work-orders', { sort: 'created_at:desc' })
+  const open = useFetchList<WorkOrder>('/work-orders', { status: 'open', sort: 'created_at:desc' })
+  const inProgress = useFetchList<WorkOrder>('/work-orders', {
+    status: 'in_progress',
+    sort: 'created_at:desc',
+  })
+  const completed = useFetchList<WorkOrder>('/work-orders', {
+    status: 'completed',
+    sort: 'created_at:desc',
+  })
+  const closed = useFetchList<WorkOrder>('/work-orders', {
+    status: 'closed',
+    sort: 'created_at:desc',
+  })
 
   return { myWorkOrders, all, open, inProgress, completed, closed }
 }

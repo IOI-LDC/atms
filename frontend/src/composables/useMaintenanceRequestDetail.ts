@@ -22,28 +22,31 @@ export function useMaintenanceRequestDetail() {
   const auth = useAuthStore()
 
   // ── Record + load state ────────────────────────────────────────────────────
-  const record    = ref<MaintenanceRequest | null>(null)
-  const loading   = ref(false)
-  const error     = ref<string | null>(null)
-  const notFound  = ref(false)
+  const record = ref<MaintenanceRequest | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const notFound = ref(false)
   const forbidden = ref(false)
 
   // ── Edit state ──────────────────────────────────────────────────────────────
-  const editing   = ref(false)
-  const saving    = ref(false)
+  const editing = ref(false)
+  const saving = ref(false)
   const editError = ref<string | null>(null)
   // priority is a plain string (not the Priority union) — the edit Select is
   // bound to the live, Admin-configurable maintenance_priorities list.
-  const draft     = ref<{ description: string; priority: string }>({ description: '', priority: 'medium' })
+  const draft = ref<{ description: string; priority: string }>({
+    description: '',
+    priority: 'medium',
+  })
   const validationErrors = ref<Record<string, string[]> | null>(null)
 
   // ── Attachments ─────────────────────────────────────────────────────────────
-  const attachments       = ref<Attachment[]>([])
+  const attachments = ref<Attachment[]>([])
   const attachmentsLoading = ref(false)
   // Backend policy currently authorises attachment deletion for Admin/Manager
   // only (any attachment, any status). Owner-deletes-while-pending is a pending
   // backend enhancement — keep this gate aligned with what the API allows.
-  const deleteAttachmentTarget  = ref<Attachment | null>(null)
+  const deleteAttachmentTarget = ref<Attachment | null>(null)
   const deleteAttachmentLoading = ref(false)
   // Per-attachment, policy-driven. Prefer the backend `can_delete` flag; fall
   // back to Admin/Manager until that flag ships so behaviour is unchanged.
@@ -52,30 +55,36 @@ export function useMaintenanceRequestDetail() {
   }
 
   // ── Workflow-action state ───────────────────────────────────────────────────
-  const approveOpen    = ref(false)
+  const approveOpen = ref(false)
   const approveLoading = ref(false)
   // Optional technician assignment performed at approval time (WO-02): the WO is
   // created by /approve, then assigned in a follow-up call. null = leave the new
   // work order unassigned.
-  const approveTechnicians        = ref<Assignee[]>([])
+  const approveTechnicians = ref<Assignee[]>([])
   const approveTechniciansLoading = ref(false)
-  const selectedApproveTechId     = ref<number | null>(null)
-  const rejectOpen     = ref(false)
-  const rejectLoading  = ref(false)
-  const rejectReason   = ref('')
-  const cancelOpen     = ref(false)
-  const cancelLoading  = ref(false)
-  const cancelReason   = ref('')
+  const selectedApproveTechId = ref<number | null>(null)
+  const rejectOpen = ref(false)
+  const rejectLoading = ref(false)
+  const rejectReason = ref('')
+  const cancelOpen = ref(false)
+  const cancelLoading = ref(false)
+  const cancelReason = ref('')
 
   // ── Derived ─────────────────────────────────────────────────────────────────
-  const isPending  = computed(() => record.value?.status === 'pending_review')
+  const isPending = computed(() => record.value?.status === 'pending_review')
   const isTerminal = computed(() => !!record.value && !isPending.value)
-  const isOwnRequest = computed(() => !!record.value?.created_by && record.value.created_by.id === auth.user?.id)
+  const isOwnRequest = computed(
+    () => !!record.value?.created_by && record.value.created_by.id === auth.user?.id,
+  )
 
-  const canEdit    = computed(() => !!record.value && isPending.value && (auth.isAdminOrManager || isOwnRequest.value))
+  const canEdit = computed(
+    () => !!record.value && isPending.value && (auth.isAdminOrManager || isOwnRequest.value),
+  )
   const canApprove = computed(() => !!record.value && isPending.value && auth.isAdminOrManager)
-  const canReject  = computed(() => !!record.value && isPending.value && auth.isAdminOrManager)
-  const canCancel  = computed(() => !!record.value && isPending.value && (auth.isAdminOrManager || isOwnRequest.value))
+  const canReject = computed(() => !!record.value && isPending.value && auth.isAdminOrManager)
+  const canCancel = computed(
+    () => !!record.value && isPending.value && (auth.isAdminOrManager || isOwnRequest.value),
+  )
 
   // ── Load ────────────────────────────────────────────────────────────────────
   async function load(id: number | string) {
@@ -172,7 +181,8 @@ export function useMaintenanceRequestDetail() {
     } catch (e) {
       if (e instanceof ApiError) {
         if (e.validationErrors) validationErrors.value = e.validationErrors
-        else if (e.status === 403) editError.value = 'You do not have permission to edit this request.'
+        else if (e.status === 403)
+          editError.value = 'You do not have permission to edit this request.'
         else editError.value = e.message
       } else {
         editError.value = 'Failed to save changes.'
@@ -188,16 +198,28 @@ export function useMaintenanceRequestDetail() {
     approveOpen.value = true
     void loadApproveTechnicians()
   }
-  function openReject() { rejectReason.value = ''; rejectOpen.value = true }
-  function openCancel() { cancelReason.value = ''; cancelOpen.value = true }
+  function openReject() {
+    rejectReason.value = ''
+    rejectOpen.value = true
+  }
+  function openCancel() {
+    cancelReason.value = ''
+    cancelOpen.value = true
+  }
 
   async function loadApproveTechnicians() {
     if (approveTechnicians.value.length > 0 || approveTechniciansLoading.value) return
     approveTechniciansLoading.value = true
     try {
-      const res = await api.get<{ data: { id: number; name: string; role?: { code: string }; is_active: boolean }[] }>('/admin/users')
+      const res = await api.get<{
+        data: { id: number; name: string; role?: { code: string }; is_active: boolean }[]
+      }>('/admin/users')
       approveTechnicians.value = (res.data ?? [])
-        .filter((u) => u.is_active && (u.role?.code === 'technician' || u.role?.code === 'maintenance_manager'))
+        .filter(
+          (u) =>
+            u.is_active &&
+            (u.role?.code === 'technician' || u.role?.code === 'maintenance_manager'),
+        )
         .map((u) => ({ id: u.id, name: u.name, role: u.role?.code ?? '' }))
     } catch {
       approveTechnicians.value = []
@@ -220,9 +242,11 @@ export function useMaintenanceRequestDetail() {
       )
       approveOpen.value = false
       await load(record.value.id)
-      toast.success(assigneeId
-        ? 'Request approved — work order created and assigned.'
-        : 'Request approved — work order created.')
+      toast.success(
+        assigneeId
+          ? 'Request approved — work order created and assigned.'
+          : 'Request approved — work order created.',
+      )
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to approve request.')
     } finally {
@@ -234,7 +258,9 @@ export function useMaintenanceRequestDetail() {
     if (!record.value || !rejectReason.value.trim()) return
     rejectLoading.value = true
     try {
-      await api.post(`/maintenance-requests/${record.value.id}/reject`, { reason: rejectReason.value.trim() })
+      await api.post(`/maintenance-requests/${record.value.id}/reject`, {
+        reason: rejectReason.value.trim(),
+      })
       toast.success('Request rejected.')
       rejectOpen.value = false
       await load(record.value.id)
@@ -249,7 +275,9 @@ export function useMaintenanceRequestDetail() {
     if (!record.value || !cancelReason.value.trim()) return
     cancelLoading.value = true
     try {
-      await api.post(`/maintenance-requests/${record.value.id}/cancel`, { reason: cancelReason.value.trim() })
+      await api.post(`/maintenance-requests/${record.value.id}/cancel`, {
+        reason: cancelReason.value.trim(),
+      })
       toast.success('Request cancelled.')
       cancelOpen.value = false
       await load(record.value.id)
@@ -261,17 +289,50 @@ export function useMaintenanceRequestDetail() {
   }
 
   return {
-    record, loading, error, notFound, forbidden,
-    editing, saving, editError, draft, validationErrors,
-    attachments, attachmentsLoading,
-    deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachment,
-    openDeleteAttachment, closeDeleteAttachment, doDeleteAttachment,
-    isPending, isTerminal,
-    canEdit, canApprove, canReject, canCancel,
-    load, startEdit, cancelEdit, saveEdit,
-    approveOpen, approveLoading, openApprove, doApprove,
-    approveTechnicians, approveTechniciansLoading, selectedApproveTechId,
-    rejectOpen, rejectLoading, rejectReason, openReject, doReject,
-    cancelOpen, cancelLoading, cancelReason, openCancel, doCancel,
+    record,
+    loading,
+    error,
+    notFound,
+    forbidden,
+    editing,
+    saving,
+    editError,
+    draft,
+    validationErrors,
+    attachments,
+    attachmentsLoading,
+    deleteAttachmentTarget,
+    deleteAttachmentLoading,
+    canDeleteAttachment,
+    openDeleteAttachment,
+    closeDeleteAttachment,
+    doDeleteAttachment,
+    isPending,
+    isTerminal,
+    canEdit,
+    canApprove,
+    canReject,
+    canCancel,
+    load,
+    startEdit,
+    cancelEdit,
+    saveEdit,
+    approveOpen,
+    approveLoading,
+    openApprove,
+    doApprove,
+    approveTechnicians,
+    approveTechniciansLoading,
+    selectedApproveTechId,
+    rejectOpen,
+    rejectLoading,
+    rejectReason,
+    openReject,
+    doReject,
+    cancelOpen,
+    cancelLoading,
+    cancelReason,
+    openCancel,
+    doCancel,
   }
 }

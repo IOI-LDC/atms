@@ -3,9 +3,9 @@
 export function mrStatusClass(s: string): string {
   const m: Record<string, string> = {
     pending_review: 'status-badge status-pending',
-    converted:      'status-badge status-converted',
-    rejected:       'status-badge status-rejected',
-    cancelled:      'status-badge status-cancelled',
+    converted: 'status-badge status-converted',
+    rejected: 'status-badge status-rejected',
+    cancelled: 'status-badge status-cancelled',
   }
   return m[s] ?? 'status-badge'
 }
@@ -13,31 +13,31 @@ export function mrStatusClass(s: string): string {
 export function mrStatusLabel(s: string): string {
   const m: Record<string, string> = {
     pending_review: 'Pending Review',
-    converted:      'Converted to Work Order',
-    rejected:       'Rejected',
-    cancelled:      'Cancelled',
+    converted: 'Converted to Work Order',
+    rejected: 'Rejected',
+    cancelled: 'Cancelled',
   }
   return m[s] ?? s
 }
 
 export function woStatusClass(s: string): string {
   const m: Record<string, string> = {
-    open:        'status-badge status-open',
+    open: 'status-badge status-open',
     in_progress: 'status-badge status-in-progress',
-    completed:   'status-badge status-completed',
-    closed:      'status-badge status-closed',
-    cancelled:   'status-badge status-cancelled',
+    completed: 'status-badge status-completed',
+    closed: 'status-badge status-closed',
+    cancelled: 'status-badge status-cancelled',
   }
   return m[s] ?? 'status-badge'
 }
 
 export function woStatusLabel(s: string): string {
   const m: Record<string, string> = {
-    open:        'Open',
+    open: 'Open',
     in_progress: 'In Progress',
-    completed:   'Completed',
-    closed:      'Closed',
-    cancelled:   'Cancelled',
+    completed: 'Completed',
+    closed: 'Closed',
+    cancelled: 'Cancelled',
   }
   return m[s] ?? s
 }
@@ -45,9 +45,9 @@ export function woStatusLabel(s: string): string {
 export function priorityClass(p: string): string {
   const m: Record<string, string> = {
     critical: 'status-badge priority-critical',
-    high:     'status-badge priority-high',
-    medium:   'status-badge priority-medium',
-    low:      'status-badge priority-low',
+    high: 'status-badge priority-high',
+    medium: 'status-badge priority-medium',
+    low: 'status-badge priority-low',
   }
   return m[p] ?? 'status-badge'
 }
@@ -68,10 +68,10 @@ export function mrTypeLabel(t: string): string {
 export function operationalStatusLabel(s: string | null | undefined): string {
   if (!s) return '—'
   const m: Record<string, string> = {
-    active:            'Active',
+    active: 'Active',
     under_maintenance: 'Under Maintenance',
-    down:              'Down',
-    inactive:          'Inactive',
+    down: 'Down',
+    inactive: 'Inactive',
   }
   return m[s] ?? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
@@ -79,12 +79,12 @@ export function operationalStatusLabel(s: string | null | undefined): string {
 export function operationalStatusClass(s: string | null | undefined): string {
   const m: Record<string, string> = {
     // active/inactive → new .status-active / .status-inactive (added to style.css)
-    active:            'status-badge status-active',
-    inactive:          'status-badge status-inactive',
+    active: 'status-badge status-active',
+    inactive: 'status-badge status-inactive',
     // under_maintenance → reuse existing amber WO badge
     under_maintenance: 'status-badge status-in-progress',
     // down → reuse existing red priority badge
-    down:              'status-badge priority-critical',
+    down: 'status-badge priority-critical',
   }
   return m[s ?? ''] ?? 'status-badge'
 }
@@ -92,7 +92,7 @@ export function operationalStatusClass(s: string | null | undefined): string {
 export function assetMaintenanceStatusLabel(s: string | null | undefined): string {
   if (!s) return '—'
   const m: Record<string, string> = {
-    enrolled:  'In maintenance program',
+    enrolled: 'In maintenance program',
     withdrawn: 'Withdrawn',
   }
   return m[s] ?? s
@@ -101,7 +101,7 @@ export function assetMaintenanceStatusLabel(s: string | null | undefined): strin
 export function assetMaintenanceStatusClass(s: string | null | undefined): string {
   // Reuses the same .status-active / .status-inactive added for operational status
   const m: Record<string, string> = {
-    enrolled:  'status-badge status-active',
+    enrolled: 'status-badge status-active',
     withdrawn: 'status-badge status-inactive',
   }
   return m[s ?? ''] ?? 'status-badge'
@@ -111,12 +111,12 @@ export function assetMaintenanceSubStatusLabel(s: string | null | undefined): st
   if (!s) return '—'
   const m: Record<string, string> = {
     installed: 'Installed',
-    ready:     'Ready',
-    lih:       'Lost in Hole',
-    dbr:       'Damaged Beyond Repair',
-    disposed:  'Disposed',
-    scrapped:  'Scrapped',
-    other:     'Other',
+    ready: 'Ready',
+    lih: 'Lost in Hole',
+    dbr: 'Damaged Beyond Repair',
+    disposed: 'Disposed',
+    scrapped: 'Scrapped',
+    other: 'Other',
   }
   return m[s] ?? s
 }
@@ -124,8 +124,8 @@ export function assetMaintenanceSubStatusLabel(s: string | null | undefined): st
 export function assetKindLabel(k: string | null | undefined): string {
   if (!k) return '—'
   const m: Record<string, string> = {
-    asset:     'Asset',
-    package:   'Package',
+    asset: 'Asset',
+    package: 'Package',
     component: 'Component',
   }
   return m[k] ?? k
@@ -134,9 +134,9 @@ export function assetKindLabel(k: string | null | undefined): string {
 export function assetKindClass(k: string | null | undefined): string {
   const m: Record<string, string> = {
     // asset → reuse existing blue WO-open badge
-    asset:     'status-badge status-open',
+    asset: 'status-badge status-open',
     // package / component → new classes (no analog exists)
-    package:   'status-badge badge-kind-package',
+    package: 'status-badge badge-kind-package',
     component: 'status-badge badge-kind-component',
   }
   return m[k ?? ''] ?? 'status-badge'
@@ -192,8 +192,12 @@ export function fmtDateTime(iso: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return '—'
   return new Intl.DateTimeFormat('en-GB', {
     timeZone: COMPANY_TIMEZONE,
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: false,
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   }).format(d)
 }
 
@@ -209,7 +213,10 @@ export function fmtKpiHours(hours: number | null | undefined): string {
   if (hours < 24) return `${hours.toFixed(1)}h`
   let d = Math.floor(hours / 24)
   let h = Math.round(hours % 24)
-  if (h === 24) { d += 1; h = 0 }
+  if (h === 24) {
+    d += 1
+    h = 0
+  }
   return h === 0 ? `${d}d` : `${d}d ${h}h`
 }
 
@@ -227,38 +234,38 @@ export function formatBytes(bytes: number): string {
 
 export function locationTypeClass(type: string | null | undefined): string {
   const m: Record<string, string> = {
-    workshop:      'location-type-badge location-type-workshop',
+    workshop: 'location-type-badge location-type-workshop',
     workshop_yard: 'location-type-badge location-type-workshop_yard',
-    yard:          'location-type-badge location-type-yard',
-    well_site:     'location-type-badge location-type-well_site',
-    rig:           'location-type-badge location-type-rig',
-    building:      'location-type-badge location-type-building',
+    yard: 'location-type-badge location-type-yard',
+    well_site: 'location-type-badge location-type-well_site',
+    rig: 'location-type-badge location-type-rig',
+    building: 'location-type-badge location-type-building',
   }
   return m[type ?? ''] ?? 'location-type-badge location-type-building'
 }
 
 export function pmStatusLabel(s: string | null | undefined): string {
   const m: Record<string, string> = {
-    ok:   'OK',
+    ok: 'OK',
     soon: 'Soon',
-    due:  'Due',
+    due: 'Due',
   }
   return m[s ?? ''] ?? '—'
 }
 
 export function pmStatusClass(s: string | null | undefined): string {
   const m: Record<string, string> = {
-    ok:   'status-badge pm-status-ok',
+    ok: 'status-badge pm-status-ok',
     soon: 'status-badge pm-status-soon',
-    due:  'status-badge pm-status-due',
+    due: 'status-badge pm-status-due',
   }
   return m[s ?? ''] ?? 'status-badge'
 }
 
 export function pmTriggerLabel(t: string | null | undefined): string {
   const m: Record<string, string> = {
-    date:            'Calendar',
-    reading:         'Usage',
+    date: 'Calendar',
+    reading: 'Usage',
     date_or_reading: 'Calendar or Usage',
   }
   return m[t ?? ''] ?? '—'
@@ -292,23 +299,23 @@ export function pmLevelClass(level: string | null | undefined): string {
 
 export function roleLabel(code: string): string {
   const m: Record<string, string> = {
-    administrator:       'Administrator',
+    administrator: 'Administrator',
     maintenance_manager: 'Maintenance Manager',
-    technician:          'Technician',
-    logistics:           'Logistics',
-    requester:           'Requester',
-    service:             'Service',
+    technician: 'Technician',
+    logistics: 'Logistics',
+    requester: 'Requester',
+    service: 'Service',
   }
   return m[code] ?? code
 }
 
 export function roleClass(code: string): string {
   const m: Record<string, string> = {
-    administrator:       'status-badge role-administrator',
+    administrator: 'status-badge role-administrator',
     maintenance_manager: 'status-badge role-maintenance-manager',
-    technician:          'status-badge role-technician',
-    logistics:           'status-badge role-logistics',
-    requester:           'status-badge role-requester',
+    technician: 'status-badge role-technician',
+    logistics: 'status-badge role-logistics',
+    requester: 'status-badge role-requester',
   }
   return m[code] ?? 'status-badge'
 }
@@ -328,12 +335,12 @@ export function userStatusClass(user: { is_active: boolean; activated_at: string
 export function locationTypeLabel(type: string | null | undefined): string {
   if (!type) return '—'
   const m: Record<string, string> = {
-    workshop:      'Workshop',
+    workshop: 'Workshop',
     workshop_yard: 'Workshop Yard',
-    yard:          'Yard',
-    well_site:     'Well Site',
-    rig:           'Rig',
-    building:      'Building',
+    yard: 'Yard',
+    well_site: 'Well Site',
+    rig: 'Rig',
+    building: 'Building',
   }
   return m[type] ?? type.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }

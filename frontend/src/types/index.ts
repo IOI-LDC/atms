@@ -9,33 +9,60 @@ export type RoleCode =
   | 'service'
 
 export type MaintenanceRequestStatus = 'pending_review' | 'rejected' | 'converted' | 'cancelled'
-export type WorkOrderStatus          = 'open' | 'in_progress' | 'completed' | 'closed' | 'cancelled'
-export type PmTriggerType            = 'date' | 'reading' | 'date_or_reading'
-export type Priority                 = 'low' | 'medium' | 'high' | 'critical'
-export type MrType                   = 'corrective' | 'preventive'
-export type MeterReadingSource       = 'user' | 'manual'
-export type ErpSyncStatus            = 'running' | 'success' | 'partial' | 'failed'
-export type AssetMaintenanceStatus   = 'enrolled' | 'withdrawn'
-export type AssetKind                = 'asset' | 'package' | 'component'
+export type WorkOrderStatus = 'open' | 'in_progress' | 'completed' | 'closed' | 'cancelled'
+export type PmTriggerType = 'date' | 'reading' | 'date_or_reading'
+export type Priority = 'low' | 'medium' | 'high' | 'critical'
+export type MrType = 'corrective' | 'preventive'
+export type MeterReadingSource = 'user' | 'manual'
+export type ErpSyncStatus = 'running' | 'success' | 'partial' | 'failed'
+export type AssetMaintenanceStatus = 'enrolled' | 'withdrawn'
+export type AssetKind = 'asset' | 'package' | 'component'
 export type AssetMaintenanceSubStatus =
-  | 'installed' | 'ready'                             // enrolled sub-statuses (component/package)
-  | 'lih' | 'dbr' | 'disposed' | 'scrapped' | 'other' // withdrawn sub-statuses
+  | 'installed'
+  | 'ready' // enrolled sub-statuses (component/package)
+  | 'lih'
+  | 'dbr'
+  | 'disposed'
+  | 'scrapped'
+  | 'other' // withdrawn sub-statuses
 export type WoFormFieldType = 'boolean' | 'numeric' | 'text'
 
 // ── Shared fragments ──────────────────────────────────────────────────────────
 
-export interface Role { id: number; code: RoleCode; name: string; description?: string }
+export interface Role {
+  id: number
+  code: RoleCode
+  name: string
+  description?: string
+}
 
 /** Minimal asset reference embedded in other resources. */
-export interface AssetRef { id: number; name: string; erp_asset_code: string; operational_status?: string }
+export interface AssetRef {
+  id: number
+  name: string
+  erp_asset_code: string
+  operational_status?: string
+}
 
 /** Minimal user reference. `email` only visible to Admin/Manager. */
-export interface UserRef { id: number; name: string; email?: string }
+export interface UserRef {
+  id: number
+  name: string
+  email?: string
+}
 
 /** A Work Order assignee candidate (active Technician or Maintenance Manager). */
-export interface Assignee { id: number; name: string; role: string }
+export interface Assignee {
+  id: number
+  name: string
+  role: string
+}
 
-export interface LocationRef { id: number; name: string; type?: string }
+export interface LocationRef {
+  id: number
+  name: string
+  type?: string
+}
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -71,14 +98,14 @@ export interface Asset {
   maintenance_sub_status: AssetMaintenanceSubStatus | null
   asset_kind: AssetKind | null
   asset_tag: string | null
-  is_booked?: boolean                     // availability marker — reserved for a Job/Project
+  is_booked?: boolean // availability marker — reserved for a Job/Project
   parent_asset_id: number | null
   child_assets_count?: number
   current_location?: LocationRef | null
-  erp_status?: string | null              // not for Requester
-  erp_last_synced_at?: string | null      // not for Requester
-  is_active?: boolean                     // Admin/Manager only
-  erp_raw_data?: Record<string, unknown>  // Admin only
+  erp_status?: string | null // not for Requester
+  erp_last_synced_at?: string | null // not for Requester
+  is_active?: boolean // Admin/Manager only
+  erp_raw_data?: Record<string, unknown> // Admin only
   created_at: string
   updated_at: string
 }
@@ -149,13 +176,13 @@ export interface MaintenanceRequest {
   created_at: string
   asset: AssetRef
   created_by?: UserRef | null
-  reviewed_by?: UserRef | null            // Admin/Manager/Viewer
-  rejection_reason?: string | null        // hidden from Logistics
-  cancellation_reason?: string | null     // hidden from Logistics
-  is_preventive?: boolean                 // Admin/Manager/Viewer
-  triggered_by_date?: boolean             // Admin/Manager/Viewer
-  triggered_by_reading?: boolean          // Admin/Manager/Viewer
-  trigger_date?: string | null            // "YYYY-MM-DD"
+  reviewed_by?: UserRef | null // Admin/Manager/Viewer
+  rejection_reason?: string | null // hidden from Logistics
+  cancellation_reason?: string | null // hidden from Logistics
+  is_preventive?: boolean // Admin/Manager/Viewer
+  triggered_by_date?: boolean // Admin/Manager/Viewer
+  triggered_by_reading?: boolean // Admin/Manager/Viewer
+  trigger_date?: string | null // "YYYY-MM-DD"
   trigger_reading_value?: string | null
   work_order?: { id: number; number: string; status: WorkOrderStatus } | null
   has_attachments?: number
@@ -178,18 +205,18 @@ export interface WorkOrder {
   description: string | null
   asset: AssetRef
   created_at: string
-  assigned_to?: UserRef | null      // Admin/Manager/Tech/Viewer
-  assigned_by?: UserRef | null      // Admin/Manager only
-  parts?: WorkOrderPart[]           // Admin/Manager/Tech/Viewer
+  assigned_to?: UserRef | null // Admin/Manager/Tech/Viewer
+  assigned_by?: UserRef | null // Admin/Manager only
+  parts?: WorkOrderPart[] // Admin/Manager/Tech/Viewer
   started_at?: string | null
   completed_at?: string | null
   completion_notes?: string | null
   closed_at?: string | null
   cancelled_at?: string | null
   cancellation_reason?: string | null
-  has_attachments?: number          // Admin/Manager/Tech
+  has_attachments?: number // Admin/Manager/Tech
   maintenance_request?: MaintenanceRequest | null
-  form?: WoFormInstance | null      // Admin/Manager/Tech — present when the WO has an attached form
+  form?: WoFormInstance | null // Admin/Manager/Tech — present when the WO has an attached form
 }
 
 // ── WO Forms ──────────────────────────────────────────────────────────────────
@@ -272,7 +299,7 @@ export interface PmRule {
   updated_at?: string
   usage_reading_type?: { id: number; name: string; unit: string } | null
   assignments?: AssetPmAssignment[]
-  created_by?: UserRef | null      // Admin/Manager only
+  created_by?: UserRef | null // Admin/Manager only
 }
 
 /** Nested rule template inside an assignment. */
@@ -313,9 +340,9 @@ export interface Attachment {
   size_bytes: number
   description: string | null
   created_at: string
-  download_url?: string            // absent for Viewer
-  uploaded_by?: UserRef | null     // Admin/Manager only
-  can_delete?: boolean             // policy-driven (AttachmentResource); true when the current user may delete
+  download_url?: string // absent for Viewer
+  uploaded_by?: UserRef | null // Admin/Manager only
+  can_delete?: boolean // policy-driven (AttachmentResource); true when the current user may delete
 }
 
 // ── Admin resources ───────────────────────────────────────────────────────────
@@ -433,7 +460,7 @@ export interface RelocatedAssetItem {
 }
 
 export interface DashboardKpiResponse {
-  window: { days: number; from: string; to: string }   // ISO 8601 bounds (UTC)
+  window: { days: number; from: string; to: string } // ISO 8601 bounds (UTC)
   kpis: {
     mtbf: { days: number | null }
     failure_rate: { failures: number; per_day: number }
@@ -469,5 +496,10 @@ export interface CursorPage<T> {
 
 // ── Mutation response wrappers ────────────────────────────────────────────────
 
-export interface MessageResponse { message: string }
-export interface DataResponse<T> { message?: string; data: T }
+export interface MessageResponse {
+  message: string
+}
+export interface DataResponse<T> {
+  message?: string
+  data: T
+}

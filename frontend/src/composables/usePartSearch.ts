@@ -9,10 +9,10 @@ import type { Part, CursorPage } from '@/types'
  * persistence concerns. Mirrors useAssetSearch.ts.
  */
 export function usePartSearch() {
-  const query   = ref('')
+  const query = ref('')
   const results = ref<Part[]>([])
-  const busy    = ref(false)
-  let   timer   = 0
+  const busy = ref(false)
+  let timer = 0
 
   /** Fetch the current page (uses `search` when set, else an unfiltered page). */
   async function fetchParts() {

@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,33 +45,44 @@ const localError = ref('')
 // backend 422 remains the backstop for races between two admins.
 const availableSubclasses = computed(() => {
   if (isEdit.value) return props.faSubclasses
-  const takenCodes = new Set(props.templates.filter((t) => t.is_active).map((t) => t.fa_subclass_code))
+  const takenCodes = new Set(
+    props.templates.filter((t) => t.is_active).map((t) => t.fa_subclass_code),
+  )
   return props.faSubclasses.filter((s) => !takenCodes.has(s.fa_subclass_code))
 })
 
-watch(() => props.open, (nowOpen) => {
-  if (!nowOpen) return
-  localError.value = ''
-  const e = props.editing
-  if (e) {
-    name.value = e.name
-    faSubclassCode.value = e.fa_subclass_code
-  } else {
-    name.value = ''
-    faSubclassCode.value = ''
-  }
-})
+watch(
+  () => props.open,
+  (nowOpen) => {
+    if (!nowOpen) return
+    localError.value = ''
+    const e = props.editing
+    if (e) {
+      name.value = e.name
+      faSubclassCode.value = e.fa_subclass_code
+    } else {
+      name.value = ''
+      faSubclassCode.value = ''
+    }
+  },
+)
 
 function handleSave() {
   localError.value = ''
-  if (!name.value.trim()) { localError.value = 'Template name is required.'; return }
+  if (!name.value.trim()) {
+    localError.value = 'Template name is required.'
+    return
+  }
 
   if (isEdit.value) {
     emit('save', { name: name.value.trim() })
     return
   }
 
-  if (!faSubclassCode.value.trim()) { localError.value = 'Asset class is required.'; return }
+  if (!faSubclassCode.value.trim()) {
+    localError.value = 'Asset class is required.'
+    return
+  }
   emit('save', { name: name.value.trim(), fa_subclass_code: faSubclassCode.value.trim() })
 }
 
@@ -77,7 +96,8 @@ const title = computed(() => (isEdit.value ? 'Edit WO Form Template' : 'Create W
         <SheetHeader>
           <SheetTitle>{{ title }}</SheetTitle>
           <SheetDescription>
-            Define the WO Form for one asset class. Manage its fields from the "Manage Fields" action after saving.
+            Define the WO Form for one asset class. Manage its fields from the "Manage Fields"
+            action after saving.
           </SheetDescription>
         </SheetHeader>
       </div>
@@ -96,9 +116,15 @@ const title = computed(() => (isEdit.value ? 'Edit WO Form Template' : 'Create W
             <Label for="wo-form-subclass">Asset Class <span class="field-required">*</span></Label>
             <p v-if="isEdit" class="detail-field-value">{{ faSubclassLabel(faSubclassCode) }}</p>
             <Select v-else v-model="faSubclassCode">
-              <SelectTrigger id="wo-form-subclass"><SelectValue placeholder="Select an asset class…" /></SelectTrigger>
+              <SelectTrigger id="wo-form-subclass"
+                ><SelectValue placeholder="Select an asset class…"
+              /></SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="s in availableSubclasses" :key="s.fa_subclass_code" :value="s.fa_subclass_code">
+                <SelectItem
+                  v-for="s in availableSubclasses"
+                  :key="s.fa_subclass_code"
+                  :value="s.fa_subclass_code"
+                >
                   {{ faSubclassLabel(s.fa_subclass_code) }}
                 </SelectItem>
               </SelectContent>
@@ -117,7 +143,7 @@ const title = computed(() => (isEdit.value ? 'Edit WO Form Template' : 'Create W
       <div class="create-sheet-footer">
         <Button variant="outline" :disabled="saving" @click="emit('close')">Cancel</Button>
         <Button :disabled="saving" @click="handleSave">
-          {{ saving ? 'Saving…' : (isEdit ? 'Save Changes' : 'Create Template') }}
+          {{ saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Template' }}
         </Button>
       </div>
     </SheetContent>

@@ -4,7 +4,12 @@ import AppDataTable from '@/components/app/AppDataTable.vue'
 import LocationForm from '@/components/locations/LocationForm.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { useLocations } from '@/composables/useLocations'
 import { toast } from 'vue-sonner'
@@ -14,18 +19,23 @@ import type { AppColumnDef } from '@/lib/appTable'
 import type { Location } from '@/types'
 
 const {
-  locations, locationsLoading, loadLocations,
-  saving, validationErrors,
-  createLocation, updateLocation, toggleLocationActive,
+  locations,
+  locationsLoading,
+  loadLocations,
+  saving,
+  validationErrors,
+  createLocation,
+  updateLocation,
+  toggleLocationActive,
 } = useLocations()
 
 // ── Column definitions ────────────────────────────────────────────────────────
 const columns: AppColumnDef<Location>[] = [
-  { field: 'name',      header: 'Name',   sortable: true,  minWidth: 200 },
-  { field: 'type',      header: 'Type',   sortable: true,  align: 'center' },
-  { field: 'code',      header: 'Code',   sortable: false, align: 'center' },
-  { field: 'is_active', header: 'Status', sortable: true,  align: 'center' },
-  { field: 'actions',   header: '',       sortable: false, minWidth: 80, align: 'center' },
+  { field: 'name', header: 'Name', sortable: true, minWidth: 200 },
+  { field: 'type', header: 'Type', sortable: true, align: 'center' },
+  { field: 'code', header: 'Code', sortable: false, align: 'center' },
+  { field: 'is_active', header: 'Status', sortable: true, align: 'center' },
+  { field: 'actions', header: '', sortable: false, minWidth: 80, align: 'center' },
 ]
 
 onMounted(() => loadLocations())
@@ -114,14 +124,25 @@ async function confirmToggle() {
         <span
           v-else-if="column.field === 'is_active'"
           :class="row.is_active ? 'status-badge status-active' : 'status-badge status-inactive'"
-        >{{ row.is_active ? 'Active' : 'Inactive' }}</span>
+          >{{ row.is_active ? 'Active' : 'Inactive' }}</span
+        >
 
         <!-- Per-row actions -->
         <div v-else-if="column.field === 'actions'" class="table-row-actions">
-          <Button variant="outline" size="icon-sm" :aria-label="`Edit ${row.name}`" @click="openEdit(row)">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            :aria-label="`Edit ${row.name}`"
+            @click="openEdit(row)"
+          >
             <Pencil />
           </Button>
-          <Button variant="ghost" size="icon-sm" :aria-label="`${row.is_active ? 'Deactivate' : 'Activate'} ${row.name}`" @click="openToggle(row)">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            :aria-label="`${row.is_active ? 'Deactivate' : 'Activate'} ${row.name}`"
+            @click="openToggle(row)"
+          >
             <ToggleRight v-if="row.is_active" />
             <ToggleLeft v-else />
           </Button>
@@ -148,15 +169,17 @@ async function confirmToggle() {
             {{ toggleTarget?.is_active ? 'Deactivate' : 'Reactivate' }} Location
           </DialogTitle>
           <DialogDescription v-if="toggleTarget">
-            {{ toggleTarget.is_active
-              ? `Are you sure you want to deactivate "${toggleTarget.name}"? It will no longer appear in location pickers.`
-              : `Reactivate "${toggleTarget.name}"? It will appear in location pickers again.` }}
+            {{
+              toggleTarget.is_active
+                ? `Are you sure you want to deactivate "${toggleTarget.name}"? It will no longer appear in location pickers.`
+                : `Reactivate "${toggleTarget.name}"? It will appear in location pickers again.`
+            }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" @click="toggleDialogOpen = false">Cancel</Button>
           <Button :disabled="saving" @click="confirmToggle">
-            {{ saving ? 'Saving…' : (toggleTarget?.is_active ? 'Deactivate' : 'Reactivate') }}
+            {{ saving ? 'Saving…' : toggleTarget?.is_active ? 'Deactivate' : 'Reactivate' }}
           </Button>
         </DialogFooter>
       </DialogContent>

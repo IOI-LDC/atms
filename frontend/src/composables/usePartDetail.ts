@@ -19,35 +19,37 @@ export function usePartDetail() {
   const auth = useAuthStore()
 
   // ── Record + load state ──────────────────────────────────────────────────
-  const record    = ref<Part | null>(null)
-  const loading   = ref(false)
-  const error     = ref<string | null>(null)
-  const notFound  = ref(false)
+  const record = ref<Part | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const notFound = ref(false)
   const forbidden = ref(false)
 
   // ── Permissions (client UX hints — backend policy remains authoritative) ──
   // Matches AttachmentPolicy::uploadToPart.
-  const canUploadAttachment = computed(() => auth.isAdminOrManager || auth.isTechnician || auth.isLogistics)
+  const canUploadAttachment = computed(
+    () => auth.isAdminOrManager || auth.isTechnician || auth.isLogistics,
+  )
   const canViewErpMeta = computed(() => auth.isAdminOrManager)
-  const canViewErpRaw  = computed(() => auth.isAdmin)
+  const canViewErpRaw = computed(() => auth.isAdmin)
 
   // ── Attachments ───────────────────────────────────────────────────────────
-  const attachments        = ref<Attachment[]>([])
+  const attachments = ref<Attachment[]>([])
   const attachmentsLoading = ref(false)
-  const uploadOpen         = ref(false)
-  const uploadLoading      = ref(false)
-  const uploadFiles        = ref<File[]>([])
+  const uploadOpen = ref(false)
+  const uploadLoading = ref(false)
+  const uploadFiles = ref<File[]>([])
 
   // ── Attachment delete ─────────────────────────────────────────────────────
-  const deleteAttachmentTarget  = ref<number | null>(null)
+  const deleteAttachmentTarget = ref<number | null>(null)
   const deleteAttachmentLoading = ref(false)
 
   // ══════════════════════════════════════════════════════════════════════════
   //  Load
   // ══════════════════════════════════════════════════════════════════════════
   async function load(id: number | string) {
-    loading.value  = true
-    error.value    = null
+    loading.value = true
+    error.value = null
     notFound.value = false
     forbidden.value = false
     try {
@@ -84,7 +86,7 @@ export function usePartDetail() {
   // ══════════════════════════════════════════════════════════════════════════
   function openUpload() {
     uploadFiles.value = []
-    uploadOpen.value  = true
+    uploadOpen.value = true
   }
 
   function addUploadFiles(files: FileList | File[]) {
@@ -109,7 +111,7 @@ export function usePartDetail() {
           ? 'Attachment uploaded.'
           : `${uploadFiles.value.length} attachments uploaded.`,
       )
-      uploadOpen.value  = false
+      uploadOpen.value = false
       uploadFiles.value = []
       await loadAttachments(partId)
     } catch (e) {
@@ -122,7 +124,9 @@ export function usePartDetail() {
   // ══════════════════════════════════════════════════════════════════════════
   //  Attachment delete  (generic by id: DELETE /attachments/{id})
   // ══════════════════════════════════════════════════════════════════════════
-  function openDeleteAttachment(id: number) { deleteAttachmentTarget.value = id }
+  function openDeleteAttachment(id: number) {
+    deleteAttachmentTarget.value = id
+  }
   async function doDeleteAttachment() {
     if (!record.value || deleteAttachmentTarget.value === null) return
     deleteAttachmentLoading.value = true
@@ -140,13 +144,30 @@ export function usePartDetail() {
 
   return {
     // Load
-    record, loading, error, notFound, forbidden, load,
+    record,
+    loading,
+    error,
+    notFound,
+    forbidden,
+    load,
     // Permissions
-    canUploadAttachment, canViewErpMeta, canViewErpRaw,
+    canUploadAttachment,
+    canViewErpMeta,
+    canViewErpRaw,
     // Attachments
-    attachments, attachmentsLoading, loadAttachments,
-    uploadOpen, uploadLoading, uploadFiles,
-    openUpload, addUploadFiles, removeUploadFile, doUpload,
-    deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
+    attachments,
+    attachmentsLoading,
+    loadAttachments,
+    uploadOpen,
+    uploadLoading,
+    uploadFiles,
+    openUpload,
+    addUploadFiles,
+    removeUploadFile,
+    doUpload,
+    deleteAttachmentTarget,
+    deleteAttachmentLoading,
+    openDeleteAttachment,
+    doDeleteAttachment,
   }
 }

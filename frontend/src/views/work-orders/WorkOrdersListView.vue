@@ -8,11 +8,17 @@ import { useWorkOrders } from '@/composables/useWorkOrders'
 import { useListOptions } from '@/composables/useListOptions'
 import { woColumns, woFilterOptions } from '@/lib/woColumns'
 import type { WorkOrder } from '@/types'
-import { woStatusClass, woStatusLabel, priorityClass, priorityLabel, fmtDate } from '@/lib/displayHelpers'
+import {
+  woStatusClass,
+  woStatusLabel,
+  priorityClass,
+  priorityLabel,
+  fmtDate,
+} from '@/lib/displayHelpers'
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
-const auth   = useAuthStore()
+const auth = useAuthStore()
 
 const { myWorkOrders, all, open, inProgress, completed, closed } = useWorkOrders()
 const { priorities, loadPriorities } = useListOptions()
@@ -24,8 +30,8 @@ const mergedFilterOptions = computed(() => ({ ...woFilterOptions, priority: prio
 
 const tabDefs = computed(() => {
   const tabs: { key: string; label: string }[] = []
-  if (auth.isTechnician)      tabs.push({ key: 'my-work-orders', label: 'My Work Orders' })
-  if (auth.isAdminOrManager)  tabs.push({ key: 'all', label: 'All' })
+  if (auth.isTechnician) tabs.push({ key: 'my-work-orders', label: 'My Work Orders' })
+  if (auth.isAdminOrManager) tabs.push({ key: 'all', label: 'All' })
   tabs.push({ key: 'open', label: 'Open' })
   tabs.push({ key: 'in-progress', label: 'In Progress' })
   tabs.push({ key: 'completed', label: 'Completed' })
@@ -35,25 +41,80 @@ const tabDefs = computed(() => {
 
 const activeTab = computed(() => {
   const t = route.query.tab as string | undefined
-  return tabDefs.value.some(d => d.key === t) ? t! : (tabDefs.value[0]?.key ?? 'open')
+  return tabDefs.value.some((d) => d.key === t) ? t! : (tabDefs.value[0]?.key ?? 'open')
 })
 
 const activeSlice = computed(() => {
   switch (activeTab.value) {
-    case 'my-work-orders': return { rows: myWorkOrders.rows.value, loading: myWorkOrders.loading.value, load: myWorkOrders.load, emptyText: 'No work orders assigned to you.', label: 'My work orders' }
-    case 'all':            return { rows: all.rows.value, loading: all.loading.value, load: all.load, emptyText: 'No work orders found.', label: 'All work orders' }
-    case 'open':           return { rows: open.rows.value, loading: open.loading.value, load: open.load, emptyText: 'No open work orders.', label: 'Open work orders' }
-    case 'in-progress':    return { rows: inProgress.rows.value, loading: inProgress.loading.value, load: inProgress.load, emptyText: 'No work orders in progress.', label: 'Work orders in progress' }
-    case 'completed':      return { rows: completed.rows.value, loading: completed.loading.value, load: completed.load, emptyText: 'No work orders awaiting closure.', label: 'Completed work orders' }
-    case 'closed':         return { rows: closed.rows.value, loading: closed.loading.value, load: closed.load, emptyText: 'No closed work orders yet.', label: 'Closed work orders' }
-    default:               return { rows: open.rows.value, loading: open.loading.value, load: open.load, emptyText: 'No open work orders.', label: 'Open work orders' }
+    case 'my-work-orders':
+      return {
+        rows: myWorkOrders.rows.value,
+        loading: myWorkOrders.loading.value,
+        load: myWorkOrders.load,
+        emptyText: 'No work orders assigned to you.',
+        label: 'My work orders',
+      }
+    case 'all':
+      return {
+        rows: all.rows.value,
+        loading: all.loading.value,
+        load: all.load,
+        emptyText: 'No work orders found.',
+        label: 'All work orders',
+      }
+    case 'open':
+      return {
+        rows: open.rows.value,
+        loading: open.loading.value,
+        load: open.load,
+        emptyText: 'No open work orders.',
+        label: 'Open work orders',
+      }
+    case 'in-progress':
+      return {
+        rows: inProgress.rows.value,
+        loading: inProgress.loading.value,
+        load: inProgress.load,
+        emptyText: 'No work orders in progress.',
+        label: 'Work orders in progress',
+      }
+    case 'completed':
+      return {
+        rows: completed.rows.value,
+        loading: completed.loading.value,
+        load: completed.load,
+        emptyText: 'No work orders awaiting closure.',
+        label: 'Completed work orders',
+      }
+    case 'closed':
+      return {
+        rows: closed.rows.value,
+        loading: closed.loading.value,
+        load: closed.load,
+        emptyText: 'No closed work orders yet.',
+        label: 'Closed work orders',
+      }
+    default:
+      return {
+        rows: open.rows.value,
+        loading: open.loading.value,
+        load: open.load,
+        emptyText: 'No open work orders.',
+        label: 'Open work orders',
+      }
   }
 })
 
 watch(activeTab, (tab) => {
   if (tab && route.query.tab !== tab) router.replace({ path: route.path, query: { tab } })
 })
-watch(activeTab, () => { activeSlice.value.load() }, { immediate: true })
+watch(
+  activeTab,
+  () => {
+    activeSlice.value.load()
+  },
+  { immediate: true },
+)
 loadPriorities()
 
 function goDetail(payload: { row: WorkOrder }) {
@@ -64,7 +125,6 @@ function goDetail(payload: { row: WorkOrder }) {
 <template>
   <AppLayout>
     <div class="page-section">
-
       <div class="page-header">
         <div class="page-heading">
           <h1 class="page-title">Work Orders</h1>
@@ -98,7 +158,8 @@ function goDetail(payload: { row: WorkOrder }) {
             v-if="column.field === 'number'"
             :to="`/work-orders/${row.id}`"
             class="table-link"
-          >{{ row.number }}</RouterLink>
+            >{{ row.number }}</RouterLink
+          >
 
           <span v-else-if="column.field === 'asset'" class="table-cell-stack">
             <span class="table-cell-primary">{{ row.asset?.name }}</span>
@@ -124,7 +185,6 @@ function goDetail(payload: { row: WorkOrder }) {
           <template v-else>{{ value }}</template>
         </template>
       </AppDataTable>
-
     </div>
   </AppLayout>
 </template>

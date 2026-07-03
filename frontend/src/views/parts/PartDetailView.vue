@@ -5,25 +5,47 @@ import { ArrowLeftIcon, PaperclipIcon, EyeIcon, Trash2Icon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { FileInput } from '@/components/ui/file-input'
 import { usePartDetail } from '@/composables/usePartDetail'
 import { openAttachmentInNewTab } from '@/lib/attachments'
 import { partStatusClass, partStatusLabel, fmtDate, formatBytes } from '@/lib/displayHelpers'
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
 
 const id = computed(() => Number(route.params.partId))
 
 const {
-  record, loading, error, notFound, forbidden, load,
-  canUploadAttachment, canViewErpMeta, canViewErpRaw,
-  attachments, attachmentsLoading, loadAttachments,
-  uploadOpen, uploadLoading, uploadFiles,
-  openUpload, addUploadFiles, removeUploadFile, doUpload,
-  deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
+  record,
+  loading,
+  error,
+  notFound,
+  forbidden,
+  load,
+  canUploadAttachment,
+  canViewErpMeta,
+  canViewErpRaw,
+  attachments,
+  attachmentsLoading,
+  loadAttachments,
+  uploadOpen,
+  uploadLoading,
+  uploadFiles,
+  openUpload,
+  addUploadFiles,
+  removeUploadFile,
+  doUpload,
+  deleteAttachmentTarget,
+  deleteAttachmentLoading,
+  openDeleteAttachment,
+  doDeleteAttachment,
 } = usePartDetail()
 
 // FileInput primitive — its open() method is triggered via ref.
@@ -32,14 +54,18 @@ const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
 // Attachment deletion uses its target id as open state (same pattern as Asset/WO detail).
 const deleteAttachmentOpen = computed({
   get: () => deleteAttachmentTarget.value !== null,
-  set: (open: boolean) => { if (!open) deleteAttachmentTarget.value = null },
+  set: (open: boolean) => {
+    if (!open) deleteAttachmentTarget.value = null
+  },
 })
 
 const erpRawDataText = computed(() =>
   record.value?.erp_raw_data ? JSON.stringify(record.value.erp_raw_data, null, 2) : null,
 )
 
-function goBack() { router.back() }
+function goBack() {
+  router.back()
+}
 
 watch(
   id,
@@ -55,7 +81,6 @@ watch(
 <template>
   <AppLayout>
     <div class="page-section">
-
       <Button variant="ghost" size="sm" class="detail-back" @click="goBack">
         <ArrowLeftIcon class="detail-back-icon" />
         Back
@@ -70,7 +95,6 @@ watch(
       <div v-else-if="error" class="error-state" role="alert">{{ error }}</div>
 
       <template v-else-if="record">
-
         <!-- ── Command bar ─────────────────────────────────────────────── -->
         <div class="detail-command-bar">
           <div class="detail-command-top">
@@ -92,7 +116,6 @@ watch(
         <!-- ── Main (details) + reference rail ───────────────────────────── -->
         <div class="detail-layout">
           <div class="detail-main">
-
             <!-- ── Overview card ─────────────────────────────────────────── -->
             <div class="data-card">
               <div class="data-card-header">
@@ -133,7 +156,6 @@ watch(
                 </div>
               </div>
             </div>
-
           </div>
 
           <aside class="detail-rail">
@@ -152,7 +174,10 @@ watch(
                     <span class="detail-field-label">Last ERP Sync</span>
                     <p class="detail-field-value">{{ fmtDate(record.erp_last_synced_at) }}</p>
                   </div>
-                  <div v-if="canViewErpRaw && erpRawDataText" class="detail-field detail-field-block">
+                  <div
+                    v-if="canViewErpRaw && erpRawDataText"
+                    class="detail-field detail-field-block"
+                  >
                     <span class="detail-field-label">Raw ERP Data</span>
                     <p class="detail-field-value detail-field-prose">{{ erpRawDataText }}</p>
                   </div>
@@ -218,7 +243,6 @@ watch(
             </div>
           </aside>
         </div>
-
       </template>
     </div>
 
@@ -258,7 +282,8 @@ watch(
                 class="file-list-remove"
                 aria-label="Remove file"
                 @click="removeUploadFile(i)"
-              >✕</Button>
+                >✕</Button
+              >
             </li>
           </ul>
         </div>
@@ -266,10 +291,7 @@ watch(
           <Button variant="outline" :disabled="uploadLoading" @click="uploadOpen = false">
             Back
           </Button>
-          <Button
-            :disabled="uploadLoading || uploadFiles.length === 0"
-            @click="doUpload(id)"
-          >
+          <Button :disabled="uploadLoading || uploadFiles.length === 0" @click="doUpload(id)">
             {{ uploadLoading ? 'Uploading…' : 'Upload' }}
           </Button>
         </DialogFooter>
@@ -281,16 +303,26 @@ watch(
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete attachment?</DialogTitle>
-          <DialogDescription>This permanently deletes the file. This cannot be undone.</DialogDescription>
+          <DialogDescription
+            >This permanently deletes the file. This cannot be undone.</DialogDescription
+          >
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" :disabled="deleteAttachmentLoading" @click="deleteAttachmentOpen = false">Back</Button>
-          <Button variant="destructive" :disabled="deleteAttachmentLoading" @click="doDeleteAttachment">
+          <Button
+            variant="outline"
+            :disabled="deleteAttachmentLoading"
+            @click="deleteAttachmentOpen = false"
+            >Back</Button
+          >
+          <Button
+            variant="destructive"
+            :disabled="deleteAttachmentLoading"
+            @click="doDeleteAttachment"
+          >
             {{ deleteAttachmentLoading ? 'Deleting…' : 'Delete' }}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
   </AppLayout>
 </template>

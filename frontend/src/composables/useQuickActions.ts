@@ -20,13 +20,18 @@ export function useQuickActions() {
   const auth = useAuthStore()
 
   const actions = computed<QuickAction[]>(() => {
-    const isHuman = auth.isAdmin || auth.isManager || auth.isTechnician || auth.isLogistics || auth.isRequester
-    if (!isHuman) return []  // service / unrecognized role → no human quick actions
+    const isHuman =
+      auth.isAdmin || auth.isManager || auth.isTechnician || auth.isLogistics || auth.isRequester
+    if (!isHuman) return [] // service / unrecognized role → no human quick actions
 
     const list: QuickAction[] = []
 
     if (auth.isAdminOrManager || auth.isTechnician || auth.isLogistics) {
-      list.push({ label: 'Assets', icon: HardDrive, to: { path: '/assets', query: { tab: 'all-assets' } } })
+      list.push({
+        label: 'Assets',
+        icon: HardDrive,
+        to: { path: '/assets', query: { tab: 'all-assets' } },
+      })
     }
 
     list.push({
@@ -39,14 +44,21 @@ export function useQuickActions() {
     })
 
     if (auth.isAdminOrManager || auth.isLogistics) {
-      list.push({ label: 'Locations', icon: MapPin, to: { path: '/locations', query: { tab: 'asset-location-update' } } })
+      list.push({
+        label: 'Locations',
+        icon: MapPin,
+        to: { path: '/locations', query: { tab: 'asset-location-update' } },
+      })
     }
 
     if (auth.isAdminOrManager || auth.isTechnician) {
       list.push({
         label: 'Work Orders',
         icon: Wrench,
-        to: { path: '/work-orders', query: { tab: auth.isAdminOrManager ? 'all' : 'my-work-orders' } },
+        to: {
+          path: '/work-orders',
+          query: { tab: auth.isAdminOrManager ? 'all' : 'my-work-orders' },
+        },
       })
     }
 

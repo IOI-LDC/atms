@@ -22,11 +22,11 @@ export const DEFAULT_PRIORITIES: FilterOption[] = [
  * so callers can either watch the ref or await the fetch directly.
  */
 export function useListOptions() {
-  const priorities   = ref<FilterOption[]>(DEFAULT_PRIORITIES)
+  const priorities = ref<FilterOption[]>(DEFAULT_PRIORITIES)
   const readingTypes = ref<UsageReadingType[]>([])
   const faSubclasses = ref<FaSubclassTypeCode[]>([])
 
-  const prioritiesLoading   = ref(false)
+  const prioritiesLoading = ref(false)
   const readingTypesLoading = ref(false)
   const faSubclassesLoading = ref(false)
 
@@ -35,9 +35,10 @@ export function useListOptions() {
     try {
       const res = await api.get<{ data: MasterDataItem[] }>('/list-options/maintenance_priorities')
       const items = res.data ?? []
-      priorities.value = items.length > 0
-        ? items.map((i) => ({ value: i.value, label: i.label }))
-        : DEFAULT_PRIORITIES
+      priorities.value =
+        items.length > 0
+          ? items.map((i) => ({ value: i.value, label: i.label }))
+          : DEFAULT_PRIORITIES
     } catch {
       priorities.value = DEFAULT_PRIORITIES
     } finally {
@@ -62,7 +63,9 @@ export function useListOptions() {
   async function loadFaSubclasses(): Promise<FaSubclassTypeCode[]> {
     faSubclassesLoading.value = true
     try {
-      const res = await api.get<{ data: FaSubclassTypeCode[] }>('/list-options/fa_subclass_type_codes')
+      const res = await api.get<{ data: FaSubclassTypeCode[] }>(
+        '/list-options/fa_subclass_type_codes',
+      )
       faSubclasses.value = res.data ?? []
     } catch {
       faSubclasses.value = []
@@ -73,8 +76,14 @@ export function useListOptions() {
   }
 
   return {
-    priorities, prioritiesLoading, loadPriorities,
-    readingTypes, readingTypesLoading, loadReadingTypes,
-    faSubclasses, faSubclassesLoading, loadFaSubclasses,
+    priorities,
+    prioritiesLoading,
+    loadPriorities,
+    readingTypes,
+    readingTypesLoading,
+    loadReadingTypes,
+    faSubclasses,
+    faSubclassesLoading,
+    loadFaSubclasses,
   }
 }

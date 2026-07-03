@@ -8,9 +8,9 @@ import type { Part } from '@/types'
  * Matches the pattern established in useAssets.ts / useWorkOrders.ts.
  */
 function useFetchList<T>(endpoint: string, baseParams: Record<string, string | number>) {
-  const rows    = ref<T[]>([]) as Ref<T[]>
+  const rows = ref<T[]>([]) as Ref<T[]>
   const loading = ref(false)
-  const loaded  = ref(false)
+  const loaded = ref(false)
 
   async function load(force = false) {
     if (loaded.value && !force) return

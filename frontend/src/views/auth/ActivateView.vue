@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useActivate } from '@/composables/useActivate'
 
-const { token, password, passwordConfirm, loading, error, fieldErrors, success, submit } = useActivate()
+const { token, password, passwordConfirm, loading, error, fieldErrors, success, submit } =
+  useActivate()
 </script>
 
 <template>

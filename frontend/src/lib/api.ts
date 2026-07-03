@@ -16,8 +16,12 @@ async function initCsrf(): Promise<void> {
   if (csrfInitialized) return
   if (!csrfPromise) {
     csrfPromise = fetch(CSRF_URL, { credentials: 'include' })
-      .then(() => { csrfInitialized = true })
-      .finally(() => { csrfPromise = null })
+      .then(() => {
+        csrfInitialized = true
+      })
+      .finally(() => {
+        csrfPromise = null
+      })
   }
   return csrfPromise
 }
@@ -126,12 +130,13 @@ function buildUrl(path: string, params?: Record<string, unknown>): string {
 }
 
 const api = {
-  get:    <T>(path: string, params?: Record<string, unknown>) => request<T>('GET',    buildUrl(path, params)),
-  post:   <T>(path: string, body?: unknown)                   => request<T>('POST',   path, body),
-  patch:  <T>(path: string, body?: unknown)                   => request<T>('PATCH',  path, body),
-  put:    <T>(path: string, body?: unknown)                   => request<T>('PUT',    path, body),
-  delete: <T>(path: string)                                   => request<T>('DELETE', path),
-  upload: <T>(path: string, form: FormData)                   => request<T>('POST',   path, form, true),
+  get: <T>(path: string, params?: Record<string, unknown>) =>
+    request<T>('GET', buildUrl(path, params)),
+  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
+  delete: <T>(path: string) => request<T>('DELETE', path),
+  upload: <T>(path: string, form: FormData) => request<T>('POST', path, form, true),
 }
 
 export default api

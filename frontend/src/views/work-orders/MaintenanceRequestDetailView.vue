@@ -5,18 +5,35 @@ import { ArrowLeftIcon, EyeIcon, Trash2Icon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { useMaintenanceRequestDetail } from '@/composables/useMaintenanceRequestDetail'
 import { useListOptions } from '@/composables/useListOptions'
 import { openAttachmentInNewTab } from '@/lib/attachments'
 import {
-  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel, priorityPickerLabel, mrTypeLabel, fmtDate, formatBytes, roleLabel,
+  mrStatusClass,
+  mrStatusLabel,
+  priorityClass,
+  priorityLabel,
+  priorityPickerLabel,
+  mrTypeLabel,
+  fmtDate,
+  formatBytes,
+  roleLabel,
 } from '@/lib/displayHelpers'
 
 const route = useRoute()
@@ -31,17 +48,50 @@ function goBack() {
 }
 
 const {
-  record, loading, error, notFound, forbidden,
-  editing, saving, editError, draft, validationErrors,
-  attachments, attachmentsLoading,
-  deleteAttachmentTarget, deleteAttachmentLoading, canDeleteAttachment,
-  openDeleteAttachment, closeDeleteAttachment, doDeleteAttachment,
-  isTerminal, canEdit, canApprove, canReject, canCancel,
-  load, startEdit, cancelEdit, saveEdit,
-  approveOpen, approveLoading, openApprove, doApprove,
-  approveTechnicians, approveTechniciansLoading, selectedApproveTechId,
-  rejectOpen, rejectLoading, rejectReason, openReject, doReject,
-  cancelOpen, cancelLoading, cancelReason, openCancel, doCancel,
+  record,
+  loading,
+  error,
+  notFound,
+  forbidden,
+  editing,
+  saving,
+  editError,
+  draft,
+  validationErrors,
+  attachments,
+  attachmentsLoading,
+  deleteAttachmentTarget,
+  deleteAttachmentLoading,
+  canDeleteAttachment,
+  openDeleteAttachment,
+  closeDeleteAttachment,
+  doDeleteAttachment,
+  isTerminal,
+  canEdit,
+  canApprove,
+  canReject,
+  canCancel,
+  load,
+  startEdit,
+  cancelEdit,
+  saveEdit,
+  approveOpen,
+  approveLoading,
+  openApprove,
+  doApprove,
+  approveTechnicians,
+  approveTechniciansLoading,
+  selectedApproveTechId,
+  rejectOpen,
+  rejectLoading,
+  rejectReason,
+  openReject,
+  doReject,
+  cancelOpen,
+  cancelLoading,
+  cancelReason,
+  openCancel,
+  doCancel,
 } = useMaintenanceRequestDetail()
 
 const { priorities, loadPriorities } = useListOptions()
@@ -50,17 +100,25 @@ loadPriorities()
 // shadcn-vue Select emits string values; the composable holds a numeric id or
 // null. '__none__' is the explicit "leave unassigned" sentinel.
 const selectedApproveTechIdStr = computed({
-  get: () => selectedApproveTechId.value !== null ? String(selectedApproveTechId.value) : '__none__',
-  set: (v: string | undefined) => { selectedApproveTechId.value = (!v || v === '__none__') ? null : Number(v) },
+  get: () =>
+    selectedApproveTechId.value !== null ? String(selectedApproveTechId.value) : '__none__',
+  set: (v: string | undefined) => {
+    selectedApproveTechId.value = !v || v === '__none__' ? null : Number(v)
+  },
 })
 
-watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
+watch(
+  id,
+  (newId) => {
+    if (newId) load(newId)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <AppLayout>
     <div class="page-section">
-
       <Button variant="ghost" size="sm" class="detail-back" @click="goBack">
         <ArrowLeftIcon class="detail-back-icon" />
         Back
@@ -69,7 +127,9 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
       <!-- Load states -->
       <div v-if="loading" class="loading-state">Loading request…</div>
       <div v-else-if="notFound" class="empty-state">Maintenance request not found.</div>
-      <div v-else-if="forbidden" class="permission-state">You don't have permission to view this request.</div>
+      <div v-else-if="forbidden" class="permission-state">
+        You don't have permission to view this request.
+      </div>
       <div v-else-if="error" class="error-state" role="alert">{{ error }}</div>
 
       <template v-else-if="record">
@@ -79,43 +139,59 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
             <div class="detail-command-identity">
               <div class="detail-command-heading">
                 <h1 class="detail-command-number">{{ record.number }}</h1>
-                <span :class="mrStatusClass(record.status)">{{ mrStatusLabel(record.status) }}</span>
-                <span :class="priorityClass(record.priority)">{{ priorityLabel(record.priority) }}</span>
+                <span :class="mrStatusClass(record.status)">{{
+                  mrStatusLabel(record.status)
+                }}</span>
+                <span :class="priorityClass(record.priority)">{{
+                  priorityLabel(record.priority)
+                }}</span>
               </div>
-              <p class="detail-command-subtitle">{{ mrTypeLabel(record.type) }} maintenance request · {{ record.asset.name }}</p>
+              <p class="detail-command-subtitle">
+                {{ mrTypeLabel(record.type) }} maintenance request · {{ record.asset.name }}
+              </p>
             </div>
 
             <div v-if="canApprove || canReject || canCancel" class="detail-command-actions">
               <Button v-if="canCancel" variant="outline" @click="openCancel">Cancel Request</Button>
               <Button v-if="canReject" variant="outline" @click="openReject">Reject Request</Button>
-              <Button v-if="canApprove" @click="openApprove">Approve &amp; Create Work Order</Button>
+              <Button v-if="canApprove" @click="openApprove"
+                >Approve &amp; Create Work Order</Button
+              >
             </div>
           </div>
         </div>
 
         <!-- Read-only banner for terminal statuses -->
         <div v-if="isTerminal" class="detail-banner">
-          This request is {{ mrStatusLabel(record.status).toLowerCase() }} and can no longer be changed.
+          This request is {{ mrStatusLabel(record.status).toLowerCase() }} and can no longer be
+          changed.
         </div>
 
         <!-- Details (main) + reference rail -->
         <div class="detail-layout">
           <div class="detail-main">
-
             <!-- Details card -->
             <div class="data-card">
               <div class="data-card-header">
                 <h2 class="data-card-title">Details</h2>
                 <div class="detail-card-actions">
-                  <Button v-if="canEdit && !editing" size="sm" variant="outline" @click="startEdit">Edit</Button>
-                  <Button v-if="editing" size="sm" variant="outline" :disabled="saving" @click="cancelEdit">Cancel</Button>
+                  <Button v-if="canEdit && !editing" size="sm" variant="outline" @click="startEdit"
+                    >Edit</Button
+                  >
+                  <Button
+                    v-if="editing"
+                    size="sm"
+                    variant="outline"
+                    :disabled="saving"
+                    @click="cancelEdit"
+                    >Cancel</Button
+                  >
                   <Button v-if="editing" size="sm" :disabled="saving" @click="saveEdit">
                     {{ saving ? 'Saving…' : 'Save Changes' }}
                   </Button>
                 </div>
               </div>
               <div class="detail-card-content">
-
                 <div v-if="editError" class="error-state" role="alert">{{ editError }}</div>
 
                 <!-- Field grid: short read-only meta + editable priority -->
@@ -142,19 +218,21 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
 
                   <!-- Priority (read / edit) -->
                   <div class="detail-field">
-                    <Label v-if="editing" for="mr-priority" class="detail-field-label">Priority</Label>
+                    <Label v-if="editing" for="mr-priority" class="detail-field-label"
+                      >Priority</Label
+                    >
                     <span v-else class="detail-field-label">Priority</span>
                     <p v-if="!editing" class="detail-field-value">
-                      <span :class="priorityClass(record.priority)">{{ priorityLabel(record.priority) }}</span>
+                      <span :class="priorityClass(record.priority)">{{
+                        priorityLabel(record.priority)
+                      }}</span>
                     </p>
                     <Select v-else v-model="draft.priority">
                       <SelectTrigger id="mr-priority"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem
-                          v-for="opt in priorities"
-                          :key="opt.value"
-                          :value="opt.value"
-                        >{{ priorityPickerLabel(opt) }}</SelectItem>
+                        <SelectItem v-for="opt in priorities" :key="opt.value" :value="opt.value">{{
+                          priorityPickerLabel(opt)
+                        }}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p v-if="editing && validationErrors?.priority" class="form-error">
@@ -164,13 +242,18 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
 
                   <!-- Description (read / edit) — full width -->
                   <div class="detail-field detail-field-block">
-                    <Label v-if="editing" for="mr-description" class="detail-field-label">Description</Label>
+                    <Label v-if="editing" for="mr-description" class="detail-field-label"
+                      >Description</Label
+                    >
                     <span v-else class="detail-field-label">Description</span>
                     <p v-if="!editing" class="detail-field-value detail-field-prose">
                       {{ record.description ?? 'No description provided.' }}
                     </p>
                     <Textarea
-                      v-else id="mr-description" v-model="draft.description" :rows="5"
+                      v-else
+                      id="mr-description"
+                      v-model="draft.description"
+                      :rows="5"
                       placeholder="Describe the fault, symptoms, or maintenance needed…"
                     />
                     <p v-if="editing && validationErrors?.description" class="form-error">
@@ -206,7 +289,9 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
                 <div v-if="record.rejection_reason" class="detail-section">
                   <h3 class="detail-section-title">Rejection reason</h3>
                   <div class="detail-callout detail-callout-destructive">
-                    <p class="detail-field-value detail-field-prose">{{ record.rejection_reason }}</p>
+                    <p class="detail-field-value detail-field-prose">
+                      {{ record.rejection_reason }}
+                    </p>
                   </div>
                 </div>
 
@@ -214,7 +299,9 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
                 <div v-if="record.cancellation_reason" class="detail-section">
                   <h3 class="detail-section-title">Cancellation reason</h3>
                   <div class="detail-callout">
-                    <p class="detail-field-value detail-field-prose">{{ record.cancellation_reason }}</p>
+                    <p class="detail-field-value detail-field-prose">
+                      {{ record.cancellation_reason }}
+                    </p>
                   </div>
                 </div>
 
@@ -225,10 +312,8 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
                     {{ record.work_order.number }}
                   </RouterLink>
                 </div>
-
               </div>
             </div>
-
           </div>
 
           <aside class="detail-rail">
@@ -285,21 +370,37 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
           </aside>
         </div>
       </template>
-
     </div>
 
     <!-- Delete attachment confirmation -->
-    <Dialog :open="!!deleteAttachmentTarget" @update:open="(v) => { if (!v) closeDeleteAttachment() }">
+    <Dialog
+      :open="!!deleteAttachmentTarget"
+      @update:open="
+        (v) => {
+          if (!v) closeDeleteAttachment()
+        }
+      "
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete attachment?</DialogTitle>
           <DialogDescription>
-            <strong>{{ deleteAttachmentTarget?.file_name }}</strong> will be permanently removed from this request. This cannot be undone.
+            <strong>{{ deleteAttachmentTarget?.file_name }}</strong> will be permanently removed
+            from this request. This cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" :disabled="deleteAttachmentLoading" @click="closeDeleteAttachment">Back</Button>
-          <Button variant="destructive" :disabled="deleteAttachmentLoading" @click="doDeleteAttachment">
+          <Button
+            variant="outline"
+            :disabled="deleteAttachmentLoading"
+            @click="closeDeleteAttachment"
+            >Back</Button
+          >
+          <Button
+            variant="destructive"
+            :disabled="deleteAttachmentLoading"
+            @click="doDeleteAttachment"
+          >
             {{ deleteAttachmentLoading ? 'Deleting…' : 'Delete Attachment' }}
           </Button>
         </DialogFooter>
@@ -329,7 +430,9 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
           </Select>
         </div>
         <DialogFooter>
-          <Button variant="outline" :disabled="approveLoading" @click="approveOpen = false">Back</Button>
+          <Button variant="outline" :disabled="approveLoading" @click="approveOpen = false"
+            >Back</Button
+          >
           <Button :disabled="approveLoading" @click="doApprove">
             {{ approveLoading ? 'Approving…' : 'Approve & Create Work Order' }}
           </Button>
@@ -346,10 +449,17 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
         </DialogHeader>
         <div class="form-field">
           <Label for="reject-reason">Reason</Label>
-          <Textarea id="reject-reason" v-model="rejectReason" :rows="4" placeholder="Explain why this request is rejected…" />
+          <Textarea
+            id="reject-reason"
+            v-model="rejectReason"
+            :rows="4"
+            placeholder="Explain why this request is rejected…"
+          />
         </div>
         <DialogFooter>
-          <Button variant="outline" :disabled="rejectLoading" @click="rejectOpen = false">Back</Button>
+          <Button variant="outline" :disabled="rejectLoading" @click="rejectOpen = false"
+            >Back</Button
+          >
           <Button :disabled="rejectLoading || !rejectReason.trim()" @click="doReject">
             {{ rejectLoading ? 'Rejecting…' : 'Reject Request' }}
           </Button>
@@ -366,16 +476,22 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
         </DialogHeader>
         <div class="form-field">
           <Label for="cancel-reason">Reason</Label>
-          <Textarea id="cancel-reason" v-model="cancelReason" :rows="4" placeholder="Explain why this request is cancelled…" />
+          <Textarea
+            id="cancel-reason"
+            v-model="cancelReason"
+            :rows="4"
+            placeholder="Explain why this request is cancelled…"
+          />
         </div>
         <DialogFooter>
-          <Button variant="outline" :disabled="cancelLoading" @click="cancelOpen = false">Back</Button>
+          <Button variant="outline" :disabled="cancelLoading" @click="cancelOpen = false"
+            >Back</Button
+          >
           <Button :disabled="cancelLoading || !cancelReason.trim()" @click="doCancel">
             {{ cancelLoading ? 'Cancelling…' : 'Cancel Request' }}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
   </AppLayout>
 </template>

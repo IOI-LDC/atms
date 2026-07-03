@@ -3,15 +3,22 @@ import { ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { usePmRules } from '@/composables/usePmRules'
-import {
-  pmStatusClass, pmStatusLabel, pmLevelClass, fmtDate,
-} from '@/lib/displayHelpers'
+import { pmStatusClass, pmStatusLabel, pmLevelClass, fmtDate } from '@/lib/displayHelpers'
 import { pmScheduleText } from '@/lib/pmSchedule'
 import { Play, ToggleLeft, ToggleRight } from '@lucide/vue'
 import type { AssetPmAssignment, PmRule } from '@/types'
@@ -22,10 +29,18 @@ const props = defineProps<{
 }>()
 
 const {
-  assignments, assignmentsLoading, assignmentsError, loadAssignments,
-  saving, validationErrors, assignRule,
-  acting, deactivateAssignment, reactivateAssignment,
-  evaluating, evaluateAssignment,
+  assignments,
+  assignmentsLoading,
+  assignmentsError,
+  loadAssignments,
+  saving,
+  validationErrors,
+  assignRule,
+  acting,
+  deactivateAssignment,
+  reactivateAssignment,
+  evaluating,
+  evaluateAssignment,
   loadActiveTemplates,
 } = usePmRules()
 
@@ -35,7 +50,13 @@ async function reload() {
   await loadAssignments(props.assetId, { showInactive: showInactive.value })
 }
 
-watch(() => props.assetId, () => { void reload() }, { immediate: true })
+watch(
+  () => props.assetId,
+  () => {
+    void reload()
+  },
+  { immediate: true },
+)
 
 function toggleInactive() {
   showInactive.value = !showInactive.value
@@ -57,7 +78,10 @@ async function openAssign() {
 }
 
 async function confirmAssign() {
-  if (!selectedTemplate.value) { assignError.value = 'Select a template to assign.'; return }
+  if (!selectedTemplate.value) {
+    assignError.value = 'Select a template to assign.'
+    return
+  }
   const result = await assignRule(props.assetId, Number(selectedTemplate.value))
   if (result) {
     toast.success('PM template assigned.')
@@ -82,7 +106,10 @@ function openEvaluate(a: AssetPmAssignment) {
 async function confirmEvaluate() {
   if (!evalTarget.value) return
   const res = await evaluateAssignment(props.assetId, evalTarget.value.id)
-  if (!res.ok) { toast.error(res.message ?? 'Evaluation failed.'); return }
+  if (!res.ok) {
+    toast.error(res.message ?? 'Evaluation failed.')
+    return
+  }
   if (res.data) {
     toast.success('PM request generated.')
     await reload()
@@ -133,7 +160,11 @@ async function confirmToggle() {
       <div v-if="assignmentsError" class="error-state" role="alert">{{ assignmentsError }}</div>
       <div v-else-if="assignmentsLoading" class="loading-state">Loading PM assignments…</div>
       <div v-else-if="assignments.length === 0" class="empty-state">
-        {{ showInactive ? 'No PM assignments (active or inactive).' : 'No PM rules assigned to this asset.' }}
+        {{
+          showInactive
+            ? 'No PM assignments (active or inactive).'
+            : 'No PM rules assigned to this asset.'
+        }}
       </div>
       <table v-else class="detail-table">
         <thead class="detail-table-head">
@@ -161,10 +192,16 @@ async function confirmToggle() {
               <span :class="pmStatusClass(a.pm_status)">{{ pmStatusLabel(a.pm_status) }}</span>
             </td>
             <td class="detail-table-cell">
-              {{ a.last_triggered_reading != null ? String(a.last_triggered_reading) : fmtDate(a.last_triggered_date) }}
+              {{
+                a.last_triggered_reading != null
+                  ? String(a.last_triggered_reading)
+                  : fmtDate(a.last_triggered_date)
+              }}
             </td>
             <td class="detail-table-cell">
-              {{ a.next_due_reading != null ? String(a.next_due_reading) : fmtDate(a.next_due_date) }}
+              {{
+                a.next_due_reading != null ? String(a.next_due_reading) : fmtDate(a.next_due_date)
+              }}
             </td>
             <td class="detail-table-cell">
               <div class="table-row-actions">
@@ -201,7 +238,8 @@ async function confirmToggle() {
         <DialogHeader>
           <DialogTitle>Assign PM Rule</DialogTitle>
           <DialogDescription>
-            Assign a maintenance schedule template to this asset. It starts with one full grace interval before its first PM is due.
+            Assign a maintenance schedule template to this asset. It starts with one full grace
+            interval before its first PM is due.
           </DialogDescription>
         </DialogHeader>
         <div class="form-field">
@@ -213,12 +251,16 @@ async function confirmToggle() {
               </SelectItem>
             </SelectContent>
           </Select>
-          <p v-if="templates.length === 0" class="form-help">No active templates available. Create one under Admin → PM Rules.</p>
+          <p v-if="templates.length === 0" class="form-help">
+            No active templates available. Create one under Admin → PM Rules.
+          </p>
           <p v-if="assignError" class="form-error">{{ assignError }}</p>
         </div>
         <DialogFooter>
           <Button variant="outline" :disabled="saving" @click="assignOpen = false">Cancel</Button>
-          <Button :disabled="saving" @click="confirmAssign">{{ saving ? 'Assigning…' : 'Assign' }}</Button>
+          <Button :disabled="saving" @click="confirmAssign">{{
+            saving ? 'Assigning…' : 'Assign'
+          }}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -229,7 +271,8 @@ async function confirmToggle() {
         <DialogHeader>
           <DialogTitle>Evaluate Now</DialogTitle>
           <DialogDescription>
-            Evaluate "{{ evalTarget?.rule.name }}" for this asset now. A due assignment generates a preventive maintenance request immediately.
+            Evaluate "{{ evalTarget?.rule.name }}" for this asset now. A due assignment generates a
+            preventive maintenance request immediately.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -245,11 +288,15 @@ async function confirmToggle() {
     <Dialog v-model:open="toggleOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{ toggleTarget?.is_active ? 'Deactivate Assignment' : 'Reactivate Assignment' }}</DialogTitle>
+          <DialogTitle>{{
+            toggleTarget?.is_active ? 'Deactivate Assignment' : 'Reactivate Assignment'
+          }}</DialogTitle>
           <DialogDescription v-if="toggleTarget">
-            {{ toggleTarget.is_active
-              ? `Deactivate "${toggleTarget.rule.name}" on this asset? It stops generating requests. Blocked if an active request or work order exists.`
-              : `Reactivate "${toggleTarget.rule.name}" on this asset? It resumes generating requests when due.` }}
+            {{
+              toggleTarget.is_active
+                ? `Deactivate "${toggleTarget.rule.name}" on this asset? It stops generating requests. Blocked if an active request or work order exists.`
+                : `Reactivate "${toggleTarget.rule.name}" on this asset? It resumes generating requests when due.`
+            }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -259,7 +306,7 @@ async function confirmToggle() {
             :disabled="acting"
             @click="confirmToggle"
           >
-            {{ acting ? 'Working…' : (toggleTarget?.is_active ? 'Deactivate' : 'Reactivate') }}
+            {{ acting ? 'Working…' : toggleTarget?.is_active ? 'Deactivate' : 'Reactivate' }}
           </Button>
         </DialogFooter>
       </DialogContent>

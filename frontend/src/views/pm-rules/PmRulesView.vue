@@ -5,10 +5,19 @@ import AppDataTable from '@/components/app/AppDataTable.vue'
 import PmRuleForm from '@/components/pm-rules/PmRuleForm.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { usePmRules } from '@/composables/usePmRules'
 import { useAuthStore } from '@/stores/auth.store'
@@ -23,11 +32,22 @@ const auth = useAuthStore()
 const canConfigure = computed(() => auth.isAdmin)
 
 const {
-  rules, rulesLoading, rulesError, loadRules,
-  readingTypes, loadReadingTypes,
-  saving, validationErrors, createRule, createRulesBatch, updateRule,
-  acting, deactivateRule, reactivateRule,
-  evaluating, evaluateAll,
+  rules,
+  rulesLoading,
+  rulesError,
+  loadRules,
+  readingTypes,
+  loadReadingTypes,
+  saving,
+  validationErrors,
+  createRule,
+  createRulesBatch,
+  updateRule,
+  acting,
+  deactivateRule,
+  reactivateRule,
+  evaluating,
+  evaluateAll,
 } = usePmRules()
 
 // ── Status filter ─────────────────────────────────────────────────────────────
@@ -41,12 +61,12 @@ const filteredRules = computed<PmRule[]>(() => {
 
 // ── Columns ───────────────────────────────────────────────────────────────────
 const columns: AppColumnDef<PmRule>[] = [
-  { field: 'name',              header: 'Template',      sortable: true, minWidth: 180 },
-  { field: 'maintenance_level', header: 'Level',         sortable: false, align: 'center' },
-  { field: 'schedule',          header: 'Schedule',      sortable: false, minWidth: 220 },
-  { field: 'assignments_count', header: 'Assets',        sortable: false, align: 'center' },
-  { field: 'is_active',         header: 'Active',        sortable: true, align: 'center' },
-  { field: 'actions',           header: '',              sortable: false, align: 'center', minWidth: 120 },
+  { field: 'name', header: 'Template', sortable: true, minWidth: 180 },
+  { field: 'maintenance_level', header: 'Level', sortable: false, align: 'center' },
+  { field: 'schedule', header: 'Schedule', sortable: false, minWidth: 220 },
+  { field: 'assignments_count', header: 'Assets', sortable: false, align: 'center' },
+  { field: 'is_active', header: 'Active', sortable: true, align: 'center' },
+  { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 120 },
 ]
 
 onMounted(() => {
@@ -57,7 +77,9 @@ onMounted(() => {
 // ── Create / Edit form ────────────────────────────────────────────────────────
 const formOpen = ref(false)
 const editing = ref<PmRule | null>(null)
-const batchResults = ref<{ index: number; ok: boolean; errors?: Record<string, string[]>; message?: string }[] | null>(null)
+const batchResults = ref<
+  { index: number; ok: boolean; errors?: Record<string, string[]>; message?: string }[] | null
+>(null)
 
 function openCreate() {
   editing.value = null
@@ -111,7 +133,9 @@ const evaluateAllOpen = ref(false)
 async function confirmEvaluateAll() {
   const res = await evaluateAll()
   if (res.ok && res.result) {
-    toast.success(`Evaluated ${res.result.evaluated} assignment${res.result.evaluated === 1 ? '' : 's'} — generated ${res.result.generated} request${res.result.generated === 1 ? '' : 's'}.`)
+    toast.success(
+      `Evaluated ${res.result.evaluated} assignment${res.result.evaluated === 1 ? '' : 's'} — generated ${res.result.generated} request${res.result.generated === 1 ? '' : 's'}.`,
+    )
   } else {
     toast.error(res.message ?? 'Evaluation failed.')
   }
@@ -158,7 +182,12 @@ async function confirmToggle() {
         </Select>
       </div>
       <div class="filter-actions">
-        <Button v-if="canConfigure" variant="outline" :disabled="evaluating" @click="evaluateAllOpen = true">
+        <Button
+          v-if="canConfigure"
+          variant="outline"
+          :disabled="evaluating"
+          @click="evaluateAllOpen = true"
+        >
           {{ evaluating ? 'Evaluating…' : 'Evaluate All' }}
         </Button>
         <Button v-if="canConfigure" @click="openCreate">Create Template</Button>
@@ -168,63 +197,65 @@ async function confirmToggle() {
     <div v-if="rulesError" class="error-state" role="alert">{{ rulesError }}</div>
 
     <AppDataTable
-        :key="statusFilter"
-        :rows="filteredRules"
-        :columns="columns"
-        empty-text="No PM templates defined."
-        label="PM Templates"
-        :loading="rulesLoading"
-      >
-        <template #cell="{ column, row }">
-          <RouterLink
-            v-if="column.field === 'name'"
-            :to="`/admin/pm-rules/${row.id}`"
-            class="table-link"
-          >{{ row.name }}</RouterLink>
+      :key="statusFilter"
+      :rows="filteredRules"
+      :columns="columns"
+      empty-text="No PM templates defined."
+      label="PM Templates"
+      :loading="rulesLoading"
+    >
+      <template #cell="{ column, row }">
+        <RouterLink
+          v-if="column.field === 'name'"
+          :to="`/admin/pm-rules/${row.id}`"
+          class="table-link"
+          >{{ row.name }}</RouterLink
+        >
 
-          <span v-else-if="column.field === 'maintenance_level'">
-            <span v-if="row.maintenance_level" :class="pmLevelClass(row.maintenance_level)">
-              {{ row.maintenance_level }}
-            </span>
-            <span v-else class="detail-field-muted">—</span>
+        <span v-else-if="column.field === 'maintenance_level'">
+          <span v-if="row.maintenance_level" :class="pmLevelClass(row.maintenance_level)">
+            {{ row.maintenance_level }}
           </span>
+          <span v-else class="detail-field-muted">—</span>
+        </span>
 
-          <span v-else-if="column.field === 'schedule'" class="pm-schedule-cell">
-            {{ pmScheduleText(row) }}
-          </span>
+        <span v-else-if="column.field === 'schedule'" class="pm-schedule-cell">
+          {{ pmScheduleText(row) }}
+        </span>
 
-          <span v-else-if="column.field === 'assignments_count'" class="table-cell-secondary">
-            {{ row.assignments_count ?? 0 }}
-          </span>
+        <span v-else-if="column.field === 'assignments_count'" class="table-cell-secondary">
+          {{ row.assignments_count ?? 0 }}
+        </span>
 
-          <span
-            v-else-if="column.field === 'is_active'"
-            :class="row.is_active ? 'status-badge status-active' : 'status-badge status-inactive'"
-          >{{ row.is_active ? 'Active' : 'Inactive' }}</span>
+        <span
+          v-else-if="column.field === 'is_active'"
+          :class="row.is_active ? 'status-badge status-active' : 'status-badge status-inactive'"
+          >{{ row.is_active ? 'Active' : 'Inactive' }}</span
+        >
 
-          <div v-else-if="column.field === 'actions'" class="table-row-actions">
-            <Button
-              v-if="canConfigure"
-              variant="outline"
-              size="icon-sm"
-              :aria-label="`Edit ${row.name}`"
-              @click="openEdit(row)"
-            >
-              <Pencil />
-            </Button>
-            <Button
-              v-if="canConfigure"
-              variant="ghost"
-              size="icon-sm"
-              :aria-label="`${row.is_active ? 'Deactivate' : 'Reactivate'} ${row.name}`"
-              @click="openToggle(row)"
-            >
-              <ToggleRight v-if="row.is_active" />
-              <ToggleLeft v-else />
-            </Button>
-          </div>
-        </template>
-      </AppDataTable>
+        <div v-else-if="column.field === 'actions'" class="table-row-actions">
+          <Button
+            v-if="canConfigure"
+            variant="outline"
+            size="icon-sm"
+            :aria-label="`Edit ${row.name}`"
+            @click="openEdit(row)"
+          >
+            <Pencil />
+          </Button>
+          <Button
+            v-if="canConfigure"
+            variant="ghost"
+            size="icon-sm"
+            :aria-label="`${row.is_active ? 'Deactivate' : 'Reactivate'} ${row.name}`"
+            @click="openToggle(row)"
+          >
+            <ToggleRight v-if="row.is_active" />
+            <ToggleLeft v-else />
+          </Button>
+        </div>
+      </template>
+    </AppDataTable>
 
     <!-- Create / Edit sheet -->
     <PmRuleForm
@@ -245,7 +276,8 @@ async function confirmToggle() {
         <DialogHeader>
           <DialogTitle>Evaluate All PM Assignments</DialogTitle>
           <DialogDescription>
-            Run every active assignment now. Due assignments will generate preventive maintenance requests immediately.
+            Run every active assignment now. Due assignments will generate preventive maintenance
+            requests immediately.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -261,11 +293,15 @@ async function confirmToggle() {
     <Dialog v-model:open="toggleOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{ toggleTarget?.is_active ? 'Deactivate PM Template' : 'Reactivate PM Template' }}</DialogTitle>
+          <DialogTitle>{{
+            toggleTarget?.is_active ? 'Deactivate PM Template' : 'Reactivate PM Template'
+          }}</DialogTitle>
           <DialogDescription v-if="toggleTarget">
-            {{ toggleTarget.is_active
-              ? `Deactivate "${toggleTarget.name}"? It will stop generating maintenance requests for all its assignments. Existing assignments stay on record. Blocked if any assignment has an active request or work order.`
-              : `Reactivate "${toggleTarget.name}"? Its active assignments will resume generating maintenance requests when due.` }}
+            {{
+              toggleTarget.is_active
+                ? `Deactivate "${toggleTarget.name}"? It will stop generating maintenance requests for all its assignments. Existing assignments stay on record. Blocked if any assignment has an active request or work order.`
+                : `Reactivate "${toggleTarget.name}"? Its active assignments will resume generating maintenance requests when due.`
+            }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -275,7 +311,7 @@ async function confirmToggle() {
             :disabled="acting"
             @click="confirmToggle"
           >
-            {{ acting ? 'Working…' : (toggleTarget?.is_active ? 'Deactivate' : 'Reactivate') }}
+            {{ acting ? 'Working…' : toggleTarget?.is_active ? 'Deactivate' : 'Reactivate' }}
           </Button>
         </DialogFooter>
       </DialogContent>

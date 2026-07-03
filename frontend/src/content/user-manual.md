@@ -178,8 +178,9 @@ activation attempts per minute.
 
 ### 2.5 Logging Out
 
-Select the sign-out action at the bottom of the sidebar. The system invalidates
-your current session. You will need to log in again to access the application.
+Click your user avatar and name in the top-right corner of the header bar to
+open the user menu, then select **Sign out**. The system invalidates your
+current session. You will need to log in again to access the application.
 
 ### 2.6 Machine-to-Machine API Access
 
@@ -369,32 +370,52 @@ history, and attachments.
 
 ## 4. Navigating the System
 
-### 4.1 Sidebar Structure
+### 4.1 Application Shell
 
-The application uses a flat single-level sidebar with eight primary items. There
-are no nested dropdown menus. Each sidebar item is shown or hidden based on your
-role.
+The application is built around a three-part shell:
 
-| # | Sidebar Item | Type | Visible To |
-|---|---|---|---|
-| 1 | Dashboard | Direct Link | Everyone |
-| 2 | Maintenance Requests | Tabbed Group | Everyone |
-| 3 | Work Orders | Tabbed Group | Admin, Manager, Technician |
-| 4 | Asset Management | Tabbed Group | Admin, Manager, Technician, Logistics |
-| 5 | Parts Management | Tabbed Group | Admin, Manager, Technician |
-| 6 | Locations | Tabbed Group | Admin, Manager, Logistics |
-| 7 | Admin | Tabbed Group | Admin only |
-| 8 | Settings | Tabbed Group | Admin only |
+- **Left sidebar** — role-aware navigation with eight primary items and the ATMS
+  logo at the top.
+- **Header bar** — runs across the top of the main content area and contains
+  three controls aligned to the right:
+  - **Sidebar toggle** (menu icon, left side of header) — collapses the sidebar
+    to icon-only mode on desktop; on mobile, opens the sidebar as a slide-in
+    sheet.
+  - **User Manual button** (book icon) — opens the User Manual in a dedicated
+    page. Available to all authenticated users.
+  - **User menu** (your avatar initials, name, role label, and a chevron) —
+    clicking opens a dropdown that shows your email address and a **Sign out**
+    action.
+- **Main content area** — the workspace where pages, lists, forms, and details
+  are rendered. The content changes when you navigate via the sidebar, tabs, or
+  drill-down links.
+
+### 4.2 Sidebar Structure
+
+The sidebar is a flat single-level navigation panel with eight primary items.
+There are no nested dropdown menus. Each sidebar item is shown or hidden based
+on your role.
+
+The sidebar header displays the **ATMS logo** and brand mark. When collapsed,
+only the logo is visible.
+
+| #   | Sidebar Item         | Type         | Visible To                            |
+| --- | -------------------- | ------------ | ------------------------------------- |
+| 1   | Dashboard            | Direct Link  | Everyone                              |
+| 2   | Maintenance Requests | Tabbed Group | Everyone                              |
+| 3   | Work Orders          | Tabbed Group | Admin, Manager, Technician            |
+| 4   | Asset Management     | Tabbed Group | Admin, Manager, Technician, Logistics |
+| 5   | Parts Management     | Tabbed Group | Admin, Manager, Technician            |
+| 6   | Locations            | Tabbed Group | Admin, Manager, Logistics             |
+| 7   | Admin                | Tabbed Group | Admin only                            |
+| 8   | Settings             | Tabbed Group | Admin only                            |
 
 The sidebar can be collapsed to icon-only mode on desktop using the sidebar
-toggle. On mobile, the sidebar becomes a slide-in sheet triggered by a menu
-button. The active sidebar item is highlighted with a background accent. For
-tabbed groups, the item stays highlighted while you are on any of its tabs.
+toggle in the header bar. On mobile, the sidebar becomes a slide-in sheet. The
+active sidebar item is highlighted with a background accent. For tabbed groups,
+the item stays highlighted while you are on any of its tabs.
 
-The footer of the sidebar shows your avatar, name, role label, and a sign-out
-action.
-
-### 4.2 Tabbed Content Areas
+### 4.3 Tabbed Content Areas
 
 When you click a primary sidebar item that contains sub-items (a "Tabbed
 Group"), the sidebar remains static and the main content area header displays a
@@ -405,7 +426,7 @@ Tab state is driven by URL query parameters (`?tab=active`), which means browser
 back and forward buttons work correctly and you can bookmark or share links to
 specific tabs.
 
-### 4.3 Drill-Down Navigation
+### 4.4 Drill-Down Navigation
 
 Detail pages for specific records — asset detail, work order detail, maintenance
 request review, part detail — are accessed by clicking on a row in their
@@ -414,30 +435,30 @@ They open as full-page views with their own sections and actions.
 
 Screens without sidebar entries:
 
-| Screen | Accessed From |
-|---|---|
-| Asset Detail | All Assets list, Asset Location Update list |
-| Usage & Meter Readings | Asset Detail |
-| Location History | Asset Detail, Asset Location Update list |
-| Maintenance History | Asset Detail |
-| Attachments | Asset Detail, Part Detail |
-| Review Maintenance Request | Pending Approval / All Requests lists |
-| Work Order Detail | Active / Completed / Closed WO lists |
-| Part Detail | All Parts list |
-| Asset Assembly History | Asset Assembly tab |
+| Screen                     | Accessed From                               |
+| -------------------------- | ------------------------------------------- |
+| Asset Detail               | All Assets list, Asset Location Update list |
+| Usage & Meter Readings     | Asset Detail                                |
+| Location History           | Asset Detail, Asset Location Update list    |
+| Maintenance History        | Asset Detail                                |
+| Attachments                | Asset Detail, Part Detail                   |
+| Review Maintenance Request | Pending Approval / All Requests lists       |
+| Work Order Detail          | Active / Completed / Closed WO lists        |
+| Part Detail                | All Parts list                              |
+| Asset Assembly History     | Asset Assembly tab                          |
 
-### 4.4 Role Visibility Summary by Section
+### 4.5 Role Visibility Summary by Section
 
-| Section | Requester | Technician | Logistics | Manager | Admin |
-|---|---|---|---|---|---|
-| Dashboard | Yes | Yes | Yes | Yes | Yes |
-| Maintenance Requests | Yes | Yes | Yes | Yes | Yes |
-| Work Orders | — | Yes | — | Yes | Yes |
-| Asset Management | — | Yes | Yes | Yes | Yes |
-| Parts Management | — | Yes | — | Yes | Yes |
-| Locations | — | — | Yes | Yes | Yes |
-| Admin | — | — | — | — | Yes |
-| Settings | — | — | — | — | Yes |
+| Section              | Requester | Technician | Logistics | Manager | Admin |
+| -------------------- | --------- | ---------- | --------- | ------- | ----- |
+| Dashboard            | Yes       | Yes        | Yes       | Yes     | Yes   |
+| Maintenance Requests | Yes       | Yes        | Yes       | Yes     | Yes   |
+| Work Orders          | —         | Yes        | —         | Yes     | Yes   |
+| Asset Management     | —         | Yes        | Yes       | Yes     | Yes   |
+| Parts Management     | —         | Yes        | —         | Yes     | Yes   |
+| Locations            | —         | —          | Yes       | Yes     | Yes   |
+| Admin                | —         | —          | —         | —       | Yes   |
+| Settings             | —         | —          | —         | —       | Yes   |
 
 ---
 
@@ -466,11 +487,11 @@ preventing new maintenance actions against them.
 
 Every asset has an `asset_kind` that declares its role in the assembly hierarchy:
 
-| Kind | Can Have Parent? | Can Have Children? | Typical Example |
-|---|---|---|---|
-| **asset** | No | No | Rotor, Stator (indivisible leaf unit) |
-| **package** | Yes | Yes | Motor, Power Section (can be both parent and child) |
-| **component** | Yes | No | Radial Bearing (designed to be installed, has no children) |
+| Kind          | Can Have Parent? | Can Have Children? | Typical Example                                            |
+| ------------- | ---------------- | ------------------ | ---------------------------------------------------------- |
+| **asset**     | No               | No                 | Rotor, Stator (indivisible leaf unit)                      |
+| **package**   | Yes              | Yes                | Motor, Power Section (can be both parent and child)        |
+| **component** | Yes              | No                 | Radial Bearing (designed to be installed, has no children) |
 
 Only Administrator and Maintenance Manager may change an asset's `asset_kind`.
 
@@ -523,7 +544,7 @@ Withdrawn (`disposed`) in ATMS while still appearing in ERP financial records.
 > The two states are stored as `enrolled` and `withdrawn`. They are displayed in
 > the UI as **"In maintenance program"** (`enrolled`) and **"Withdrawn"**
 > (`withdrawn`). (These were renamed from the former "Active"/"Inactive" so that
-> maintenance status is never confused with an asset's separate *operational*
+> maintenance status is never confused with an asset's separate _operational_
 > status, which has its own "active" value.)
 
 #### Enrolled — displayed as "In maintenance program"
@@ -536,11 +557,11 @@ The asset is in operational use and eligible for maintenance workflows:
 
 **Enrolled sub-statuses** (for components and packages only):
 
-| Sub-status | Meaning |
-|---|---|
-| *(none)* | Default for standalone assets. Normal operation. |
-| **Installed** (`installed`) | Component is currently installed inside a parent. `parent_asset_id` is set. |
-| **Ready** (`ready`) | Component is fully maintained and available for installation. Not currently installed (`parent_asset_id` is null). A spare. |
+| Sub-status                  | Meaning                                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| _(none)_                    | Default for standalone assets. Normal operation.                                                                            |
+| **Installed** (`installed`) | Component is currently installed inside a parent. `parent_asset_id` is set.                                                 |
+| **Ready** (`ready`)         | Component is fully maintained and available for installation. Not currently installed (`parent_asset_id` is null). A spare. |
 
 #### Withdrawn — displayed as "Withdrawn"
 
@@ -550,13 +571,13 @@ the registry and its full maintenance history is preserved.
 
 **Withdrawn sub-statuses** (purely informational — no workflow triggers):
 
-| Sub-status | Meaning |
-|---|---|
-| **Lost in Hole** (`lih`) | Physically inaccessible (e.g., downhole equipment that cannot be retrieved). |
-| **Damaged Beyond Repair** (`dbr`) | Repair is not economically or technically feasible. |
-| **Disposed** (`disposed`) | Formally disposed per organizational policy (independent of ERP disposal accounting). |
-| **Scrapped** (`scrapped`) | Dismantled, sold for scrap, or otherwise removed from the operational pool. |
-| **Other** (`other`) | Any other reason, with a free-text note for context. |
+| Sub-status                        | Meaning                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------- |
+| **Lost in Hole** (`lih`)          | Physically inaccessible (e.g., downhole equipment that cannot be retrieved).          |
+| **Damaged Beyond Repair** (`dbr`) | Repair is not economically or technically feasible.                                   |
+| **Disposed** (`disposed`)         | Formally disposed per organizational policy (independent of ERP disposal accounting). |
+| **Scrapped** (`scrapped`)         | Dismantled, sold for scrap, or otherwise removed from the operational pool.           |
+| **Other** (`other`)               | Any other reason, with a free-text note for context.                                  |
 
 **Key rules:**
 
@@ -569,7 +590,7 @@ the registry and its full maintenance history is preserved.
 - Withdrawn assets may be re-enrolled at any time by Admin or Manager.
 - `installed` requires `parent_asset_id` to be set; `ready` requires
   `parent_asset_id` to be null. These sub-statuses only apply to `asset_kind =
-  component` or `package`.
+component` or `package`.
 - Swapping a component auto-updates its sub-status: `ready` → `installed` on
   install; `installed` → `ready` on removal (or to a Withdrawn sub-status if
   decommissioned).
@@ -600,13 +621,13 @@ reassigned or relocated.
 
 **Who can toggle booking:**
 
-| Role | Book | Unbook |
-|---|---|---|
-| Administrator | Yes | Yes |
-| Maintenance Manager | Yes | Yes |
-| Logistics | Yes | Yes |
-| Technician | No | No |
-| Requester | No | No |
+| Role                | Book | Unbook |
+| ------------------- | ---- | ------ |
+| Administrator       | Yes  | Yes    |
+| Maintenance Manager | Yes  | Yes    |
+| Logistics           | Yes  | Yes    |
+| Technician          | No   | No     |
+| Requester           | No   | No     |
 
 ### 5.6 Asset Assembly (Package / Component)
 
@@ -618,12 +639,12 @@ maintainable assets.
 
 **Key concepts:**
 
-| Term | Definition |
-|---|---|
-| **Asset** | A single indivisible unit. Cannot contain sub-assets. Leaf node only. |
-| **Package** | An asset that can contain child assets. A package may also be installed as a component inside a larger package. |
-| **Component** | An asset that can be installed inside a parent. |
-| **Root** | A package with no parent — sits at the top of an assembly tree. |
+| Term          | Definition                                                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Asset**     | A single indivisible unit. Cannot contain sub-assets. Leaf node only.                                           |
+| **Package**   | An asset that can contain child assets. A package may also be installed as a component inside a larger package. |
+| **Component** | An asset that can be installed inside a parent.                                                                 |
+| **Root**      | A package with no parent — sits at the top of an assembly tree.                                                 |
 
 These are not mutually exclusive — a Power Section is both a Package (contains
 Rotor + Stator) and a Component (installed inside the Motor).
@@ -669,7 +690,7 @@ Motor (Package, Root)
   - 🟢 **OK** — well within PM interval.
   - 🟡 **Soon** — approaching PM interval.
   - 🔴 **Due / Overdue** — at or past interval.
-  
+
   The Technician or Manager may decide to act on yellow/red items while the
   asset is already in the workshop. A "Create MR for Component" action is
   available (Admin/Manager only) for any yellow/red component. This is a manual
@@ -722,31 +743,121 @@ Locations section, but the formal movement approval chain belongs to AM.
 
 ## 6. Dashboard
 
-The Dashboard is the landing page for all authenticated users. It provides an
-operational overview at a glance.
+The Dashboard — titled **Maintenance Control Center** — is the landing page for
+all authenticated users. It provides a comprehensive operational overview with
+reliability analytics, process metrics, action-required alerts, and quick-access
+controls.
 
 **Visible to:** Everyone.
 
 **Route:** `/dashboard`
 
-**Elements displayed:**
+### 6.1 Page Layout
 
-- **KPI summary cards** providing counts of:
-  - Pending Maintenance Requests (awaiting review).
-  - Open Work Orders.
-  - Overdue Preventive Maintenance items.
-  - Recently closed Work Orders.
-- **Pending MR list** — a short list of MRs currently in `pending_review`
-  status.
-- **Open WO list** — Work Orders that are `open` or `in_progress`.
-- **Overdue PM list** — Preventive Maintenance assignments that are past their
-  due date or reading threshold.
-- **Recently closed WO list** — Work Orders that were recently finalised.
-- **Recently updated assets** — assets with recent activity.
+The Dashboard uses a two-column split layout:
+
+- **Left panel (main workspace):** Contains the analytics KPIs section and
+  detailed data cards (action-required lists and activity tracking).
+- **Right panel (command center sidebar):** Contains role-driven quick actions
+  and live operational status tiles.
+
+A "Refresh" button in the page header lets you reload all dashboard data
+manually. A window indicator shows the analysis time frame (e.g., "Last 90
+days") with the actual date range.
+
+### 6.2 Analytics & Reliability KPIs
+
+The top of the dashboard displays six Key Performance Indicators organized into
+two groups. These KPIs are calculated over a rolling **90-day window** and are
+visible to all roles. Metrics that cannot be computed due to insufficient data
+display a dash (—), never zero.
+
+#### Reliability Performance
+
+| KPI              | Description                                                                                                                                | Unit  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| **MTBF**         | Mean Time Between Failures — the average interval between corrective maintenance events during the window. Calculated on a calendar basis. | days  |
+| **MTTR**         | Mean Time To Repair — the average clock time from WO creation through closure for corrective Work Orders completed in the window.          | hours |
+| **Failure Rate** | Total number of corrective failures (closed corrective WOs) in the window, expressed as a count and a per-day average.                     | count |
+
+#### Process Efficiency
+
+| KPI                 | Description                                                                                                                    | Unit  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| **PM Compliance**   | Percentage of Preventive Maintenance assignments completed on time (WO closed by or before the PM due date) during the window. | %     |
+| **Avg MR Duration** | Average elapsed time from Maintenance Request creation to its final resolution (conversion, rejection, or cancellation).       | hours |
+| **Avg WO Duration** | Average elapsed time from Work Order creation to closure for WOs closed during the window.                                     | hours |
+
+### 6.3 Action Required
+
+Role-adaptive data cards appear in the left workspace when you have items
+requiring attention. Each card shows a count badge and a scrollable list of
+items. Cards only appear when the backend determines your role has relevant
+items — absence of a card means none apply.
+
+| Card                             | Content                                                                                           | Link Target                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Pending Maintenance Requests** | MRs in `pending_review` status awaiting Manager review.                                           | MR detail page (`/maintenance/requests/:id`) |
+| **Open Work Orders**             | WOs in `open` or `in_progress` status. Assigned WOs for Technicians; all WOs for Managers/Admins. | WO detail page (`/work-orders/:id`)          |
+| **Overdue PM Assignments**       | PM assignments that have passed their due date or reading threshold.                              | Asset detail page (`/assets/:id`)            |
+
+### 6.4 Activity & Tracking
+
+Two additional data cards provide visibility into recent operational events:
+
+| Card                            | Description                                                                                                 | Data Source        |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
+| **Recently Relocated Assets**   | Assets whose physical location changed in the last 90 days, showing the from → to route and effective date. | KPI endpoint       |
+| **Recently Closed Work Orders** | Work Orders closed within the last 30 days, showing WO number, asset, assignee, and closure date.           | Dashboard endpoint |
+
+### 6.5 Command Center (Right Sidebar)
+
+The right sidebar provides two panels:
+
+#### Actions Hub
+
+A set of role-driven shortcut buttons that link directly to frequently used
+screens. Each action routes to the same default tab as the sidebar navigation
+item for that section.
+
+| Action          | Visible To                            | Target                                     |
+| --------------- | ------------------------------------- | ------------------------------------------ |
+| **Assets**      | Admin, Manager, Technician, Logistics | `/assets?tab=all-assets`                   |
+| **New MR**      | Everyone                              | `/maintenance` (new request form)          |
+| **Locations**   | Admin, Manager, Logistics             | `/locations?tab=asset-location-update`     |
+| **Work Orders** | Admin, Manager, Technician            | `/work-orders` (role-adaptive default tab) |
+
+#### Operational Status
+
+Live KPI tiles displayed as compact stat cards. Each tile shows an icon, label,
+and count, and acts as a direct link to the corresponding filtered view — for
+example, clicking "Pending MR" navigates to `/maintenance?tab=pending-approval`.
+
+| Tile                 | Visible When                   | Links To                            |
+| -------------------- | ------------------------------ | ----------------------------------- |
+| **Pending MR**       | Pending MR summary key present | `/maintenance?tab=pending-approval` |
+| **Open Work Orders** | Open WO summary key present    | `/work-orders?tab=open`             |
+| **Overdue PM Rules** | Overdue PM summary key present | `/admin/pm-rules`                   |
+
+Tiles only appear when the corresponding summary data is available for your role
+— the backend omits keys entirely for roles that should not see them.
+
+### 6.6 Role Filtering
 
 Dashboard data is role-filtered. Each role sees counts and lists relevant to
-their responsibilities. For example, a Technician sees WOs assigned to them,
-while a Maintenance Manager sees all pending MRs requiring their review.
+their responsibilities. For example:
+
+- **Technician** sees Work Orders assigned to them; Pending MRs are filtered to
+  their role-appropriate view.
+- **Maintenance Manager** sees all pending MRs requiring review and all active
+  WOs across the team.
+- **Requester** sees their own submitted MRs and a limited set of dashboard
+  widgets relevant to their permissions.
+- **Logistics** sees location-related activity but no Work Order data.
+
+The analytics KPIs (Section 6.2) and relocated-assets feed are the same for
+every role — they represent system-wide operational health over the 90-day
+window.
 
 ---
 
@@ -854,23 +965,23 @@ assignments. Users do not manually create PM requests.
 
 ### 7.3 Maintenance Request Statuses
 
-| Status | Meaning | Is Terminal? |
-|---|---|---|
-| `pending_review` | Submitted/generated and awaiting Manager review. Creator or Admin/Manager may edit description, priority, and asset. | No |
-| `converted` | Approved and atomically converted into exactly one Work Order. There is no separate stored "approved" status. | Yes |
-| `rejected` | Declined by the Maintenance Manager with a required reason. | Yes |
-| `cancelled` | Withdrawn while awaiting review, before approval and conversion. Once approved and converted, the MR cannot be cancelled. | Yes |
+| Status           | Meaning                                                                                                                   | Is Terminal? |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `pending_review` | Submitted/generated and awaiting Manager review. Creator or Admin/Manager may edit description, priority, and asset.      | No           |
+| `converted`      | Approved and atomically converted into exactly one Work Order. There is no separate stored "approved" status.             | Yes          |
+| `rejected`       | Declined by the Maintenance Manager with a required reason.                                                               | Yes          |
+| `cancelled`      | Withdrawn while awaiting review, before approval and conversion. Once approved and converted, the MR cannot be cancelled. | Yes          |
 
 ### 7.4 Maintenance Request Tabs
 
 The Maintenance Requests page has four tabs, shown/hidden by role:
 
-| Tab | Visible To | Content |
-|---|---|---|
-| **New Request** | Everyone | Side-sheet form for creating a new Corrective MR. |
-| **My Requests** | Everyone | All MRs created by the current user. |
+| Tab                  | Visible To     | Content                                                                           |
+| -------------------- | -------------- | --------------------------------------------------------------------------------- |
+| **New Request**      | Everyone       | Side-sheet form for creating a new Corrective MR.                                 |
+| **My Requests**      | Everyone       | All MRs created by the current user.                                              |
 | **Pending Approval** | Admin, Manager | All MRs with status `pending_review`. Row actions: Approve, Reject, Cancel, Edit. |
-| **All Requests** | Admin, Manager | Every MR regardless of status, with search and filters. |
+| **All Requests**     | Admin, Manager | Every MR regardless of status, with search and filters.                           |
 
 ### 7.5 Maintenance Request Detail (Drill-Down)
 
@@ -1118,13 +1229,13 @@ filled before the WO can be completed.
 
 **Who can fill the form:**
 
-| Role | Can fill pre/post values? |
-|---|---|
-| Administrator | Yes — any WO |
-| Maintenance Manager | Yes — any WO |
-| Technician | Yes — assigned WO only |
-| Logistics | No |
-| Requester | No |
+| Role                | Can fill pre/post values? |
+| ------------------- | ------------------------- |
+| Administrator       | Yes — any WO              |
+| Maintenance Manager | Yes — any WO              |
+| Technician          | Yes — assigned WO only    |
+| Logistics           | No                        |
+| Requester           | No                        |
 
 **Sync-to-latest:**
 
@@ -1149,23 +1260,23 @@ After the WO transitions to `completed`, all form fields become read-only.
 
 ### 8.7 Work Order Status Summary
 
-| Status | Meaning | Editable By | Terminal? |
-|---|---|---|---|
-| `open` | Created from approved MR. May be unassigned. | Manager (assign, edit exec details), Technician (after assignment) | No |
-| `in_progress` | Work has started. Must be assigned to an active Technician. | Assigned Technician (exec details, parts, readings, status), Admin/Manager (exec details) | No |
-| `completed` | Technician has submitted all completion info. Awaiting closure. | Admin/Manager (edit exec details, close, cancel) | No |
-| `closed` | Reviewed and finalized by Admin or Manager. PM baselines updated. | No one — permanently immutable | Yes |
-| `cancelled` | Cancelled by Admin or Manager with required reason. | No one — terminal and read-only | Yes |
+| Status        | Meaning                                                           | Editable By                                                                               | Terminal? |
+| ------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------- |
+| `open`        | Created from approved MR. May be unassigned.                      | Manager (assign, edit exec details), Technician (after assignment)                        | No        |
+| `in_progress` | Work has started. Must be assigned to an active Technician.       | Assigned Technician (exec details, parts, readings, status), Admin/Manager (exec details) | No        |
+| `completed`   | Technician has submitted all completion info. Awaiting closure.   | Admin/Manager (edit exec details, close, cancel)                                          | No        |
+| `closed`      | Reviewed and finalized by Admin or Manager. PM baselines updated. | No one — permanently immutable                                                            | Yes       |
+| `cancelled`   | Cancelled by Admin or Manager with required reason.               | No one — terminal and read-only                                                           | Yes       |
 
 ### 8.8 Work Order Tabs
 
-| Tab | Visible To | Content |
-|---|---|---|
-| **My Work Orders** | Technician only | WOs assigned to the current Technician. |
-| **All Work Orders** | Admin, Manager | Every WO regardless of status or assignment, with search and filters. |
-| **Active** | Admin, Manager, Technician | WOs with status `open` or `in_progress`. |
-| **Completed** | Admin, Manager, Technician | WOs with status `completed` (awaiting closure). |
-| **Closed** | Admin, Manager, Technician | WOs with status `closed` (read-only). |
+| Tab                 | Visible To                 | Content                                                               |
+| ------------------- | -------------------------- | --------------------------------------------------------------------- |
+| **My Work Orders**  | Technician only            | WOs assigned to the current Technician.                               |
+| **All Work Orders** | Admin, Manager             | Every WO regardless of status or assignment, with search and filters. |
+| **Active**          | Admin, Manager, Technician | WOs with status `open` or `in_progress`.                              |
+| **Completed**       | Admin, Manager, Technician | WOs with status `completed` (awaiting closure).                       |
+| **Closed**          | Admin, Manager, Technician | WOs with status `closed` (read-only).                                 |
 
 ### 8.9 Work Order Detail (Drill-Down)
 
@@ -1304,12 +1415,12 @@ Clicking an asset row opens the full-page Asset Detail screen.
 
 **Who can perform assembly operations:**
 
-| Operation | Admin | Manager | Technician | Others |
-|---|---|---|---|---|
-| Install component | Yes | Yes | Assigned WO only | No |
-| Remove component | Yes | Yes | Assigned WO only | No |
-| Swap component | Yes | Yes | Assigned WO only | No |
-| Create MR for child component | Yes | Yes | No | No |
+| Operation                     | Admin | Manager | Technician       | Others |
+| ----------------------------- | ----- | ------- | ---------------- | ------ |
+| Install component             | Yes   | Yes     | Assigned WO only | No     |
+| Remove component              | Yes   | Yes     | Assigned WO only | No     |
+| Swap component                | Yes   | Yes     | Assigned WO only | No     |
+| Create MR for child component | Yes   | Yes     | No               | No     |
 
 ### 9.4 Meter Readings
 
@@ -1607,16 +1718,16 @@ L3 overhaul.
 
 The PM Rules tab lives under the Admin sidebar item:
 
-| Element | Visible To | Content |
-|---|---|---|
-| Template list | Admin only | All PM rule templates with name, level, trigger type, schedule, assignment count, active status. |
-| Create/Edit | Admin only | Side-sheet form for template creation and editing. |
-| Deactivate/Reactivate | Admin only | Toggle for individual templates. |
-| Evaluate All | Admin only | Runs evaluation against every active assignment. |
+| Element               | Visible To | Content                                                                                          |
+| --------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
+| Template list         | Admin only | All PM rule templates with name, level, trigger type, schedule, assignment count, active status. |
+| Create/Edit           | Admin only | Side-sheet form for template creation and editing.                                               |
+| Deactivate/Reactivate | Admin only | Toggle for individual templates.                                                                 |
+| Evaluate All          | Admin only | Runs evaluation against every active assignment.                                                 |
 
-**Note:** Creating and editing PM rule *templates* is Administrator-only by
+**Note:** Creating and editing PM rule _templates_ is Administrator-only by
 design. Maintenance Managers do not manage the template library; instead they
-assign templates to assets and manage each asset's PM *assignments* (assign,
+assign templates to assets and manage each asset's PM _assignments_ (assign,
 evaluate, deactivate, reactivate) directly from the **Asset Detail → PM Rules**
 section.
 
@@ -1853,107 +1964,107 @@ Attachments can be uploaded against four parent types:
 
 ### Maintenance Request Statuses
 
-| Status | Description | Terminal |
-|---|---|---|
-| `pending_review` | Awaiting Manager review. Editable by creator or Admin/Manager. | No |
-| `converted` | Approved and atomically converted to a Work Order. | Yes |
-| `rejected` | Declined by Manager with required reason. | Yes |
-| `cancelled` | Withdrawn before approval/conversion. | Yes |
+| Status           | Description                                                    | Terminal |
+| ---------------- | -------------------------------------------------------------- | -------- |
+| `pending_review` | Awaiting Manager review. Editable by creator or Admin/Manager. | No       |
+| `converted`      | Approved and atomically converted to a Work Order.             | Yes      |
+| `rejected`       | Declined by Manager with required reason.                      | Yes      |
+| `cancelled`      | Withdrawn before approval/conversion.                          | Yes      |
 
 ### Work Order Statuses
 
-| Status | Description | Terminal |
-|---|---|---|
-| `open` | Created from approved MR. May be unassigned. | No |
-| `in_progress` | Work started. Must be assigned to active Technician. | No |
-| `completed` | Technician submitted all work. Awaiting Manager closure. | No |
-| `closed` | Reviewed and finalized. Permanently immutable. | Yes |
-| `cancelled` | Cancelled by Admin/Manager with required reason. | Yes |
+| Status        | Description                                              | Terminal |
+| ------------- | -------------------------------------------------------- | -------- |
+| `open`        | Created from approved MR. May be unassigned.             | No       |
+| `in_progress` | Work started. Must be assigned to active Technician.     | No       |
+| `completed`   | Technician submitted all work. Awaiting Manager closure. | No       |
+| `closed`      | Reviewed and finalized. Permanently immutable.           | Yes      |
+| `cancelled`   | Cancelled by Admin/Manager with required reason.         | Yes      |
 
 ### Asset Maintenance Status
 
-| Parent State (`value`) | Sub-Status | Applies To | PM Eligible |
-|---|---|---|---|
-| **Enrolled** (`enrolled`) — "In maintenance program" | *(none)* | `asset_kind = asset` (standalone) | Yes |
-| **Enrolled** (`enrolled`) | `installed` | `asset_kind = component` or `package` | Yes |
-| **Enrolled** (`enrolled`) | `ready` | `asset_kind = component` or `package` | Yes |
-| **Withdrawn** (`withdrawn`) | `lih` | Any | No |
-| **Withdrawn** (`withdrawn`) | `dbr` | Any | No |
-| **Withdrawn** (`withdrawn`) | `disposed` | Any | No |
-| **Withdrawn** (`withdrawn`) | `scrapped` | Any | No |
-| **Withdrawn** (`withdrawn`) | `other` | Any | No |
+| Parent State (`value`)                               | Sub-Status  | Applies To                            | PM Eligible |
+| ---------------------------------------------------- | ----------- | ------------------------------------- | ----------- |
+| **Enrolled** (`enrolled`) — "In maintenance program" | _(none)_    | `asset_kind = asset` (standalone)     | Yes         |
+| **Enrolled** (`enrolled`)                            | `installed` | `asset_kind = component` or `package` | Yes         |
+| **Enrolled** (`enrolled`)                            | `ready`     | `asset_kind = component` or `package` | Yes         |
+| **Withdrawn** (`withdrawn`)                          | `lih`       | Any                                   | No          |
+| **Withdrawn** (`withdrawn`)                          | `dbr`       | Any                                   | No          |
+| **Withdrawn** (`withdrawn`)                          | `disposed`  | Any                                   | No          |
+| **Withdrawn** (`withdrawn`)                          | `scrapped`  | Any                                   | No          |
+| **Withdrawn** (`withdrawn`)                          | `other`     | Any                                   | No          |
 
 ### Asset Kinds
 
-| Kind | Can Have Parent? | Can Have Children? |
-|---|---|---|
-| `asset` | No | No |
-| `package` | Yes | Yes |
-| `component` | Yes | No |
+| Kind        | Can Have Parent? | Can Have Children? |
+| ----------- | ---------------- | ------------------ |
+| `asset`     | No               | No                 |
+| `package`   | Yes              | Yes                |
+| `component` | Yes              | No                 |
 
 ### PM Trigger Types
 
-| Trigger | Behaviour |
-|---|---|
-| `date` | Generates MR when calendar interval elapses since last baseline. |
-| `reading` | Generates MR when usage reading crosses threshold since last baseline. |
-| `date_or_reading` | Generates MR when either condition is met — whichever comes first. |
+| Trigger           | Behaviour                                                              |
+| ----------------- | ---------------------------------------------------------------------- |
+| `date`            | Generates MR when calendar interval elapses since last baseline.       |
+| `reading`         | Generates MR when usage reading crosses threshold since last baseline. |
+| `date_or_reading` | Generates MR when either condition is met — whichever comes first.     |
 
 ### ERP Sync Job Statuses
 
-| Status | Meaning |
-|---|---|
-| `running` | Sync job is currently executing. |
-| `success` | Sync completed with no errors. |
+| Status    | Meaning                                   |
+| --------- | ----------------------------------------- |
+| `running` | Sync job is currently executing.          |
+| `success` | Sync completed with no errors.            |
 | `partial` | Sync completed but some items had errors. |
-| `failed` | Sync could not complete. |
+| `failed`  | Sync could not complete.                  |
 
 ---
 
 ## Appendix B: Role Permission Quick Reference
 
-| Permission | Admin | Manager | Technician | Logistics | Requester |
-|---|---|---|---|---|---|
-| View dashboard | Yes | Yes | Yes | Yes | Yes |
-| Create corrective MR | Yes | Yes | Yes | Yes | Yes |
-| Update own pending MR | Yes | Yes | Yes | Yes | Yes |
-| Update any pending MR | Yes | Yes | No | No | No |
-| Cancel own pending CM MR | Yes | Yes | Yes | Yes | Yes |
-| Cancel any pending MR | Yes | Yes | No | No | No |
-| Approve / reject MR | Yes | Yes | No | No | No |
-| View Work Orders | Yes | Yes | Yes (assigned) | No | No |
-| Assign WO | Yes | Yes | No | No | No |
-| Start WO | Yes | Yes | Yes (assigned) | No | No |
-| Edit WO execution details | Yes | Yes | Yes (assigned) | No | No |
-| Complete WO | Yes | Yes | Yes (assigned) | No | No |
-| Close WO | Yes | Yes | No | No | No |
-| Cancel WO | Yes | Yes | No | No | No |
-| Create / edit asset | Yes | Yes | No | No | No |
-| Change asset kind | Yes | Yes | No | No | No |
-| Set parent_asset_id (outside WO) | Yes | Yes | No | No | No |
-| Change asset maintenance status | Yes | Yes | No | No | No |
-| Book / unbook asset | Yes | Yes | No | No | No |
-| Install / remove / swap component | Yes | Yes | Yes (assigned WO) | No | No |
-| Create MR for child component | Yes | Yes | No | No | No |
-| Record meter reading | Yes | Yes | Yes | No | Unverified only |
-| Confirm meter reading | Yes | Yes | Yes | No | No |
-| View parts catalogue | Yes | Yes | Yes | No | No |
-| Update local part fields | Yes | Yes | No | No | No |
-| View raw ERP payload | Yes | No | No | No | No |
-| Create / edit PM rule templates | Yes | No | No | No | No |
-| Assign PM template to asset | Yes | Yes | No | No | No |
-| Evaluate PM assignment | Yes | Yes | No | No | No |
-| View PM templates | Yes | Yes | No | No | No |
-| Trigger manual ERP sync | Yes | Yes | No | No | No |
-| Manage ERP sync settings | Yes | No | No | No | No |
-| Manage users | Yes | No | No | No | No |
-| Import employees | Yes | No | No | No | No |
-| Provision employees as users | Yes | No | No | No | No |
-| Manage locations / master data | Yes | No | No | No | No |
-| Manage company settings | Yes | No | No | No | No |
-| View technical audit logs | Yes | No | No | No | No |
-| Manage API clients | Yes | No | No | No | No |
-| Update asset location | Yes | Yes | No | Yes | No |
+| Permission                        | Admin | Manager | Technician        | Logistics | Requester       |
+| --------------------------------- | ----- | ------- | ----------------- | --------- | --------------- |
+| View dashboard                    | Yes   | Yes     | Yes               | Yes       | Yes             |
+| Create corrective MR              | Yes   | Yes     | Yes               | Yes       | Yes             |
+| Update own pending MR             | Yes   | Yes     | Yes               | Yes       | Yes             |
+| Update any pending MR             | Yes   | Yes     | No                | No        | No              |
+| Cancel own pending CM MR          | Yes   | Yes     | Yes               | Yes       | Yes             |
+| Cancel any pending MR             | Yes   | Yes     | No                | No        | No              |
+| Approve / reject MR               | Yes   | Yes     | No                | No        | No              |
+| View Work Orders                  | Yes   | Yes     | Yes (assigned)    | No        | No              |
+| Assign WO                         | Yes   | Yes     | No                | No        | No              |
+| Start WO                          | Yes   | Yes     | Yes (assigned)    | No        | No              |
+| Edit WO execution details         | Yes   | Yes     | Yes (assigned)    | No        | No              |
+| Complete WO                       | Yes   | Yes     | Yes (assigned)    | No        | No              |
+| Close WO                          | Yes   | Yes     | No                | No        | No              |
+| Cancel WO                         | Yes   | Yes     | No                | No        | No              |
+| Create / edit asset               | Yes   | Yes     | No                | No        | No              |
+| Change asset kind                 | Yes   | Yes     | No                | No        | No              |
+| Set parent_asset_id (outside WO)  | Yes   | Yes     | No                | No        | No              |
+| Change asset maintenance status   | Yes   | Yes     | No                | No        | No              |
+| Book / unbook asset               | Yes   | Yes     | No                | No        | No              |
+| Install / remove / swap component | Yes   | Yes     | Yes (assigned WO) | No        | No              |
+| Create MR for child component     | Yes   | Yes     | No                | No        | No              |
+| Record meter reading              | Yes   | Yes     | Yes               | No        | Unverified only |
+| Confirm meter reading             | Yes   | Yes     | Yes               | No        | No              |
+| View parts catalogue              | Yes   | Yes     | Yes               | No        | No              |
+| Update local part fields          | Yes   | Yes     | No                | No        | No              |
+| View raw ERP payload              | Yes   | No      | No                | No        | No              |
+| Create / edit PM rule templates   | Yes   | No      | No                | No        | No              |
+| Assign PM template to asset       | Yes   | Yes     | No                | No        | No              |
+| Evaluate PM assignment            | Yes   | Yes     | No                | No        | No              |
+| View PM templates                 | Yes   | Yes     | No                | No        | No              |
+| Trigger manual ERP sync           | Yes   | Yes     | No                | No        | No              |
+| Manage ERP sync settings          | Yes   | No      | No                | No        | No              |
+| Manage users                      | Yes   | No      | No                | No        | No              |
+| Import employees                  | Yes   | No      | No                | No        | No              |
+| Provision employees as users      | Yes   | No      | No                | No        | No              |
+| Manage locations / master data    | Yes   | No      | No                | No        | No              |
+| Manage company settings           | Yes   | No      | No                | No        | No              |
+| View technical audit logs         | Yes   | No      | No                | No        | No              |
+| Manage API clients                | Yes   | No      | No                | No        | No              |
+| Update asset location             | Yes   | Yes     | No                | Yes       | No              |
 
 ---
 
@@ -1983,6 +2094,15 @@ installed in a parent).
 child components, each of which is a full ATMS asset with its own maintenance
 lifecycle.
 
+**Avg MR Duration:** Average elapsed time from Maintenance Request creation to
+its final resolution (conversion, rejection, or cancellation). One of the six
+Process Efficiency KPIs displayed on the Dashboard, measured in hours over the
+rolling 90-day window.
+
+**Avg WO Duration:** Average elapsed time from Work Order creation to closure for
+Work Orders closed during the rolling 90-day window. One of the six Process
+Efficiency KPIs displayed on the Dashboard, measured in hours.
+
 **Booking:** An availability marker (`is_booked`) used by Operations to reserve
 an asset for a Job/Project. Independent of maintenance and operational status.
 Auto-clears on location change or inactivation.
@@ -2005,12 +2125,25 @@ L1-L4 levels.
 financial asset management, procurement, and parts master data. ATMS reads parts
 from ERP (via SM) but does not write back.
 
+**Failure Rate:** Total number of corrective maintenance events (closed
+corrective Work Orders) during the rolling 90-day window, displayed as a count
+and a per-day average. One of the six reliability KPIs on the Dashboard.
+
 **Withdrawn (asset maintenance status, `withdrawn`):** The asset is not in active
 maintenance service. PM evaluation, CM creation, and WO creation are blocked.
 (Renamed from the former "Inactive".)
 
 **Installed (`installed`):** A sub-status indicating a component is currently
 installed in a parent (`parent_asset_id` is set).
+
+**KPI (Key Performance Indicator):** A quantifiable metric that measures
+operational performance. The Dashboard displays six KPIs in two groups:
+Reliability Performance (MTBF, MTTR, Failure Rate) and Process Efficiency
+(PM Compliance, Avg MR Duration, Avg WO Duration).
+
+**Maintenance Control Center:** The title of the Dashboard page. A two-column
+layout providing reliability analytics, action-required alerts, activity
+tracking, quick-action shortcuts, and live operational status tiles.
 
 **Maintenance history:** A read-model view assembled from an asset's MRs, WOs,
 parts used, readings, and location changes. Not stored in a duplicate table —
@@ -2020,6 +2153,16 @@ derived from authoritative source records.
 (user-initiated) or Preventive (system-generated). All MRs must be reviewed by a
 Maintenance Manager before becoming a Work Order.
 
+**MTBF (Mean Time Between Failures):** The average interval between corrective
+maintenance events during the rolling 90-day window. Calculated on a calendar
+basis: window days divided by the number of corrective failures. Displayed in
+days on the Dashboard. A higher MTBF indicates better asset reliability.
+
+**MTTR (Mean Time To Repair):** The average clock time from Work Order creation
+through closure for corrective Work Orders completed during the rolling 90-day
+window. Displayed in hours on the Dashboard. A lower MTTR indicates faster
+maintenance response and repair.
+
 **Package:** An asset that can contain child assets. Defined by `asset_kind =
 package`.
 
@@ -2028,6 +2171,11 @@ rules (date intervals, operating hours, kilometers, or other readings).
 
 **PM assignment:** The connection between a PM rule template and a specific
 asset. Defines the asset's baseline and determines when preventive MRs are due.
+
+**PM Compliance:** The percentage of Preventive Maintenance assignments completed
+on time (WO closed by or before the PM due date) during the rolling 90-day
+window. Displayed as a percentage on the Dashboard with the ratio of compliant
+assignments to total assignments evaluated.
 
 **PM rule template:** An asset-agnostic schedule definition (trigger type,
 interval, maintenance level). Reusable — one template can be assigned to many

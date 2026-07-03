@@ -9,18 +9,16 @@ import type { Asset, CursorPage } from '@/types'
  * form/persistence concerns.
  */
 export function useAssetSearch() {
-  const query   = ref('')
+  const query = ref('')
   const results = ref<Asset[]>([])
-  const busy    = ref(false)
-  let   timer   = 0
+  const busy = ref(false)
+  let timer = 0
 
   /** Fetch the current page (uses `search` when set, else an unfiltered page). */
   async function fetchAssets() {
     busy.value = true
     try {
-      const params = query.value.trim()
-        ? { search: query.value, per_page: 10 }
-        : { per_page: 10 }
+      const params = query.value.trim() ? { search: query.value, per_page: 10 } : { per_page: 10 }
       const res = await api.get<CursorPage<Asset>>('/assets', params)
       results.value = res.data
     } catch {

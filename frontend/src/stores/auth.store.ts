@@ -7,15 +7,15 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
 
-  const isAuthenticated  = computed(() => !!user.value)
-  const role             = computed<RoleCode | null>(() => user.value?.role?.code ?? null)
+  const isAuthenticated = computed(() => !!user.value)
+  const role = computed<RoleCode | null>(() => user.value?.role?.code ?? null)
 
-  const isAdmin          = computed(() => role.value === 'administrator')
-  const isManager        = computed(() => role.value === 'maintenance_manager')
+  const isAdmin = computed(() => role.value === 'administrator')
+  const isManager = computed(() => role.value === 'maintenance_manager')
   const isAdminOrManager = computed(() => isAdmin.value || isManager.value)
-  const isTechnician     = computed(() => role.value === 'technician')
-  const isLogistics      = computed(() => role.value === 'logistics')
-  const isRequester      = computed(() => role.value === 'requester')
+  const isTechnician = computed(() => role.value === 'technician')
+  const isLogistics = computed(() => role.value === 'logistics')
+  const isRequester = computed(() => role.value === 'requester')
 
   const userInitials = computed(() => {
     if (!user.value?.name) return '?'

@@ -1,18 +1,32 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
 import {
-  Select, SelectContent, SelectGroup, SelectItem,
-  SelectLabel, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import api, { ApiError } from '@/lib/api'
 import { toast } from 'vue-sonner'
@@ -21,7 +35,7 @@ import type { Asset, Location, AssetLocationHistoryItem } from '@/types'
 
 const props = defineProps<{
   asset: Asset
-  locations: Location[]  // active locations only, from useLocations().activeLocations
+  locations: Location[] // active locations only, from useLocations().activeLocations
   open: boolean
 }>()
 
@@ -70,16 +84,23 @@ async function loadHistory() {
   }
 }
 
-watch(() => props.asset?.id, () => {
-  if (props.open && props.asset?.id) loadHistory()
-})
+watch(
+  () => props.asset?.id,
+  () => {
+    if (props.open && props.asset?.id) loadHistory()
+  },
+)
 
-watch(() => props.open, (nowOpen) => {
-  if (nowOpen && props.asset?.id) {
-    loadHistory()
-    resetForm()
-  }
-}, { immediate: true })
+watch(
+  () => props.open,
+  (nowOpen) => {
+    if (nowOpen && props.asset?.id) {
+      loadHistory()
+      resetForm()
+    }
+  },
+  { immediate: true },
+)
 
 function resetForm() {
   locationId.value = ''
@@ -168,11 +189,7 @@ const selectedLocation = computed(() =>
                 <template v-for="[type, locs] in locationGroups" :key="type">
                   <SelectGroup>
                     <SelectLabel>{{ type }}</SelectLabel>
-                    <SelectItem
-                      v-for="loc in locs"
-                      :key="loc.id"
-                      :value="String(loc.id)"
-                    >
+                    <SelectItem v-for="loc in locs" :key="loc.id" :value="String(loc.id)">
                       {{ loc.name }}
                       <span v-if="loc.code" class="select-code-hint">{{ loc.code }}</span>
                     </SelectItem>
@@ -211,9 +228,7 @@ const selectedLocation = computed(() =>
 
           <!-- Notes -->
           <div class="form-field form-field-full">
-            <Label for="update-notes">
-              Notes <span class="field-optional">— optional</span>
-            </Label>
+            <Label for="update-notes"> Notes <span class="field-optional">— optional</span> </Label>
             <Textarea
               id="update-notes"
               v-model="notes"
@@ -233,7 +248,8 @@ const selectedLocation = computed(() =>
             <div v-for="h in history" :key="h.id" class="compact-timeline-item">
               <span class="compact-timeline-date">{{ fmtDate(h.effective_at) }}</span>
               <span class="compact-timeline-summary">
-                Moved{{ h.to_location_id ? ' to new location' : '' }}<template v-if="h.reason"> — {{ h.reason }}</template>
+                Moved{{ h.to_location_id ? ' to new location' : ''
+                }}<template v-if="h.reason"> — {{ h.reason }}</template>
               </span>
             </div>
           </div>
@@ -244,12 +260,8 @@ const selectedLocation = computed(() =>
       </div>
 
       <div class="create-sheet-footer">
-        <Button variant="outline" :disabled="saving" @click="emit('close')">
-          Cancel
-        </Button>
-        <Button :disabled="saving" @click="requestSave">
-          Update Location
-        </Button>
+        <Button variant="outline" :disabled="saving" @click="emit('close')"> Cancel </Button>
+        <Button :disabled="saving" @click="requestSave"> Update Location </Button>
       </div>
     </SheetContent>
   </Sheet>
@@ -260,9 +272,10 @@ const selectedLocation = computed(() =>
       <DialogHeader>
         <DialogTitle>Confirm Location Change</DialogTitle>
         <DialogDescription>
-          Move <strong>{{ asset.asset_tag ?? asset.name }}</strong>
-          from <strong>{{ asset.current_location?.name ?? 'No location' }}</strong>
-          to <strong>{{ selectedLocation?.name ?? '—' }}</strong>?
+          Move <strong>{{ asset.asset_tag ?? asset.name }}</strong> from
+          <strong>{{ asset.current_location?.name ?? 'No location' }}</strong> to
+          <strong>{{ selectedLocation?.name ?? '—' }}</strong
+          >?
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>

@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -25,12 +34,15 @@ const emit = defineEmits<{
 const selectedRoleId = ref('')
 const roleError = ref('')
 
-watch(() => props.open, (nowOpen) => {
-  if (nowOpen) {
-    selectedRoleId.value = ''
-    roleError.value = ''
-  }
-})
+watch(
+  () => props.open,
+  (nowOpen) => {
+    if (nowOpen) {
+      selectedRoleId.value = ''
+      roleError.value = ''
+    }
+  },
+)
 
 function handleConfirm() {
   if (!selectedRoleId.value) {
@@ -60,11 +72,9 @@ function handleConfirm() {
             <SelectValue placeholder="Select a role…" />
           </SelectTrigger>
           <SelectContent disable-portal>
-            <SelectItem
-              v-for="role in roles"
-              :key="role.id"
-              :value="String(role.id)"
-            >{{ role.name }}</SelectItem>
+            <SelectItem v-for="role in roles" :key="role.id" :value="String(role.id)">{{
+              role.name
+            }}</SelectItem>
           </SelectContent>
         </Select>
         <p v-if="roleError" class="form-error">{{ roleError }}</p>

@@ -5,7 +5,11 @@ import AppLayout from '@/components/app/AppLayout.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { useAuthStore } from '@/stores/auth.store'
 import { useAssets } from '@/composables/useAssets'
@@ -13,13 +17,15 @@ import { useListOptions } from '@/composables/useListOptions'
 import { assetColumns, assetFilterOptions, toFaSubclassFilterOptions } from '@/lib/assetColumns'
 import type { Asset } from '@/types'
 import {
-  assetMaintenanceStatusClass, assetMaintenanceStatusLabel,
-  assetKindClass, assetKindLabel,
+  assetMaintenanceStatusClass,
+  assetMaintenanceStatusLabel,
+  assetKindClass,
+  assetKindLabel,
 } from '@/lib/displayHelpers'
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
-const auth   = useAuthStore()
+const auth = useAuthStore()
 
 const { all, locations, loadLocations } = useAssets()
 const { faSubclasses, loadFaSubclasses } = useListOptions()
@@ -34,8 +40,8 @@ const mergedFilterOptions = computed(() => ({
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
 const tabDefs = [
-  { key: 'all-assets',      label: 'All Assets' },
-  { key: 'asset-assembly',  label: 'Asset Assembly' },
+  { key: 'all-assets', label: 'All Assets' },
+  { key: 'asset-assembly', label: 'Asset Assembly' },
 ]
 
 const activeTab = computed(() => {
@@ -81,7 +87,6 @@ function goDetail(payload: { row: Asset }) {
 <template>
   <AppLayout>
     <div class="page-section">
-
       <div class="page-header">
         <div class="page-heading">
           <h1 class="page-title">Asset Management</h1>
@@ -109,7 +114,6 @@ function goDetail(payload: { row: Asset }) {
 
       <!-- ── All Assets tab ─────────────────────────────────────────────── -->
       <template v-if="activeTab === 'all-assets'">
-
         <AppDataTable
           :key="activeTab"
           :rows="filteredRows"
@@ -124,23 +128,24 @@ function goDetail(payload: { row: Asset }) {
           <template v-if="auth.isAdminOrManager || auth.isLogistics" #toolbar>
             <Select
               :model-value="locationFilter !== null ? String(locationFilter) : '__all__'"
-              @update:model-value="(v) => { locationFilter = v === '__all__' ? null : Number(v) }"
+              @update:model-value="
+                (v) => {
+                  locationFilter = v === '__all__' ? null : Number(v)
+                }
+              "
             >
               <SelectTrigger class="asset-location-filter" aria-label="Filter by location">
                 <SelectValue placeholder="All locations" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All locations</SelectItem>
-                <SelectItem
-                  v-for="loc in locations"
-                  :key="loc.id"
-                  :value="String(loc.id)"
-                >{{ loc.name }}</SelectItem>
+                <SelectItem v-for="loc in locations" :key="loc.id" :value="String(loc.id)">{{
+                  loc.name
+                }}</SelectItem>
               </SelectContent>
             </Select>
           </template>
           <template #cell="{ column, row }">
-
             <span v-if="column.field === 'asset_tag'" class="atms-erp-code">
               {{ row.asset_tag ?? '—' }}
             </span>
@@ -165,17 +170,18 @@ function goDetail(payload: { row: Asset }) {
               {{ assetKindLabel(row.asset_kind) }}
             </span>
 
-            <span v-else-if="column.field === 'maintenance_status'" :class="assetMaintenanceStatusClass(row.maintenance_status)">
+            <span
+              v-else-if="column.field === 'maintenance_status'"
+              :class="assetMaintenanceStatusClass(row.maintenance_status)"
+            >
               {{ assetMaintenanceStatusLabel(row.maintenance_status) }}
             </span>
 
             <span v-else-if="column.field === 'current_location'">
               {{ row.current_location?.name ?? '—' }}
             </span>
-
           </template>
         </AppDataTable>
-
       </template>
 
       <!-- ── Asset Assembly tab (Phase 2) ──────────────────────────────── -->
@@ -188,14 +194,13 @@ function goDetail(payload: { row: Asset }) {
           <div class="empty-state">
             <p class="empty-state-title">Coming in Phase 2</p>
             <p class="empty-state-description">
-              Asset Assembly will let you manage package and component hierarchies,
-              install and remove components, and track the full assembly and service history
-              for each component — all from a single view.
+              Asset Assembly will let you manage package and component hierarchies, install and
+              remove components, and track the full assembly and service history for each component
+              — all from a single view.
             </p>
           </div>
         </div>
       </div>
-
     </div>
   </AppLayout>
 </template>

@@ -5,15 +5,27 @@ import { ArrowLeftIcon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import PmRuleForm from '@/components/pm-rules/PmRuleForm.vue'
 import { toast } from 'vue-sonner'
 import { usePmRules } from '@/composables/usePmRules'
 import { useAuthStore } from '@/stores/auth.store'
 import {
-  pmLevelClass, pmTriggerLabel, pmStatusClass, pmStatusLabel, fmtDate,
-  mrStatusClass, mrStatusLabel, priorityClass, priorityLabel,
+  pmLevelClass,
+  pmTriggerLabel,
+  pmStatusClass,
+  pmStatusLabel,
+  fmtDate,
+  mrStatusClass,
+  mrStatusLabel,
+  priorityClass,
+  priorityLabel,
 } from '@/lib/displayHelpers'
 import { pmScheduleText } from '@/lib/pmSchedule'
 import type { PmRulePayload } from '@/composables/usePmRules'
@@ -26,26 +38,50 @@ const canConfigure = computed(() => auth.isAdmin)
 const id = computed(() => Number(route.params.ruleId))
 
 const {
-  rule, ruleLoading, ruleError, notFound, forbidden, loadRule,
-  mrHistory, mrHistoryLoading, loadMrHistory,
-  readingTypes, loadReadingTypes,
-  saving, validationErrors, updateRule,
-  acting, deactivateRule, reactivateRule,
+  rule,
+  ruleLoading,
+  ruleError,
+  notFound,
+  forbidden,
+  loadRule,
+  mrHistory,
+  mrHistoryLoading,
+  loadMrHistory,
+  readingTypes,
+  loadReadingTypes,
+  saving,
+  validationErrors,
+  updateRule,
+  acting,
+  deactivateRule,
+  reactivateRule,
 } = usePmRules()
 
-watch(id, async (newId) => {
-  if (!newId) return
-  await loadRule(newId)
-  void loadMrHistory(newId)
-  if (canConfigure.value) void loadReadingTypes()
-}, { immediate: true })
+watch(
+  id,
+  async (newId) => {
+    if (!newId) return
+    await loadRule(newId)
+    void loadMrHistory(newId)
+    if (canConfigure.value) void loadReadingTypes()
+  },
+  { immediate: true },
+)
 
-function goBack() { router.back() }
+function goBack() {
+  router.back()
+}
 
 // ── Edit ──────────────────────────────────────────────────────────────────────
 const formOpen = ref(false)
-function openEdit() { validationErrors.value = null; formOpen.value = true }
-function closeForm() { formOpen.value = false; validationErrors.value = null }
+function openEdit() {
+  validationErrors.value = null
+  formOpen.value = true
+}
+function closeForm() {
+  formOpen.value = false
+  validationErrors.value = null
+}
 
 async function onSaveSingle(payload: PmRulePayload) {
   if (!rule.value) return
@@ -99,11 +135,17 @@ async function confirmToggle() {
                 <span v-if="rule.maintenance_level" :class="pmLevelClass(rule.maintenance_level)">
                   {{ rule.maintenance_level }}
                 </span>
-                <span :class="rule.is_active ? 'status-badge status-active' : 'status-badge status-inactive'">
+                <span
+                  :class="
+                    rule.is_active ? 'status-badge status-active' : 'status-badge status-inactive'
+                  "
+                >
                   {{ rule.is_active ? 'Active' : 'Inactive' }}
                 </span>
               </div>
-              <p class="detail-command-subtitle">{{ pmTriggerLabel(rule.trigger_type) }} schedule</p>
+              <p class="detail-command-subtitle">
+                {{ pmTriggerLabel(rule.trigger_type) }} schedule
+              </p>
             </div>
 
             <div v-if="canConfigure" class="detail-command-actions">
@@ -112,7 +154,8 @@ async function confirmToggle() {
                 :variant="rule.is_active ? 'destructive' : 'default'"
                 :disabled="acting"
                 @click="toggleOpen = true"
-              >{{ rule.is_active ? 'Deactivate' : 'Reactivate' }}</Button>
+                >{{ rule.is_active ? 'Deactivate' : 'Reactivate' }}</Button
+              >
             </div>
           </div>
         </div>
@@ -120,7 +163,6 @@ async function confirmToggle() {
         <!-- ── Main (schedule + coverage) + reference rail ───────────────────── -->
         <div class="detail-layout">
           <div class="detail-main">
-
             <!-- ── Schedule ──────────────────────────────────────────────────── -->
             <div class="data-card">
               <div class="data-card-header">
@@ -141,7 +183,9 @@ async function confirmToggle() {
                     <span class="detail-field-label">Usage Interval</span>
                     <p class="detail-field-value">
                       {{ rule.interval_reading }}
-                      <span class="detail-field-muted">{{ rule.usage_reading_type?.unit ?? '' }}</span>
+                      <span class="detail-field-muted">{{
+                        rule.usage_reading_type?.unit ?? ''
+                      }}</span>
                     </p>
                   </div>
                   <div v-if="rule.usage_reading_type" class="detail-field">
@@ -159,7 +203,9 @@ async function confirmToggle() {
             <!-- ── Assigned Assets (coverage) ───────────────────────────────────── -->
             <div class="data-card">
               <div class="data-card-header">
-                <h2 class="data-card-title">Assigned Assets ({{ rule.assignments?.length ?? 0 }})</h2>
+                <h2 class="data-card-title">
+                  Assigned Assets ({{ rule.assignments?.length ?? 0 }})
+                </h2>
               </div>
               <div class="data-card-content">
                 <div v-if="(rule.assignments?.length ?? 0) === 0" class="empty-state">
@@ -182,11 +228,19 @@ async function confirmToggle() {
                         </RouterLink>
                       </td>
                       <td class="detail-table-cell">
-                        <span :class="pmStatusClass(a.pm_status)">{{ pmStatusLabel(a.pm_status) }}</span>
+                        <span :class="pmStatusClass(a.pm_status)">{{
+                          pmStatusLabel(a.pm_status)
+                        }}</span>
                       </td>
                       <td class="detail-table-cell">{{ fmtDate(a.last_triggered_date) }}</td>
                       <td class="detail-table-cell">
-                        <span :class="a.is_active ? 'status-badge status-active' : 'status-badge status-inactive'">
+                        <span
+                          :class="
+                            a.is_active
+                              ? 'status-badge status-active'
+                              : 'status-badge status-inactive'
+                          "
+                        >
                           {{ a.is_active ? 'Active' : 'Inactive' }}
                         </span>
                       </td>
@@ -223,10 +277,14 @@ async function confirmToggle() {
                         </RouterLink>
                       </td>
                       <td class="detail-table-cell">
-                        <span :class="mrStatusClass(mr.status)">{{ mrStatusLabel(mr.status) }}</span>
+                        <span :class="mrStatusClass(mr.status)">{{
+                          mrStatusLabel(mr.status)
+                        }}</span>
                       </td>
                       <td class="detail-table-cell">
-                        <span :class="priorityClass(mr.priority)">{{ priorityLabel(mr.priority) }}</span>
+                        <span :class="priorityClass(mr.priority)">{{
+                          priorityLabel(mr.priority)
+                        }}</span>
                       </td>
                       <td class="detail-table-cell">{{ fmtDate(mr.created_at) }}</td>
                     </tr>
@@ -234,7 +292,6 @@ async function confirmToggle() {
                 </table>
               </div>
             </div>
-
           </div>
 
           <aside class="detail-rail">
@@ -279,17 +336,25 @@ async function confirmToggle() {
     <Dialog v-model:open="toggleOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{ rule?.is_active ? 'Deactivate PM Template' : 'Reactivate PM Template' }}</DialogTitle>
+          <DialogTitle>{{
+            rule?.is_active ? 'Deactivate PM Template' : 'Reactivate PM Template'
+          }}</DialogTitle>
           <DialogDescription v-if="rule">
-            {{ rule.is_active
-              ? `Deactivate "${rule.name}"? It stops generating maintenance requests for all its assignments (assignments stay on record). Blocked if any assignment has an active request or work order.`
-              : `Reactivate "${rule.name}"? Its active assignments resume generating requests when due.` }}
+            {{
+              rule.is_active
+                ? `Deactivate "${rule.name}"? It stops generating maintenance requests for all its assignments (assignments stay on record). Blocked if any assignment has an active request or work order.`
+                : `Reactivate "${rule.name}"? Its active assignments resume generating requests when due.`
+            }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" @click="toggleOpen = false">Cancel</Button>
-          <Button :variant="rule?.is_active ? 'destructive' : 'default'" :disabled="acting" @click="confirmToggle">
-            {{ acting ? 'Working…' : (rule?.is_active ? 'Deactivate' : 'Reactivate') }}
+          <Button
+            :variant="rule?.is_active ? 'destructive' : 'default'"
+            :disabled="acting"
+            @click="confirmToggle"
+          >
+            {{ acting ? 'Working…' : rule?.is_active ? 'Deactivate' : 'Reactivate' }}
           </Button>
         </DialogFooter>
       </DialogContent>

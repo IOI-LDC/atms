@@ -54,14 +54,14 @@ export function useAssetDetail() {
   const auth = useAuthStore()
 
   // ── Record + load state ──────────────────────────────────────────────────
-  const record    = ref<Asset | null>(null)
-  const loading   = ref(false)
-  const error     = ref<string | null>(null)
-  const notFound  = ref(false)
+  const record = ref<Asset | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const notFound = ref(false)
   const forbidden = ref(false)
 
   // ── Permissions (client UX hints — backend gate remains authoritative) ────
-  const canEdit          = computed(() => auth.isAdminOrManager)
+  const canEdit = computed(() => auth.isAdminOrManager)
   // Booking is togglable by Admin, Manager, and Logistics (backend gate authoritative).
   const canToggleBooking = computed(() => auth.isAdminOrManager || auth.isLogistics)
   // Logistics cannot see ERP reference fields or maintenance history (API 403)
@@ -69,59 +69,69 @@ export function useAssetDetail() {
 
   // ── Booking state ───────────────────────────────────────────────────────────
   const bookingConfirmOpen = ref(false)
-  const bookingLoading     = ref(false)
+  const bookingLoading = ref(false)
 
   // ── Edit state ────────────────────────────────────────────────────────────
-  const editOpen         = ref(false)
-  const confirmEditOpen  = ref(false)
-  const saving           = ref(false)
-  const editError        = ref<string | null>(null)
+  const editOpen = ref(false)
+  const confirmEditOpen = ref(false)
+  const saving = ref(false)
+  const editError = ref<string | null>(null)
   const validationErrors = ref<Record<string, string[]> | null>(null)
-  const draft            = ref<AssetEditDraft>({
-    name: '', description: '', fa_subclass_code: '', serial_number: '',
-    model: '', manufacturer: '', operational_status: 'active',
-    maintenance_status: 'enrolled', maintenance_sub_status: '',
-    is_active: true, current_location_id: null, location_notes: '',
-    asset_kind: 'asset', asset_tag: '', asset_tag_override_reason: '',
+  const draft = ref<AssetEditDraft>({
+    name: '',
+    description: '',
+    fa_subclass_code: '',
+    serial_number: '',
+    model: '',
+    manufacturer: '',
+    operational_status: 'active',
+    maintenance_status: 'enrolled',
+    maintenance_sub_status: '',
+    is_active: true,
+    current_location_id: null,
+    location_notes: '',
+    asset_kind: 'asset',
+    asset_tag: '',
+    asset_tag_override_reason: '',
   })
 
   // ── Suggest-tag state ─────────────────────────────────────────────────────
-  const suggestTagLoading   = ref(false)
+  const suggestTagLoading = ref(false)
   const suggestTagCollision = ref(false)
 
   // ── Locations (for edit form — Admin/Manager only) ────────────────────────
-  const locations        = ref<Location[]>([])
+  const locations = ref<Location[]>([])
   const locationsLoading = ref(false)
 
   // ── Location history ──────────────────────────────────────────────────────
-  const locationHistory        = ref<AssetLocationHistoryItem[]>([])
+  const locationHistory = ref<AssetLocationHistoryItem[]>([])
   const locationHistoryLoading = ref(false)
 
   // ── Maintenance history ───────────────────────────────────────────────────
-  const maintenanceHistory        = ref<MaintenanceHistoryItem[]>([])
+  const maintenanceHistory = ref<MaintenanceHistoryItem[]>([])
   const maintenanceHistoryLoading = ref(false)
 
   // ── Usage readings (read-only on asset detail) ────────────────────────────
-  const readings        = ref<AssetMeterReading[]>([])
+  const readings = ref<AssetMeterReading[]>([])
   const readingsLoading = ref(false)
 
   // ── Attachments ───────────────────────────────────────────────────────────
-  const attachments        = ref<Attachment[]>([])
+  const attachments = ref<Attachment[]>([])
   const attachmentsLoading = ref(false)
-  const uploadOpen         = ref(false)
-  const uploadLoading      = ref(false)
-  const uploadFiles        = ref<File[]>([])
+  const uploadOpen = ref(false)
+  const uploadLoading = ref(false)
+  const uploadFiles = ref<File[]>([])
 
   // ── Attachment delete ─────────────────────────────────────────────────────
-  const deleteAttachmentTarget  = ref<number | null>(null)
+  const deleteAttachmentTarget = ref<number | null>(null)
   const deleteAttachmentLoading = ref(false)
 
   // ══════════════════════════════════════════════════════════════════════════
   //  Primary load
   // ══════════════════════════════════════════════════════════════════════════
   async function load(id: number | string) {
-    loading.value  = true
-    error.value    = null
+    loading.value = true
+    error.value = null
     notFound.value = false
     forbidden.value = false
     try {
@@ -152,7 +162,9 @@ export function useAssetDetail() {
       // re-resolve names from the Admin-only /admin/locations endpoint using
       // location-id fields the response doesn't expose, which both 403'd for
       // non-admins and clobbered the real objects → "Location #undefined".)
-      const res = await api.get<{ data: AssetLocationHistoryItem[] }>(`/assets/${id}/location-history`)
+      const res = await api.get<{ data: AssetLocationHistoryItem[] }>(
+        `/assets/${id}/location-history`,
+      )
       locationHistory.value = res.data ?? []
     } catch {
       locationHistory.value = []
@@ -165,7 +177,9 @@ export function useAssetDetail() {
     // Logistics receives 403 — silently ignore, leave array empty.
     maintenanceHistoryLoading.value = true
     try {
-      const res = await api.get<{ data: MaintenanceHistoryItem[] }>(`/assets/${id}/maintenance-history`)
+      const res = await api.get<{ data: MaintenanceHistoryItem[] }>(
+        `/assets/${id}/maintenance-history`,
+      )
       maintenanceHistory.value = res.data ?? []
     } catch {
       maintenanceHistory.value = []
@@ -199,7 +213,7 @@ export function useAssetDetail() {
   }
 
   async function loadLocations() {
-    if (locations.value.length > 0) return  // already cached
+    if (locations.value.length > 0) return // already cached
     locationsLoading.value = true
     try {
       const res = await api.get<{ data: Location[] }>('/admin/locations')
@@ -217,21 +231,21 @@ export function useAssetDetail() {
   function openEdit() {
     if (!record.value) return
     draft.value = {
-      name:                    record.value.name,
-      description:             record.value.description ?? '',
-      fa_subclass_code:        record.value.fa_subclass_code ?? '',
-      serial_number:           record.value.serial_number ?? '',
-      model:                   record.value.model ?? '',
-      manufacturer:            record.value.manufacturer ?? '',
-      operational_status:      record.value.operational_status ?? 'active',
-      maintenance_status:      record.value.maintenance_status ?? 'enrolled',
-      maintenance_sub_status:  record.value.maintenance_sub_status ?? '',
-      is_active:               record.value.is_active ?? true,
-      current_location_id:     record.value.current_location?.id ?? null,
-      location_notes:          '',
-      asset_kind:              record.value.asset_kind ?? 'asset',
+      name: record.value.name,
+      description: record.value.description ?? '',
+      fa_subclass_code: record.value.fa_subclass_code ?? '',
+      serial_number: record.value.serial_number ?? '',
+      model: record.value.model ?? '',
+      manufacturer: record.value.manufacturer ?? '',
+      operational_status: record.value.operational_status ?? 'active',
+      maintenance_status: record.value.maintenance_status ?? 'enrolled',
+      maintenance_sub_status: record.value.maintenance_sub_status ?? '',
+      is_active: record.value.is_active ?? true,
+      current_location_id: record.value.current_location?.id ?? null,
+      location_notes: '',
+      asset_kind: record.value.asset_kind ?? 'asset',
       // Only pre-fill when already set; otherwise leave blank for user to assign
-      asset_tag:               record.value.asset_tag ?? '',
+      asset_tag: record.value.asset_tag ?? '',
       asset_tag_override_reason: '',
     }
     validationErrors.value = null
@@ -264,18 +278,18 @@ export function useAssetDetail() {
     editError.value = null
     try {
       const payload: Record<string, unknown> = {
-        name:               draft.value.name.trim(),
-        description:        draft.value.description.trim() || null,
-        fa_subclass_code:   draft.value.fa_subclass_code || null,
-        serial_number:      draft.value.serial_number.trim() || null,
-        model:              draft.value.model.trim() || null,
-        manufacturer:       draft.value.manufacturer.trim() || null,
+        name: draft.value.name.trim(),
+        description: draft.value.description.trim() || null,
+        fa_subclass_code: draft.value.fa_subclass_code || null,
+        serial_number: draft.value.serial_number.trim() || null,
+        model: draft.value.model.trim() || null,
+        manufacturer: draft.value.manufacturer.trim() || null,
         operational_status: draft.value.operational_status,
         maintenance_status: draft.value.maintenance_status,
         maintenance_sub_status: draft.value.maintenance_sub_status.trim() || null,
         current_location_id: draft.value.current_location_id,
-        location_notes:     draft.value.location_notes.trim() || null,
-        asset_kind:         draft.value.asset_kind,
+        location_notes: draft.value.location_notes.trim() || null,
+        asset_kind: draft.value.asset_kind,
       }
       // is_active is Admin/Manager-only per the API
       if (auth.isAdminOrManager) {
@@ -286,7 +300,12 @@ export function useAssetDetail() {
       const newTag = draft.value.asset_tag.trim()
       if (!record.value.asset_tag && newTag) {
         payload.asset_tag = newTag
-      } else if (record.value.asset_tag && newTag && newTag !== record.value.asset_tag && auth.isAdmin) {
+      } else if (
+        record.value.asset_tag &&
+        newTag &&
+        newTag !== record.value.asset_tag &&
+        auth.isAdmin
+      ) {
         payload.asset_tag = newTag
         payload.asset_tag_override_reason = draft.value.asset_tag_override_reason.trim()
       }
@@ -300,7 +319,8 @@ export function useAssetDetail() {
       confirmEditOpen.value = false
       if (e instanceof ApiError) {
         if (e.validationErrors) validationErrors.value = e.validationErrors
-        else if (e.status === 403) editError.value = 'You do not have permission to edit this asset.'
+        else if (e.status === 403)
+          editError.value = 'You do not have permission to edit this asset.'
         else editError.value = e.message
       } else {
         editError.value = 'Failed to save changes.'
@@ -321,7 +341,7 @@ export function useAssetDetail() {
    */
   async function suggestTag() {
     if (!record.value) return
-    suggestTagLoading.value   = true
+    suggestTagLoading.value = true
     suggestTagCollision.value = false
     try {
       const res = await api.post<{ asset_tag: string | null; collision: boolean }>(
@@ -344,7 +364,7 @@ export function useAssetDetail() {
   // ══════════════════════════════════════════════════════════════════════════
   function openUpload() {
     uploadFiles.value = []
-    uploadOpen.value  = true
+    uploadOpen.value = true
   }
 
   function addUploadFiles(files: FileList | File[]) {
@@ -369,7 +389,7 @@ export function useAssetDetail() {
           ? 'Attachment uploaded.'
           : `${uploadFiles.value.length} attachments uploaded.`,
       )
-      uploadOpen.value  = false
+      uploadOpen.value = false
       uploadFiles.value = []
       await loadAttachments(assetId)
     } catch (e) {
@@ -382,7 +402,9 @@ export function useAssetDetail() {
   // ══════════════════════════════════════════════════════════════════════════
   //  Attachment delete  (generic by id: DELETE /attachments/{id})
   // ══════════════════════════════════════════════════════════════════════════
-  function openDeleteAttachment(id: number) { deleteAttachmentTarget.value = id }
+  function openDeleteAttachment(id: number) {
+    deleteAttachmentTarget.value = id
+  }
   async function doDeleteAttachment() {
     if (!record.value || deleteAttachmentTarget.value === null) return
     deleteAttachmentLoading.value = true
@@ -399,8 +421,12 @@ export function useAssetDetail() {
   }
 
   // ── Booking actions ─────────────────────────────────────────────────────────
-  function requestToggleBooking() { bookingConfirmOpen.value = true }
-  function closeBookingConfirm() { bookingConfirmOpen.value = false }
+  function requestToggleBooking() {
+    bookingConfirmOpen.value = true
+  }
+  function closeBookingConfirm() {
+    bookingConfirmOpen.value = false
+  }
 
   async function doToggleBooking() {
     if (!record.value) {
@@ -422,28 +448,65 @@ export function useAssetDetail() {
 
   return {
     // Load
-    record, loading, error, notFound, forbidden,
-    load, loadLocationHistory, loadMaintenanceHistory, loadReadings, loadAttachments,
+    record,
+    loading,
+    error,
+    notFound,
+    forbidden,
+    load,
+    loadLocationHistory,
+    loadMaintenanceHistory,
+    loadReadings,
+    loadAttachments,
     // Permissions
-    canEdit, canViewSensitive, canToggleBooking,
+    canEdit,
+    canViewSensitive,
+    canToggleBooking,
     // Booking
-    bookingConfirmOpen, bookingLoading, requestToggleBooking, closeBookingConfirm, doToggleBooking,
+    bookingConfirmOpen,
+    bookingLoading,
+    requestToggleBooking,
+    closeBookingConfirm,
+    doToggleBooking,
     // Edit
-    editOpen, confirmEditOpen, saving, editError, validationErrors, draft,
-    locations, locationsLoading,
-    openEdit, closeEdit, requestSave, doSave,
+    editOpen,
+    confirmEditOpen,
+    saving,
+    editError,
+    validationErrors,
+    draft,
+    locations,
+    locationsLoading,
+    openEdit,
+    closeEdit,
+    requestSave,
+    doSave,
     // Suggest tag
-    suggestTagLoading, suggestTagCollision, suggestTag,
+    suggestTagLoading,
+    suggestTagCollision,
+    suggestTag,
     // Location history
-    locationHistory, locationHistoryLoading,
+    locationHistory,
+    locationHistoryLoading,
     // Maintenance history
-    maintenanceHistory, maintenanceHistoryLoading,
+    maintenanceHistory,
+    maintenanceHistoryLoading,
     // Readings
-    readings, readingsLoading,
+    readings,
+    readingsLoading,
     // Attachments
-    attachments, attachmentsLoading,
-    uploadOpen, uploadLoading, uploadFiles,
-    openUpload, addUploadFiles, removeUploadFile, doUpload,
-    deleteAttachmentTarget, deleteAttachmentLoading, openDeleteAttachment, doDeleteAttachment,
+    attachments,
+    attachmentsLoading,
+    uploadOpen,
+    uploadLoading,
+    uploadFiles,
+    openUpload,
+    addUploadFiles,
+    removeUploadFile,
+    doUpload,
+    deleteAttachmentTarget,
+    deleteAttachmentLoading,
+    openDeleteAttachment,
+    doDeleteAttachment,
   }
 }

@@ -10,9 +10,9 @@ import { fmtDate } from '@/lib/displayHelpers'
  * fire both dashboard calls in parallel and refresh them together.
  */
 export function useDashboardKpis() {
-  const data    = ref<DashboardKpiResponse | null>(null)
+  const data = ref<DashboardKpiResponse | null>(null)
   const loading = ref(true)
-  const error   = ref<string | null>(null)
+  const error = ref<string | null>(null)
 
   async function reload() {
     loading.value = true
@@ -28,11 +28,11 @@ export function useDashboardKpis() {
 
   onMounted(reload)
 
-  const kpis      = computed(() => data.value?.kpis ?? null)
+  const kpis = computed(() => data.value?.kpis ?? null)
   const relocated = computed(() => data.value?.recently_relocated_assets ?? [])
 
   // Window scope caption — the KPIs and relocated feed are a fixed 90-day window.
-  const windowDays  = computed(() => data.value?.window.days ?? 90)
+  const windowDays = computed(() => data.value?.window.days ?? 90)
   const windowLabel = computed(() => (data.value ? `Last ${windowDays.value} days` : ''))
   const windowRange = computed(() => {
     const w = data.value?.window
@@ -40,8 +40,14 @@ export function useDashboardKpis() {
   })
 
   return {
-    data, loading, error, reload,
-    kpis, relocated,
-    windowDays, windowLabel, windowRange,
+    data,
+    loading,
+    error,
+    reload,
+    kpis,
+    relocated,
+    windowDays,
+    windowLabel,
+    windowRange,
   }
 }

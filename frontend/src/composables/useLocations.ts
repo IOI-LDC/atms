@@ -35,7 +35,8 @@ export function useLocations() {
     } catch (e) {
       locations.value = []
       if (e instanceof ApiError && e.status === 403) {
-        locationsError.value = 'Location list not available for your role. Contact an administrator.'
+        locationsError.value =
+          'Location list not available for your role. Contact an administrator.'
       } else {
         locationsError.value = 'Failed to load locations.'
       }
@@ -88,7 +89,10 @@ export function useLocations() {
     }
   }
 
-  async function updateLocation(id: number, payload: Partial<LocationPayload>): Promise<Location | null> {
+  async function updateLocation(
+    id: number,
+    payload: Partial<LocationPayload>,
+  ): Promise<Location | null> {
     saving.value = true
     validationErrors.value = null
     try {

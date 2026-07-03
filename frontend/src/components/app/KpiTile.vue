@@ -21,7 +21,7 @@ defineProps<{
     :is="to ? RouterLink : 'div'"
     :to="to"
     class="kpi-tile"
-    style="text-decoration: none; color: inherit;"
+    style="text-decoration: none; color: inherit"
   >
     <span class="kpi-tile-icon"><component :is="icon" /></span>
     <span class="kpi-tile-body">

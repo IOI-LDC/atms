@@ -5,7 +5,12 @@ import AppDataTable from '@/components/app/AppDataTable.vue'
 import ListItemSheet from '@/components/admin/ListItemSheet.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { useLists, LIST_GROUPS, LIST_SECTIONS } from '@/composables/useLists'
 import { Pencil, ToggleLeft, ToggleRight, Trash2, Plus } from '@lucide/vue'
@@ -14,10 +19,19 @@ import type { ListItem } from '@/composables/useLists'
 import type { MasterDataItem, UsageReadingType, FaSubclassTypeCode } from '@/types'
 
 const {
-  activeGroupKey, activeGroup, items, loading, error,
-  loadActive, selectGroup,
-  saving, validationErrors,
-  createItem, updateItem, toggleActive, deleteItem,
+  activeGroupKey,
+  activeGroup,
+  items,
+  loading,
+  error,
+  loadActive,
+  selectGroup,
+  saving,
+  validationErrors,
+  createItem,
+  updateItem,
+  toggleActive,
+  deleteItem,
 } = useLists()
 
 // ── Rail sections ─────────────────────────────────────────────────────────────
@@ -30,35 +44,38 @@ const railSections = LIST_SECTIONS.map((section) => ({
 const columns = computed<AppColumnDef<ListItem>[]>(() => {
   if (activeGroup.value.kind === 'master_data') {
     return [
-      { field: 'label',     header: 'Label',  sortable: true },
-      { field: 'value',     header: 'Value',  sortable: true },
-      { field: 'sort_order', header: 'Sort',   sortable: true, align: 'center' },
+      { field: 'label', header: 'Label', sortable: true },
+      { field: 'value', header: 'Value', sortable: true },
+      { field: 'sort_order', header: 'Sort', sortable: true, align: 'center' },
       { field: 'is_active', header: 'Status', sortable: true, align: 'center' },
-      { field: 'actions',   header: '',       sortable: false, align: 'center', minWidth: 80 },
+      { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 80 },
     ]
   }
   if (activeGroup.value.kind === 'reading_types') {
     return [
-      { field: 'name',      header: 'Name',   sortable: true },
-      { field: 'unit',      header: 'Unit',   sortable: true, align: 'center' },
+      { field: 'name', header: 'Name', sortable: true },
+      { field: 'unit', header: 'Unit', sortable: true, align: 'center' },
       { field: 'is_active', header: 'Status', sortable: true, align: 'center' },
-      { field: 'actions',   header: '',       sortable: false, align: 'center', minWidth: 80 },
+      { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 80 },
     ]
   }
   return [
-    { field: 'fa_subclass_code',     header: 'Subclass Code',    sortable: true },
-    { field: 'type_code',            header: 'Type Code',        sortable: true, align: 'center' },
-    { field: 'description',          header: 'Description',      sortable: false },
+    { field: 'fa_subclass_code', header: 'Subclass Code', sortable: true },
+    { field: 'type_code', header: 'Type Code', sortable: true, align: 'center' },
+    { field: 'description', header: 'Description', sortable: false },
     { field: 'has_no_physical_size', header: 'No Physical Size', sortable: false, align: 'center' },
-    { field: 'actions',              header: '',                 sortable: false, align: 'center', minWidth: 80 },
+    { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 80 },
   ]
 })
 
 const panelSubtitle = computed(() => {
   switch (activeGroup.value.kind) {
-    case 'master_data':  return 'Lookup values selectable on records across the system.'
-    case 'reading_types': return 'Meter / usage reading types used by assets and PM rules.'
-    case 'fa_subclass':   return 'ERP fixed-asset subclass classification reference.'
+    case 'master_data':
+      return 'Lookup values selectable on records across the system.'
+    case 'reading_types':
+      return 'Meter / usage reading types used by assets and PM rules.'
+    case 'fa_subclass':
+      return 'ERP fixed-asset subclass classification reference.'
   }
 })
 
@@ -87,9 +104,7 @@ function closeSheet() {
 }
 
 async function onSave(payload: Record<string, unknown>) {
-  const ok = editing.value
-    ? await updateItem(editing.value, payload)
-    : await createItem(payload)
+  const ok = editing.value ? await updateItem(editing.value, payload) : await createItem(payload)
   if (ok) {
     toast.success(editing.value ? 'Item updated.' : 'Item created.')
     closeSheet()
@@ -133,9 +148,15 @@ async function confirmDelete() {
 }
 
 // ── Cell helpers ──────────────────────────────────────────────────────────────
-function asMaster(row: ListItem) { return row as MasterDataItem }
-function asReading(row: ListItem) { return row as UsageReadingType }
-function asFa(row: ListItem) { return row as FaSubclassTypeCode }
+function asMaster(row: ListItem) {
+  return row as MasterDataItem
+}
+function asReading(row: ListItem) {
+  return row as UsageReadingType
+}
+function asFa(row: ListItem) {
+  return row as FaSubclassTypeCode
+}
 
 function itemLabel(row: ListItem): string {
   switch (activeGroup.value.kind) {
@@ -162,7 +183,8 @@ function itemLabel(row: ListItem): string {
           :class="['lists-rail-item', activeGroupKey === g.key ? 'lists-rail-item-active' : '']"
           :aria-current="activeGroupKey === g.key ? 'true' : undefined"
           @click="selectGroup(g.key)"
-        >{{ g.label }}</Button>
+          >{{ g.label }}</Button
+        >
       </div>
     </nav>
 
@@ -191,21 +213,31 @@ function itemLabel(row: ListItem): string {
       >
         <template #cell="{ column, row }">
           <!-- Master data -->
-          <span v-if="column.field === 'label'" class="table-cell-primary">{{ asMaster(row).label }}</span>
-          <span v-else-if="column.field === 'value'" class="atms-erp-code">{{ asMaster(row).value }}</span>
+          <span v-if="column.field === 'label'" class="table-cell-primary">{{
+            asMaster(row).label
+          }}</span>
+          <span v-else-if="column.field === 'value'" class="atms-erp-code">{{
+            asMaster(row).value
+          }}</span>
           <span v-else-if="column.field === 'sort_order'" class="table-cell-secondary">
             {{ asMaster(row).sort_order ?? '—' }}
           </span>
 
           <!-- Reading types -->
-          <span v-else-if="column.field === 'name'" class="table-cell-primary">{{ asReading(row).name }}</span>
-          <span v-else-if="column.field === 'unit'" class="table-cell-secondary">{{ asReading(row).unit }}</span>
+          <span v-else-if="column.field === 'name'" class="table-cell-primary">{{
+            asReading(row).name
+          }}</span>
+          <span v-else-if="column.field === 'unit'" class="table-cell-secondary">{{
+            asReading(row).unit
+          }}</span>
 
           <!-- FA subclass -->
           <span v-else-if="column.field === 'fa_subclass_code'" class="table-cell-primary">
             {{ asFa(row).fa_subclass_code }}
           </span>
-          <span v-else-if="column.field === 'type_code'" class="atms-erp-code">{{ asFa(row).type_code }}</span>
+          <span v-else-if="column.field === 'type_code'" class="atms-erp-code">{{
+            asFa(row).type_code
+          }}</span>
           <span v-else-if="column.field === 'description'" class="table-cell-truncate">
             {{ asFa(row).description ?? '—' }}
           </span>
@@ -216,12 +248,22 @@ function itemLabel(row: ListItem): string {
           <!-- Status badge (master_data + reading_types) -->
           <span
             v-else-if="column.field === 'is_active'"
-            :class="asMaster(row).is_active ? 'status-badge status-active' : 'status-badge status-inactive'"
-          >{{ asMaster(row).is_active ? 'Active' : 'Inactive' }}</span>
+            :class="
+              asMaster(row).is_active
+                ? 'status-badge status-active'
+                : 'status-badge status-inactive'
+            "
+            >{{ asMaster(row).is_active ? 'Active' : 'Inactive' }}</span
+          >
 
           <!-- Actions -->
           <div v-else-if="column.field === 'actions'" class="table-row-actions">
-            <Button variant="outline" size="icon-sm" :aria-label="`Edit ${itemLabel(row)}`" @click="openEdit(row)">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              :aria-label="`Edit ${itemLabel(row)}`"
+              @click="openEdit(row)"
+            >
               <Pencil />
             </Button>
 
@@ -265,17 +307,21 @@ function itemLabel(row: ListItem): string {
   <Dialog v-model:open="toggleOpen">
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>{{ toggleTarget?.is_active ? 'Deactivate Item' : 'Reactivate Item' }}</DialogTitle>
+        <DialogTitle>{{
+          toggleTarget?.is_active ? 'Deactivate Item' : 'Reactivate Item'
+        }}</DialogTitle>
         <DialogDescription v-if="toggleTarget">
-          {{ toggleTarget.is_active
-            ? 'Deactivated items no longer appear in dropdowns but remain on existing records.'
-            : 'Reactivate this item so it appears in dropdowns again.' }}
+          {{
+            toggleTarget.is_active
+              ? 'Deactivated items no longer appear in dropdowns but remain on existing records.'
+              : 'Reactivate this item so it appears in dropdowns again.'
+          }}
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>
         <Button variant="outline" @click="toggleOpen = false">Cancel</Button>
         <Button :disabled="saving" @click="confirmToggle">
-          {{ saving ? 'Saving…' : (toggleTarget?.is_active ? 'Deactivate' : 'Reactivate') }}
+          {{ saving ? 'Saving…' : toggleTarget?.is_active ? 'Deactivate' : 'Reactivate' }}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -287,7 +333,8 @@ function itemLabel(row: ListItem): string {
       <DialogHeader>
         <DialogTitle>Delete Subclass Code</DialogTitle>
         <DialogDescription v-if="deleteTarget">
-          Permanently delete <strong>{{ deleteTarget.fa_subclass_code }}</strong>? This cannot be undone.
+          Permanently delete <strong>{{ deleteTarget.fa_subclass_code }}</strong
+          >? This cannot be undone.
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>

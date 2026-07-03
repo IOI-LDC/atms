@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,13 +29,16 @@ const password = ref('')
 const passwordConfirmation = ref('')
 const localError = ref('')
 
-watch(() => props.open, (nowOpen) => {
-  if (nowOpen) {
-    password.value = ''
-    passwordConfirmation.value = ''
-    localError.value = ''
-  }
-})
+watch(
+  () => props.open,
+  (nowOpen) => {
+    if (nowOpen) {
+      password.value = ''
+      passwordConfirmation.value = ''
+      localError.value = ''
+    }
+  },
+)
 
 function handleConfirm() {
   if (password.value.length < 8) {
@@ -52,7 +60,8 @@ function handleConfirm() {
       <DialogHeader>
         <DialogTitle>Reset Password</DialogTitle>
         <DialogDescription v-if="user">
-          Set a new password for <strong>{{ user.name }}</strong>.
+          Set a new password for <strong>{{ user.name }}</strong
+          >.
         </DialogDescription>
       </DialogHeader>
 

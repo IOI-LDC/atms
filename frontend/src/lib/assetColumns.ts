@@ -60,7 +60,10 @@ export const assetColumns: ColumnDef<Asset>[] = [
 
 /** Maps the live fa_subclass_type_codes list into select-filter options. */
 export function toFaSubclassFilterOptions(codes: FaSubclassTypeCode[]): FilterOption[] {
-  return codes.map((c) => ({ value: c.fa_subclass_code, label: faSubclassLabel(c.fa_subclass_code) }))
+  return codes.map((c) => ({
+    value: c.fa_subclass_code,
+    label: faSubclassLabel(c.fa_subclass_code),
+  }))
 }
 
 /**
