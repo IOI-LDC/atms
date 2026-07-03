@@ -395,18 +395,54 @@ export interface CompanySettings {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
+// Every field is optional: the backend omits a key entirely when the current
+// user's role isn't permitted to see it — absence (not zero/null) is the gate.
 export interface DashboardSummary {
-  pending_maintenance_requests: number
-  open_work_orders: number
-  overdue_pm_assignments: number
-  recently_closed_work_orders: number
+  pending_maintenance_requests?: number
+  open_work_orders?: number
+  overdue_pm_assignments?: number
+  recently_closed_work_orders?: number
 }
 
 export interface DashboardData {
   summary: DashboardSummary
   pending_maintenance_requests?: MaintenanceRequest[]
   open_work_orders?: WorkOrder[]
+  overdue_pm_assignments?: AssetPmAssignment[]
   recently_closed_work_orders?: WorkOrder[]
+}
+
+// ── Dashboard KPIs (GET /api/dashboard/kpis) ──────────────────────────────────
+// Full payload to every role (not role-filtered), over a rolling 90-day window.
+// Several scalars are `null` when there is no data in the window ("no basis to
+// compute" — render an em dash, never 0). See DASHBOARD_KPI_HANDOFF.md §4.
+
+export interface RelocatedAssetItem {
+  id: number
+  asset_id: number
+  asset: { id: number; name: string; erp_asset_code: string; asset_tag: string }
+  // `from_location` is null for an asset's first-ever placement (no prior
+  // location). Verified against the live endpoint — the handoff type omits this.
+  from_location: { id: number; name: string } | null
+  to_location: { id: number; name: string } | null
+  effective_at: string
+  reason: string | null
+  notes: string | null
+  changed_by_user_id: number
+  created_at: string
+}
+
+export interface DashboardKpiResponse {
+  window: { days: number; from: string; to: string }   // ISO 8601 bounds (UTC)
+  kpis: {
+    mtbf: { days: number | null }
+    failure_rate: { failures: number; per_day: number }
+    mttr: { hours: number | null }
+    pm_compliance: { compliant: number; total: number; percentage: number | null }
+    avg_mr_duration: { hours: number | null }
+    avg_wo_duration: { hours: number | null }
+  }
+  recently_relocated_assets: RelocatedAssetItem[]
 }
 
 // ── Pagination ────────────────────────────────────────────────────────────────

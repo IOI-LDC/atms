@@ -19,6 +19,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardKpiController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\ListOptionController;
 use App\Http\Controllers\LocationController;
@@ -44,6 +45,7 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::get('/auth/me', [AuthController::class, 'me']);
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/kpis', [DashboardKpiController::class, 'index']);
 
     Route::get('/locations', [LocationController::class, 'index']);
 

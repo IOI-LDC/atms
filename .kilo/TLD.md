@@ -36,6 +36,8 @@
 | 2026-06-24 | Asset tag format `L-BBB-CCC-XXXX` decided. New `asset_tag` column added to spec. | Frontend (create/edit forms, QR), Backend (migration, validation) | ⚠️ Unacknowledged |
 | 2026-06-24 | Mock ERP deprecated. Real ERP auth + URL pattern documented in `ERP_SYNC.md`. | Backend (4 PHP files to clean up) | ⚠️ Unacknowledged |
 | 2026-07-02 | Admin Lists & Dropdowns cleaned — removed 5 decorative/Enum-backed groups (`asset_categories`, `maintenance_categories`, `asset_statuses`, `asset_maintenance_sub_statuses`, `work_order_statuses`). Tab now 3 live groups: Maintenance Priorities (new dynamic CRUD), Usage Reading Types, FA Subclass Type Codes. Fixed priority hardcoding (was in 4 spots + backend `in:` rule). New public `GET /api/list-options/{group}` endpoint for non-Admin consumers. FA-subclass drift fixed (hardcoded 18 → DB 20). See `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. | Frontend (admin tab changed), Backend (new controller + seed migration) | ⚠️ Unacknowledged |
+| 2026-07-02 | **Parts Management UI (G-02) — DONE.** `PartsView.vue` (table + category filter) + `PartDetailView.vue` (details, ERP reference rail for Admin/Manager, attachments upload/delete) replace the "coming soon" stubs. New `useParts`/`usePartDetail`/`usePartSearch` composables + `partColumns` + `PartCombobox`. `__mockParts.ts` removed; WO parts-used picker now reads live `GET /parts`. Backend `PartSeeder` (55 O&G parts across 11 categories) + seeder tests. Committed `56bd463`. See `.kilo/plans/1783038000000-parts-management-frontend.md`. | Frontend (parts views live), Backend (seeder) | ⚠️ Unacknowledged |
+| 2026-07-03 | **Dashboard KPIs endpoint — `GET /api/dashboard/kpis`.** Rolling 90-day window; serves Row 2 (MTBF / MTTR / Failure Rate) + Row 3 (PM Compliance / Avg MR Duration / Avg WO Duration) + "Recently Relocated Assets" widget (latest 5). Full payload to **every authenticated role** (reuses `viewDashboard` gate). Row 1 counts stay on the existing role-adaptive `GET /api/dashboard`. New `DashboardKpiController`, `ReliabilityKpiQuery`/`ProcessPerformanceKpiQuery`/`RecentlyRelocatedAssetsQuery`, `DashboardKpiResource`; `AssetLocationHistoryResource` gained an `asset` fragment. Frontend handover: `docs/atms/04-technical/DASHBOARD_KPI_HANDOFF.md`. 11 tests, full suite 476 green. | **Frontend** (build the 9-card dashboard + relocated widget), Backend | ⚠️ Unacknowledged |
 
 ---
 
@@ -48,10 +50,11 @@
 |---|---|---|---|
 | D-001 | Rename `frontend/` → `atms/` + update Docker/nginx configs | Docs restructure done; code rename deferred per plan | When backend team starts SM subsystem |
 | D-002 | Update `CLAUDE.md` to match new docs structure | Explicitly out of scope for docs restructure | After `frontend/` → `atms/` rename |
-| D-003 | `asset_tag` QR code generation on asset detail page | Tag format decided; QR is future scope | After asset_tag column is implemented and populated |
 | D-004 ✅ | Virtual Store resolved — one workshop, per-part approval, auto-flag, overnight hold with next-day enforcement | 2026-06-24 | Done — spec in `docs/sm/01-product/VIRTUAL_STORE.md` |
-| D-005 | SM architecture + parts catalogue design | VJ reply pending. If BC Store Order live → no local `parts` table needed; query BC directly. If not → build `parts` table synced from ERP. `work_order_parts` table needed either way. | When VJ replies about BC Store Order |
-| D-006 | Parts consumption write-back to ERP (SM → ERP when stock issued at GR) | Under discussion with LDC; not yet agreed. ERP team must confirm API contract for consumption/decrement transaction. | After LDC meeting on parts write-back |
+
+> **Note:** Asset tag QR code generation (was D-003), SM architecture/parts
+> catalogue (was D-005), and ERP parts write-back (was D-006) have been
+> assigned concrete phases — see the Phase 2 / Phase 3 tables below.
 
 ---
 
@@ -98,10 +101,23 @@
 
 ## Phase 2 (deferred)
 
-| P2-001 | Asset Assembly: parent_asset_id column, install/remove/swap Actions, assembly_history table | Phase 2 |
-| P2-002 | Component PM cross-check: 🟢🟡🔴 indicators + "Create MR for Component" | Phase 2 |
-| P2-003 | SM Order workflow: Order → Approval → Dispatch → Goods Receipt | Phase 2 |
-| P2-004 | SM inventory management: stock movement, balances, Virtual Store | Phase 2 |
-| P2-005 | AM movement workflow: Requester → Logistics approve → confirm arrival | Phase 2 |
-| P2-006 | ERP parts write-back from SM GR to BC ERP | Phase 2 |
-| P2-007 | SM full build vs. BC Store Order integration (pending VJ reply) | Phase 2 |
+| ID | What |
+|---|---|
+| P2-001 | Asset Assembly: parent_asset_id column, install/remove/swap Actions, assembly_history table |
+| P2-002 | Component PM cross-check: 🟢🟡🔴 indicators + "Create MR for Component" |
+| P2-005 | AM movement workflow: Requester → Logistics approve → confirm arrival |
+| P2-006 | ERP parts write-back from SM GR to BC ERP (ERP team must confirm consumption/decrement API contract) |
+| P2-008 | Asset tag QR code generation on asset detail page (format `L-BBB-CCC-XXXX` already decided; visual rendering is the remaining work) |
+
+## Phase 3 — SM Subsystem (deferred)
+
+> SM decoupled into its own phase (2026-07-02). The Store Management subsystem
+> is the largest, most uncertain scope item — pending VJ's answer on whether BC
+> Store Order is live (determines local `parts` table vs direct BC query).
+
+| ID | What |
+|---|---|
+| P3-001 | SM architecture + parts catalogue design — full local build vs. BC Store Order integration (pending VJ reply about BC Store Order). `work_order_parts` already exists in Phase 1 regardless. |
+| P3-002 | SM Order workflow: Order → Approval → Dispatch → Goods Receipt |
+| P3-003 | SM inventory management: stock movement, balances, Virtual Store |
+| P3-004 | Manual Asset Creation + lifecycle-field persistence (G-01 Add Asset button + G-04 `CreateAsset` dropped fields) — **deferred to Phase 3 or cancelled** pending data-integrity decision. See gap analysis §4.1/§5.1. |

@@ -124,7 +124,7 @@ Technician or Manager.
 
 ---
 
-### Phase 2 — Store Management (future)
+### Phase 3 — Store Management (future, decoupled 2026-07-02)
 
 #### 3. SM Order Submitted
 

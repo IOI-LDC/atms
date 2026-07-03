@@ -282,6 +282,63 @@ Role-adaptive dashboard with summary counts and widget previews.
 
 Only widgets the user can see are included. Widgets are arrays of the same resource shapes documented below.
 
+### GET `/api/dashboard/kpis`
+
+Aggregate reliability / process-performance KPIs and a "Recently Relocated Assets"
+widget, over a **rolling 90-day window**. Complements `GET /api/dashboard` (which
+remains role-adaptive for the Row 1 widget lists). The KPI payload is **not**
+role-filtered — every authenticated role receives the full set.
+
+**Auth:** Required (any role)
+
+**Window:** `now − 90 days` → `now`. Surfaced in the response as `window.from` /
+`window.to` (ISO 8601, UTC).
+
+**KPI definitions:**
+
+| KPI | Measures | Returns | `null` when |
+|---|---|---|---|
+| `mtbf` | Mean Time Between Failures, calendar basis = `90 / corrective failures` | `{ days: number }` | no corrective failures in window |
+| `failure_rate` | Corrective failures in window + per-day rate | `{ failures: number, per_day: number }` | never (0 when none) |
+| `mttr` | Mean Time To Repair = mean `assigned_at → closed_at` on corrective Work Orders closed in window | `{ hours: number }` | no corrective closed WOs in window |
+| `pm_compliance` | Date-triggered PM requests due in window; on-time when `wo.closed_at ≤ mr.trigger_date` | `{ compliant, total, percentage }` | `percentage` is null when `total = 0` |
+| `avg_mr_duration` | Mean `created_at → terminal` for MRs resolved in window (reviewed_at / cancelled_at) | `{ hours: number }` | no resolved MRs in window |
+| `avg_wo_duration` | Mean `created_at → closed_at` for WOs closed in window | `{ hours: number }` | no closed WOs in window |
+
+Notes:
+- A "failure" / "corrective" record is identified by `maintenance_requests.is_preventive = false` (never the raw `type` string).
+- PM Compliance denominator = date-triggered PMs only (`triggered_by_date = true`, `trigger_date` within `[window.from, today]`). Reading-triggered PMs are excluded (no calendar due-date).
+- `recently_relocated_assets` = latest 5 `asset_location_histories` entries whose `effective_at` falls in the window, newest first. Each item is the `AssetLocationHistoryResource` shape (with `asset`, `from_location`, `to_location` eager-loaded).
+
+**Response `200`:**
+```json
+{
+  "window": { "days": 90, "from": "2026-04-04T01:17:48Z", "to": "2026-07-03T01:17:48Z" },
+  "kpis": {
+    "mtbf":            { "days": 45.0 },
+    "failure_rate":    { "failures": 2, "per_day": 0.0222 },
+    "mttr":            { "hours": 6.0 },
+    "pm_compliance":   { "compliant": 1, "total": 3, "percentage": 33.3 },
+    "avg_mr_duration": { "hours": 36.0 },
+    "avg_wo_duration": { "hours": 36.0 }
+  },
+  "recently_relocated_assets": [
+    {
+      "id": 12,
+      "asset_id": 7,
+      "asset": { "id": 7, "name": "Top Drive 01", "erp_asset_code": "A-001", "asset_tag": "L-ROTOR-001-0007" },
+      "from_location": { "id": 3, "name": "Yard B" },
+      "to_location":   { "id": 5, "name": "Rig 12" },
+      "effective_at": "2026-07-01T08:00:00Z",
+      "reason": "Deployment",
+      "notes": null,
+      "changed_by_user_id": 4,
+      "created_at": "2026-07-01T08:00:00Z"
+    }
+  ]
+}
+```
+
 ---
 
 ## Assets

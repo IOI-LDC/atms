@@ -1,6 +1,6 @@
 import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
 import type { Asset, AssetMaintenanceStatus, AssetKind, FaSubclassTypeCode } from '@/types'
-import { assetKindLabel, assetMaintenanceStatusLabel } from '@/lib/displayHelpers'
+import { assetKindLabel, assetMaintenanceStatusLabel, faSubclassLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
 
 /**
@@ -10,8 +10,8 @@ import type { FilterOption } from '@/lib/dataTableSource'
  * - `fa_subclass_code` replaces `category` — the `category` column in the DB
  *   is empty for all assets; the real classification lives in fa_subclass_code.
  * - `current_location` is an object { id, name } — no headerFilter (location
- *   filtering is handled externally via the .asset-filter-bar select shown
- *   to Admin/Manager only).
+ *   filtering is handled externally via the select in the table's #toolbar
+ *   slot, shown to Admin/Manager/Logistics only).
  * - "Latest usage reading" and "PM status" are not returned by the list
  *   endpoint and are deferred to the asset detail page.
  */
@@ -57,38 +57,6 @@ export const assetColumns: ColumnDef<Asset>[] = [
     sortable: false,
   },
 ]
-
-/**
- * Friendly display labels for known ERP FA subclass codes. The live
- * fa_subclass_type_codes table (fetched via useListOptions().loadFaSubclasses)
- * is the source of truth for which codes exist — this map only formats them
- * for display. Codes without a curated entry (e.g. a code the ERP adds later)
- * fall back to the raw code via `faSubclassLabel()`.
- */
-const FA_SUBCLASS_LABELS: Record<string, string> = {
-  'MUD MOTOR': 'Mud Motor',
-  'MWD/LWD': 'MWD/LWD',
-  DHT: 'DHT',
-  NMDC: 'NMDC',
-  MACHEQ: 'Machinery & Equipment',
-  WHIPSTOCK: 'Whipstock',
-  JARS: 'Jars',
-  WIRELINE: 'Wireline',
-  'SHOCK SUBS': 'Shock Subs',
-  COMPLETION: 'Completion',
-  FURNOFF: 'Furnoff',
-  RTM: 'RTM',
-  GYRO: 'Gyro',
-  ORGEXP: 'Org Exp',
-  PROPPLT: 'Propplt',
-  VEH: 'Vehicle',
-  COMPPER: 'Completion Perforating',
-  HOLEOPENER: 'Hole Opener',
-}
-
-export function faSubclassLabel(code: string): string {
-  return FA_SUBCLASS_LABELS[code] ?? code
-}
 
 /** Maps the live fa_subclass_type_codes list into select-filter options. */
 export function toFaSubclassFilterOptions(codes: FaSubclassTypeCode[]): FilterOption[] {

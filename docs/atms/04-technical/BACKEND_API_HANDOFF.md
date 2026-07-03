@@ -654,6 +654,36 @@ export interface AssetLocationHistoryItem {
   changed_by_user_id: number
 }
 
+// ---------- Dashboard KPIs (GET /api/dashboard/kpis) ----------
+
+/** Relocated-asset item as returned by the KPI endpoint (asset + locations eager-loaded). */
+export interface RelocatedAssetItem {
+  id: number
+  asset_id: number
+  asset: { id: number; name: string; erp_asset_code: string; asset_tag: string }
+  from_location: { id: number; name: string }
+  to_location: { id: number; name: string }
+  effective_at: string                     // ISO 8601
+  reason: string | null
+  notes: string | null
+  changed_by_user_id: number
+  created_at: string                       // ISO 8601
+}
+
+/** Response of GET /api/dashboard/kpis — rolling 90-day window, same payload for every role. */
+export interface DashboardKpiResponse {
+  window: { days: 90; from: string; to: string }   // ISO 8601 bounds (UTC)
+  kpis: {
+    mtbf: { days: number | null }                  // calendar basis = 90 / corrective failures
+    failure_rate: { failures: number; per_day: number }
+    mttr: { hours: number | null }                 // mean assigned_at → closed_at (corrective)
+    pm_compliance: { compliant: number; total: number; percentage: number | null }
+    avg_mr_duration: { hours: number | null }       // created_at → resolved
+    avg_wo_duration: { hours: number | null }       // created_at → closed
+  }
+  recently_relocated_assets: RelocatedAssetItem[]   // latest 5, newest first
+}
+
 export interface AssetAssemblyHistoryItem {
   id: number
   component_id: number
@@ -1109,6 +1139,7 @@ see [`BACKEND_API_REFERENCE.md`](./BACKEND_API_REFERENCE.md).
 | Method | Endpoint | Role |
 |---|---|---|
 | GET | `/api/dashboard` | Any role (widgets adapt by role) |
+| GET | `/api/dashboard/kpis` | Any role (full payload to everyone — see [`DASHBOARD_KPI_HANDOFF.md`](./DASHBOARD_KPI_HANDOFF.md)) |
 
 ### Assets
 

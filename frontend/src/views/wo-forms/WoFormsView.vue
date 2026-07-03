@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { useWoForms } from '@/composables/useWoForms'
+import { faSubclassLabel } from '@/lib/displayHelpers'
 import { Pencil, ToggleLeft, ToggleRight } from '@lucide/vue'
 import type { AppColumnDef } from '@/lib/appTable'
 import type { WoFormTemplate } from '@/types'
@@ -38,7 +39,7 @@ const filteredTemplates = computed<WoFormTemplate[]>(() => {
 // ── Columns ───────────────────────────────────────────────────────────────────
 const columns: AppColumnDef<WoFormTemplate>[] = [
   { field: 'name',             header: 'Template',     sortable: true, minWidth: 200 },
-  { field: 'fa_subclass_code', header: 'FA Subclass',  sortable: true },
+  { field: 'fa_subclass_code', header: 'Asset Class',  sortable: true },
   { field: 'fields_count',     header: 'Fields',       sortable: false, align: 'center' },
   { field: 'is_active',        header: 'Active',       sortable: true, align: 'center' },
   { field: 'actions',          header: '',             sortable: false, align: 'center', minWidth: 180 },
@@ -197,7 +198,7 @@ async function onReorderFields(fieldIds: number[]) {
         <span v-if="column.field === 'name'" class="table-cell-primary">{{ row.name }}</span>
 
         <span v-else-if="column.field === 'fa_subclass_code'" class="table-cell-secondary">
-          {{ row.fa_subclass_code }}
+          {{ faSubclassLabel(row.fa_subclass_code) }}
         </span>
 
         <span v-else-if="column.field === 'fields_count'" class="table-cell-secondary">
@@ -266,8 +267,8 @@ async function onReorderFields(fieldIds: number[]) {
           <DialogTitle>{{ toggleTarget?.is_active ? 'Deactivate Form Template' : 'Reactivate Form Template' }}</DialogTitle>
           <DialogDescription v-if="toggleTarget">
             {{ toggleTarget.is_active
-              ? `Deactivate "${toggleTarget.name}"? New work orders for ${toggleTarget.fa_subclass_code} assets will no longer snapshot this form. Existing work order forms are unaffected.`
-              : `Reactivate "${toggleTarget.name}"? It becomes available for new work order snapshots again. Blocked if another active template already covers ${toggleTarget.fa_subclass_code}.` }}
+              ? `Deactivate "${toggleTarget.name}"? New work orders for ${faSubclassLabel(toggleTarget.fa_subclass_code)} assets will no longer snapshot this form. Existing work order forms are unaffected.`
+              : `Reactivate "${toggleTarget.name}"? It becomes available for new work order snapshots again. Blocked if another active template already covers ${faSubclassLabel(toggleTarget.fa_subclass_code)}.` }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

@@ -385,20 +385,6 @@
   border-color: oklch(0.577 0.245 27 / 0.2);
 }
 
-/* Workflow action bar — a contained visual footer for terminal actions. */
-.detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.625rem;
-  padding: 1rem 1.25rem;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-}
-
 /* ═══════════════════════════════════════════════════════════════════
    Detail pages — shared command bar + two-column layout (Approach A)
    Used by Work Order and Asset detail. Page-specific content inside the
@@ -600,46 +586,6 @@
   }
 }
 
-.attachment-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.attachment-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.attachment-name {
-  font-size: 0.875rem;
-}
-
-.attachment-size {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-.attachment-download {
-  margin-inline-start: auto;
-  font-size: 0.8125rem;
-}
-
-/* Right-aligned cluster of per-attachment actions (Open / Delete). */
-.attachment-actions {
-  margin-inline-start: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
 .attachment-delete {
   color: var(--destructive);
 }
@@ -700,76 +646,6 @@
   height: 2px;
   background-color: var(--primary);
   border-radius: 2px 2px 0 0;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   Status and Priority Badges
-   ═══════════════════════════════════════════════════════════════════ */
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.1875rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-/* MR statuses */
-.status-pending {
-  background-color: oklch(0.96 0.05 75);
-  color: oklch(0.52 0.14 70);
-}
-.status-converted {
-  background-color: oklch(0.93 0.05 142);
-  color: oklch(0.42 0.13 142);
-}
-.status-rejected {
-  background-color: oklch(0.95 0.06 20);
-  color: oklch(0.48 0.18 20);
-}
-.status-cancelled {
-  background-color: oklch(0.93 0 0);
-  color: oklch(0.48 0 0);
-}
-
-/* WO statuses */
-.status-open {
-  background-color: oklch(0.94 0.04 232);
-  color: oklch(0.45 0.12 232);
-}
-.status-in-progress {
-  background-color: oklch(0.95 0.07 75);
-  color: oklch(0.5 0.16 70);
-}
-.status-completed {
-  background-color: oklch(0.93 0.05 165);
-  color: oklch(0.42 0.13 165);
-}
-.status-closed {
-  background-color: oklch(0.88 0 0);
-  color: oklch(0.32 0 0);
-}
-
-/* Priorities */
-.priority-critical {
-  background-color: oklch(0.94 0.08 20);
-  color: oklch(0.45 0.22 20);
-}
-.priority-high {
-  background-color: oklch(0.95 0.07 50);
-  color: oklch(0.5 0.18 50);
-}
-.priority-medium {
-  background-color: oklch(0.94 0.04 232);
-  color: oklch(0.45 0.12 232);
-}
-.priority-low {
-  background-color: oklch(0.94 0 0);
-  color: oklch(0.5 0.01 247);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1134,6 +1010,296 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   Dashboard (role-adaptive overview)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* KPI metric groups — labelled 3-up rows (Operational / Reliability / Process).
+   Each group carries one subtle accent (a tinted icon chip + a label dot) so
+   colour encodes the grouping rather than decorating. */
+.kpi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.kpi-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kpi-group-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.kpi-group-label::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+}
+.kpi-group-label-operational::before { background: var(--primary); }
+.kpi-group-label-reliability::before { background: var(--chart-3); }
+.kpi-group-label-process::before     { background: var(--chart-1); }
+
+.kpi-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 1000px) {
+  .kpi-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .kpi-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Compact stat tile — icon chip + title/value/subtitle stack. */
+.kpi-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.875rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.kpi-tile-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Default accent — overridden per group below. */
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+.kpi-tile-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.kpi-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.kpi-tile-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-tile-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.kpi-tile-sub {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+/* Group accents — soft tint of the group colour behind a saturated icon. */
+.kpi-accent-operational .kpi-tile-icon {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+.kpi-accent-reliability .kpi-tile-icon {
+  background: color-mix(in oklab, var(--chart-3) 16%, transparent);
+  color: var(--chart-3);
+}
+.kpi-accent-process .kpi-tile-icon {
+  background: color-mix(in oklab, var(--chart-1) 16%, transparent);
+  color: var(--chart-1);
+}
+
+/* "Last 90 days" scope caption in the page-actions row. */
+.dashboard-window-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+}
+
+.dashboard-window-range {
+  font-size: 0.6875rem;
+  opacity: 0.8;
+}
+
+/* Relocation from → to path in the relocated-assets widget. */
+.relocation-path-arrow {
+  color: var(--muted-foreground);
+  padding: 0 0.25rem;
+}
+
+/* Two explicit columns. The left "Action Required" stack spans both rows;
+   Quick Actions (row 1) and Recently Closed (row 2, sized 1fr) sit back to
+   back in the right column — no auto-placement, so neither column can leave
+   holes when a role lacks a section. */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.dashboard-main {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.dashboard-aside-top {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.dashboard-aside-bottom {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+}
+
+/* Roles with no "Action Required" column (e.g. Logistics) get a full-width
+   single stack; mobile collapses to the same, in DOM order. */
+.dashboard-grid-stacked {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.data-card-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background-color: var(--muted);
+  border-radius: 999px;
+  padding: 0.0625rem 0.5rem;
+}
+
+/* Compact widget list — rows are RouterLinks so they stay keyboard-operable. */
+.widget-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.widget-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+
+.widget-list-item:last-child {
+  border-bottom: none;
+}
+
+.widget-list-item:hover {
+  background-color: var(--muted);
+}
+
+.widget-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.widget-item-primary {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-item-secondary {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.widget-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+/* Prominent two-up action grid — buttons stretch to fill the card. */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    Filters and Tables
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -1206,7 +1372,10 @@
 
 .data-table-toolbar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .data-table-search {
@@ -1414,24 +1583,11 @@
 }
 
 /* Dialog and sheet form helpers */
-.dialog-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-}
-
 .sheet-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   padding-top: 1.25rem;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4375rem;
 }
 
 .field-required {
@@ -1452,20 +1608,6 @@
   justify-content: flex-end;
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
-}
-
-/* Loading / Empty / Error states */
-.loading-state,
-.empty-state,
-.error-state {
-  padding: 3rem 1rem;
-  text-align: center;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
-
-.error-state {
-  color: var(--destructive);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1610,7 +1752,7 @@
 }
 
 /* Maintenance Request statuses */
-.status-pending-review {
+.status-pending {
   background: oklch(0.7 0.155 75 / 0.12);
   color: oklch(0.5 0.13 75);
   border-color: oklch(0.7 0.155 75 / 0.25);
@@ -1775,7 +1917,7 @@
   color: var(--muted-foreground);
 }
 
-/* PM rule list filter bar (reuses asset-filter-bar spacing) */
+/* PM rule list filter bar */
 .pm-filter-bar {
   display: flex;
   align-items: center;
@@ -1910,14 +2052,8 @@
   vertical-align: middle;
 }
 
-/* External filter bar shown above the asset table for Admin/Manager */
-.asset-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.375rem;
-}
-
+/* Location filter select — rendered inside the data-table toolbar slot,
+   sized to sit beside the search input. */
 .asset-location-filter {
   width: 14rem;
   height: 2rem;
@@ -2445,89 +2581,6 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Dashboard
-   ═══════════════════════════════════════════════════════════════════ */
-
-.dashboard-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-.dashboard-preview-card {
-  background-color: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-.dashboard-preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.dashboard-preview-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-  margin: 0;
-}
-
-.dashboard-preview-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard-preview-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.625rem 1rem;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.dashboard-preview-row:last-child {
-  border-bottom: none;
-}
-
-.dashboard-preview-row:hover {
-  background-color: var(--muted);
-}
-
-.dashboard-preview-row-main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.dashboard-preview-row-name {
-  font-size: 0.8125rem;
-  color: var(--foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dashboard-preview-row-sub {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-@media (max-width: 768px) {
-  .dashboard-preview-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════
    ATMS Entity Identifiers
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -2546,11 +2599,6 @@
   background-color: var(--muted);
   padding: 0.125rem 0.375rem;
   border-radius: var(--radius-sm);
-}
-
-.table-cell-primary {
-  font-weight: 500;
-  color: var(--foreground);
 }
 
 /* Hidden file input managed by FileInput primitive */

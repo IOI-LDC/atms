@@ -333,7 +333,7 @@ The single Laravel backend and PostgreSQL database are shared by three product s
 - **AM** (Asset Movement) — Asset movement form, location history, movement workflow.
 
 Source-of-truth boundaries:
-- **Assets** — ⚠️ **PENDING LDC DECISION** (`docs/05-delivery/TDL.md` #10): Path A (ERP as source of truth → build ERP asset sync like Parts Sync, remove manual create UI) vs Path B (ATMS manages assets manually — current documented position in `IN_SCOPE.md`/`PRD.md`/`ERP_SYNC.md`). The "Add Asset" button is intentionally disabled until LDC decides. See `docs/PHASE_1_GAP_ANALYSIS.md` §4.1 (G-01).
+- **Assets** — ⚠️ **DEFERRED TO PHASE 3 / CANCELLED (2026-07-02)** — pending final confirm/cancel call. Originally "Path A (ERP as source of truth → build ERP asset sync, remove manual create UI) vs Path B (ATMS manages assets manually — current documented position in `IN_SCOPE.md`/`PRD.md`/`ERP_SYNC.md`)". Decision deferred on data-integrity grounds: ERP is the likely source of truth for asset reference data (Phase 3 SM work), so a manual create path risks duplicates/drift. The "Add Asset" button stays disabled (no live impact). See `docs/PHASE_1_GAP_ANALYSIS.md` §4.1 (G-01) and `docs/05-delivery/TDL.md` #10.
 - **Parts** are owned by SM. ERP syncs parts into SM tables. ATMS reads parts only to populate Work Order part-request forms. SM parts tables are the source of truth for parts.
 - **Asset location** is owned by AM. ATMS reads the current location from AM tables for display only. AM location tables are the source of truth for location history.
 
@@ -341,7 +341,7 @@ Source-of-truth boundaries:
 
 ### Asset management
 
-Assets are managed fully within ATMS via `POST /assets` and `PATCH /assets/{asset}`. The `CreateAsset` Action handles creation; **⚠️ Known bug (G-04):** `CreateAsset::execute()` silently drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, and `fa_subclass_code` — these are validated and permission-gated in `AssetController::store` but never persisted. The `update()` path via `UpdateAssetFields` does honor them. See `docs/PHASE_1_GAP_ANALYSIS.md` §5.1. The `AssetController::update` method delegates location changes to the existing `UpdateAssetLocation` Action (generating a separate `asset.location_updated` audit entry) and updates remaining operational fields separately — so a single PATCH that changes both name and location produces two audit entries. Asset create/update is restricted to Administrator and Maintenance Manager.
+Assets are managed fully within ATMS via `POST /assets` and `PATCH /assets/{asset}`. The `CreateAsset` Action handles creation; **⚠️ G-04 (deferred to Phase 3 / cancelled, 2026-07-02):** `CreateAsset::execute()` silently drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, and `fa_subclass_code` (validated + permission-gated in `AssetController::store` but never persisted). This is moot because the create button is disabled in production (G-01 deferred). The `update()` path via `UpdateAssetFields` **does** honour these fields correctly, so lifecycle fields remain settable post-create. Apply the fix first if manual create is revived in Phase 3. See `docs/PHASE_1_GAP_ANALYSIS.md` §5.1. The `AssetController::update` method delegates location changes to the existing `UpdateAssetLocation` Action (generating a separate `asset.location_updated` audit entry) and updates remaining operational fields separately — so a single PATCH that changes both name and location produces two audit entries. Asset create/update is restricted to Administrator and Maintenance Manager.
 
 ### Parts and ERP sync
 
@@ -479,6 +479,7 @@ Do not add: labor hours/rates/costs/timesheets, category-level or template-level
 | `PATCH` | `/admin/users/{user}` | Admin | Update user details; self-update rejected with 422 |
 | `POST` | `/admin/users/{user}/reset-password` | Admin | Force-reset password, invalidates all sessions/tokens; self-reset rejected |
 | `GET` | `/list-options/{group}` | Everyone (auth-only, not Admin-gated) | Active-only dropdown options for `maintenance_priorities`, `usage_reading_types`, `fa_subclass_type_codes`. Unknown group → 404. Added 2026-07-02 to unblock non-Admin consumers (MR priority pickers, Assets FA-subclass filter) without exposing the Admin-gated `/admin/master-data/*` CRUD endpoints. See `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. |
+| `GET` | `/dashboard/kpis` | Everyone (auth-only; full payload to all roles) | Rolling 90-day aggregate KPIs (MTBF / MTTR / Failure Rate / PM Compliance / Avg MR & WO Duration) + "Recently Relocated Assets" widget. Complements role-adaptive `GET /dashboard` (Row 1 counts stay there). Failure = `is_preventive=false`. MTBF calendar basis; MTTR `assigned→closed`; PM compliance date-triggered only, on-time `wo.closed_at::date ≤ mr.trigger_date`. `DashboardKpiResource` (`$wrap=null`). Handover: `docs/atms/04-technical/DASHBOARD_KPI_HANDOFF.md`. Added 2026-07-03. |
 
 Full request/response shapes: `docs/atms/04-technical/BACKEND_API_REFERENCE.md`.
 
@@ -488,12 +489,12 @@ A code-verified gap analysis is in [`docs/PHASE_1_GAP_ANALYSIS.md`](docs/PHASE_1
 Key findings future sessions must know:
 
 - **Backend is solid** (zero TODO/FIXME; consistent action-query-controller architecture).
-- **Frontend has 4 stub views** that look "complete" but show "coming soon": `PartsView`, `PartDetailView`, `SystemSettingsView`, `AuditLogsView`. The backend for all four is fully implemented.
-- **3 Critical code gaps:** G-02 (Parts UI stub), G-03 (location picker empty for Manager/Logistics — `useLocations.ts` only loads for Admins despite `GET /api/locations` existing), G-04 (CreateAsset drops lifecycle fields).
-- **G-01 (Add Asset disabled) is intentional** — pending LDC decision on ERP-as-source-of-truth (`TDL.md` #10). Do NOT build the create UI until LDC picks Path A or Path B.
+- **Frontend has 2 stub views** remaining that look "complete" but show "coming soon": `SystemSettingsView`, `AuditLogsView`. (`PartsView`/`PartDetailView` were built — G-02 closed 2026-07-02, commit `56bd463`.) Backend for all is fully implemented.
+- **Critical code gaps:** G-02 ✅ CLOSED. G-03 (location picker empty for Manager/Logistics — `useLocations.ts` only loads for Admins despite `GET /api/locations` existing) is the **one remaining Critical gap**. G-04 (`CreateAsset` drops lifecycle fields) deferred to Phase 3 / cancelled with G-01 (create disabled → no live impact).
+- **G-01 (Add Asset disabled) — DEFERRED TO PHASE 3 / CANCELLED (2026-07-02)** on data-integrity grounds (ERP likely source of truth in Phase 3). Final confirm/cancel pending. See `TDL.md` #10 and `PHASE_1_GAP_ANALYSIS.md` §4.1.
 - **Manager PM workflow is complete** — not a gap. The `RBAC.md` "known gap" note was outdated; Manager manages all PM assignments from Asset Detail → PM Rules section. Template create/edit is Admin-only by design.
-- **Asset Assembly does NOT exist in the backend** (despite earlier docs claiming it was "implemented"). No routes, no controller, no history table. Correct for Phase 1 scope; the frontend shows an honest "Phase 2" placeholder.
-- **Parts sync blocked** on ERP team providing the BC parts API page name (`TDL.md` #1–2). Infrastructure is fully built.
+- **Asset Assembly does NOT exist in the backend** (despite earlier docs claiming it was "implemented"). No routes, no controller, no history table. Correct for Phase 1 scope; the frontend shows an honest "Phase 2" placeholder. (Phase reorganisation 2026-07-02: Assembly is Phase 2, SM is Phase 3 — see `.kilo/TLD.md`.)
+- **Parts sync blocked** on ERP team providing the BC parts API page name (`TDL.md` #1–2). Infrastructure is fully built; the UI runs on seed data (`PartSeeder`, 55 parts) in the meantime.
 
 ## Documentation index
 
@@ -523,6 +524,7 @@ Key findings future sessions must know:
 | `docs/atms/04-frontend/UI_STATES.md` | Loading, empty, error state patterns |
 | `docs/atms/04-frontend/FORM_REQUIREMENTS.md` | Form validation and submission patterns |
 | `docs/atms/04-technical/BACKEND_API_HANDOFF.md` | Frontend integration guide: auth lifecycle, conventions, TS types, workflow sequences, patterns |
+| `docs/atms/04-technical/DASHBOARD_KPI_HANDOFF.md` | Focused frontend handover for `GET /api/dashboard/kpis`: 9-card layout mapping, TS types, null handling, formatting |
 | `docs/atms/04-technical/BACKEND_API_REFERENCE.md` | Exhaustive per-endpoint reference (request/response/role visibility) |
 | `docs/sm/01-product/PRD.md` | Store Management (SM) subsystem scope (placeholder) |
 | `docs/am/01-product/PRD.md` | Asset Movement (AM) subsystem scope (placeholder) |

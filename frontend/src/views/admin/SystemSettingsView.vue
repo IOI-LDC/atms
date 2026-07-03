@@ -12,7 +12,12 @@ import AppLayout from '@/components/app/AppLayout.vue'
         </div>
       </div>
       <div class="data-card">
-        <div class="empty-state">System settings coming soon.</div>
+        <div class="empty-state">
+          <p class="empty-state-title">Coming soon</p>
+          <p class="empty-state-description">
+            Company settings, ERP connection, sync schedule, and manual sync controls are not built yet.
+          </p>
+        </div>
       </div>
     </div>
   </AppLayout>

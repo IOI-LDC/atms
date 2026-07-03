@@ -89,7 +89,7 @@ Two things from VJ, framed as outcomes (not BC internals — VJ owns the "how"):
 | **Blocked since** | 2026-06-25 |
 | **Depends on** | VJ (ERP Consultant) |
 | **What we need** | (1) Parts/consumables/M&S read URL; (2) confirmation that QTY can be updated in BC on consumption + the handoff format VJ requires from us. |
-| **Phase** | Phase 2 (SM build). Phase 1 parts reference is read-only and unaffected. |
+| **Phase** | Phase 3 (SM build — decoupled 2026-07-02). Phase 1 parts reference is read-only and unaffected. |
 | **Impact if QTY update possible** | SM consumption flows straight into BC; ERP inventory stays accurate. |
 | **Impact if QTY update not possible** | SM maintains its own balances; reconciliation with BC becomes manual/periodic. |
 | **Message** | [`ERP_WAREHOUSE_FOLLOWUP.md`](../sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md) |
@@ -115,8 +115,11 @@ Two things from VJ, framed as outcomes (not BC internals — VJ owns the "how"):
 
 ### 10. Is ERP the source of truth for assets? 🔴
 
-**Status:** Pending LDC decision. Blocks the G-01 asset-creation strategy
-(`PHASE_1_GAP_ANALYSIS.md` §4.1).
+**Status:** **Deferred to Phase 3 / cancelled (2026-07-02)** — pending final confirm/cancel
+call. Blocks the G-01 asset-creation strategy (`PHASE_1_GAP_ANALYSIS.md` §4.1).
+Decision rationale: data-integrity concerns — with ERP as the likely source of truth
+for asset reference data (Phase 3 SM work), a manual create path risks duplicates/drift.
+The "Add Asset" button stays disabled in production (no live impact either way).
 
 **The question for LDC:** Is ERP (Dynamics 365 BC) the source of truth for asset
 **reference data**, or is ATMS?
@@ -155,8 +158,8 @@ Two things from VJ, framed as outcomes (not BC internals — VJ owns the "how"):
 
 | # | Gap | Severity | File | Effort |
 |---|-----|----------|------|--------|
-| G-01 | "Add Asset" button disabled — **intentional, pending LDC decision** (Path A: ERP sync vs Path B: manual create). See decision #10 above. | ⏸ Decision | `AssetsView.vue:81` | Path A ~2.0d / Path B ~1.0d |
-| G-02 | Parts Management UI is a stub (list + detail) | 🔴 Critical | `PartsView.vue`, `PartDetailView.vue` | 1.5d |
+| G-01 | "Add Asset" button disabled — **deferred to Phase 3 / cancelled (2026-07-02, data-integrity decision)**. Final confirm/cancel pending. See decision #10 above. | ⏸ Deferred | `AssetsView.vue:81` | 0d (decision) |
+| G-02 | ~~Parts Management UI is a stub~~ — **DONE (2026-07-02, commit `56bd463`)**. `PartsView` + `PartDetailView` fully built; mock removed; WO picker reads live `GET /parts`. | ✅ Done | `PartsView.vue`, `PartDetailView.vue` | — |
 | G-03 | Location picker empty for Manager/Logistics | 🔴 Critical | `useLocations.ts:24-26` | 0.25d |
 | G-05 | System Settings UI stub | 🟡 Medium | `SystemSettingsView.vue` | 0.5d |
 | G-06 | Audit Logs viewer stub | 🟡 Medium | `AuditLogsView.vue` | 0.5d |
@@ -171,7 +174,7 @@ Two things from VJ, framed as outcomes (not BC internals — VJ owns the "how"):
 
 | # | Gap | Severity | File | Effort |
 |---|-----|----------|------|--------|
-| G-04 | `CreateAsset` action drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, `fa_subclass_code` (validated + permission-gated in controller but never persisted) | 🔴 High | `CreateAsset.php:16-27` | 0.25d |
+| G-04 | ~~`CreateAsset` action drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, `fa_subclass_code`~~ — **deferred to Phase 3 / cancelled (2026-07-02)** with G-01. Create button disabled in production → code path unreachable → no live impact. Apply fix first if manual create is revived. | ⏸ Deferred | `CreateAsset.php:16-27` | — |
 
 ### Internal — Dead Code
 

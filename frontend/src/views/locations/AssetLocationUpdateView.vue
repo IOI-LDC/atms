@@ -77,40 +77,38 @@ function onCloseHistory() {
 </script>
 
 <template>
-  <div>
-    <!-- Location filter bar (only shown when locations are available) -->
-    <div v-if="activeLocations.length > 0" class="asset-filter-bar">
-      <span class="detail-field-muted">Filter by location:</span>
-      <Select
-        :model-value="locationFilter !== null ? String(locationFilter) : '__all__'"
-        @update:model-value="(v) => { locationFilter = v === '__all__' ? null : Number(v) }"
-      >
-        <SelectTrigger class="asset-location-filter">
-          <SelectValue placeholder="All locations" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="__all__">All locations</SelectItem>
-          <SelectItem
-            v-for="loc in activeLocations"
-            :key="loc.id"
-            :value="String(loc.id)"
-          >{{ loc.name }}</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
+  <div class="page-content">
     <div v-if="locationsError" class="error-state" role="alert">
       {{ locationsError }}
     </div>
 
     <AppDataTable
-      :key="locationFilter ?? 'all'"
       :rows="filteredAssets"
       :columns="columns"
       empty-text="No active assets found."
       label="Assets"
       :loading="assetsLoading"
     >
+      <!-- Location filter (only shown when locations are available) -->
+      <template v-if="activeLocations.length > 0" #toolbar>
+        <Select
+          :model-value="locationFilter !== null ? String(locationFilter) : '__all__'"
+          @update:model-value="(v) => { locationFilter = v === '__all__' ? null : Number(v) }"
+        >
+          <SelectTrigger class="asset-location-filter" aria-label="Filter by location">
+            <SelectValue placeholder="All locations" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All locations</SelectItem>
+            <SelectItem
+              v-for="loc in activeLocations"
+              :key="loc.id"
+              :value="String(loc.id)"
+            >{{ loc.name }}</SelectItem>
+          </SelectContent>
+        </Select>
+      </template>
+
       <template #cell="{ column, row }">
         <RouterLink
           v-if="column.field === 'asset_tag'"

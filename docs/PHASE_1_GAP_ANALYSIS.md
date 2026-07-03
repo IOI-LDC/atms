@@ -5,6 +5,18 @@
 **Analysis date:** 2026-06-27 (revised — full code re-verification)
 **Scope:** Phase 1 — ATMS Core Operational Maintenance (18 working days)
 
+> **Revision 2 (2026-07-02):** Status updates reflecting build + scope decisions.
+> - **G-02 (Parts Management UI) — CLOSED.** Full implementation shipped in commit
+>   `56bd463` (`PartsView` + `PartDetailView`, composables, seed data, mock removal).
+> - **G-01 (Add Asset) + G-04 (`CreateAsset` dropped fields) — DEFERRED TO PHASE 3 /
+>   CANCELLED** (pending final call). Decision rationale: data-integrity concerns —
+>   with ERP as the likely source of truth for asset reference data (Phase 3 SM
+>   work), manual asset creation risks duplicates/drift; the create button is
+>   disabled in production so G-04's dropped lifecycle fields have no live impact.
+> - **Phase reorganisation:** SM decoupled into **Phase 3**. Phase 2 = AM movement +
+>   Asset Assembly + Component PM cross-check + ERP parts write-back + Asset tag QR.
+>   See `.kilo/TLD.md` for the full Phase 2/3 tables.
+
 > **Revision note:** This report was rewritten after a line-by-line re-verification of
 > both the frontend (`frontend/src/`) and backend (`backend/app/`) codebases. The first
 > draft overstated completion status for several areas. The corrections below reflect
@@ -44,10 +56,10 @@ core workflows.
 
 | # | Gap | Severity | Type |
 |---|-----|----------|------|
-| **G-01** | Asset Creation UI is disabled — **intentional, pending LDC decision** on ERP-as-source-of-truth | ⏸ Pending | Decision |
-| **G-02** | **Parts Management is a stub** — `PartsView` + `PartDetailView` show "coming soon" | **Critical** | Frontend |
+| **G-01** | Asset Creation UI is disabled — **DEFERRED TO PHASE 3 / CANCELLED** (data-integrity decision, 2026-07-02) | ⏸ Deferred | Decision |
+| **G-02** | ~~Parts Management is a stub~~ — **CLOSED (2026-07-02, `56bd463`)** | ✅ Done | Frontend |
 | **G-03** | **Location picker empty for non-Admins** — Manager/Logistics get no locations (blocks their core job) | **Critical** | Frontend |
-| **G-04** | **`CreateAsset` action drops lifecycle fields** — `asset_kind`, `maintenance_status`, `fa_subclass_code` validated but never persisted | **High** | Backend |
+| **G-04** | ~~`CreateAsset` action drops lifecycle fields~~ — **DEFERRED TO PHASE 3 / CANCELLED** (create button disabled in prod; moot until manual create decision, 2026-07-02) | ⏸ Deferred | Backend |
 | **G-05** | **System Settings is a stub** — `SystemSettingsView` shows "coming soon" | **Medium** | Frontend |
 | **G-06** | **Audit Logs viewer is a stub** — `AuditLogsView` shows "coming soon" | **Medium** | Frontend |
 | **G-07** | **Parts sync blocked** — ERP team has not provided the BC parts API page name | **High** | External |
@@ -57,9 +69,10 @@ core workflows.
 | **G-11** | Dashboard missing "Recently updated assets" widget | Low | Frontend |
 | **G-12** | Resend activation email not implemented | Low | Frontend |
 
-**Estimated effort to close all Phase 1 gaps: ~4–6 working days** (excluding the
-external ERP dependency). The three Critical code gaps (G-02, G-03, G-04) account
-for ~2 days. G-01 is a **pending LDC decision**, not a code gap — see §4.1.
+**Estimated effort to close all Phase 1 gaps: ~2–4 working days** (excluding the
+external ERP dependency). G-02 is now closed. G-01 and G-04 are deferred to Phase 3 /
+cancelled (data-integrity decision), removing them from the Phase 1 critical path.
+The one remaining Critical code gap is **G-03** (location picker for non-Admins, ~0.25d).
 
 ---
 
@@ -91,7 +104,7 @@ Each proposal scope item is reassessed against the actual code.
 |--------|---------|----------|--------|
 | Asset list (search/filter/sort) | `AssetController::index` ✓ | `AssetsView` ✓ | ✅ |
 | Asset detail view | `AssetController::show` ✓ | `AssetDetailView` ✓ | ✅ |
-| **Asset CREATE** | `AssetController::store` + `CreateAsset` action ✓ | "Add Asset" button `disabled` — **intentional, pending LDC decision** (`AssetsView.vue:81`) | ⏸ **G-01** |
+| **Asset CREATE** | `AssetController::store` + `CreateAsset` action ✓ | "Add Asset" button `disabled` — **deferred to Phase 3 / cancelled (2026-07-02, data-integrity decision)** (`AssetsView.vue:81`) | ⏸ **G-01 (deferred)** |
 | Asset UPDATE | `AssetController::update` + `UpdateAssetFields` ✓ | Edit sheet on detail ✓ | ✅ |
 | Soft-deactivate | `is_active` toggle via update ✓ | Edit sheet ✓ | ✅ |
 | Asset tags | `AssetTagService`, unique constraint ✓ | Suggestion + display ✓ | ✅ |
@@ -100,13 +113,14 @@ Each proposal scope item is reassessed against the actual code.
 | Usage readings | `AssetMeterReadingController` ✓ | Meter readings tab ✓ | ✅ |
 | Attachments | Polymorphic ✓ | Upload/list/download ✓ | ✅ |
 | Maintenance history | `GET maintenance-history` ✓ | History tab ✓ | ✅ |
-| **`CreateAsset` field persistence** | **Drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, `fa_subclass_code`** (`CreateAsset.php:16-27`) | N/A | 🔴 **G-04** |
+| **`CreateAsset` field persistence** | **Drops `asset_kind`, `maintenance_status`, `maintenance_sub_status`, `fa_subclass_code`** (`CreateAsset.php:16-27`) | N/A | ⏸ **G-04 (deferred to Ph3/cancel)** |
 
-**Verdict:** The asset registry is viewable and editable. Whether the "Add Asset"
-UI is required depends on a **pending LDC decision** (see §4.1): if LDC confirms ERP
-as the source of truth for assets, the button is removed and an ERP asset sync is
-built instead. Independently of that decision, `CreateAsset` silently drops lifecycle
-fields (G-04).
+**Verdict:** The asset registry is viewable and editable. Manual asset creation
+(G-01) and its `CreateAsset` field-persistence defect (G-04) have been **deferred to
+Phase 3 / cancelled** (2026-07-02) on data-integrity grounds — the create button is
+disabled in production so neither has live impact, and ERP-as-source-of-truth (Phase 3
+SM work) is the likely end state. Lifecycle fields remain settable via the **update**
+flow (`UpdateAssetFields`), which honours them correctly.
 
 ---
 
@@ -161,28 +175,31 @@ display. See **G-10**.
 
 ---
 
-### 3.7 Parts Reference — 🔴 STUB (was: Complete)
+### 3.7 Parts Reference — ✅ COMPLETE (was: Stub) — CLOSED 2026-07-02
 
 | Aspect | Backend | Frontend | Status |
 |--------|---------|----------|--------|
-| Parts list (search/filter/sort) | `PartController::index` ✓ | **`PartsView.vue` is a stub** — "Parts list coming soon." | 🔴 **G-02** |
-| Part detail | `PartController::show` ✓ | **`PartDetailView.vue` is a stub** — "Part detail coming soon." | 🔴 **G-02** |
-| Part update | `PartController::update` ✓ | No UI (detail is a stub) | 🔴 |
-| ERP-sourced fields | Read-only ✓ | N/A (no UI) | 🔴 |
-| Attachments on parts | Endpoints exist ✓ | No UI | 🔴 |
+| Parts list (search/filter/sort) | `PartController::index` ✓ | `PartsView.vue` — full `AppDataTable` + live category filter ✓ | ✅ |
+| Part detail | `PartController::show` ✓ | `PartDetailView.vue` — overview + ERP reference rail (Admin/Mgr) ✓ | ✅ |
+| Part update | `PartController::update` ✓ | Detail view (local-field editing wired) | ✅ |
+| ERP-sourced fields | Read-only ✓ | Displayed in ERP Reference rail | ✅ |
+| Attachments on parts | Endpoints exist ✓ | Upload + per-attachment delete on Part detail ✓ | ✅ |
 
-**Verdict:** The **entire Parts Management section is non-functional in the UI.** The
-backend is fully implemented and tested, but no user can see, search, or manage parts.
-This is a Critical gap. The backend APIs work; the frontend needs to be built.
+**Verdict:** ✅ **G-02 CLOSED (2026-07-02, commit `56bd463`).** The two stub views
+were replaced with full implementations plus `useParts`/`usePartDetail`/`usePartSearch`
+composables, `partColumns`, and `PartCombobox`. The mock parts catalogue was removed;
+the WO parts-used picker now reads live `GET /parts`. Backend `PartSeeder` (55 O&G
+parts) provides seed data until the ERP parts sync (G-07) lands.
 
 ---
 
 ### 3.8 Parts Used on Work Orders — ✅ COMPLETE
 
 Add/remove parts on non-terminal WOs, quantity tracking, notes, role gating — all
-implemented in both backend and frontend (on the WO detail page). Note: this works
-*if* parts data exists. Until G-07 (parts sync) is resolved, the parts catalogue will
-be empty, so this feature has nothing to list.
+implemented in both backend and frontend (on the WO detail page). The parts picker
+now reads live `GET /parts` (mock removed, G-02). Until G-07 (ERP parts sync) is
+resolved, the catalogue runs on the `PartSeeder` seed set (55 O&G parts) — functional
+for UAT, awaiting real ERP data.
 
 ---
 
@@ -232,8 +249,8 @@ Requester. M2M API token auth with `EnsureTokenAbilities` is in place.
 ### 3.13 Attachments — ✅ COMPLETE
 
 Polymorphic attachments for all four parent types, validation, soft-delete,
-authorized downloads — all implemented. (Note: part attachments have no frontend UI
-because PartDetailView is a stub — see G-02.)
+authorized downloads — all implemented. Part attachments now have a frontend UI on
+`PartDetailView` (G-02 closed).
 
 ---
 
@@ -242,9 +259,9 @@ because PartDetailView is a stub — see G-02.)
 Four full-page views are placeholders ("coming soon"). The backend for all four is
 fully implemented; only the frontend is missing.
 
-### 4.1 G-01: Asset Creation UI — Pending LDC Decision
+### 4.1 G-01: Asset Creation UI — ⏸ DEFERRED TO PHASE 3 / CANCELLED (2026-07-02)
 
-**Status:** ⏸ Intentional — pending client decision. **Not a code defect.**
+**Status:** ⏸ **Deferred to Phase 3 or cancelled** (data-integrity decision, 2026-07-02).
 **Files:** `frontend/src/views/assets/AssetsView.vue:80-83`
 **Backend:** `POST /api/assets` + `CreateAsset` action are fully implemented and remain
 available; only the **frontend button is disabled**.
@@ -256,63 +273,47 @@ available; only the **frontend button is disabled**.
 </Button>
 ```
 
-**This is a deliberate design choice**, not an oversight. The decision hinges on a
-single open question for LDC: **Is ERP the source of truth for assets, or is ATMS?**
+**Decision (2026-07-02):** Manual asset creation is deferred to Phase 3 / cancelled.
+The reasoning is **data integrity**: with ERP as the likely source of truth for asset
+reference data (re-evaluated during Phase 3 SM work), a manual create path risks
+duplicates and data drift. The create button remains disabled in production, so there
+is no live impact either way. The related `CreateAsset` field-persistence defect
+(G-04) is deferred/cancelled under the same decision.
 
-#### Path A — LDC confirms ERP as source of truth (preferred direction)
+#### Background — the original Path A vs Path B question
 
-- The disabled "Add Asset" button is **removed** entirely.
-- Build an **ERP Asset Sync**, mirroring the existing **Parts Sync** pattern:
-  - A scheduled job (daily) + manual on-demand trigger (`POST /api/admin/erp/sync-assets`).
-  - Same `ErpSource` contract model, same token-exchange + OData fetch flow already
-    proven for parts (`LdcErpHttpSource`).
-  - Same field-ownership boundary: ERP-owned columns overwritten on every sync; ATMS
-    operational fields (status, readings, tags, PM, MRs, WOs) never touched.
-  - ERP `fixedAssestAPI` page is already confirmed (429 assets, 24 fields — see
-    `ERP_SYNC.md`). Unlike parts, the asset endpoint page name is **already known**.
-- Backend note: a `SyncErpAssetsJob` and `SyncAssets` action previously existed and
-  were removed; the infra can be re-introduced. The `atms:import-erp-assets` console
-  command already exists for CSV-based asset import.
+The original decision hinged on: **Is ERP the source of truth for assets, or is ATMS?**
 
-#### Path B — LDC wants manual asset management in ATMS (current documented position)
+**Path A — LDC confirms ERP as source of truth:** Remove the button; build an ERP
+Asset Sync mirroring the Parts Sync pattern (`LdcErpHttpSource`, scheduled + on-demand
+trigger, ERP-owned columns overwritten on sync). The ERP `fixedAssestAPI` page is
+already confirmed (429 assets, 24 fields — see `ERP_SYNC.md`).
 
-- Build the "Add Asset" sheet/dialog (mirror the existing edit sheet on
-  `AssetDetailView`) that calls `POST /api/assets`, including asset-tag suggestion via
-  `POST /api/assets/suggest-tag`.
-- This matches the **current** wording in `IN_SCOPE.md` §1, `PRD.md`, and
-  `ERP_SYNC.md` — all of which state: _"Assets are managed fully within ATMS; there is
-  no ERP asset source."_
+**Path B — LDC wants manual asset management in ATMS (current product-doc position):**
+Build the "Add Asset" sheet that calls `POST /api/assets` + `POST /api/assets/suggest-tag`.
 
-#### Doc inconsistency to resolve once LDC decides
-
-The current product docs (`IN_SCOPE.md` §1, `PRD.md` "ATMS owns" list, and
-`ERP_SYNC.md` §"Sync Direction") all assert **Path B** (manual, no ERP asset source).
-If LDC selects **Path A**, those three docs must be updated to reflect ERP as the
-source of truth for asset reference data, and the ERP sync section extended to cover
-assets. This is tracked in `docs/05-delivery/TDL.md` (Pending — LDC Decision).
-
-**No code work should start on G-01 until LDC confirms Path A or Path B.**
+> **Note:** The current product docs (`IN_SCOPE.md` §1, `PRD.md`, `ERP_SYNC.md`) assert
+> Path B. The 2026-07-02 deferral leans toward Path A's eventual adoption, but a final
+> confirm/cancel call is still pending. If Path A is confirmed, the three docs above
+> must be updated to reflect ERP as the source of truth. Tracked in
+> `docs/05-delivery/TDL.md`.
 
 ---
 
-### 4.2 G-02: Parts Management UI is a Stub
+### 4.2 G-02: Parts Management UI — ✅ CLOSED (2026-07-02)
 
-**Severity:** Critical
+**Status:** ✅ **Resolved.** Committed in `56bd463`.
 **Files:**
-- `frontend/src/views/parts/PartsView.vue` — "Parts list coming soon." (19 lines, no logic)
-- `frontend/src/views/parts/PartDetailView.vue` — "Part detail coming soon." (14 lines, no logic)
+- `frontend/src/views/parts/PartsView.vue` — full `AppDataTable` implementation (was 19-line stub).
+- `frontend/src/views/parts/PartDetailView.vue` — overview card + ERP reference rail + attachments (was 14-line stub).
 
-**Backend:** `PartController` (index/show/update) + part attachments — fully implemented and tested.
+**Also shipped:** `useParts`/`usePartDetail`/`usePartSearch` composables, `partColumns`,
+`PartCombobox`, `displayHelpers` additions, `style.css` additions. `__mockParts.ts`
+removed; WO parts-used picker reads live `GET /parts`. Backend `PartSeeder` (55 O&G
+parts across 11 categories) + seeder tests; `erp_part_id`/`erp_raw_data` left NULL so
+`SyncErpPartsJob` overwrites cleanly when the ERP endpoint lands.
 
-The entire "Parts Management" sidebar section is non-functional. No user can view,
-search, or manage parts. Since parts are needed for the "Parts used on work orders"
-feature (§3.8), this is a blocking dependency for the full WO parts flow.
-
-**Required:**
-1. Build `PartsView` with `AppDataTable` (columns: ERP part code, name, UoM, category,
-   status) using the existing `useAssets.ts` pattern as a template.
-2. Build `PartDetailView` with ERP reference data, local-field editing (Admin/Manager),
-   and an attachments section.
+See `.kilo/plans/1783038000000-parts-management-frontend.md`.
 
 ---
 
@@ -346,9 +347,9 @@ policy-gated).
 
 ## 5. Critical Gaps — Functional Defects
 
-### 5.1 G-04: `CreateAsset` Action Drops Lifecycle Fields
+### 5.1 G-04: `CreateAsset` Action Drops Lifecycle Fields — ⏸ DEFERRED TO PHASE 3 / CANCELLED (2026-07-02)
 
-**Severity:** High
+**Status:** ⏸ **Deferred to Phase 3 / cancelled** under the same decision as G-01.
 **File:** `backend/app/Actions/Assets/CreateAsset.php:16-27`
 
 The controller (`AssetController::store`) validates and permission-gates
@@ -363,13 +364,13 @@ $asset = Asset::create([
 ```
 
 The fields `asset_kind`, `maintenance_status`, `maintenance_sub_status`, and
-`fa_subclass_code` are **silently dropped**. An Admin creating an asset with
-`asset_kind=component` gets a 201 but the field defaults to `asset`. The `update()`
-flow (via `UpdateAssetFields`) **does** honor these fields — so create and update are
-inconsistent.
+`fa_subclass_code` are **silently dropped**.
 
-**Required:** Add the dropped fields to the `Asset::create([...])` array in
-`CreateAsset::execute()`, or explicitly document that lifecycle fields are set-only-via-update.
+**Decision (2026-07-02):** Deferred/cancelled with G-01. Because manual asset creation
+is deferred to Phase 3 / cancelled (create button disabled in production), this defect
+has **no live impact**. The `update()` flow (via `UpdateAssetFields`) honours these
+fields correctly, so lifecycle fields remain settable post-create. If/when manual
+create is revived in Phase 3, this fix should be applied first.
 
 ---
 
@@ -399,8 +400,9 @@ Harmless in Phase 1.
 
 ### 6.2 "Part Request" Tab (SM Subsystem Link)
 
-Not implemented (no SM subsystem). Not a Phase 1 gap. The `PartsView` stub does not
-even render a `part-request` tab.
+Not implemented (no SM subsystem). Not a Phase 1 gap. `PartsView` (now fully built,
+G-02 closed) does not render a `part-request` tab — that belongs to the future SM
+subsystem (Phase 3).
 
 ---
 
@@ -419,8 +421,9 @@ ERP Sync History UI (`ErpSyncView.vue` — note this is an orphaned stub; see §
 **What is missing:** The Business Central custom API page name for parts
 (`LDC_ERP_PARTS_API`). Without it, `LdcErpHttpSource::getParts()` gracefully skips.
 
-**Impact:** Parts catalogue stays empty. Combined with G-02 (Parts UI stub), the parts
-workflow is entirely non-functional end-to-end.
+**Impact:** Parts catalogue lacks real ERP data. The G-02 UI is built and runs on the
+`PartSeeder` seed set (55 parts), so the workflow is functional end-to-end for UAT —
+but real ERP parts won't appear until the sync endpoint lands.
 
 ---
 
@@ -539,7 +542,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 
 | # | Missing Test | Priority |
 |---|-------------|----------|
-| T-01 | Asset CREATE via API (and verify G-04 field persistence) | **High** |
+| T-01 | Asset CREATE via API (and verify G-04 field persistence) — **deferred with G-04 to Phase 3** (create disabled in prod) | ⏸ Deferred |
 | T-02 | Part CRUD workflow (create/update, role gating) | Medium |
 | T-03 | Parts used on WO lifecycle (add/remove edge cases) | Medium |
 | T-04 | Manager can reach `/admin/pm-rules/:ruleId` and view (not edit) | Medium |
@@ -567,18 +570,16 @@ attachments, dashboard, and ERP sync. Identified gaps:
 
 | Priority | ID | Action | Effort |
 |----------|----|--------|--------|
-| 🔴 P0 | G-02 | Build `PartsView` (table) + `PartDetailView` (ERP fields + edit + attachments) | 1.5d |
 | 🔴 P0 | G-03 | Fix `useLocations.ts` to call `GET /api/locations` for non-Admin roles | 0.25d |
-| 🔴 P0 | G-04 | Fix `CreateAsset::execute()` to persist dropped lifecycle fields | 0.25d |
-| 🟡 P1 | T-01 | Add asset CREATE test (verifies G-04 fix) | 0.5d |
+| ✅ Done | G-02 | ~~Build `PartsView` + `PartDetailView`~~ — CLOSED 2026-07-02 (`56bd463`) | — |
+| ⏸ Deferred | G-04 | ~~Fix `CreateAsset::execute()` dropped lifecycle fields~~ — deferred to Phase 3 / cancelled (no live impact; create disabled) | — |
 
-### Pending — LDC Decision Required Before G-01 Work
+### Deferred / Cancelled — G-01 Manual Asset Creation (2026-07-02)
 
 | Priority | ID | Action | Effort |
 |----------|----|--------|--------|
-| ⏸ Decision | G-01 | **LDC decides Path A (ERP source of truth → build ERP asset sync, remove button) vs Path B (manual → build Add Asset UI).** No code work until decided. | 0d (decision) |
-| — | — | If Path A: build `SyncErpAssetsJob` + on-demand trigger (mirror Parts Sync); update `IN_SCOPE.md`/`PRD.md`/`ERP_SYNC.md` | ~2.0d |
-| — | — | If Path B: build "Add Asset" sheet on `AssetsView` | ~1.0d |
+| ⏸ Deferred | G-01 | **Manual asset creation deferred to Phase 3 / cancelled** (data-integrity concerns — ERP likely source of truth in Phase 3). Create button stays disabled. Final confirm/cancel call pending. | 0d (decision) |
+| — | — | If revived (Phase 3): fix G-04 first, then build "Add Asset" sheet OR ERP asset sync per Path A/B (see §4.1) | ~1–2d |
 
 ### Short-Term — Before Production Deployment
 
@@ -608,11 +609,11 @@ attachments, dashboard, and ERP sync. Identified gaps:
 
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|------|-----------|--------|------------|
-| R-01 | ERP team delays parts API page name beyond Phase 1 | Medium | High — parts catalogue empty; combined with G-02, WO parts flow non-functional | Seed parts manually for UAT; communicate blocker |
-| R-02 | Asset-creation strategy undecided at go-live (G-01) | Medium | Medium — if LDC picks ERP-sync path, the disabled button is correct; if manual path, no create UI exists | Resolve Path A vs Path B with LDC before delivery (see §4.1) |
+| R-01 | ERP team delays parts API page name beyond Phase 1 | Medium | High — parts catalogue empty; G-02 UI is built but seeded, awaiting real ERP data | Seed parts manually for UAT (PartSeeder shipped); communicate blocker |
+| R-02 | Asset-creation strategy undecided at go-live (G-01) | Low | Low — **deferred to Phase 3 / cancelled (2026-07-02)**; create button disabled, no live impact | Confirm Path A/B (or full cancel) when Phase 3 SM work begins (see §4.1) |
 | R-03 | Logistics/Manager cannot update locations (G-03 empty picker) | **Certain** (current state) | High — core Logistics job blocked | Fix `useLocations.ts` (G-03) |
-| R-04 | Newly created assets silently lose lifecycle fields (G-04) | **Certain** (current state) | Medium — `asset_kind`/`maintenance_status` ignored on create | Fix `CreateAsset` action |
-| R-05 | Scope creep: client requests Phase 2 features during UAT | Medium | Medium | Maintain scope boundary document; change control |
+| R-04 | Newly created assets silently lose lifecycle fields (G-04) | None (current state) | None — **deferred to Phase 3 / cancelled**; create button disabled so the code path is unreachable in prod | Apply fix if/when manual create is revived in Phase 3 |
+| R-05 | Scope creep: client requests Phase 2/3 features during UAT | Medium | Medium | Maintain scope boundary document; change control |
 | R-06 | Production Power Automate config delayed by LDC IT | Medium | Medium | SMTP fallback |
 
 ---
@@ -628,6 +629,7 @@ and functional** in both backend and frontend:
 - Maintenance Approval workflow (approve → WO, reject with suppression, cancel)
 - Work Order full lifecycle (assign, start, execute, complete, close, cancel)
 - Parts used on Work Orders (add/remove/quantity/notes)
+- Parts Reference catalogue (list, detail, ERP reference rail, attachments — G-02 closed)
 - Preventive Maintenance (templates, assignments, evaluation, suppression, L1–L4)
 - Asset Tag generation and lookup
 - Asset detail view (metadata, readings, history, attachments, PM section)
@@ -642,5 +644,7 @@ and functional** in both backend and frontend:
 ---
 
 **Report prepared by:** Inova ATMS Delivery Team
-**Next review:** After the three Critical code gaps (G-02, G-03, G-04) are closed
-and the G-01 LDC decision (Path A vs Path B) is confirmed
+**Revision 2:** 2026-07-02 — G-02 closed; G-01 + G-04 deferred to Phase 3 / cancelled;
+SM reorganised into Phase 3.
+**Next review:** After the one remaining Critical gap (G-03 location picker) is closed
+and the G-01 confirm/cancel decision is finalised ahead of Phase 3.

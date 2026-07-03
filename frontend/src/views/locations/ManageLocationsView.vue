@@ -92,9 +92,11 @@ async function confirmToggle() {
 </script>
 
 <template>
-  <div>
+  <div class="page-content">
     <div class="filter-bar">
-      <Button size="sm" @click="openCreate">Create Location</Button>
+      <div class="filter-actions">
+        <Button size="sm" @click="openCreate">Create Location</Button>
+      </div>
     </div>
 
     <AppDataTable

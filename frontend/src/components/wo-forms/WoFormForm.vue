@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { faSubclassLabel } from '@/lib/displayHelpers'
 import type { WoFormTemplate, FaSubclassTypeCode } from '@/types'
 import type { WoFormTemplatePayload } from '@/composables/useWoForms'
 
@@ -62,7 +63,7 @@ function handleSave() {
     return
   }
 
-  if (!faSubclassCode.value.trim()) { localError.value = 'FA subclass is required.'; return }
+  if (!faSubclassCode.value.trim()) { localError.value = 'Asset class is required.'; return }
   emit('save', { name: name.value.trim(), fa_subclass_code: faSubclassCode.value.trim() })
 }
 
@@ -76,7 +77,7 @@ const title = computed(() => (isEdit.value ? 'Edit WO Form Template' : 'Create W
         <SheetHeader>
           <SheetTitle>{{ title }}</SheetTitle>
           <SheetDescription>
-            Define the WO Form for one FA subclass. Manage its fields from the "Manage Fields" action after saving.
+            Define the WO Form for one asset class. Manage its fields from the "Manage Fields" action after saving.
           </SheetDescription>
         </SheetHeader>
       </div>
@@ -92,19 +93,19 @@ const title = computed(() => (isEdit.value ? 'Edit WO Form Template' : 'Create W
           </div>
 
           <div class="form-field">
-            <Label for="wo-form-subclass">FA Subclass <span class="field-required">*</span></Label>
-            <p v-if="isEdit" class="detail-field-value">{{ faSubclassCode }}</p>
+            <Label for="wo-form-subclass">Asset Class <span class="field-required">*</span></Label>
+            <p v-if="isEdit" class="detail-field-value">{{ faSubclassLabel(faSubclassCode) }}</p>
             <Select v-else v-model="faSubclassCode">
-              <SelectTrigger id="wo-form-subclass"><SelectValue placeholder="Select an FA subclass…" /></SelectTrigger>
+              <SelectTrigger id="wo-form-subclass"><SelectValue placeholder="Select an asset class…" /></SelectTrigger>
               <SelectContent>
                 <SelectItem v-for="s in availableSubclasses" :key="s.fa_subclass_code" :value="s.fa_subclass_code">
-                  {{ s.fa_subclass_code }}
+                  {{ faSubclassLabel(s.fa_subclass_code) }}
                 </SelectItem>
               </SelectContent>
             </Select>
-            <p v-if="isEdit" class="form-help">The FA subclass cannot be changed after creation.</p>
+            <p v-if="isEdit" class="form-help">The asset class cannot be changed after creation.</p>
             <p v-else-if="availableSubclasses.length === 0" class="form-help">
-              Every FA subclass already has an active template.
+              Every asset class already has an active template.
             </p>
             <p v-if="validationErrors?.fa_subclass_code" class="form-error">
               {{ validationErrors.fa_subclass_code[0] }}

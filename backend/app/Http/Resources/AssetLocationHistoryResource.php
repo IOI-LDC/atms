@@ -12,6 +12,12 @@ class AssetLocationHistoryResource extends JsonResource
         return [
             'id' => $this->id,
             'asset_id' => $this->asset_id,
+            'asset' => $this->whenLoaded('asset', fn () => [
+                'id' => $this->asset?->id,
+                'name' => $this->asset?->name,
+                'erp_asset_code' => $this->asset?->erp_asset_code,
+                'asset_tag' => $this->asset?->asset_tag,
+            ]),
             'from_location' => $this->whenLoaded('fromLocation', fn () => [
                 'id' => $this->fromLocation?->id,
                 'name' => $this->fromLocation?->name,

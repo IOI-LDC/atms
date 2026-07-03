@@ -4,8 +4,21 @@
 > was done, what is decided, what is blocked, and what to tackle next.
 
 
+## Session — 2026-07-03
+
+- **Dashboard KPIs endpoint — DONE (backend, uncommitted).** New `GET /api/dashboard/kpis` serves the 9-card dashboard's Row 2 (MTBF / MTTR / Failure Rate) + Row 3 (PM Compliance / Avg MR Duration / Avg WO Duration) plus a "Recently Relocated Assets" widget (latest 5 `asset_location_histories`). Visible to **every authenticated role** (reuses the existing `viewDashboard` gate, which is `fn (User $user): bool => true`); payload is **not** role-filtered — Row 1 counts stay on the existing role-adaptive `GET /api/dashboard` (decision (a): KPIs = aggregate numbers for all; record lists stay role-scoped on `/dashboard`).
+  - **Decisions locked:** rolling **90-day** window; MTBF = **calendar** basis (`90 / corrective failures`); MTTR = `assigned_at → closed_at` on **corrective** WOs; PM Compliance = **date-triggered** PMs only, on-time = `wo.closed_at::date ≤ mr.trigger_date` (no grace); relocated = latest 5 within the window.
+  - **Files:** `DashboardKpiController` (thin: Gate → 2 query classes → `DashboardKpiResource`, `$wrap=null` for a flat object matching `/dashboard`), `app/Queries/Dashboard/Kpis/ReliabilityKpiQuery` + `ProcessPerformanceKpiQuery`, `app/Queries/Dashboard/RecentlyRelocatedAssetsQuery`, `app/Http/Resources/DashboardKpiResource`. Route added under the auth group.
+  - **"Failure" = `maintenance_requests.is_preventive = false`** (boolean) — deliberately avoided the raw `type` string. `maintenance_requests.type` is still a bare varchar without an Enum cast (pre-existing guardrail gap — flagged as a separate cleanup; create `MaintenanceRequestType` enum + cast).
+  - **Resource enhancement:** `AssetLocationHistoryResource` now exposes an `asset` fragment (`whenLoaded`) so the relocated widget can show asset name/tag/code without a second fetch. Safe — the existing `/assets/{asset}/location-history` endpoint doesn't load `asset`, so its response is unchanged.
+  - **Tests:** `tests/Feature/Dashboard/DashboardKpiTest` — 11 tests (auth/401, every-role access, structure, each KPI's math incl. corrective-only filtering + window exclusion, empty→null state, relocated top-5 + asset identity). Full suite **476 passed (1278 assertions)**. Pint clean. No fresh log errors.
+  - **Gotcha for future tests:** `created_at`/`updated_at` are **not** in the models' `$fillable` (guarded) — passing them via `create()` is silently ignored. Use `forceCreate([...])` when a test needs an explicit `created_at`. Also `work_orders.maintenance_request_id` is NOT NULL.
+- **Docs updated:** `BACKEND_API_REFERENCE.md` (§Dashboard — full `/dashboard/kpis` endpoint), `BACKEND_API_HANDOFF.md` (TS types `DashboardKpiResponse`/`RelocatedAssetItem` + quick-ref row), new focused `DASHBOARD_KPI_HANDOFF.md` (self-contained frontend handover: 9-card mapping, null handling, formatting), `.kilo/TLD.md` (🟡 Recently Completed), `CLAUDE.md` (New endpoints table).
+
 ## Session — 2026-07-02
 
+- **Parts Management UI (G-02) — DONE (committed `56bd463`).** Replaced the two "coming soon" stubs with full implementations: `PartsView.vue` (searchable/filterable table via `AppDataTable`, category filter derived live from data) + `PartDetailView.vue` (overview card, ERP reference rail for Admin/Manager incl. raw ERP JSON, attachments upload + per-attachment delete). New `useParts`/`usePartDetail`/`usePartSearch` composables, `partColumns`, and `PartCombobox`. Removed `__mockParts.ts` + all `// MOCK(PARTS)` blocks; the WO parts-used picker now reads live `GET /parts`. Backend: `PartSeeder` (55 O&G drilling-maintenance parts across 11 categories) registered in `DatabaseSeeder` + feature tests. Placeholder `erp_part_id`/`erp_raw_data` are NULL so `SyncErpPartsJob` overwrites cleanly when the ERP parts endpoint lands. Closes critical gap **G-02** from `docs/PHASE_1_GAP_ANALYSIS.md`.
+- **Phase reorganisation decided (2026-07-02):** SM decoupled into **Phase 3** (largest, most uncertain scope — pending VJ's BC Store Order answer). Phase 2 = AM movement + Asset Assembly + Component PM cross-check + ERP parts write-back + Asset tag QR generation. Manual Asset Creation (G-01 Add Asset + G-04 `CreateAsset` dropped lifecycle fields) **deferred to Phase 3 or cancelled** — data-integrity concerns: with ERP as the likely source of truth for asset reference data (Phase 3 SM work), manual create risks duplicates/drift; and the create button is disabled in production so G-04's dropped fields have no live impact. See updated `.kilo/TLD.md` Phase 2/3 tables.
 - **Admin Lists & Dropdowns cleanup — DONE (backend + frontend, parallel implementation).** `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. Trimmed the Admin "Lists & Dropdowns" tab from 8 groups to 3 genuinely-configurable ones (`maintenance_priorities`, `usage_reading_types`, `fa_subclass_type_codes`) — the other 5 were Enum-backed state machines (`WorkOrderStatus`, `OperationalStatus`, `MaintenanceSubStatus`) or dead concepts (`asset_categories`, `maintenance_categories`), decorative no-ops since `master_data_items` was empty. New public read path `GET /api/list-options/{group}` (auth-only, not Admin-gated — see CLAUDE.md New endpoints) lets every role read active-only priorities/reading-types/FA-subclasses without the Admin-gated `/admin/master-data/*` CRUD. Backend: `ListOptionController` + route + `maintenance_priorities` seed migration (4 rows: low/medium/high/critical) — 7 tests passing (20 assertions), confirmed via `docker exec atms-api php artisan test`. Frontend: new `useListOptions.ts` composable (fallback `DEFAULT_PRIORITIES` on fetch failure); `mrColumns.ts`/`woColumns.ts` dropped static priority arrays, `WorkOrdersView.vue`/`MaintenanceRequestDetailView.vue`/`WorkOrdersListView.vue` now merge live priorities into filter/select options; `useMaintenanceRequestDetail.ts` draft `priority` widened `Priority`→`string` (now dynamic data). **Bug fixed in passing:** the hardcoded FA-subclass filter list (`assetColumns.ts`) had drifted to 18 codes vs. 20 in the DB — missing `ROTOR`/`STATOR`. Fixed by fetching the live list; kept a display-only `FA_SUBCLASS_LABELS` lookup (repurposed from the old hardcoded array) so friendly labels ("Mud Motor") are preserved, falling back to the raw code for anything uncurated. Also preserved the "Critical — immediate attention required" picker hint via a new `priorityPickerLabel()` helper. Docs updated: `ROUTES.md` §Admin, `SCREEN_INVENTORY.md` §7b. Both sides uncommitted in the working tree as of this session.
 - **Asset status enum rename — DONE (backend + frontend).** `maintenance_status` `Active`/`Inactive`→`enrolled`/`withdrawn`; `maintenance_sub_status` PascalCase→lowercase (`installed`,`ready`,`lih`,`dbr`,`disposed`,`scrapped`,`other`). Reason: kill the `operational_status='active'` collision. Rolled out as 3 plans (`.kilo/plans/1782944404943/44/45`). Backend done: both enums, `LegacyAssetStatusNormalizer` (`normalize`+`normalizeSubStatus`, both `?string`; validation accepts both cases), 2 migrations. Frontend done: 6 files (`types/index.ts`, `useAssetDetail.ts` L83+L227, `AssetDetailView.vue`, `displayHelpers.ts`, `assetColumns.ts`, `content/user-manual.md`) — type-check + build green, sweep clean. Display labels: enrolled→"In maintenance program", withdrawn→"Withdrawn". **Ordering: backend-shim-first (NOT atomic)** — shim decouples FE/BE timing. **PENDING: Plan 3** (`1782944404945`) removes both shims ~14 days after Plan 2 deploy (≈mid-July 2026); un-skips `legacy→422` test stubs. Untouched: `operational_status`, `is_active`.
 - **Docs clean-up (2026-07-02):** `TDL.md` (added G-13 gap entry), `STATUS_MODEL.md` (L90 — fixed "configurable as master data" → Enum-backed state machine contradiction), `NAVIGATION.md` (L162-165 — corrected lists description), and `IN_SCOPE.md` (L185-188 — same). `SCREEN_INVENTORY.md` §7b and `ROUTES.md` §Admin were already aligned from the Lists implementation. All docs now match the dynamic-config model.
@@ -46,7 +59,7 @@
     HTTP trigger → email. No DB polling, push-based.
   - 5 notification triggers documented with full payload contracts:
     - Phase 1: MR Created, WO Assigned/Reassigned
-    - Phase 2: SM Order Submitted, SM Order Approved, SM Order Rejected
+    - Phase 3: SM Order Submitted, SM Order Approved, SM Order Rejected
   - Laravel implementation: `SendNotificationToPowerAutomate` queued job, event
     listeners, retry/failure handling.
   - Power Automate setup checklist.
@@ -72,11 +85,7 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
   buttons now surface automatically.
 
 ### Remaining Frontend Builds (F) — stub views with backend already implemented
-- **Parts Management UI** — `PartsView.vue` + `PartDetailView.vue` are "coming soon"
-  stubs. Backend done (`GET /parts`, `PATCH /parts/{part}`, attachments).
-  ⏸️ **PARKED (2026-06-30)** — client hasn't finalised Parts scope and the ERP Parts
-  schema isn't available yet. Do **not** start until both land. (Data side already
-  ERP-blocked — see P2.)
+- ~~**Parts Management UI**~~ — ✅ **DONE (2026-07-02, committed `56bd463`).** See session log above.
 - **System Settings** — `SystemSettingsView.vue` stub; backend done.
 - **Audit Logs** — `AuditLogsView.vue` stub; backend done.
 - **Manager → Admin-area access** — decided but not implemented: `AppSidebar.vue`
@@ -114,16 +123,19 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
 
 ### Suggested execution order
 **System Settings + Audit Logs views → Manager admin-area access → Notification
-testing.** Asset Booking frontend ✅ done. Parts Management UI is ⏸️ PARKED (client
-scope + ERP schema). P2 parts data stays ERP-blocked. #6 / #7 anytime.
+testing.** Asset Booking frontend ✅ done. Parts Management UI ✅ done (G-02 closed).
+G-01 (Add Asset) + G-04 (`CreateAsset` dropped fields) deferred to Phase 3 / cancelled
+(data-integrity decision). P2 parts data stays ERP-blocked. #6 / #7 anytime.
 
 ---
 
 ## Phase 1 pending review
 Phase 1 core is **COMPLETE**. VPS bug fixes and WO assignment enhancements are
-**done** (2026-06-28). Remaining: stub-view frontend builds (Parts UI, System
-Settings, Audit Logs), Manager admin-area access, Asset Booking frontend, and
-notification integration testing.
+**done** (2026-06-28). **Parts Management UI (G-02) closed (2026-07-02).**
+Remaining: stub-view frontend builds (System Settings, Audit Logs), Manager
+admin-area access, and notification integration testing. G-01 (Add Asset) and G-04
+(`CreateAsset` dropped fields) deferred to Phase 3 / cancelled (data-integrity
+concerns). G-03 (location picker for non-Admins) still open.
 
 ---
 
@@ -207,19 +219,25 @@ notification integration testing.
 - API bearer tokens with ability-based access control
 - Real ERP adapter (LdcErpHttpSource)
 
-### Phase 2 — SM + AM + Assembly (future)
+### Phase 2 — AM + Assembly + integrations (future)
 - Asset Assembly (parent/child, install/remove/swap)
-- Component PM cross-check
-- SM: Order → Approval → Dispatch → GR, inventory, Virtual Store
+- Component PM cross-check indicators
 - AM: Movement request workflow with approval chain
-- ERP parts write-back
+- ERP parts write-back (SM GR → BC ERP; ERP team must confirm consumption API contract)
+- Asset tag QR code generation on asset detail page
+
+### Phase 3 — SM Subsystem (future, decoupled 2026-07-02)
+- SM architecture + parts catalogue design (full local build vs. BC Store Order integration — pending VJ reply)
+- SM: Order → Approval → Dispatch → GR, inventory, Virtual Store
+- Manual Asset Creation + lifecycle-field persistence (G-01 Add Asset button + G-04 `CreateAsset` dropped fields) — deferred-to-Phase-3-or-cancelled decision (data-integrity concerns)
 
 ### Deferred entirely from Phase 1
-- Asset Assembly (parent_asset_id, assembly_history, component hours)
-- Component PM cross-check indicators
-- SM Order workflow, inventory, stock movement, Virtual Store
-- AM movement approval workflow
-- ERP parts write-back
+- Asset Assembly (parent_asset_id, assembly_history, component hours) — Phase 2
+- Component PM cross-check indicators — Phase 2
+- SM Order workflow, inventory, stock movement, Virtual Store — **Phase 3**
+- AM movement approval workflow — Phase 2
+- ERP parts write-back — Phase 2
+- Asset tag QR code generation — Phase 2
 - MinIO object storage
 
 ## Parts Table Decision (on hold — 2026-06-24)

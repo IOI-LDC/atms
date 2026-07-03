@@ -11,7 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { ChevronUpIcon, ChevronDownIcon, Trash2 } from '@lucide/vue'
-import { woFormFieldTypeLabel } from '@/lib/displayHelpers'
+import { woFormFieldTypeLabel, faSubclassLabel } from '@/lib/displayHelpers'
 import type { WoFormTemplate, WoFormTemplateField, WoFormFieldType } from '@/types'
 import type { WoFormFieldPayload } from '@/composables/useWoForms'
 
@@ -161,7 +161,7 @@ function confirmDelete() {
     <DialogContent class="wo-form-fields-dialog">
       <DialogHeader>
         <DialogTitle>Manage Fields — {{ template?.name }}</DialogTitle>
-        <DialogDescription>{{ template?.fa_subclass_code }} · fields shown in display order</DialogDescription>
+        <DialogDescription>{{ template ? faSubclassLabel(template.fa_subclass_code) : '' }} · fields shown in display order</DialogDescription>
       </DialogHeader>
 
       <div v-if="loading" class="loading-state">Loading fields…</div>

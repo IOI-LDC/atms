@@ -3,7 +3,16 @@
 **Prepared for:** LDC  
 **Prepared by:** Inova  
 **Subject:** Revised delivery approach for ATMS, Parts, and Location scope  
-**Date:** June 2026
+**Date:** June 2026  
+
+> **Delivery-phase note (updated 2026-07-02):** This proposal's commercial structure
+> is unchanged — full Store Management was always a separate optional add-on (§3),
+> not part of Phase 1 or Phase 2. Internally, Inova now labels that Store Management
+> work as **Phase 3** for tracking purposes (decoupled 2026-07-02, pending confirmation
+> of the BC Warehouse consumption mechanism). Phase 2 below (Advanced Operations)
+> remains as written: Asset Assembly, component PM visibility, asset movement, and the
+> consumed-parts handoff. This relabelling is administrative only and does not change
+> scope, sequence, or commercial effort.
 
 ---
 

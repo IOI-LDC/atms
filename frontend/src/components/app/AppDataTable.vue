@@ -88,6 +88,8 @@ defineSlots<{
     value: unknown
     columnIndex: number
   }): unknown
+  /** View-specific controls rendered in the toolbar row, before the search box. */
+  toolbar?(props: Record<string, never>): unknown
 }>()
 
 // Column defs in their framework-agnostic form (what the template renders
@@ -330,8 +332,12 @@ watch(
 
 <template>
   <div class="app-data-table">
-    <div v-if="searchable" class="data-table-toolbar">
+    <div v-if="searchable || $slots.toolbar" class="data-table-toolbar">
+      <!-- View-specific controls (e.g. an external filter select) that belong
+           on the same row as the search box instead of a separate bar. -->
+      <slot name="toolbar" />
       <Input
+        v-if="searchable"
         v-model="search"
         :placeholder="`Search ${label.toLowerCase()}…`"
         class="data-table-search"

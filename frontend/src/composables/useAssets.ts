@@ -32,15 +32,15 @@ function useFetchList<T>(endpoint: string, baseParams: Record<string, string | n
  *
  * Backend contract (see docs/04-technical/BACKEND_API_REFERENCE.md):
  *  GET /api/assets                  -> cursor-paginated AssetResource list
- *  GET /api/admin/locations         -> { data: Location[] }  (Admin/Manager only)
+ *  GET /api/locations               -> { data: Location[] }  (active-only; Admin/Manager/Logistics)
  */
 export function useAssets() {
   // Single slice — all assets sorted by name. Client-mode: full list fetched
   // once; the AppDataTable sorts/filters/searches in memory.
   const all = useFetchList<Asset>('/assets', { sort: 'name:asc' })
 
-  // Locations — fetched on demand, only for Admin/Manager (caller must
-  // check role before invoking loadLocations).
+  // Locations — fetched on demand, only for Admin/Manager/Logistics (caller
+  // must check role before invoking loadLocations).
   const locations        = ref<Location[]>([])
   const locationsLoading = ref(false)
 
@@ -48,8 +48,8 @@ export function useAssets() {
     if (locations.value.length > 0) return  // already loaded
     locationsLoading.value = true
     try {
-      const res = await api.get<{ data: Location[] }>('/admin/locations')
-      locations.value = (res.data ?? []).filter((l) => l.is_active)
+      const res = await api.get<{ data: Location[] }>('/locations')
+      locations.value = res.data ?? []
     } catch {
       locations.value = []
     } finally {

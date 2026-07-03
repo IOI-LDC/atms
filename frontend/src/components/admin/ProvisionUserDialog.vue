@@ -53,7 +53,7 @@ function handleConfirm() {
         </DialogDescription>
       </DialogHeader>
 
-      <div class="dialog-field">
+      <div class="form-field">
         <Label for="provision-role">Role <span class="field-required">*</span></Label>
         <Select v-model="selectedRoleId">
           <SelectTrigger id="provision-role">

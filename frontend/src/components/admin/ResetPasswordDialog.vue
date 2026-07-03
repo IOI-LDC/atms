@@ -60,7 +60,7 @@ function handleConfirm() {
         All active sessions and API tokens for this user will be invalidated immediately.
       </div>
 
-      <div class="dialog-field">
+      <div class="form-field">
         <Label for="reset-pw-new">New Password <span class="field-required">*</span></Label>
         <Input
           id="reset-pw-new"
@@ -74,7 +74,7 @@ function handleConfirm() {
         </p>
       </div>
 
-      <div class="dialog-field">
+      <div class="form-field">
         <Label for="reset-pw-confirm">Confirm Password <span class="field-required">*</span></Label>
         <Input
           id="reset-pw-confirm"

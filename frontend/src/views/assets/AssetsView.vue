@@ -52,16 +52,17 @@ watch(
   (tab) => {
     if (tab === 'all-assets') {
       all.load()
-      if (auth.isAdminOrManager) loadLocations()
+      if (auth.isAdminOrManager || auth.isLogistics) loadLocations()
       loadFaSubclasses()
     }
   },
   { immediate: true },
 )
 
-// ── Location filter (Admin/Manager only) ──────────────────────────────────────
+// ── Location filter (Admin/Manager/Logistics) ─────────────────────────────────
 // Pre-filters rows before passing to AppDataTable, which then handles search /
-// column filters / sort / pagination in-memory on top of this subset.
+// column filters / sort / pagination in-memory on top of this subset. The
+// select itself renders inside the table's #toolbar slot, beside the search.
 
 const locationFilter = ref<number | null>(null)
 
@@ -109,26 +110,6 @@ function goDetail(payload: { row: Asset }) {
       <!-- ── All Assets tab ─────────────────────────────────────────────── -->
       <template v-if="activeTab === 'all-assets'">
 
-        <!-- Location filter — Admin/Manager only (endpoint is admin-only) -->
-        <div v-if="auth.isAdminOrManager" class="asset-filter-bar">
-          <Select
-            :model-value="locationFilter !== null ? String(locationFilter) : '__all__'"
-            @update:model-value="(v) => { locationFilter = v === '__all__' ? null : Number(v) }"
-          >
-            <SelectTrigger class="asset-location-filter">
-              <SelectValue placeholder="All locations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All locations</SelectItem>
-              <SelectItem
-                v-for="loc in locations"
-                :key="loc.id"
-                :value="String(loc.id)"
-              >{{ loc.name }}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <AppDataTable
           :key="activeTab"
           :rows="filteredRows"
@@ -139,6 +120,25 @@ function goDetail(payload: { row: Asset }) {
           :loading="all.loading.value"
           @row-click="goDetail"
         >
+          <!-- Location filter — Admin/Manager/Logistics only (viewAny-gated) -->
+          <template v-if="auth.isAdminOrManager || auth.isLogistics" #toolbar>
+            <Select
+              :model-value="locationFilter !== null ? String(locationFilter) : '__all__'"
+              @update:model-value="(v) => { locationFilter = v === '__all__' ? null : Number(v) }"
+            >
+              <SelectTrigger class="asset-location-filter" aria-label="Filter by location">
+                <SelectValue placeholder="All locations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All locations</SelectItem>
+                <SelectItem
+                  v-for="loc in locations"
+                  :key="loc.id"
+                  :value="String(loc.id)"
+                >{{ loc.name }}</SelectItem>
+              </SelectContent>
+            </Select>
+          </template>
           <template #cell="{ column, row }">
 
             <span v-if="column.field === 'asset_tag'" class="atms-erp-code">

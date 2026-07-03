@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { ArrowLeftIcon } from '@lucide/vue'
+import { ArrowLeftIcon, EyeIcon, Trash2Icon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -73,15 +73,23 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
       <div v-else-if="error" class="error-state" role="alert">{{ error }}</div>
 
       <template v-else-if="record">
-        <!-- Header -->
-        <div class="page-header">
-          <div class="page-heading">
-            <h1 class="page-title">{{ record.number }}</h1>
-            <p class="page-subtitle">{{ mrTypeLabel(record.type) }} maintenance request</p>
-          </div>
-          <div class="page-actions">
-            <span :class="mrStatusClass(record.status)">{{ mrStatusLabel(record.status) }}</span>
-            <span :class="priorityClass(record.priority)">{{ priorityLabel(record.priority) }}</span>
+        <!-- Command bar -->
+        <div class="detail-command-bar">
+          <div class="detail-command-top">
+            <div class="detail-command-identity">
+              <div class="detail-command-heading">
+                <h1 class="detail-command-number">{{ record.number }}</h1>
+                <span :class="mrStatusClass(record.status)">{{ mrStatusLabel(record.status) }}</span>
+                <span :class="priorityClass(record.priority)">{{ priorityLabel(record.priority) }}</span>
+              </div>
+              <p class="detail-command-subtitle">{{ mrTypeLabel(record.type) }} maintenance request · {{ record.asset.name }}</p>
+            </div>
+
+            <div v-if="canApprove || canReject || canCancel" class="detail-command-actions">
+              <Button v-if="canCancel" variant="outline" @click="openCancel">Cancel Request</Button>
+              <Button v-if="canReject" variant="outline" @click="openReject">Reject Request</Button>
+              <Button v-if="canApprove" @click="openApprove">Approve &amp; Create Work Order</Button>
+            </div>
           </div>
         </div>
 
@@ -90,168 +98,191 @@ watch(id, (newId) => { if (newId) load(newId) }, { immediate: true })
           This request is {{ mrStatusLabel(record.status).toLowerCase() }} and can no longer be changed.
         </div>
 
-        <!-- Details card -->
-        <div class="data-card">
-          <div class="data-card-header">
-            <h2 class="data-card-title">Details</h2>
-            <div class="detail-card-actions">
-              <Button v-if="canEdit && !editing" size="sm" variant="outline" @click="startEdit">Edit</Button>
-              <Button v-if="editing" size="sm" variant="outline" :disabled="saving" @click="cancelEdit">Cancel</Button>
-              <Button v-if="editing" size="sm" :disabled="saving" @click="saveEdit">
-                {{ saving ? 'Saving…' : 'Save Changes' }}
-              </Button>
+        <!-- Details (main) + reference rail -->
+        <div class="detail-layout">
+          <div class="detail-main">
+
+            <!-- Details card -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Details</h2>
+                <div class="detail-card-actions">
+                  <Button v-if="canEdit && !editing" size="sm" variant="outline" @click="startEdit">Edit</Button>
+                  <Button v-if="editing" size="sm" variant="outline" :disabled="saving" @click="cancelEdit">Cancel</Button>
+                  <Button v-if="editing" size="sm" :disabled="saving" @click="saveEdit">
+                    {{ saving ? 'Saving…' : 'Save Changes' }}
+                  </Button>
+                </div>
+              </div>
+              <div class="detail-card-content">
+
+                <div v-if="editError" class="error-state" role="alert">{{ editError }}</div>
+
+                <!-- Field grid: short read-only meta + editable priority -->
+                <div class="detail-grid">
+                  <div class="detail-field detail-field-block">
+                    <span class="detail-field-label">Asset</span>
+                    <p class="detail-field-value">
+                      {{ record.asset.name }}
+                      <span class="detail-field-muted">{{ record.asset.erp_asset_code }}</span>
+                    </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Requested by</span>
+                    <p class="detail-field-value">{{ record.created_by?.name ?? '—' }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Created</span>
+                    <p class="detail-field-value">{{ fmtDate(record.created_at) }}</p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Approved by</span>
+                    <p class="detail-field-value">{{ record.reviewed_by?.name ?? '—' }}</p>
+                  </div>
+
+                  <!-- Priority (read / edit) -->
+                  <div class="detail-field">
+                    <Label v-if="editing" for="mr-priority" class="detail-field-label">Priority</Label>
+                    <span v-else class="detail-field-label">Priority</span>
+                    <p v-if="!editing" class="detail-field-value">
+                      <span :class="priorityClass(record.priority)">{{ priorityLabel(record.priority) }}</span>
+                    </p>
+                    <Select v-else v-model="draft.priority">
+                      <SelectTrigger id="mr-priority"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          v-for="opt in priorities"
+                          :key="opt.value"
+                          :value="opt.value"
+                        >{{ priorityPickerLabel(opt) }}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p v-if="editing && validationErrors?.priority" class="form-error">
+                      {{ validationErrors.priority[0] }}
+                    </p>
+                  </div>
+
+                  <!-- Description (read / edit) — full width -->
+                  <div class="detail-field detail-field-block">
+                    <Label v-if="editing" for="mr-description" class="detail-field-label">Description</Label>
+                    <span v-else class="detail-field-label">Description</span>
+                    <p v-if="!editing" class="detail-field-value detail-field-prose">
+                      {{ record.description ?? 'No description provided.' }}
+                    </p>
+                    <Textarea
+                      v-else id="mr-description" v-model="draft.description" :rows="5"
+                      placeholder="Describe the fault, symptoms, or maintenance needed…"
+                    />
+                    <p v-if="editing && validationErrors?.description" class="form-error">
+                      {{ validationErrors.description[0] }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Preventive trigger info (role-gated by presence) -->
+                <div v-if="record.is_preventive" class="detail-section">
+                  <h3 class="detail-section-title">Preventive trigger</h3>
+                  <div class="detail-grid">
+                    <div v-if="record.triggered_by_date" class="detail-field">
+                      <span class="detail-field-label">Triggered by date</span>
+                      <p class="detail-field-value">Yes</p>
+                    </div>
+                    <div v-if="record.trigger_date" class="detail-field">
+                      <span class="detail-field-label">Trigger date</span>
+                      <p class="detail-field-value">{{ fmtDate(record.trigger_date) }}</p>
+                    </div>
+                    <div v-if="record.triggered_by_reading" class="detail-field">
+                      <span class="detail-field-label">Triggered by reading</span>
+                      <p class="detail-field-value">Yes</p>
+                    </div>
+                    <div v-if="record.trigger_reading_value" class="detail-field">
+                      <span class="detail-field-label">Trigger reading</span>
+                      <p class="detail-field-value">{{ record.trigger_reading_value }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rejection reason (role-gated by presence) -->
+                <div v-if="record.rejection_reason" class="detail-section">
+                  <h3 class="detail-section-title">Rejection reason</h3>
+                  <div class="detail-callout detail-callout-destructive">
+                    <p class="detail-field-value detail-field-prose">{{ record.rejection_reason }}</p>
+                  </div>
+                </div>
+
+                <!-- Cancellation reason (role-gated by presence) -->
+                <div v-if="record.cancellation_reason" class="detail-section">
+                  <h3 class="detail-section-title">Cancellation reason</h3>
+                  <div class="detail-callout">
+                    <p class="detail-field-value detail-field-prose">{{ record.cancellation_reason }}</p>
+                  </div>
+                </div>
+
+                <!-- Resulting Work Order -->
+                <div v-if="record.work_order" class="detail-section">
+                  <h3 class="detail-section-title">Resulting work order</h3>
+                  <RouterLink :to="`/work-orders/${record.work_order.id}`" class="table-link">
+                    {{ record.work_order.number }}
+                  </RouterLink>
+                </div>
+
+              </div>
             </div>
+
           </div>
-          <div class="detail-card-content">
 
-            <div v-if="editError" class="error-state" role="alert">{{ editError }}</div>
-
-            <!-- Field grid: short read-only meta + editable priority -->
-            <div class="detail-grid">
-              <div class="detail-field detail-field-block">
-                <span class="detail-field-label">Asset</span>
-                <p class="detail-field-value">
-                  {{ record.asset.name }}
-                  <span class="detail-field-muted">{{ record.asset.erp_asset_code }}</span>
-                </p>
+          <aside class="detail-rail">
+            <!-- Attachments -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Attachments</h2>
               </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Requested by</span>
-                <p class="detail-field-value">{{ record.created_by?.name ?? '—' }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Created</span>
-                <p class="detail-field-value">{{ fmtDate(record.created_at) }}</p>
-              </div>
-              <div class="detail-field">
-                <span class="detail-field-label">Approved by</span>
-                <p class="detail-field-value">{{ record.reviewed_by?.name ?? '—' }}</p>
-              </div>
-
-              <!-- Priority (read / edit) -->
-              <div class="detail-field">
-                <Label v-if="editing" for="mr-priority" class="detail-field-label">Priority</Label>
-                <span v-else class="detail-field-label">Priority</span>
-                <p v-if="!editing" class="detail-field-value">
-                  <span :class="priorityClass(record.priority)">{{ priorityLabel(record.priority) }}</span>
-                </p>
-                <Select v-else v-model="draft.priority">
-                  <SelectTrigger id="mr-priority"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="opt in priorities"
-                      :key="opt.value"
-                      :value="opt.value"
-                    >{{ priorityPickerLabel(opt) }}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p v-if="editing && validationErrors?.priority" class="form-error">
-                  {{ validationErrors.priority[0] }}
-                </p>
-              </div>
-
-              <!-- Description (read / edit) — full width -->
-              <div class="detail-field detail-field-block">
-                <Label v-if="editing" for="mr-description" class="detail-field-label">Description</Label>
-                <span v-else class="detail-field-label">Description</span>
-                <p v-if="!editing" class="detail-field-value detail-field-prose">
-                  {{ record.description ?? 'No description provided.' }}
-                </p>
-                <Textarea
-                  v-else id="mr-description" v-model="draft.description" :rows="5"
-                  placeholder="Describe the fault, symptoms, or maintenance needed…"
-                />
-                <p v-if="editing && validationErrors?.description" class="form-error">
-                  {{ validationErrors.description[0] }}
-                </p>
+              <div class="data-card-content">
+                <div v-if="attachmentsLoading" class="loading-state">Loading attachments…</div>
+                <div v-else-if="attachments.length === 0" class="empty-state">No attachments.</div>
+                <table v-else class="detail-table">
+                  <thead class="detail-table-head">
+                    <tr>
+                      <th>File</th>
+                      <th>Size</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="a in attachments" :key="a.id" class="detail-table-row">
+                      <td class="detail-table-cell">{{ a.file_name }}</td>
+                      <td class="detail-table-cell">{{ formatBytes(a.size_bytes) }}</td>
+                      <td class="detail-table-cell">
+                        <div class="detail-table-actions">
+                          <Button
+                            v-if="a.download_url"
+                            variant="ghost"
+                            size="icon-sm"
+                            :title="`View ${a.file_name}`"
+                            :aria-label="`View ${a.file_name}`"
+                            @click="openAttachmentInNewTab(a.download_url, a.file_name)"
+                          >
+                            <EyeIcon />
+                          </Button>
+                          <Button
+                            v-if="canDeleteAttachment(a)"
+                            variant="ghost"
+                            size="icon-sm"
+                            class="attachment-delete"
+                            :title="`Delete ${a.file_name}`"
+                            :aria-label="`Delete ${a.file_name}`"
+                            @click="openDeleteAttachment(a)"
+                          >
+                            <Trash2Icon />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            <!-- Preventive trigger info (role-gated by presence) -->
-            <div v-if="record.is_preventive" class="detail-section">
-              <h3 class="detail-section-title">Preventive trigger</h3>
-              <div class="detail-grid">
-                <div v-if="record.triggered_by_date" class="detail-field">
-                  <span class="detail-field-label">Triggered by date</span>
-                  <p class="detail-field-value">Yes</p>
-                </div>
-                <div v-if="record.trigger_date" class="detail-field">
-                  <span class="detail-field-label">Trigger date</span>
-                  <p class="detail-field-value">{{ fmtDate(record.trigger_date) }}</p>
-                </div>
-                <div v-if="record.triggered_by_reading" class="detail-field">
-                  <span class="detail-field-label">Triggered by reading</span>
-                  <p class="detail-field-value">Yes</p>
-                </div>
-                <div v-if="record.trigger_reading_value" class="detail-field">
-                  <span class="detail-field-label">Trigger reading</span>
-                  <p class="detail-field-value">{{ record.trigger_reading_value }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Rejection reason (role-gated by presence) -->
-            <div v-if="record.rejection_reason" class="detail-section">
-              <h3 class="detail-section-title">Rejection reason</h3>
-              <div class="detail-callout detail-callout-destructive">
-                <p class="detail-field-value detail-field-prose">{{ record.rejection_reason }}</p>
-              </div>
-            </div>
-
-            <!-- Cancellation reason (role-gated by presence) -->
-            <div v-if="record.cancellation_reason" class="detail-section">
-              <h3 class="detail-section-title">Cancellation reason</h3>
-              <div class="detail-callout">
-                <p class="detail-field-value detail-field-prose">{{ record.cancellation_reason }}</p>
-              </div>
-            </div>
-
-            <!-- Resulting Work Order -->
-            <div v-if="record.work_order" class="detail-section">
-              <h3 class="detail-section-title">Resulting work order</h3>
-              <RouterLink :to="`/work-orders/${record.work_order.id}`" class="table-link">
-                {{ record.work_order.number }}
-              </RouterLink>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Attachments -->
-        <div class="data-card">
-          <div class="data-card-header"><div class="data-card-title">Attachments</div></div>
-          <div class="data-card-content">
-            <div v-if="attachmentsLoading" class="loading-state">Loading attachments…</div>
-            <div v-else-if="attachments.length === 0" class="empty-state">No attachments.</div>
-            <ul v-else class="attachment-list">
-              <li v-for="a in attachments" :key="a.id" class="attachment-item">
-                <span class="attachment-name">{{ a.file_name }}</span>
-                <span class="attachment-size">{{ formatBytes(a.size_bytes) }}</span>
-                <div class="attachment-actions">
-                  <Button
-                    v-if="a.download_url"
-                    variant="link"
-                    size="sm"
-                    @click="openAttachmentInNewTab(a.download_url, a.file_name)"
-                  >Open</Button>
-                  <Button
-                    v-if="canDeleteAttachment(a)"
-                    variant="link"
-                    size="sm"
-                    class="attachment-delete"
-                    @click="openDeleteAttachment(a)"
-                  >Delete</Button>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Workflow actions -->
-        <div v-if="canApprove || canReject || canCancel" class="detail-actions">
-          <Button v-if="canCancel" variant="outline" @click="openCancel">Cancel Request</Button>
-          <Button v-if="canReject" variant="outline" @click="openReject">Reject Request</Button>
-          <Button v-if="canApprove" @click="openApprove">Approve &amp; Create Work Order</Button>
+          </aside>
         </div>
       </template>
 

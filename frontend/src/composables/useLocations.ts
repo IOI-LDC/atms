@@ -21,10 +21,15 @@ export function useLocations() {
     locationsLoading.value = true
     locationsError.value = null
     try {
-      // TODO: Switch to GET /api/locations once a non-admin endpoint is provided.
-      // Until then, Admins see the full list; Manager/Logistics see empty.
+      // Admin needs the full list (incl. inactive) for ManageLocationsView's
+      // CRUD table. Manager/Logistics only reach the picker/filter, so the
+      // active-only /locations endpoint is sufficient. Technician/Requester
+      // lack viewAny — skip the fetch to avoid a 403.
       if (auth.isAdmin) {
         const res = await api.get<{ data: Location[] }>('/admin/locations')
+        locations.value = res.data ?? []
+      } else if (auth.isManager || auth.isLogistics) {
+        const res = await api.get<{ data: Location[] }>('/locations')
         locations.value = res.data ?? []
       }
     } catch (e) {

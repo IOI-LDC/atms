@@ -26,7 +26,7 @@ import {
   assetKindClass, assetKindLabel,
   operationalStatusClass, operationalStatusLabel,
   priorityClass, priorityLabel,
-  mrTypeLabel, fmtDate, formatBytes,
+  mrTypeLabel, fmtDate, formatBytes, faSubclassLabel,
 } from '@/lib/displayHelpers'
 import { useAuthStore } from '@/stores/auth.store'
 
@@ -191,8 +191,8 @@ watch(
                 </p>
               </div>
               <div class="detail-field">
-                <span class="detail-field-label">ERP Class</span>
-                <p class="detail-field-value">{{ record.fa_subclass_code ?? '—' }}</p>
+                <span class="detail-field-label">Asset Class</span>
+                <p class="detail-field-value">{{ record.fa_subclass_code ? faSubclassLabel(record.fa_subclass_code) : '—' }}</p>
               </div>
               <div class="detail-field">
                 <span class="detail-field-label">Kind</span>
@@ -530,9 +530,9 @@ watch(
               </p>
             </div>
 
-            <!-- ERP Class — editable Select for Admin/Manager -->
+            <!-- Asset Class — editable Select for Admin/Manager -->
             <div class="form-field">
-              <Label for="edit-fa-subclass">ERP Class</Label>
+              <Label for="edit-fa-subclass">Asset Class</Label>
               <Select
                 :model-value="draft.fa_subclass_code || '__none__'"
                 @update:model-value="(v) => { const s = String(v); draft.fa_subclass_code = s === '__none__' ? '' : s }"

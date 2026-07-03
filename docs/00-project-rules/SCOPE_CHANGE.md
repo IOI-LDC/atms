@@ -75,8 +75,10 @@
 
 ## 2. Implementation Phases
 
-The system will be delivered in two phases to prioritise operational maintenance
-and defer store/inventory complexity.
+The system will be delivered in three delivery phases to prioritise operational
+maintenance and defer store/inventory complexity (SM decoupled into Phase 3 on
+2026-07-02). Note: the granular build-phase sequence in `IMPLEMENTATION_PLAN.md`
+(Phase 0–N) is a separate, earlier scheme and is unaffected.
 
 ### Phase 1 — ATMS Core (Operational Maintenance)
 
@@ -91,28 +93,41 @@ and defer store/inventory complexity.
 | Dashboard & reporting | KPI cards, MR/WO status summaries, maintenance history |
 | Attachments | Laravel local storage on persistent Docker volume |
 
-**Out of Phase 1 (deferred to Phase 2):**
-Asset Assembly (parent/child), Component PM cross-check, SM Order workflow,
-SM inventory/stock movement, Virtual Store, AM movement approval workflow,
-ERP parts write-back, MinIO object storage.
+**Out of Phase 1 (deferred to Phase 2 / Phase 3):**
+Asset Assembly (parent/child) — Phase 2; Component PM cross-check — Phase 2;
+AM movement approval workflow — Phase 2; ERP parts write-back — Phase 2; Asset tag
+QR generation — Phase 2. SM Order workflow, SM inventory/stock movement, Virtual
+Store — **Phase 3**. MinIO object storage — future. See `.kilo/TLD.md` for the full
+Phase 2/3 tables.
 
-### Phase 2 — Store Management + Asset Movement + Assembly
+### Phase 2 — Asset Movement + Assembly + integrations (future)
 
 | Scope item | Detail |
 |---|---|
 | Asset Assembly | `parent_asset_id`, install/remove/swap Actions, `asset_assembly_history`, component hours derivation |
 | Component PM cross-check | 🟢🟡🔴 indicators on parent WO. Manual "Create MR for Component" for yellow/red items. |
-| SM subsystem | Full store management: Order → Approval → Dispatch → Goods Receipt workflow. Inventory balances, stock movement. Virtual Store (workshop stock). |
 | AM subsystem | Movement request workflow: Requester → Logistics approve → confirm arrival. Formal location history with audit trail. |
-| ERP write-back | Parts consumption (GR) pushed from SM to BC ERP (pending LDC confirmation) |
+| ERP write-back | Parts consumption (GR) pushed from SM to BC ERP (pending LDC confirmation; ERP team must confirm consumption API contract) |
 | ERP parts sync | Full bidirectional awareness — ERP is source of truth for parts, SM owns consumption |
+| Asset tag QR | Visual QR rendering of the `L-BBB-CCC-XXXX` tag on the asset detail page (format already decided) |
 
 **Phase 2 dependencies:** ~~VJ's reply on BC Store Order determines SM
 architecture~~ — **RESOLVED 2026-06-25:** VJ confirmed no Store Order; SM built
-as full subsystem. Remaining dependency: BC Warehouse consumption write-back
-mechanism (correct transaction type + OData write support) — see
-[`sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md`](../sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md)
+as a separate subsystem (Phase 3). Remaining Phase 2 dependency: BC Warehouse
+consumption write-back mechanism (correct transaction type + OData write support) —
+see [`sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md`](../sm/01-product/ERP_WAREHOUSE_FOLLOWUP.md)
 and TDL #8.
+
+### Phase 3 — Store Management (future, decoupled 2026-07-02)
+
+> SM is the largest, most uncertain subsystem. Decoupled into its own phase pending
+> confirmation of the BC Warehouse consumption mechanism. `work_order_parts` already
+> exists from Phase 1 regardless.
+
+| Scope item | Detail |
+|---|---|
+| SM subsystem | Full store management: Order → Approval → Dispatch → Goods Receipt workflow. Inventory balances, stock movement. Virtual Store (workshop stock). |
+| Manual asset creation | G-01 "Add Asset" + G-04 `CreateAsset` lifecycle fields — **deferred to Phase 3 / cancelled** (data-integrity decision, 2026-07-02). Final confirm/cancel pending. See `PHASE_1_GAP_ANALYSIS.md` §4.1/§5.1. |
 
 ---
 

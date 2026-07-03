@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { PaperclipIcon } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useMaintenanceRequests } from '@/composables/useMaintenanceRequests'
 import { useListOptions } from '@/composables/useListOptions'
@@ -204,7 +205,7 @@ function goDetail(payload: { row: MaintenanceRequest }) {
         <div class="form-field">
           <Label for="file-pick">Attachments <span class="field-optional">— optional</span></Label>
           <Button id="file-pick" type="button" variant="outline" class="file-pick-btn" @click="fileInput?.open()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            <PaperclipIcon class="icon-sm" />
             Attach files (PDF, images, Office — max 20 MB each)
           </Button>
           <FileInput ref="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx" @change="addFiles" />
