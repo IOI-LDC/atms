@@ -11,20 +11,20 @@ const { html, filteredToc, searchQuery, activeId, scrollToSection, printManual }
 <template>
   <AppLayout>
     <div class="manual-page">
-      <!-- Hero: title + print -->
+      <!-- Hero Banner -->
       <header class="manual-hero">
-        <div class="manual-hero-heading">
-          <span class="manual-hero-icon" aria-hidden="true">
-            <BookOpen />
-          </span>
-          <div>
-            <h1 class="page-title">User Manual</h1>
-            <p class="page-subtitle">
+        <div class="manual-hero-inner">
+          <div class="manual-hero-badge">
+            <BookOpen aria-hidden="true" />
+          </div>
+          <div class="manual-hero-text">
+            <h1 class="manual-hero-title">User Manual</h1>
+            <p class="manual-hero-subtitle">
               Complete guide to maintenance requests, work orders, assets and parts in ATMS.
             </p>
           </div>
         </div>
-        <Button variant="outline" @click="printManual">
+        <Button variant="outline" class="manual-hero-print" @click="printManual">
           <Printer />
           Print
         </Button>
@@ -33,12 +33,14 @@ const { html, filteredToc, searchQuery, activeId, scrollToSection, printManual }
       <div class="manual-grid">
         <!-- Table of contents -->
         <nav class="manual-toc" aria-label="Table of contents">
+          <p class="manual-toc-label">On This Page</p>
+
           <div class="manual-toc-search">
             <Search class="manual-toc-search-icon" aria-hidden="true" />
             <Input
               v-model="searchQuery"
               type="search"
-              placeholder="Search topics…"
+              placeholder="Search sections…"
               aria-label="Search the user manual"
             />
           </div>

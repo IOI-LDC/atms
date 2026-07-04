@@ -3330,47 +3330,111 @@
 .manual-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  max-width: 80rem;
+  gap: 0;
+  /* No max-width — stretches to the full available shell width */
 }
+
+/* ── Hero Banner ────────────────────────────────────────────────────── */
 
 .manual-hero {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border);
+  padding: 2rem 2.5rem;
+  margin-bottom: 2rem;
+  border-radius: var(--radius);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary) 90%, white) 0%,
+    color-mix(in oklab, var(--primary) 60%, black) 100%
+  );
+  position: relative;
+  overflow: hidden;
 }
 
-.manual-hero-heading {
+/* Subtle radial glow on the hero */
+.manual-hero::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: -60px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.manual-hero-inner {
   display: flex;
-  align-items: flex-start;
-  gap: 0.875rem;
+  align-items: center;
+  gap: 1.25rem;
+  position: relative;
+  z-index: 1;
 }
 
-.manual-hero-icon {
+.manual-hero-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 3rem;
+  height: 3rem;
   flex-shrink: 0;
   border-radius: var(--radius);
-  background-color: var(--accent);
-  color: var(--accent-foreground);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
-.manual-hero-icon svg {
+.manual-hero-badge svg {
   width: 1.5rem;
   height: 1.5rem;
 }
 
+.manual-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.manual-hero-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.manual-hero-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.manual-hero-print {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.manual-hero-print:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: white;
+}
+
+/* ── Layout grid ────────────────────────────────────────────────────── */
+
 .manual-grid {
   display: grid;
-  grid-template-columns: 16rem minmax(0, 1fr);
-  gap: 2rem;
+  grid-template-columns: 20rem minmax(0, 1fr);
+  gap: 2.5rem;
   align-items: start;
 }
 
@@ -3391,17 +3455,33 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 1rem;
+  padding: 1.25rem 1rem;
+  background-color: color-mix(in oklab, var(--muted) 60%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: var(--muted);
 }
 
 @media (max-width: 64rem) {
   .manual-toc {
     position: static;
     max-height: none;
+    border-left: none;
+    padding-left: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    background-color: var(--muted);
   }
+}
+
+.manual-toc-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  margin: 0 0 0.25rem;
+  padding: 0 0.25rem;
 }
 
 .manual-toc-search {
@@ -3413,15 +3493,16 @@
   left: 0.625rem;
   top: 50%;
   transform: translateY(-50%);
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
   color: var(--muted-foreground);
   pointer-events: none;
 }
 
 .manual-toc-search input {
   padding-left: 2rem;
-  background-color: var(--background);
+  font-size: 0.8125rem;
+  height: 2rem;
 }
 
 .manual-toc-list,
@@ -3435,12 +3516,11 @@
 }
 
 .manual-toc-sublist {
-  margin-top: 1px;
+  margin-top: 2px;
   padding-left: 0.75rem;
 }
 
-/* Override the ghost Button base for TOC links (compound selector wins
-   over single-utility classes). */
+/* Override ghost Button base for TOC links */
 .manual-toc .manual-toc-link,
 .manual-toc .manual-toc-sublink {
   width: 100%;
@@ -3448,33 +3528,45 @@
   justify-content: flex-start;
   text-align: left;
   white-space: normal;
-  padding: 0.4rem 0.625rem;
+  padding: 0.3rem 0.5rem;
   font-weight: 400;
   color: var(--muted-foreground);
-  line-height: 1.35;
+  line-height: 1.4;
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+
+.manual-toc .manual-toc-link:hover,
+.manual-toc .manual-toc-sublink:hover {
+  color: var(--foreground);
+  background-color: var(--accent);
 }
 
 .manual-toc .manual-toc-link {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--foreground);
 }
 
 .manual-toc .manual-toc-sublink {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
 
+/* Active state: left pill indicator instead of full chip background */
 .manual-toc .manual-toc-link-active,
 .manual-toc .manual-toc-sublink-active {
-  color: var(--accent-foreground);
-  background-color: var(--accent);
+  color: var(--primary);
+  background-color: color-mix(in oklab, var(--primary) 8%, transparent);
   font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--primary);
 }
 
 .manual-toc-empty {
   font-size: 0.8125rem;
   color: var(--muted-foreground);
-  padding: 0.5rem 0.625rem;
+  padding: 0.5rem 0.25rem;
   margin: 0;
 }
 
@@ -3483,17 +3575,27 @@
 .manual-content {
   min-width: 0;
   color: var(--foreground);
-  font-size: 0.9375rem;
-  line-height: 1.7;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.manual-content .manual-h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 1.25rem;
+  letter-spacing: -0.02em;
 }
 
 .manual-content .manual-h2 {
   font-size: 1.375rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--foreground);
-  margin: 2.25rem 0 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
+  margin: 2.5rem 0 1rem;
+  padding: 0.75rem 1rem;
+  background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   scroll-margin-top: 1.5rem;
 }
 
@@ -3505,15 +3607,8 @@
   font-size: 1.0625rem;
   font-weight: 600;
   color: var(--foreground);
-  margin: 1.75rem 0 0.5rem;
+  margin: 2rem 0 0.625rem;
   scroll-margin-top: 1.5rem;
-}
-
-.manual-content .manual-h1 {
-  font-size: 1.625rem;
-  font-weight: 700;
-  color: var(--foreground);
-  margin: 0 0 1rem;
 }
 
 .manual-content .manual-h4,
@@ -3522,20 +3617,20 @@
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--foreground);
-  margin: 1.25rem 0 0.5rem;
+  margin: 1.5rem 0 0.5rem;
 }
 
 .manual-content .manual-p {
-  margin: 0 0 1rem;
+  margin: 0 0 1.1rem;
 }
 
 .manual-content .manual-list,
 .manual-content .manual-steps {
-  margin: 0 0 1rem;
+  margin: 0 0 1.1rem;
   padding-left: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.4rem;
 }
 
 .manual-content .manual-list {
@@ -3549,7 +3644,13 @@
 .manual-content a {
   color: var(--primary);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--primary) 40%, transparent);
+  transition: text-decoration-color 0.15s;
+}
+
+.manual-content a:hover {
+  text-decoration-color: var(--primary);
 }
 
 .manual-content strong {
@@ -3560,62 +3661,107 @@
 .manual-content code {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.85em;
-  background-color: var(--muted);
-  padding: 0.125rem 0.375rem;
+  background-color: color-mix(in oklab, var(--primary) 8%, var(--muted));
+  color: var(--primary);
+  padding: 0.125rem 0.4rem;
   border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in oklab, var(--primary) 15%, transparent);
 }
 
 .manual-content .manual-code {
   background-color: var(--muted);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.875rem 1rem;
-  margin: 0 0 1rem;
+  padding: 1rem 1.25rem;
+  margin: 0 0 1.1rem;
   overflow-x: auto;
 }
 
 .manual-content .manual-code code {
   background-color: transparent;
+  border: none;
   padding: 0;
+  color: var(--foreground);
 }
 
 .manual-content .manual-quote {
-  margin: 0 0 1rem;
-  padding: 0.5rem 1rem;
-  border-left: 3px solid var(--accent);
-  background-color: var(--muted);
-  border-radius: var(--radius-sm);
+  margin: 0 0 1.1rem;
+  padding: 0.75rem 1.25rem;
+  border-left: 3px solid var(--primary);
+  background-color: color-mix(in oklab, var(--primary) 5%, var(--muted));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   color: var(--muted-foreground);
+  font-style: italic;
 }
 
 .manual-content .manual-hr {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 2rem 0;
+  margin: 2.5rem 0;
 }
 
 .manual-content .manual-table-wrap {
   overflow-x: auto;
-  margin: 0 0 1rem;
+  margin: 0 0 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
 
 .manual-content .manual-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.manual-content .manual-table th,
-.manual-content .manual-table td {
-  border: 1px solid var(--border);
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  vertical-align: top;
+/* Header row — primary-tinted, uppercase labels */
+.manual-content .manual-table thead tr {
+  background: color-mix(in oklab, var(--primary) 8%, var(--muted));
+  border-bottom: 2px solid color-mix(in oklab, var(--primary) 20%, var(--border));
 }
 
 .manual-content .manual-table th {
-  background-color: var(--muted);
-  font-weight: 600;
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* Body rows — alternating stripe for the matrix look */
+.manual-content .manual-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.1s;
+}
+
+.manual-content .manual-table tbody tr:nth-child(even) {
+  background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+}
+
+.manual-content .manual-table tbody tr:hover {
+  background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+
+.manual-content .manual-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.manual-content .manual-table td {
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  vertical-align: top;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+/* First column as a row header / key column */
+.manual-content .manual-table td:first-child {
+  font-weight: 500;
   color: var(--foreground);
 }
 
@@ -3624,7 +3770,8 @@
   height: auto;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  margin: 0.5rem 0 1rem;
+  margin: 0.75rem 0 1.25rem;
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── Print ──────────────────────────────────────────────────────────── */
