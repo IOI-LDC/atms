@@ -72,7 +72,7 @@ The `03-backend/`, `00-project-rules/`, `05-delivery/`, and `operations/` folder
 - **ERP Sync:** Parts master data synced from LDC ERP into SM tables using client-credentials token auth. No asset sync.
 - **Attachments:** Laravel local storage on a persistent Docker volume
 - **Auth/RBAC:** Laravel Sanctum SPA cookie/session authentication with role-based permissions
-- **Notifications / Email Delivery:** All transactional emails (MR created, WO assigned, SM approval workflow, activation, password reset) are delivered via Microsoft Power Automate (company standard). ATMS dispatches a queued job that POSTs a JSON payload to the Power Automate HTTP trigger endpoint. Power Automate owns email composition, template rendering, approved sender, and delivery. See `03-backend/NOTIFICATIONS.md`.
+- **Notifications / Email Delivery:** Transactional emails (MR created, WO assigned, WO completed, account activation, password reset) are delivered via **Microsoft Graph `sendMail`** (OAuth2 client-credentials) from the corporate mailbox `notification@ldc.com.ly`. SMTP AUTH is ruled out (LDC M365 tenant disables it); Power Automate is a viable alternative but not chosen. Templates are rendered Laravel-side (Mailable + Blade) and sent via a queued, throttle-aware transport. See `03-backend/NOTIFICATIONS.md`.
 - **Company Portal:** SharePoint contains a normal link to the separately hosted product web applications; they are not embedded in or deployed to SharePoint
 
 Redis and MinIO are optional future upgrades and are not part of the default MVP deployment.
@@ -96,7 +96,7 @@ visual references and component examples.
 | Document | Purpose |
 |----------|---------|
 | `atms/04-frontend/VPS_FRONTEND_ISSUES.md` | Live issue tracker for frontend bugs found during VPS deployment testing |
-| `03-backend/NOTIFICATIONS.md` | Power Automate notification integration — payload contract, triggers, implementation |
+| `03-backend/NOTIFICATIONS.md` | Notification/email transport (Microsoft Graph sendMail), triggers, Azure provisioning, secret/cert expiry, pre-release checklist |
 | `05-delivery/TDL.md` | Task Delivery List — items blocked on external dependencies or pending decisions |
 | `PHASE_1_GAP_ANALYSIS.md` | Phase 1 code gaps discovered during audit |
 | `atms/04-technical/BACKEND_API_REFERENCE.md` | Backend API reference for ATMS |

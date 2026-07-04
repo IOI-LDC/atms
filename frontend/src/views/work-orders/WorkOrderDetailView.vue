@@ -11,6 +11,7 @@ import {
   Trash2Icon,
 } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
+import DetailNotFound from '@/components/app/DetailNotFound.vue'
 import PartCombobox from '@/components/app/PartCombobox.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -288,7 +289,13 @@ watch(
 
       <!-- Load states -->
       <div v-if="loading" class="loading-state">Loading work order…</div>
-      <div v-else-if="notFound" class="empty-state">Work order not found.</div>
+      <DetailNotFound
+        v-else-if="notFound"
+        entity-label="Work order"
+        :identifier="String(route.params.workOrderId)"
+        back-label="Browse all work orders"
+        :back-to="{ path: '/work-orders', query: { tab: 'all' } }"
+      />
       <div v-else-if="forbidden" class="permission-state">
         You don't have permission to view this work order.
       </div>

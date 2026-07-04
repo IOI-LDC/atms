@@ -29,7 +29,8 @@
 | Date | What changed | Who needs to know | Status |
 |---|---|---|---|
 | 2026-06-28 | VPS Frontend Issue Tracker created (`docs/atms/04-frontend/VPS_FRONTEND_ISSUES.md`) — 8 issues logged (5 MR, 3 WO, 1 Asset). 4 frontend fixes verified on VPS, 3 need backend follow-up. | Frontend, Backend | ⚠️ Unacknowledged |
-| 2026-06-28 | Power Automate Notification Integration spec (`docs/03-backend/NOTIFICATIONS.md`) — 5 triggers, payload contracts, Laravel implementation, setup checklist. | Frontend (notification UX), Backend (queued jobs) | ⚠️ Unacknowledged |
+| 2026-07-04 | **Email transport = Microsoft Graph `sendMail`** (pivoted from Power Automate — SMTP ruled out by tenant policy `535 5.7.139`). Azure app provisioned + Mail.Send consented + probe passed (HTTP 202). Shared Blade template `emails/atms-notification.blade.php` + 3 scenarios (MR Created, WO Assigned, WO Completed) test-sent. Routing decided. **Not built yet:** `GraphMailTransport` (queue-serialized + 429 retry) + Mailables + wiring into WO/MR actions + tests (TDD). Pre-release: final frontend URL, Application Access Policy, real user emails (demo has fakes), serialize+retry. See `docs/03-backend/NOTIFICATIONS.md`. | Frontend (notification UX if any), Backend (transport build) | ⚠️ Unacknowledged |
+| 2026-07-04 | **Self-service password change — `POST /api/auth/change-password`** (committed `a03b078`). Authenticated, no current-password required, invalidates all sessions/tokens, audits `user.password_changed`. 7 tests; full suite 483 green. | Frontend, Backend | ✅ Acknowledged (FE UI shipped in `77d4e13`) |
 | 2026-06-28 | WO assignable roles expanded — Admin/Manager can assign WO to Technician OR Maintenance Manager (small teams, overloaded tech). | Frontend (assign picker), Backend (policy) | ⚠️ Unacknowledged |
 | 2026-06-24 | ERP connection confirmed (Entra ID → BC OData V4). Token + assets working. Env vars in `backend/.env`. | Frontend (API base URL pattern changed), SM team | ⚠️ Unacknowledged |
 | 2026-06-24 | Asset Assembly model decided. 5 API endpoints defined: `install`, `remove`, `swap`, `assembly-history`, `children`. | Frontend (new routes), Backend (new actions) | ⚠️ Unacknowledged |
@@ -84,7 +85,7 @@
 | 1 | Parts API page name (BC custom API page) | ERP team / LDC |
 | 2 | Parts field mapping (response schema) | ERP team / LDC |
 | 3 | `componentOfMainAsset` sample with non-null parent | ERP team / LDC |
-| 4 | Power Automate webhook URL for notification testing | LDC IT / Power Automate admin |
+| 4 | ~~Power Automate webhook URL~~ → **Graph email remaining: Application Access Policy** (restrict app to `notification@ldc.com.ly`) + **official LDC frontend subdomain** for email links | LDC IT (Exchange admin) / LDC (subdomain) |
 
 ---
 

@@ -3,6 +3,7 @@ import { computed, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { ArrowLeftIcon, EyeIcon, Trash2Icon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
+import DetailNotFound from '@/components/app/DetailNotFound.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -126,7 +127,13 @@ watch(
 
       <!-- Load states -->
       <div v-if="loading" class="loading-state">Loading request…</div>
-      <div v-else-if="notFound" class="empty-state">Maintenance request not found.</div>
+      <DetailNotFound
+        v-else-if="notFound"
+        entity-label="Maintenance request"
+        :identifier="String(route.params.requestId)"
+        back-label="Browse all requests"
+        :back-to="{ path: '/maintenance', query: { tab: 'all-requests' } }"
+      />
       <div v-else-if="forbidden" class="permission-state">
         You don't have permission to view this request.
       </div>

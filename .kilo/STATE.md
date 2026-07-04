@@ -4,6 +4,19 @@
 > was done, what is decided, what is blocked, and what to tackle next.
 
 
+## Session — 2026-07-04
+
+- **Email transport pivoted to Microsoft Graph `sendMail` (replacing the Power Automate plan).** SMTP AUTH ruled out empirically — LDC M365 tenant `SmtpClientAuthenticationDisabled` → `535 5.7.139` (creds valid; policy block). XOAUTH2-over-SMTP is not a supported M365 app-only path. Power Automate viable but not chosen (avoids building/maintaining a flow). Chose **Graph `sendMail`** (OAuth2 client-credentials): reuses the existing token-acquisition code, sends from `notification@ldc.com.ly`, unaffected by the SMTP AUTH policy.
+  - **Azure provisioning DONE (2026-07-04):** separate Entra app from `LDC_ERP_*` (Client `6dd70b5f-…`, Tenant `a8a21afa-…`, Object `ffbb837a-…`); `Mail.Send` (Application) + tenant-wide admin consent granted; probe delivered test mail to both recipients (HTTP 202). Config in `backend/.env` as `GRAPH_TENANT_ID/CLIENT_ID/CLIENT_SECRET/MAILBOX`; `ACCOUNT_EMAIL_TRANSPORT` stays `fake` until the transport is built.
+  - **Template:** shared Blade view `resources/views/emails/atms-notification.blade.php` (client-provided HTML adapted; amber `#d97706` accent, navy `#21274b` header, **no logo**, dynamic CTA). 3 scenarios rendered + test-sent (202 each): MR Created, WO Assigned, WO Completed.
+  - **Routing decided:** MR Created → To: all active Managers, Cc: all Admins. WO Assigned/Reassigned → To: new assignee, Cc: action taker (notify on any change). WO Completed → To: all active Managers, Cc: completer. Greeting = To recipient only. From-name "ATMS Notifications", **no Reply-To**.
+  - **Unify activation/reset onto Graph: NO for now** — they stay on `AccountEmailTransport`; Graph pipeline = operational notifications only.
+  - **Throttle finding (important):** Exchange Online throttles concurrent app access per mailbox (~3–4) → `429 ApplicationThrottled` (and gateway `504`s) when blasting parallel sends. Production dispatch MUST be **serialized via the queue** + **retry-on-429 honouring `Retry-After`**.
+  - **Docs updated:** `NOTIFICATIONS.md` (full rewrite), `ARCHITECTURE.md`, `CLAUDE.md`, `README.md`, `IMPLEMENTATION_PLAN.md`, `DEPLOYMENT.md`, `PHASE_1_GAP_ANALYSIS.md` (I-03, R-06).
+  - **NOT built yet (next, TDD):** `GraphMailTransport` (queue-serialized + 429 retry), 3 Mailables, wiring into WO/MR actions, tests.
+  - **Pre-release checklist (email):** frontend base URL NOT final (temp `atms.inova.krd` → official LDC subdomain); real user emails (demo has fakes); serialize+retry; prod secret/cert; Application Access Policy; queue worker.
+- **Self-service password change — DONE (committed `a03b078`).** `POST /api/auth/change-password` (authenticated; no current-password required per product decision); `ChangeUserPassword` action (invalidates all sessions + tokens, audits `user.password_changed`); `ChangePasswordRequest`; `UserPolicy::changePassword`. 7 tests; full suite **483 passed (1292 assertions)**.
+
 ## Session — 2026-07-03
 
 - **Dashboard KPIs endpoint — DONE (backend, uncommitted).** New `GET /api/dashboard/kpis` serves the 9-card dashboard's Row 2 (MTBF / MTTR / Failure Rate) + Row 3 (PM Compliance / Avg MR Duration / Avg WO Duration) plus a "Recently Relocated Assets" widget (latest 5 `asset_location_histories`). Visible to **every authenticated role** (reuses the existing `viewDashboard` gate, which is `fn (User $user): bool => true`); payload is **not** role-filtered — Row 1 counts stay on the existing role-adaptive `GET /api/dashboard` (decision (a): KPIs = aggregate numbers for all; record lists stay role-scoped on `/dashboard`).
@@ -92,9 +105,13 @@ Ordered by value and unblocking. **B** = backend (this agent), **F** = frontend
   Admin items still `visibleTo: isAdmin` (lines 86, 93); router still has
   `requiresAdmin` guards (lines 118, 127). Grant Managers access (see Open Follow-ups).
 
-### Notification Testing (2026-06-29)
-- Test Power Automate webhook integration: POST sample payloads from ATMS queue
-  worker → verify email arrives via Power Automate flow.
+### Notification Testing — ✅ Graph probe passed (2026-07-04)
+- Graph `sendMail` probe delivered test mail to both recipients (HTTP 202).
+- Azure app provisioned (separate Entra app from `LDC_ERP_*`), `Mail.Send` (Application) consented.
+- Remaining before prod: Application Access Policy (restrict app to mailbox), official
+  LDC frontend subdomain for links, prod secret/cert, queue-serialized dispatch. See
+  `docs/03-backend/NOTIFICATIONS.md` pre-release checklist. (Supersedes the
+  2026-06-29 Power Automate webhook test plan.)
 
 ### ✅ Asset Booking — Frontend wiring (F) DONE (2026-06-30)
 - Backend complete (`POST /assets/{id}/book` + `/unbook`, `is_booked` in
@@ -162,7 +179,7 @@ concerns). G-03 (location picker for non-Admins) still open.
 | Mock ERP | Fully deleted. `LdcErpHttpSource` skips sync gracefully when `LDC_ERP_PARTS_API` is empty. |
 | API token abilities | Read-only (`['read']`) blocked on POST/PUT/PATCH/DELETE → 403. Write (`['read','write']`) allowed all. SPA session never blocked. |
 | Git commit convention | When the user says "commit ALL" (capitalized), use `git add .` — stage everything including untracked files, then commit. |
-| Notifications / Email | All transactional emails delivered via Microsoft Power Automate (company standard). ATMS dispatches queued job → HTTP POST → Power Automate HTTP trigger → email. Not Laravel's native mail driver. (2026-06-28) |
+| Notifications / Email | Transactional emails delivered via **Microsoft Graph `sendMail`** (OAuth2 client-credentials) from `notification@ldc.com.ly`. SMTP AUTH ruled out (tenant `SmtpClientAuthenticationDisabled` → `535 5.7.139`); Power Automate viable but not chosen. Queued, throttle-aware transport (serialize per mailbox + retry on 429). Pivoted 2026-07-04 from the earlier Power Automate plan. |
 | WO assignable roles | Admin/Manager can assign WO to active Technician OR Maintenance Manager (small teams, overloaded tech). Assignment authority remains solely Admin/Manager. (2026-06-28) |
 
 ## Pending — Blocked on ERP Team 🔴

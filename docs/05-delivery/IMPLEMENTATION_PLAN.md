@@ -24,7 +24,7 @@ and AM. All three subsystems share one Laravel backend and PostgreSQL database.
 - Local employee directory
 - Administrator employee-to-user provisioning
 - One-time activation and password-reset flow
-- Power Automate production transport for activation and password-reset email
+- Microsoft Graph `sendMail` production transport for activation, password-reset, and operational (MR/WO) email (SMTP AUTH ruled out by tenant policy; Power Automate viable but not chosen)
 - Users and roles (5 roles)
 - Locations
 - Master data/dropdowns (including Asset Maintenance sub-statuses)

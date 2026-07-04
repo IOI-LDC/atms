@@ -3,6 +3,7 @@ import { computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeftIcon, PaperclipIcon, EyeIcon, Trash2Icon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
+import DetailNotFound from '@/components/app/DetailNotFound.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -88,7 +89,13 @@ watch(
 
       <!-- ── Load / error states ──────────────────────────────────────── -->
       <div v-if="loading" class="loading-state">Loading part…</div>
-      <div v-else-if="notFound" class="empty-state">Part not found.</div>
+      <DetailNotFound
+        v-else-if="notFound"
+        entity-label="Part"
+        :identifier="String(route.params.partId)"
+        back-label="Browse all parts"
+        :back-to="{ path: '/parts' }"
+      />
       <div v-else-if="forbidden" class="permission-state">
         You don't have permission to view this part.
       </div>

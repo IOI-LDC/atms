@@ -37,7 +37,12 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     inflight = (async () => {
       try {
-        const data = await api.get<{ user: User }>('/auth/me')
+        // skipAuthRedirect: a 401 here is the expected "logged out" signal.
+        // Let the router guard redirect to login with the intended destination
+        // instead of the api client hard-redirecting to a bare /login.
+        const data = await api.get<{ user: User }>('/auth/me', undefined, {
+          skipAuthRedirect: true,
+        })
         user.value = data.user
         return true
       } catch {

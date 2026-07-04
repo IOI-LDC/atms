@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeftIcon } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
+import DetailNotFound from '@/components/app/DetailNotFound.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -119,7 +120,13 @@ async function confirmToggle() {
       </Button>
 
       <div v-if="ruleLoading" class="loading-state">Loading PM template…</div>
-      <div v-else-if="notFound" class="empty-state">PM template not found.</div>
+      <DetailNotFound
+        v-else-if="notFound"
+        entity-label="PM template"
+        :identifier="String(route.params.ruleId)"
+        back-label="Browse all PM templates"
+        :back-to="{ path: '/admin/pm-rules' }"
+      />
       <div v-else-if="forbidden" class="permission-state">
         You don't have permission to view this PM template.
       </div>

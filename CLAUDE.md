@@ -359,7 +359,7 @@ Asset maintenance history is assembled from authoritative source records (MRs, W
 
 ### Email transport
 
-Two implementations in `app/Services/Notifications/`: `FakeAccountEmailTransport` (dev/test, default) and `PowerAutomateAccountEmailTransport` (production). Selected via `ACCOUNT_EMAIL_TRANSPORT` env var. Laravel owns token lifecycle; Power Automate only receives the minimum payload required to send the email.
+**Decision (2026-07-04):** production transport is **Microsoft Graph `sendMail`** (OAuth2 client-credentials), sending from `notification@ldc.com.ly`. SMTP AUTH is **ruled out** (LDC M365 tenant disables it — `SmtpClientAuthenticationDisabled`, verified `535 5.7.139`); Power Automate is a viable alternative but not chosen. Current code has `FakeAccountEmailTransport` (dev/test, default) and `PowerAutomateAccountEmailTransport`; a `GraphMailTransport` is to be built behind the same `ACCOUNT_EMAIL_TRANSPORT` switch (`fake` / `graph` / optional `power_automate`). Config: `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, `GRAPH_CLIENT_SECRET`, `GRAPH_MAILBOX` — a **separate Entra app** from the `LDC_ERP_*` (Dynamics 365 BC) app. Full design + Azure provisioning + secret/certificate expiry & renewal: `docs/03-backend/NOTIFICATIONS.md`.
 
 ### Audit log
 
@@ -456,7 +456,8 @@ Five human roles (Administrator, Maintenance Manager, Technician, Logistics, Req
 
 | Variable | Purpose |
 |---|---|
-| `ACCOUNT_EMAIL_TRANSPORT` | `fake` (default/dev) or `power_automate` (production) |
+| `ACCOUNT_EMAIL_TRANSPORT` | `fake` (default/dev), `graph` (production — Microsoft Graph sendMail), or `power_automate` (optional alt). SMTP ruled out (tenant disables SMTP AUTH). |
+| `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` / `GRAPH_CLIENT_SECRET` / `GRAPH_MAILBOX` | OAuth2 client-credentials + sender mailbox for Graph sendMail. **Separate Entra app** from the `LDC_ERP_*` app. |
 | `LDC_ERP_BASE_URL` | Base URL of the LDC ERP API |
 | `LDC_ERP_CLIENT_ID` / `LDC_ERP_CLIENT_SECRET` | OAuth2 client credentials for ERP token acquisition |
 | `ATMS_COMPANY_TIMEZONE` | Display timezone (default `Africa/Tripoli`) |

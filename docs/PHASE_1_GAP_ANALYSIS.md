@@ -558,7 +558,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 |----|-----|----------|
 | I-01 | Production Docker Compose needs verification (services, volumes, env) | Medium |
 | I-02 | Backup/restore procedures need end-to-end verification | Medium |
-| I-03 | Power Automate email transport needs production configuration (LDC IT) | Medium |
+| I-03 | Graph `sendMail` email transport — Azure app provisioned + `Mail.Send` consented + probe passed (2026-07-04); **remaining**: Application Access Policy (restrict app to mailbox), prod secret/cert, final frontend URL for links. See `03-backend/NOTIFICATIONS.md`. | Low |
 | I-04 | SSL/domain configuration pending (LDC IT) | Medium |
 | I-05 | SharePoint transport throws `RuntimeException` if selected (AppServiceProvider:40) | Low |
 
@@ -588,7 +588,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 | 🟡 P1 | G-05 | Build `SystemSettingsView` (timezone + ERP sync controls) | 0.5d |
 | 🟡 P1 | G-06 | Build `AuditLogsView` (filtered table) | 0.5d |
 | 🟡 P1 | G-07 | Implement + test parts sync once ERP team provides page name | 1.5d |
-| 🟡 P1 | I-01–I-04 | Production config (Docker, backup, Power Automate, SSL) | 2.5d |
+| 🟡 P1 | I-01–I-04 | Production config (Docker, backup, Graph email, SSL) | 2.5d |
 | 🟢 P2 | — | Delete 5 orphaned stub views (dead code cleanup) | 0.1d |
 
 ### Lower Priority — Can Lag
@@ -614,7 +614,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 | R-03 | Logistics/Manager cannot update locations (G-03 empty picker) | **Certain** (current state) | High — core Logistics job blocked | Fix `useLocations.ts` (G-03) |
 | R-04 | Newly created assets silently lose lifecycle fields (G-04) | None (current state) | None — **deferred to Phase 3 / cancelled**; create button disabled so the code path is unreachable in prod | Apply fix if/when manual create is revived in Phase 3 |
 | R-05 | Scope creep: client requests Phase 2/3 features during UAT | Medium | Medium | Maintain scope boundary document; change control |
-| R-06 | Production Power Automate config delayed by LDC IT | Medium | Medium | SMTP fallback |
+| R-06 | Email transport provisioning (Graph `sendMail`) — mostly done 2026-07-04 (Azure app + consent + probe); remaining: App Access Policy + official LDC frontend subdomain for links | Low | Low | SMTP not viable (tenant disabled `SmtpClientAuthenticationDisabled`); Graph is the path |
 
 ---
 

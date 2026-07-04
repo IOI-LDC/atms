@@ -56,12 +56,21 @@ export class ApiError extends Error {
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
+type RequestOptions = {
+  // Skip the global hard-redirect to /login on a 401. Used by the auth probe
+  // (GET /auth/me), where a 401 is the *expected* "logged out" signal and the
+  // router guard — not the api client — owns the redirect so it can preserve
+  // the originally-requested destination via ?redirect=.
+  skipAuthRedirect?: boolean
+}
+
 async function request<T>(
   method: Method,
   path: string,
   body?: unknown,
   isForm = false,
   isRetry = false,
+  options: RequestOptions = {},
 ): Promise<T> {
   const mutating = method !== 'GET'
 
@@ -100,15 +109,20 @@ async function request<T>(
   if (response.status === 419 && !isRetry) {
     resetCsrf()
     await initCsrf()
-    return request<T>(method, path, body, isForm, true)
+    return request<T>(method, path, body, isForm, true, options)
   }
 
   const data = await response.json().catch(() => ({}))
 
   if (response.status === 401) {
     resetCsrf()
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login'
+    // A mid-session 401 (session expired while on a protected page) bounces to
+    // login, preserving the current location so the user returns after re-login.
+    // The auth probe opts out via skipAuthRedirect — the router guard handles
+    // its redirect and sets ?redirect= to the deep link the user actually wanted.
+    if (!options.skipAuthRedirect && window.location.pathname !== '/login') {
+      const target = window.location.pathname + window.location.search
+      window.location.href = `/login?redirect=${encodeURIComponent(target)}`
     }
     throw new ApiError(401, data)
   }
@@ -130,8 +144,8 @@ function buildUrl(path: string, params?: Record<string, unknown>): string {
 }
 
 const api = {
-  get: <T>(path: string, params?: Record<string, unknown>) =>
-    request<T>('GET', buildUrl(path, params)),
+  get: <T>(path: string, params?: Record<string, unknown>, options?: RequestOptions) =>
+    request<T>('GET', buildUrl(path, params), undefined, false, false, options),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),

@@ -30,11 +30,10 @@ docker compose run --rm api php artisan key:generate --env
 | `DB_PASSWORD` | Yes | PostgreSQL password |
 | `LDC_ERP_CLIENT_ID` / `LDC_ERP_CLIENT_SECRET` | For ERP sync | OAuth2 client credentials for LDC ERP token acquisition |
 | `LDC_ERP_BASE_URL` | For ERP sync | Base URL of the LDC ERP API |
-| `POWER_AUTOMATE_URL` | For email | Power Automate flow endpoint |
-| `POWER_AUTOMATE_TENANT_ID` | For email | Azure AD tenant |
-| `POWER_AUTOMATE_CLIENT_ID` | For email | Azure AD client |
-| `POWER_AUTOMATE_CLIENT_SECRET` | For email | Azure AD secret |
-| `POWER_AUTOMATE_MAILBOX` | For email | Shared mailbox address |
+| `GRAPH_TENANT_ID` | For email | Azure AD tenant (notification app — separate Entra app from `LDC_ERP_*`) |
+| `GRAPH_CLIENT_ID` | For email | Azure AD app (client) ID |
+| `GRAPH_CLIENT_SECRET` | For email | Azure AD client secret (certificate is the stronger alternative) |
+| `GRAPH_MAILBOX` | For email | Sender mailbox (e.g. `notification@ldc.com.ly`) |
 
 ## Build and Start
 

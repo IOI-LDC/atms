@@ -156,21 +156,15 @@ resets. There is no self-registration.
 
 ## Production Account Email Transport
 
-Microsoft Power Automate is the production transport for activation and
-password-reset emails. Laravel remains responsible for creating and hashing
-one-time tokens, enforcing expiry and single use, building the frontend link,
-queuing delivery, retrying failed delivery, and recording the audited outcome.
+**Decision (2026-07-04):** Microsoft **Graph `sendMail`** (OAuth2 client-credentials) is the production transport for ATMS notification emails. Laravel owns token lifecycle, template rendering (Mailable + Blade), queuing, retry, and the audited outcome; Graph delivers through the corporate mailbox (`notification@ldc.com.ly`) via `POST https://graph.microsoft.com/v1.0/users/{mailbox}/sendMail`.
 
-The queued Laravel notification adapter sends only the minimum message payload
-required by an authenticated Power Automate flow. The flow sends the email
-through the client's approved Microsoft 365 mailbox or connection. Secrets,
-plaintext tokens, and complete reset URLs must not be written to application or
-flow logs.
+SMTP AUTH is **not** used: the LDC M365 tenant disables it (`SmtpClientAuthenticationDisabled`, verified empirically — `535 5.7.139`). Power Automate remains a viable alternative but was not chosen; the transport is a swappable abstraction (`Fake` for dev/test, `Graph` for production). Full design, Azure provisioning, and secret/certificate expiry & renewal procedures: [`NOTIFICATIONS.md`](./NOTIFICATIONS.md).
 
-The Power Automate endpoint, tenant identifiers, application credentials,
-mailbox, and environment-specific flow details are deployment configuration.
-Local development and automated tests use a fake transport and do not require
-access to the client's Microsoft tenant.
+The Graph endpoint, tenant identifiers, application credentials, mailbox, and
+environment-specific details are deployment configuration (`GRAPH_*` env vars).
+Secrets, plaintext tokens, and complete reset URLs must not be written to
+application logs. Local development and automated tests use a fake transport
+and do not require access to the client's Microsoft tenant.
 
 ## Recommended Laravel Structure
 

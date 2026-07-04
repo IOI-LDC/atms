@@ -1,262 +1,180 @@
-# Notifications
+# Notifications & Email
+
+## Status (2026-07-04)
+
+| Item | State |
+|---|---|
+| Production transport | **Microsoft Graph `sendMail`** (OAuth2 client-credentials) — chosen |
+| SMTP AUTH | **Ruled out** — LDC M365 tenant policy disables it (verified empirically) |
+| Power Automate | Viable alternative; **not** the chosen path. Kept as an optional transport behind the abstraction. |
+| Transport abstraction | To be built: `Fake` (dev/test) / `Graph` (prod) / optional `PowerAutomate` |
+| Built notifications | Account activation, password reset (currently via `AccountEmailTransport`, `Fake` in dev) |
+| Planned notifications | MR Created, WO Assigned, WO Completed |
+| Implementation | In progress — design/provisioning phase |
+
+---
 
 ## Architecture
 
-ATMS does **not** send emails directly. All email delivery is delegated to the
-company's official notification platform — **Microsoft Power Automate**.
-
 ```
-ATMS (Laravel)                    Power Automate              Recipient
-  ┌──────────┐                   ┌──────────────┐            ┌──────────┐
-  │ Event    │ ── queued job ──► │ HTTP trigger  │ ── email ──►│ Inbox    │
-  │ fires    │    (POST JSON)    │ flow          │            └──────────┘
-  └──────────┘                   └──────────────┘
-```
-
-- **ATMS owns:** When to notify, whom to notify, and what data to include.
-- **Power Automate owns:** Email composition, template rendering, approved sender,
-  delivery, and compliance.
-- **Transport:** HTTP POST (webhook) from a Laravel queued job to the Power
-  Automate flow endpoint. No DB polling by Power Automate — push-based,
-  instant.
-
-## Power Automate Flow
-
-A single HTTP-triggered flow receives a JSON payload and routes to the correct
-email template based on the `type` field.
-
-### Endpoint
-
-The flow URL is stored in `config/services.php`:
-
-```php
-'power_automate' => [
-    'webhook_url' => env('POWER_AUTOMATE_WEBHOOK_URL'),
-],
+ATMS (Laravel)                 Microsoft Graph            Recipient
+  ┌──────────┐                 ┌──────────────┐           ┌──────────┐
+  │ Event    │ ── queued ────► │ POST         │ ── email ─►│ Inbox    │
+  │ fires    │    job          │ /users/{mb}/ │           └──────────┘
+  │          │                 │   sendMail   │
+  └──────────┘                 └──────────────┘
+     │                                ▲
+     │  app-only OAuth2 token          │
+     └──── login.microsoftonline.com ──┘
 ```
 
-### Payload Contract
-
-Every notification POSTs the same envelope:
-
-```json
-{
-  "type": "mr_created | wo_assigned | sm_order_submitted | sm_order_approved | sm_order_rejected",
-  "recipient_email": "user@ldc.com",
-  "recipient_name": "Ahmed Al-Sayed",
-  "data": {
-    // type-specific fields (see below)
-  }
-}
-```
-
-### Flow Logic (built in Power Automate)
-
-1. Receive HTTP request.
-2. Parse JSON.
-3. Switch on `type`.
-4. Render the matching email template.
-5. Send via the company-approved Outlook 365 connector.
+- **ATMS owns:** when to notify, whom to notify, what data to include, token lifecycle, retry, and the audited outcome.
+- **Microsoft Graph `sendMail` owns:** delivery through the corporate mailbox (`notification@ldc.com.ly`).
+- **Templates:** rendered **Laravel-side** (Mailable + Blade), because Graph `sendMail` takes the full message body (subject + HTML/text). This is the key difference from the Power Automate alternative (where the flow would own templates).
+- **Transport is a swappable abstraction:** `Fake` (dev/test, no external calls), `Graph` (production), with `PowerAutomate`/SMTP as optional alternates behind the same contract.
+- **Throttling / concurrency (important):** Exchange Online limits concurrent app access per mailbox (~3–4). Blasting parallel `sendMail` calls to the one mailbox triggers `429 ApplicationThrottled` (and gateway `504`s). Dispatch MUST be **serialized** through the queue (limited per-mailbox concurrency) with **retry-on-429 honouring `Retry-After`**. Verified empirically 2026-07-04.
 
 ---
 
-## Notification Triggers
+## Why Graph `sendMail` (not SMTP, not Power Automate)
 
-### Phase 1 — Current
+### SMTP — ruled out
+LDC's M365 tenant has **SMTP AUTH (Basic Auth) disabled**. Verified empirically 2026-07-04:
 
-#### 1. MR Created
-
-**When:** A Requester submits a new Maintenance Request.
-
-**Who:** All active Maintenance Managers.
-
-**Payload:**
-
-```json
-{
-  "type": "mr_created",
-  "recipient_email": "manager@ldc.com",
-  "recipient_name": "Maintenance Manager",
-  "data": {
-    "mr_number": "MR-0042",
-    "asset_name": "Conveyor Belt Motor X3",
-    "asset_tag": "L-ELE-048-1234",
-    "requester_name": "Ahmed Al-Sayed",
-    "priority": "high",
-    "description": "Motor overheating, needs inspection",
-    "mr_url": "https://atms.ldc.com/maintenance-requests/42"
-  }
-}
+```
+535 5.7.139 Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant.
+Visit https://aka.ms/smtp_auth_disabled
 ```
 
-**Laravel event:** `MaintenanceRequestCreated`  
-**Queued job:** `SendNotificationToPowerAutomate`
+The credentials are valid (the server recognised `notification@ldc.com.ly` and rejected on policy, not on password). Microsoft disables Basic-Auth SMTP tenant-wide by default. SMTP is therefore **not viable unless LDC IT re-enables SMTP AUTH for the mailbox** — which we are not pursuing. (OAuth2-over-SMTP / XOAUTH2 is also not a supported M365 path for app-only; the supported OAuth2 app-only path is Graph `sendMail`.)
+
+### Power Automate — viable, not chosen
+Power Automate would send via the M365 mailbox connector (unaffected by the SMTP AUTH policy) and own template rendering — it was the client's stated preference. We chose Graph instead to **avoid building/maintaining a PA flow** and to keep all templating in Laravel. PA remains available as an optional transport behind the abstraction if policy ever mandates it.
+
+### Graph `sendMail` — chosen
+- Pure OAuth2 (client-credentials → access token), **not SMTP**, so `SmtpClientAuthenticationDisabled` does not apply.
+- Sends **from `notification@ldc.com.ly`** via `POST https://graph.microsoft.com/v1.0/users/{mailbox}/sendMail`.
+- Reuses the token-acquisition pattern already in the codebase (`PowerAutomateAccountEmailTransport::getAccessToken()` does the client-credentials flow against `login.microsoftonline.com/{tenant}/oauth2/v2.0/token`, scope `https://graph.microsoft.com/.default`).
+- Only IT ask: an Azure App Registration with `Mail.Send` (Application). No PA flow to build.
 
 ---
 
-#### 2. WO Assigned / Reassigned
+## Azure provisioning (LDC IT / Entra ID)
 
-**When:** Admin or Maintenance Manager assigns (or reassigns) a Work Order to a
-Technician or Manager.
+> **Important:** This is a **separate Entra ID app registration** from the `LDC_ERP_*` (Dynamics 365 Business Central) app. Use distinct credentials; do not reuse the ERP app.
 
-**Who:** The assignee (Technician or Maintenance Manager).
+1. **Register an application** in Entra ID (Azure AD) for ATMS notification email → yields **Client (Application) ID** and **Tenant (Directory) ID**.
+2. **Add client credentials** — a client **secret** (recommended to start) or a **certificate**. See [Secret vs Certificate](#secret-vs-certificate-expiry--renewal) below.
+3. **API permissions → Microsoft Graph → Application permissions → add `Mail.Send`** (Application, *not* Delegated) → **Grant admin consent** tenant-wide.
+4. **(Recommended) Restrict the app to only `notification@ldc.com.ly`** so it cannot impersonate arbitrary senders, via an Application Access Policy (Exchange Online PowerShell):
+   ```powershell
+   New-DistributionGroup -Name "ATMS-Notification-Senders" -Members notification@ldc.com.ly
+   New-ApplicationAccessPolicy -AppId "<CLIENT_ID>" -PolicyScopeGroupId "ATMS-Notification-Senders" -AccessRight RestrictAccess -Description "Restrict ATMS app to the notification mailbox"
+   ```
+5. Confirm **outbound HTTPS** from the ATMS server to `login.microsoftonline.com` and `graph.microsoft.com` is allowed.
 
-**Payload:**
+### Application configuration (`backend/.env`)
 
-```json
-{
-  "type": "wo_assigned",
-  "recipient_email": "technician@ldc.com",
-  "recipient_name": "Hassan Ibrahim",
-  "data": {
-    "wo_number": "WO-0193",
-    "asset_name": "Conveyor Belt Motor X3",
-    "asset_tag": "L-ELE-048-1234",
-    "assigned_by": "Maintenance Manager",
-    "priority": "high",
-    "wo_url": "https://atms.ldc.com/work-orders/193"
-  }
-}
+```dotenv
+ACCOUNT_EMAIL_TRANSPORT=fake     # keep "fake" until the Graph transport is built and the probe passes; then "graph"
+GRAPH_TENANT_ID=                 # Directory (tenant) ID
+GRAPH_CLIENT_ID=                 # App (client) ID
+GRAPH_CLIENT_SECRET=             # secret value (or use GRAPH_CERT_PATH for a certificate)
+GRAPH_MAILBOX=notification@ldc.com.ly
 ```
 
-**Laravel event:** `WorkOrderAssigned`  
-**Queued job:** `SendNotificationToPowerAutomate`
+The container receives these via `compose.yaml`; after changing them, run `docker compose up -d` (compose re-injects env on `up`, not on `restart`).
 
 ---
 
-### Phase 3 — Store Management (future, decoupled 2026-07-02)
+## Secret vs Certificate (expiry & renewal)
 
-#### 3. SM Order Submitted
+### Recommendation: start with a client secret
+- Matches the existing client-credentials code (which uses `client_secret`); **zero extra code** to run the probe.
+- Switching to a certificate later is **trivial on Azure** (just add the cert; the secret can coexist or be removed), so there is no lock-in.
+- Use a certificate later only if LDC policy requires it or you want longer validity / stronger security.
 
-**When:** Requester submits a new Store Order for approval.
+### Client secret
+- **Expiry:** up to **24 months** (subject to LDC tenant policy). Record the exact expiry date Azure displays at creation.
+- **Renewal:** ~2 weeks before expiry → generate a new secret in Azure → update `GRAPH_CLIENT_SECRET` in `backend/.env` → `docker compose up -d` → re-run the sendMail probe to confirm → delete the old secret in Azure.
+- **If it lapses:** token acquisition fails (`AADSTS7000215: Invalid client secret provided`); notifications stop until rotated. **No data loss** — only a delivery gap.
 
-**Who:** All active Maintenance Managers.
+### Certificate (optional, stronger / longer-lived)
+- Self-signed is fine; Azure needs only the **public key** (`.cer`). Keep the **private key** (`.pem`/`.key`) on the server in a gitignored location, bind-mounted into the container; reference via `GRAPH_CERT_PATH`.
+- **Validity:** typically **1–3 years** (longer than secrets).
+- **Requires code:** the client-credentials flow must send a **signed client-assertion JWT** (e.g. via `firebase/php-jwt`) instead of a secret. This code is added only if certificates are adopted.
+- **Renewal (zero-downtime overlap):** generate a new key pair → upload the **new** public cert to Azure (it coexists with the old) → place the new private key on the server, update config → restart → confirm via probe → remove the old cert from Azure.
 
-```json
-{
-  "type": "sm_order_submitted",
-  "recipient_email": "manager@ldc.com",
-  "recipient_name": "Maintenance Manager",
-  "data": {
-    "order_number": "SO-0017",
-    "requester_name": "Ahmed Al-Sayed",
-    "line_items_count": 3,
-    "order_url": "https://atms.ldc.com/store-orders/17"
-  }
-}
-```
-
----
-
-#### 4. SM Order Approved
-
-**When:** Manager approves a Store Order.
-
-**Who:** The Requester who submitted it.
-
-```json
-{
-  "type": "sm_order_approved",
-  "recipient_email": "requester@ldc.com",
-  "recipient_name": "Ahmed Al-Sayed",
-  "data": {
-    "order_number": "SO-0017",
-    "approved_by": "Maintenance Manager",
-    "order_url": "https://atms.ldc.com/store-orders/17"
-  }
-}
-```
+### Operational rule (applies to either)
+**The #1 operational risk is unnoticed expiry** — notifications silently fail when the credential lapses. At creation, set a calendar reminder for **~2 weeks before expiry** (secret) or **~1 month before** (certificate).
 
 ---
 
-#### 5. SM Order Rejected
+## Notification triggers
 
-**When:** Manager rejects a Store Order.
+### Built (current)
+| Trigger | Recipient | Notes |
+|---|---|---|
+| Account activation (one-time link) | The new user | `UserActivationNotification`; via `AccountEmailTransport` (`Fake` in dev). **Stays on this path for now** (unify deferred — see Resolved decisions). |
+| Password reset (one-time link) | The requesting user | `PasswordResetNotification`; same path. |
 
-**Who:** The Requester who submitted it.
+### Planned (Phase 1) — routing finalised 2026-07-04
+| Trigger | To | Cc | Template heading |
+|---|---|---|---|
+| MR Created | All active Maintenance Managers | All active Administrators | "New Maintenance Request" |
+| WO Assigned / Reassigned | The new assignee | The action taker (who assigned/reassigned) | "Work Order Assigned" (first) / "Work Order Reassigned" (subsequent) |
+| WO Completed | All active Maintenance Managers | The user who completed the WO | "Work Order Completed" |
 
-```json
-{
-  "type": "sm_order_rejected",
-  "recipient_email": "requester@ldc.com",
-  "recipient_name": "Ahmed Al-Sayed",
-  "data": {
-    "order_number": "SO-0017",
-    "rejected_by": "Maintenance Manager",
-    "rejection_reason": "Part X is out of stock — reorder next week",
-    "order_url": "https://atms.ldc.com/store-orders/17"
-  }
-}
-```
+- Greeting addresses the **To** recipient only (Cc see the same message).
+- From-name "ATMS Notifications"; **no Reply-To** (footer carries the "do not reply" notice).
+- All sends go through the shared `resources/views/emails/atms-notification.blade.php` template (amber `#d97706` accent, navy `#21274b` header, no logo).
+- **Demo/dev caveat:** the demo DB uses faker emails, so role-based routing yields undeliverable addresses — test sends must use a hardcoded real recipient (`rawand.hawez@inova.krd`). Real routing works only in production with real user emails.
 
----
-
-## Laravel Implementation Notes
-
-### Queued Job
-
-```php
-// app/Jobs/SendNotificationToPowerAutomate.php
-class SendNotificationToPowerAutomate implements ShouldQueue
-{
-    public function __construct(
-        public string $type,
-        public string $recipientEmail,
-        public string $recipientName,
-        public array $data,
-    ) {}
-
-    public function handle(): void
-    {
-        Http::timeout(15)
-            ->retry(3, 1000)
-            ->post(config('services.power_automate.webhook_url'), [
-                'type' => $this->type,
-                'recipient_email' => $this->recipientEmail,
-                'recipient_name' => $this->recipientName,
-                'data' => $this->data,
-            ]);
-    }
-}
-```
-
-### Event Listener Example
-
-```php
-// app/Listeners/SendWorkOrderAssignedNotification.php
-class SendWorkOrderAssignedNotification
-{
-    public function handle(WorkOrderAssigned $event): void
-    {
-        SendNotificationToPowerAutomate::dispatch(
-            type: 'wo_assigned',
-            recipientEmail: $event->workOrder->assignee->email,
-            recipientName: $event->workOrder->assignee->name,
-            data: [
-                'wo_number' => $event->workOrder->number,
-                'asset_name' => $event->workOrder->asset->name,
-                'asset_tag' => $event->workOrder->asset->asset_tag,
-                'assigned_by' => $event->assignedBy->name,
-                'priority' => $event->workOrder->priority,
-                'wo_url' => route('work-orders.show', $event->workOrder),
-            ],
-        );
-    }
-}
-```
-
-### Retry & Failure
-
-- The queued job retries up to 3 times (1s backoff).
-- On final failure, the job lands in the `failed_jobs` table.
-- Administrators can retry failed notifications from the Laravel Horizon /
-  Telescope UI or via `php artisan queue:retry`.
+### Superseded / out of scope
+- The earlier generic `{ type, recipient_email, recipient_name, data }` Power Automate **webhook** envelope (unauthenticated HTTP trigger + `SendNotificationToPowerAutomate` job) is **superseded** by this Graph design.
+- **SM Order** notifications (`sm_order_submitted/approved/rejected`) remain **Phase 3** (Store Management is not built).
 
 ---
 
-## Power Automate Setup Checklist
+## Security
 
-- [ ] Create HTTP-triggered flow.
-- [ ] Register the webhook URL in the ATMS `.env` (`POWER_AUTOMATE_WEBHOOK_URL`).
-- [ ] Build the `type` switch and email templates for each notification.
-- [ ] Test: POST sample payloads from the ATMS queue worker → verify email arrives.
+- Credentials live only in `backend/.env` (gitignored) or a secure secret store — never in code, commits, or logs.
+- Activation/reset links carry one-time tokens. Graph inherently receives the action URL (required to render the link) — this is accepted by design; tokens are hashed server-side (`token_lookup`), single-use, and expiry-enforced.
+- Every notification dispatch is recorded in the audit log.
+- Secrets, plaintext tokens, and complete reset URLs must not be written to application logs.
+
+---
+
+## Resolved decisions (2026-07-04)
+1. **WO Completed routing:** To = all active Maintenance Managers; Cc = the user who completed the WO.
+2. **WO reassignment:** notify on **any assignee change**; Cc = the action taker.
+3. **Unify activation + reset onto Graph:** **No, for now** — they stay on `AccountEmailTransport`; the Graph pipeline is for operational notifications only (MR Created, WO Assigned, WO Completed).
+4. **From-name / Reply-To:** From-name "ATMS Notifications"; **no Reply-To** (footer "do not reply" text only).
+5. **Branding:** keep amber `#d97706` accent + navy `#21274b` header; **no logo** (text header, consistent with other apps). Base HTML provided by the client, adapted into `resources/views/emails/atms-notification.blade.php`.
+
+---
+
+## Pre-release / go-live checklist (email)
+
+> Must be complete before client release. Carry these into the master go-live checklist when one is created.
+
+- [ ] **Frontend base URL not final.** Email CTA links currently use the temporary `https://atms.inova.krd`. This **MUST** be updated to the officially-provided **LDC subdomain** before client release. Make the base URL a **config value** (e.g. `APP_FRONTEND_URL`), not hardcoded, so it can be switched without code changes. (Broader impact beyond email: Caddy `APP_HOST`, Sanctum `SESSION_DOMAIN` / `SANCTUM_STATEFUL_DOMAINS`, CORS — track separately.)
+- [ ] **Real user email addresses.** Production users must have real, deliverable emails; the demo DB uses faker addresses, so role-based routing only delivers in prod.
+- [ ] **Serialize dispatch + retry-on-429.** Send via the queue with limited per-mailbox concurrency and retry honouring `Retry-After` (Exchange throttles ~3–4 concurrent — see Architecture). Do **not** fan out parallel sends to the one mailbox.
+- [ ] **Production credential.** Set the production `GRAPH_CLIENT_SECRET` (or certificate) in the prod env; record the expiry and rotate before it lapses.
+- [ ] **Application Access Policy.** Restrict the app to `notification@ldc.com.ly` (`New-ApplicationAccessPolicy`) so it cannot send as arbitrary mailboxes.
+- [ ] **Mail.Send consent.** Confirmed granted tenant-wide (2026-07-04) — re-verify in the production tenant.
+- [ ] **Queue worker running** in production (notifications dispatch as queued jobs).
+
+---
+
+## Legacy reference (superseded)
+
+The sections below describe the original Power Automate webhook design. They are **superseded** by the Graph `sendMail` architecture above and retained for history only.
+
+<details>
+<summary>Original Power Automate webhook spec (superseded 2026-07-04)</summary>
+
+The original design delegated all email to a single HTTP-triggered Power Automate flow receiving a JSON envelope `{ type, recipient_email, recipient_name, data }`, routed by `type`, with the flow owning template rendering and sending via the company-approved Outlook 365 connector. A generic `App\Jobs\SendNotificationToPowerAutomate` job (`Http::retry(3, 1000)`) and per-event listeners were specified. This approach was replaced by Graph `sendMail` (Laravel owns templates; no PA flow) per the 2026-07-04 decision. The `config/services.php` `power_automate.webhook_url` reference is also superseded by the `account-email` / `GRAPH_*` configuration.
+
+</details>

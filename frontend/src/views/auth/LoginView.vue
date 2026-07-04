@@ -23,7 +23,13 @@ async function handleSubmit() {
   loading.value = true
   try {
     await auth.login(email.value, password.value, remember.value)
-    const redirect = (route.query.redirect as string) || '/dashboard'
+    // Only honour internal absolute paths; reject protocol-relative (//host)
+    // and external URLs to avoid an open-redirect after login.
+    const target = route.query.redirect
+    const redirect =
+      typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
+        ? target
+        : '/dashboard'
     router.push(redirect)
   } catch (err) {
     if (err instanceof ApiError) {
