@@ -2,8 +2,13 @@
 
 ## Shared Components
 
-- AppLayout
-- SidebarNavigation
+- **AppLayout** — application shell (sidebar + header bar + main content)
+- **AppSidebar** — role-aware flat navigation sidebar with ATMS logo header
+- **AppUserMenu** — user dropdown in the header bar (avatar, name, role, email, sign out)
+- **KpiTile** — compact stat tile (icon + title + value + subtitle), optionally a router link
+- **AppDataTable** — reusable data table wrapper
+- **AssetCombobox** — asset search/select combobox
+- **PartCombobox** — part search/select combobox
 - PageHeader
 - DataTable
 - SearchInput

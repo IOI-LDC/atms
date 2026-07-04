@@ -23,6 +23,11 @@ class UserPolicy
         return true;
     }
 
+    public function changePassword(User $user): bool
+    {
+        return true;
+    }
+
     public function manage(User $user): bool
     {
         return $user->hasRole(RoleCode::ADMINISTRATOR);

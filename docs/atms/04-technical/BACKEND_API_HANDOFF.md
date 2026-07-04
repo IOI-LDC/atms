@@ -190,6 +190,26 @@ queued (visible in the fake transport during dev).
 
 `reset-password` body: `token`, `password`, `password_confirmation`.
 
+### 2.8 Change own password (self-service)
+
+An authenticated user can set a new password without supplying the current one
+(the authenticated session is trusted):
+
+```
+POST /api/auth/change-password   → 200
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `password` | string | required, confirmed, min 8 (Password defaults) |
+| `password_confirmation` | string | required |
+
+**`200`** — `{"message":"Password changed. Please log in again."}`
+
+All sessions are invalidated and all API tokens are revoked, so the client MUST
+re-authenticate (`POST /api/auth/login` with the new password) immediately
+afterwards. The transition is audited as `user.password_changed`.
+
 ---
 
 ## 3. Global Conventions
@@ -1131,6 +1151,7 @@ see [`BACKEND_API_REFERENCE.md`](./BACKEND_API_REFERENCE.md).
 | POST | `/api/auth/activate` | Public | throttle 5/min |
 | POST | `/api/auth/forgot-password` | Public | always 200 |
 | POST | `/api/auth/reset-password` | Public | throttle 5/min |
+| POST | `/api/auth/change-password` | Auth | invalidates sessions/tokens, force re-login |
 | GET | `/api/health/live` | Public | `{status:"alive"}` |
 | GET | `/api/health/ready` | Public | db + attachments check |
 

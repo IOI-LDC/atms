@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\Auth\ActivateUser;
+use App\Actions\Auth\ChangeUserPassword;
 use App\Actions\Auth\ResetUserPassword;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ActivateRequest;
+use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
@@ -102,5 +104,14 @@ class AuthController extends Controller
         $action->execute($request->input('token'), $request->input('password'));
 
         return response()->json(['message' => 'Password reset successful.']);
+    }
+
+    public function changePassword(ChangePasswordRequest $request, ChangeUserPassword $action): JsonResponse
+    {
+        Gate::authorize('changePassword', User::class);
+
+        $action->execute($request->user(), $request->input('password'));
+
+        return response()->json(['message' => 'Password changed. Please log in again.']);
     }
 }

@@ -520,9 +520,9 @@ The "X / Y since last service" indicator on WO detail never displays. **Low** pr
 
 ---
 
-### 9.7 G-11: Dashboard Missing "Recently Updated Assets" Widget
+### 9.7 G-11: Dashboard Missing "Recently Relocated Assets" Widget
 
-**Source:** `SCREEN_INVENTORY.md` §1 lists "Recently updated assets" as a required dashboard element.
+**Source:** `SCREEN_INVENTORY.md` §1 lists "Recently relocated assets" as a required dashboard element.
 Neither the `DashboardController` nor `DashboardView` includes it. **Low** priority.
 
 ---

@@ -16,12 +16,16 @@ Displays the operational overview.
 
 Required elements:
 
-- KPI summary cards
-- Pending MR list
-- Open WO list
-- Overdue PM list
-- Recently closed WO list
-- Recently updated assets
+- **Analytics KPIs** (6 cards, two groups): Reliability Performance (MTBF, MTTR,
+  Failure Rate) and Process Efficiency (PM Compliance, Avg MR Duration, Avg WO
+  Duration) over a rolling 90-day window.
+- **Action Required cards:** Pending MR list, Open WO list, Overdue PM
+  assignments list.
+- **Activity & Tracking cards:** Recently relocated assets (90-day window),
+  Recently closed WO list (30-day window).
+- **Command Center (right sidebar):** Role-driven quick actions (Assets, New MR,
+  Locations, Work Orders) and live operational status KPI tiles as click-through
+  links.
 
 ---
 

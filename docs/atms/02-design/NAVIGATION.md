@@ -36,9 +36,13 @@ Eight primary sidebar items.
 
 - **Type:** Direct link.
 - **Route:** `/dashboard`
-- **Content:** Operational overview with KPI summary cards, pending MR list,
-  open WO list, overdue PM list, recently closed WO list, and recently updated
-  assets.
+- **Content:** Two-column "Maintenance Control Center" layout. Left workspace
+  contains six analytical KPIs (MTBF, MTTR, Failure Rate, PM Compliance,
+  Avg MR Duration, Avg WO Duration) over a rolling 90-day window, plus data
+  cards for pending MRs, open WOs, overdue PM assignments, recently relocated
+  assets, and recently closed WOs. Right sidebar contains role-driven quick
+  actions (Assets, New MR, Locations, Work Orders) and live operational status
+  KPI tiles with click-through links to filtered views.
 
 ### 2. Maintenance Requests
 
@@ -201,8 +205,11 @@ Eight primary sidebar items.
   accent. For tabbed groups, the item stays highlighted while the user is on
   any of its tabs.
 - **Hover:** Subtle background change on hover for all items.
-- **Footer:** User avatar, name, role label, and sign-out action at the bottom
-  of the sidebar.
+- **Header bar:** The top bar contains the sidebar toggle (collapses sidebar
+  to icon-only mode), the User Manual button (opens the in-app manual), and the
+  user menu (avatar initials, name, role label, and email, with a Sign out
+  action). The sidebar has no footer — user identity and logout are accessed
+  exclusively through the header bar.
 
 ## Role Visibility Summary
 

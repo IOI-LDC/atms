@@ -142,6 +142,28 @@ Reset password using a token from the reset email.
 
 ---
 
+### POST `/api/auth/change-password`
+
+Change the authenticated user's own password (self-service). The current password is **not** required — the authenticated session is trusted.
+
+**Auth:** Required
+
+**Request Body:**
+
+| Field | Type | Rules |
+|---|---|---|
+| `password` | string | required, confirmed, Laravel Password defaults |
+| `password_confirmation` | string | required with `password` |
+
+**Response `200`:** `{"message": "Password changed. Please log in again."}`
+
+All sessions are invalidated and all API tokens are revoked, so the client must log in again with the new password. The transition is audited as `user.password_changed`.
+
+**Error `401`:** Unauthenticated.
+**Error `422`:** Validation error (weak/missing/unconfirmed password).
+
+---
+
 ## Conventions
 
 ### Base URL

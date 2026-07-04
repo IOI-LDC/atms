@@ -393,7 +393,7 @@ Stack: **Vue 3 + TypeScript + Tailwind CSS + shadcn-vue**. Source lives in `fron
 
 The full list of semantic classes that feature files use (defined in the shared CSS layer):
 
-`app-layout`, `page-header`, `page-actions`, `kpi-grid`, `data-card`, `dense-table`, `filter-bar`, `form-grid`, `form-actions`, `loading-state`, `empty-state`, `error-state`
+`app-shell-header`, `app-shell-header-left`, `app-shell-header-right`, `app-shell-main`, `app-topbar-link`, `sidebar-brand`, `sidebar-brand-logo`, `sidebar-brand-mark`, `app-user-menu-trigger`, `app-user-menu-avatar`, `app-user-menu-info`, `app-user-menu-name`, `app-user-menu-role`, `app-user-menu-chevron`, `page-header`, `page-actions`, `kpi-section`, `kpi-group`, `kpi-group-label`, `kpi-grid-3`, `kpi-accent-reliability`, `kpi-accent-process`, `kpi-accent-operational`, `dashboard-split-layout`, `dashboard-workspace-main`, `dashboard-column-action`, `dashboard-column-tracking`, `dashboard-sidebar-command`, `dashboard-sidebar-section`, `dashboard-sidebar-title`, `dashboard-cta-btn`, `dashboard-window-note`, `dashboard-window-range`, `dashboard-grid-redesigned`, `dashboard-grid-stacked`, `data-card`, `data-card-header`, `data-card-title`, `data-card-count`, `data-card-content`, `widget-list`, `widget-list-header`, `widget-list-item`, `widget-item-main`, `widget-item-primary`, `widget-item-secondary`, `widget-item-meta`, `widget-empty`, `dense-table`, `filter-bar`, `form-grid`, `form-actions`, `loading-state`, `empty-state`, `error-state`
 
 ### Design tokens (CSS custom properties)
 
@@ -414,7 +414,7 @@ Light theme only for MVP. Full spec: `docs/atms/02-design/UI_DESIGN_SYSTEM.md`.
 
 ### Navigation layout
 
-shadcn-vue `Sidebar` component (`AppSidebar.vue` + `AppLayout.vue`). Collapsible icon-mode sidebar on desktop; slide-in sheet on mobile. Nav structure: Dashboard / Maintenance Requests / Work Orders / Asset Management / Parts Management / Admin / Settings. Uses flat sidebar with tabbed content areas; no nested dropdown menus. Full nav tree with role visibility is defined in `AppSidebar.vue`.
+shadcn-vue `Sidebar` component (`AppSidebar.vue` + `AppLayout.vue`). Collapsible icon-mode sidebar on desktop; slide-in sheet on mobile. Nav structure: Dashboard / Maintenance Requests / Work Orders / Asset Management / Parts Management / Locations / Admin / Settings. Uses flat sidebar with tabbed content areas; no nested dropdown menus. Full nav tree with role visibility is defined in `AppSidebar.vue`.
 
 ### State management
 
@@ -480,6 +480,7 @@ Do not add: labor hours/rates/costs/timesheets, category-level or template-level
 | `POST` | `/admin/users/{user}/reset-password` | Admin | Force-reset password, invalidates all sessions/tokens; self-reset rejected |
 | `GET` | `/list-options/{group}` | Everyone (auth-only, not Admin-gated) | Active-only dropdown options for `maintenance_priorities`, `usage_reading_types`, `fa_subclass_type_codes`. Unknown group → 404. Added 2026-07-02 to unblock non-Admin consumers (MR priority pickers, Assets FA-subclass filter) without exposing the Admin-gated `/admin/master-data/*` CRUD endpoints. See `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. |
 | `GET` | `/dashboard/kpis` | Everyone (auth-only; full payload to all roles) | Rolling 90-day aggregate KPIs (MTBF / MTTR / Failure Rate / PM Compliance / Avg MR & WO Duration) + "Recently Relocated Assets" widget. Complements role-adaptive `GET /dashboard` (Row 1 counts stay there). Failure = `is_preventive=false`. MTBF calendar basis; MTTR `assigned→closed`; PM compliance date-triggered only, on-time `wo.closed_at::date ≤ mr.trigger_date`. `DashboardKpiResource` (`$wrap=null`). Handover: `docs/atms/04-technical/DASHBOARD_KPI_HANDOFF.md`. Added 2026-07-03. |
+| `POST` | `/auth/change-password` | Auth (any role) | Self-service password change; current password not required (session is trusted). Invalidates all sessions and revokes all tokens → client must re-login. Body: `password`, `password_confirmation`. Audited as `user.password_changed`. Added 2026-07-04. |
 
 Full request/response shapes: `docs/atms/04-technical/BACKEND_API_REFERENCE.md`.
 
