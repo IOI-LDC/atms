@@ -44,6 +44,13 @@ const router = createRouter({
       component: () => import('@/views/DashboardView.vue'),
     },
 
+    // ── My Profile (account details, role & access) ──────────────────────────
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/MyProfileView.vue'),
+    },
+
     // ── Maintenance Requests ──────────────────────────────────────────────────
     {
       path: '/maintenance',

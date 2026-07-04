@@ -65,6 +65,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Clears local session state WITHOUT a network call. Use when the server
+   * has already invalidated the session (e.g. after a successful change-password,
+   * which wipes all sessions/tokens and forces re-login).
+   */
+  function clearLocalSession(): void {
+    user.value = null
+    resetCsrf()
+  }
+
   return {
     user,
     loading,
@@ -80,5 +90,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchCurrentUser,
     login,
     logout,
+    clearLocalSession,
   }
 })

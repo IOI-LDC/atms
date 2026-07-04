@@ -19,7 +19,6 @@ import {
   Wrench,
   HardDrive,
   Package,
-  Settings,
   Shield,
   MapPin,
 } from '@lucide/vue'
@@ -100,13 +99,6 @@ const navItems: NavItemDef[] = [
       p === '/admin/users' ||
       p.startsWith('/admin/pm-rules') ||
       p.startsWith('/admin/wo-forms'),
-    visibleTo: (r) => r.isAdmin,
-  },
-  {
-    label: 'Settings',
-    icon: Settings,
-    to: () => '/settings/system',
-    isActiveFor: (p) => p === '/settings/system' || p === '/settings/audit-logs',
     visibleTo: (r) => r.isAdmin,
   },
 ]
