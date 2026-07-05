@@ -74,7 +74,6 @@ class DeleteFormFieldSnapshotIntegrityTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-'.str_pad((string) (MaintenanceRequest::count() + 1), 6, '0', STR_PAD_LEFT),
             'asset_id' => $asset->id,
-            'type' => 'corrective',
             'status' => 'pending_review',
             'priority' => 'high',
             'description' => 'Snapshot integrity',

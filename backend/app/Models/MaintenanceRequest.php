@@ -13,7 +13,6 @@ class MaintenanceRequest extends Model
     protected $fillable = [
         'number',
         'asset_id',
-        'type',
         'status',
         'priority',
         'description',
@@ -25,6 +24,7 @@ class MaintenanceRequest extends Model
         'cancelled_at',
         'cancellation_reason',
         'is_preventive',
+        'is_failure',
         'pm_rule_id',
         'triggered_by_date',
         'triggered_by_reading',
@@ -38,6 +38,7 @@ class MaintenanceRequest extends Model
         'reviewed_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'is_preventive' => 'boolean',
+        'is_failure' => 'boolean',
         'triggered_by_date' => 'boolean',
         'triggered_by_reading' => 'boolean',
         'trigger_date' => 'date',

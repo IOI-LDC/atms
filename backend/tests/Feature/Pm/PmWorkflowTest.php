@@ -97,7 +97,6 @@ class PmWorkflowTest extends TestCase
         MaintenanceRequest::create([
             'number' => 'MR-000001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -120,7 +119,6 @@ class PmWorkflowTest extends TestCase
         MaintenanceRequest::create([
             'number' => 'MR-000001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -155,7 +153,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-000001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -189,7 +186,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-000001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -238,7 +234,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-000001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'converted',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -300,7 +295,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-000001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -332,7 +326,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-000002',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -428,7 +421,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-SUP-001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -479,7 +471,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-BL-001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'converted',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -528,7 +519,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-DUAL-001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -593,7 +583,6 @@ class PmWorkflowTest extends TestCase
         $pmMr = MaintenanceRequest::create([
             'number' => 'MR-FLT-001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -604,7 +593,6 @@ class PmWorkflowTest extends TestCase
         $otherMr = MaintenanceRequest::create([
             'number' => 'MR-FLT-002',
             'asset_id' => $asset->id,
-            'type' => 'corrective',
             'status' => 'pending_review',
             'priority' => 'medium',
             'created_by' => $this->admin->id,
@@ -637,7 +625,6 @@ class PmWorkflowTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-CUM-001',
             'asset_id' => $asset->id,
-            'type' => 'preventive',
             'status' => 'converted',
             'priority' => 'medium',
             'created_by' => $this->admin->id,

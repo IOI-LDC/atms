@@ -10,9 +10,12 @@ use Carbon\Carbon;
 /**
  * Reliability KPIs over a rolling calendar window.
  *
- * A "failure" is a corrective maintenance request (is_preventive = false).
- * - MTBF: calendar basis = window days / corrective failures.
- * - Failure Rate: corrective failures and failures-per-day within the window.
+ * A "failure" is a corrective maintenance request explicitly classified as a
+ * real failure (is_failure = true). Set by a manager at approval, optionally
+ * revised at WO close. Unclassified (null) and no-failure-found (false) CMRs
+ * are excluded.
+ * - MTBF: calendar basis = window days / classified failures.
+ * - Failure Rate: classified failures and failures-per-day within the window.
  * - MTTR: mean assigned_at -> closed_at duration of corrective work orders
  *   closed within the window (full repair cycle, not execution-only).
  */
@@ -43,7 +46,7 @@ class ReliabilityKpiQuery
 
     private function countCorrectiveFailures(Carbon $since, Carbon $now): int
     {
-        return MaintenanceRequest::where('is_preventive', false)
+        return MaintenanceRequest::where('is_failure', true)
             ->whereBetween('created_at', [$since, $now])
             ->count();
     }

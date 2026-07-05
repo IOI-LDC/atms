@@ -39,7 +39,7 @@ class MaintenanceRequestResourceTest extends TestCase
         ]);
 
         return MaintenanceRequest::create([
-            'number' => 'MR-'.$uniq, 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-'.$uniq, 'asset_id' => $asset->id,
             'status' => 'pending_review', 'priority' => 'high', 'description' => 'Test MR',
             'created_by' => $createdBy, 'is_preventive' => false,
         ]);

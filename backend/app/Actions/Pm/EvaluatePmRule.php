@@ -57,7 +57,6 @@ class EvaluatePmRule
             $mr = MaintenanceRequest::create([
                 'number' => $number,
                 'asset_id' => $locked->asset_id,
-                'type' => 'preventive',
                 'status' => MaintenanceRequestStatus::PENDING_REVIEW,
                 'priority' => 'medium',
                 'description' => "Auto-generated PM: {$locked->pmRule->name}",

@@ -97,12 +97,12 @@ class DashboardTest extends TestCase
         $asset = $this->createAsset();
 
         MaintenanceRequest::create([
-            'number' => 'MR-OWN', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-OWN', 'asset_id' => $asset->id,
             'status' => 'pending_review', 'priority' => 'high', 'description' => 'Own',
             'created_by' => $requester->id, 'is_preventive' => false,
         ]);
         MaintenanceRequest::create([
-            'number' => 'MR-OTHER', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-OTHER', 'asset_id' => $asset->id,
             'status' => 'pending_review', 'priority' => 'high', 'description' => 'Other',
             'created_by' => $other->id, 'is_preventive' => false,
         ]);
@@ -121,17 +121,17 @@ class DashboardTest extends TestCase
         $asset = $this->createAsset();
 
         MaintenanceRequest::create([
-            'number' => 'MR-001', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-001', 'asset_id' => $asset->id,
             'status' => 'pending_review', 'priority' => 'high', 'description' => 'Test',
             'created_by' => $admin->id, 'is_preventive' => false,
         ]);
         $mrOpen = MaintenanceRequest::create([
-            'number' => 'MR-002', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-002', 'asset_id' => $asset->id,
             'status' => 'converted', 'priority' => 'high', 'description' => 'Open WO',
             'created_by' => $admin->id, 'is_preventive' => false,
         ]);
         $mrClosed = MaintenanceRequest::create([
-            'number' => 'MR-003', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-003', 'asset_id' => $asset->id,
             'status' => 'converted', 'priority' => 'high', 'description' => 'Closed WO',
             'created_by' => $admin->id, 'is_preventive' => false,
         ]);

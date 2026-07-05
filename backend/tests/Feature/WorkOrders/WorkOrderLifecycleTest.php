@@ -3,6 +3,7 @@
 namespace Tests\Feature\WorkOrders;
 
 use App\Enums\RoleCode;
+use App\Enums\MaintenanceRequestStatus;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
 use App\Models\MaintenanceRequest;
@@ -48,7 +49,6 @@ class WorkOrderLifecycleTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-'.str_pad((string) MaintenanceRequest::count() + 1, 6, '0', STR_PAD_LEFT),
             'asset_id' => $asset->id,
-            'type' => 'corrective',
             'status' => 'pending_review',
             'priority' => 'high',
             'description' => 'Test request',
@@ -56,7 +56,9 @@ class WorkOrderLifecycleTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         return WorkOrder::where('maintenance_request_id', $mr->id)->first();
     }
@@ -576,5 +578,93 @@ class WorkOrderLifecycleTest extends TestCase
 
         $this->actingAs($tech2)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Hijack'])
             ->assertForbidden();
+    }
+
+    public function test_close_overrides_corrective_mr_is_failure(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+        $mrId = $wo->maintenance_request_id;
+
+        // The approve step set is_failure = true; the tech inspected and found
+        // nothing wrong, so the manager overrides to false on close.
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
+            'completion_notes' => 'No fault found',
+        ])->assertOk();
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'is_failure' => false,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('maintenance_requests', [
+            'id' => $mrId,
+            'is_failure' => false,
+        ]);
+    }
+
+    public function test_close_without_is_failure_leaves_mr_unchanged(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+        $mrId = $wo->maintenance_request_id;
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
+            'completion_notes' => 'Done',
+        ])->assertOk();
+
+        // No is_failure in payload — the review-time value (true) must persist.
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $this->assertDatabaseHas('maintenance_requests', [
+            'id' => $mrId,
+            'is_failure' => true,
+        ]);
+    }
+
+    public function test_close_ignores_is_failure_for_preventive_work_order(): void
+    {
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $asset = $this->createAsset();
+
+        // Build a preventive MR directly (PM MRs are system-generated).
+        $mr = MaintenanceRequest::forceCreate([
+            'number' => 'MR-'.str_pad((string) (MaintenanceRequest::max('id') + 1), 6, '0', STR_PAD_LEFT),
+            'asset_id' => $asset->id,
+            'status' => MaintenanceRequestStatus::PENDING_REVIEW,
+            'priority' => 'medium',
+            'description' => 'PM close override',
+            'created_by' => $manager->id,
+            'is_preventive' => true,
+            'triggered_by_date' => true,
+            'trigger_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
+            'completion_notes' => 'PM done',
+        ])->assertOk();
+
+        // Even if a client sends is_failure, PM WOs must never be classified.
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'is_failure' => true,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('maintenance_requests', [
+            'id' => $mr->id,
+            'is_failure' => null,
+        ]);
     }
 }

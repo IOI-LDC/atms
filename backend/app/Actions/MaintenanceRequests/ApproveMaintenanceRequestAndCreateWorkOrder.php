@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 
 class ApproveMaintenanceRequestAndCreateWorkOrder
 {
-    public function execute(MaintenanceRequest $maintenanceRequest, int $approvedByUserId, ?int $assignToUserId = null): MaintenanceRequest
+    public function execute(MaintenanceRequest $maintenanceRequest, int $approvedByUserId, ?int $assignToUserId = null, ?bool $isFailure = null): MaintenanceRequest
     {
         $asset = $maintenanceRequest->asset;
 
@@ -26,7 +26,7 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
             throw new DomainException('Cannot approve a maintenance request for an inactive asset.');
         }
 
-        return DB::transaction(function () use ($maintenanceRequest, $approvedByUserId, $assignToUserId) {
+        return DB::transaction(function () use ($maintenanceRequest, $approvedByUserId, $assignToUserId, $isFailure) {
             $logger = app(AuditLogger::class);
             $locked = MaintenanceRequest::where('id', $maintenanceRequest->id)->lockForUpdate()->first();
 
@@ -40,6 +40,7 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
                 'status' => MaintenanceRequestStatus::CONVERTED,
                 'reviewed_by' => $approvedByUserId,
                 'reviewed_at' => now(),
+                'is_failure' => $isFailure,
             ]);
 
             $woNumber = BusinessNumberSequence::next('WO', 'WO-');

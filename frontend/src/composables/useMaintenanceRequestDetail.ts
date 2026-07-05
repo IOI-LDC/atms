@@ -57,6 +57,10 @@ export function useMaintenanceRequestDetail() {
   // ── Workflow-action state ───────────────────────────────────────────────────
   const approveOpen = ref(false)
   const approveLoading = ref(false)
+  // Failure classification decided at approval (corrective MRs only). null = not yet
+  // chosen; the Approve button stays disabled until the reviewer picks a value. Sent
+  // to the API as `is_failure`.
+  const approveIsFailure = ref<boolean | null>(null)
   // Optional technician assignment performed at approval time (WO-02): the WO is
   // created by /approve, then assigned in a follow-up call. null = leave the new
   // work order unassigned.
@@ -73,6 +77,8 @@ export function useMaintenanceRequestDetail() {
   // ── Derived ─────────────────────────────────────────────────────────────────
   const isPending = computed(() => record.value?.status === 'pending_review')
   const isTerminal = computed(() => !!record.value && !isPending.value)
+  // Corrective requests carry a failure classification; preventive ones never do.
+  const isCorrective = computed(() => record.value?.type === 'corrective')
   const isOwnRequest = computed(
     () => !!record.value?.created_by && record.value.created_by.id === auth.user?.id,
   )
@@ -195,6 +201,7 @@ export function useMaintenanceRequestDetail() {
   // ── Workflow actions (refresh the record on success) ────────────────────────
   function openApprove() {
     selectedApproveTechId.value = null
+    approveIsFailure.value = null
     approveOpen.value = true
     void loadApproveTechnicians()
   }
@@ -235,10 +242,18 @@ export function useMaintenanceRequestDetail() {
     try {
       // Atomic approve + optional assign: the backend creates the WO and assigns
       // it inside one transaction, rolling back the MR conversion if the assignee
-      // is ineligible. Omitting assignee_id keeps the WO unassigned.
+      // is ineligible. Omitting assignee_id keeps the WO unassigned. `is_failure` is
+      // required by the backend for corrective MRs and ignored for preventive ones.
+      const payload: Record<string, unknown> = {}
+      if (assigneeId) {
+        payload.assignee_id = assigneeId
+      }
+      if (isCorrective.value && approveIsFailure.value !== null) {
+        payload.is_failure = approveIsFailure.value
+      }
       await api.post(
         `/maintenance-requests/${record.value.id}/approve`,
-        assigneeId ? { assignee_id: assigneeId } : undefined,
+        Object.keys(payload).length > 0 ? payload : undefined,
       )
       approveOpen.value = false
       await load(record.value.id)
@@ -309,6 +324,7 @@ export function useMaintenanceRequestDetail() {
     doDeleteAttachment,
     isPending,
     isTerminal,
+    isCorrective,
     canEdit,
     canApprove,
     canReject,
@@ -319,6 +335,7 @@ export function useMaintenanceRequestDetail() {
     saveEdit,
     approveOpen,
     approveLoading,
+    approveIsFailure,
     openApprove,
     doApprove,
     approveTechnicians,

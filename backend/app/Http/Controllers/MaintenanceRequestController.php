@@ -7,6 +7,7 @@ use App\Actions\MaintenanceRequests\CancelMaintenanceRequest;
 use App\Actions\MaintenanceRequests\CreateCorrectiveMaintenanceRequest;
 use App\Actions\MaintenanceRequests\RejectMaintenanceRequest;
 use App\Actions\MaintenanceRequests\UpdateMaintenanceRequest;
+use App\Enums\MaintenanceRequestStatus;
 use App\Http\Resources\MaintenanceRequestResource;
 use App\Models\Asset;
 use App\Models\MaintenanceRequest;
@@ -89,15 +90,25 @@ class MaintenanceRequestController extends Controller
     {
         Gate::authorize('approve', $maintenanceRequest);
 
-        $validated = $request->validate([
+        // is_failure is required for corrective MRs being approved for the first
+        // time (the manager must classify whether this is a real failure — drives
+        // MTBF). Only enforced when approval can actually proceed
+        // (PENDING_REVIEW); otherwise the state-machine guard below surfaces the
+        // correct 409 instead of a validation 422. Preventive MRs ignore it.
+        $rules = [
             'assignee_id' => ['nullable', 'exists:users,id'],
-        ]);
+        ];
+        if (! $maintenanceRequest->is_preventive && $maintenanceRequest->status === MaintenanceRequestStatus::PENDING_REVIEW) {
+            $rules['is_failure'] = ['required', 'boolean'];
+        }
+        $validated = $request->validate($rules);
 
         try {
             $mr = $action->execute(
                 $maintenanceRequest,
                 $request->user()->id,
-                isset($validated['assignee_id']) ? (int) $validated['assignee_id'] : null
+                isset($validated['assignee_id']) ? (int) $validated['assignee_id'] : null,
+                array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null,
             );
 
             return response()->json([

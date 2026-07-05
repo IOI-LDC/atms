@@ -196,7 +196,7 @@ class AssetPmAssignmentControllerTest extends TestCase
         $assignment = AssetPmAssignment::create(['asset_id' => $asset->id, 'pm_rule_id' => $rule->id, 'is_active' => true, 'assigned_by' => $this->admin->id, 'last_triggered_date' => now()->subDays(31)]);
 
         MaintenanceRequest::create([
-            'number' => 'MR-CHAIN', 'asset_id' => $asset->id, 'type' => 'preventive',
+            'number' => 'MR-CHAIN', 'asset_id' => $asset->id,
             'status' => 'pending_review', 'priority' => 'medium', 'created_by' => $this->admin->id,
             'is_preventive' => true, 'pm_rule_id' => $rule->id,
         ]);

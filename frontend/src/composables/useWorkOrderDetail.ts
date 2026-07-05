@@ -60,6 +60,21 @@ export function useWorkOrderDetail() {
       !!record.value && (record.value.status === 'closed' || record.value.status === 'cancelled'),
   )
   const isCancelled = computed(() => record.value?.status === 'cancelled')
+  // Corrective-origin WOs carry a failure classification (re-asked at closure);
+  // PM-origin WOs never do. The WO payload embeds the MR's `is_preventive` (not
+  // `type`), so key off that: corrective ⇔ is_preventive === false.
+  const isCorrectiveOrigin = computed(
+    () => record.value?.maintenance_request?.is_preventive === false,
+  )
+  // The WO payload embeds `is_preventive` but not `type`; derive the display label
+  // from it. null when no MR is linked.
+  const originTypeLabel = computed<'Preventive' | 'Corrective' | null>(() => {
+    const mr = record.value?.maintenance_request
+    if (!mr) {
+      return null
+    }
+    return mr.is_preventive ? 'Preventive' : 'Corrective'
+  })
 
   // Lifecycle stepper model for the command bar. `cancelled` is off the linear
   // open→closed track, so the view renders a distinct marker instead (isCancelled)
@@ -171,7 +186,12 @@ export function useWorkOrderDetail() {
   const completeOpen = ref(false)
   const completeLoading = ref(false)
   const completionNotes = ref('')
+  const closeOpen = ref(false)
   const closeLoading = ref(false)
+  // Re-asked failure classification at closure (corrective-origin WOs only). Seeded
+  // from the linked MR's current value so the reviewer sees the prior decision. Sent
+  // to the API as `is_failure`.
+  const closeIsFailure = ref<boolean | null>(null)
   const cancelOpen = ref(false)
   const cancelLoading = ref(false)
   const cancelReason = ref('')
@@ -443,12 +463,26 @@ export function useWorkOrderDetail() {
     }
   }
 
+  function openClose() {
+    // Seed the toggle with the prior review-time decision so the reviewer can
+    // confirm or override it after physical inspection.
+    closeIsFailure.value = record.value?.maintenance_request?.is_failure ?? null
+    closeOpen.value = true
+  }
   async function doClose() {
     if (!record.value) return
     closeLoading.value = true
     try {
-      await api.post(`/work-orders/${record.value.id}/close`)
+      // Only send `is_failure` for corrective-origin WOs when a value is chosen —
+      // never send null, which would clobber the review-time classification. The
+      // key is omitted entirely for PM WOs and when unset.
+      const payload =
+        isCorrectiveOrigin.value && closeIsFailure.value !== null
+          ? { is_failure: closeIsFailure.value }
+          : undefined
+      await api.post(`/work-orders/${record.value.id}/close`, payload)
       toast.success('Work order closed.')
+      closeOpen.value = false
       await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to close work order.')
@@ -796,6 +830,8 @@ export function useWorkOrderDetail() {
     isCompleted,
     isTerminal,
     isCancelled,
+    isCorrectiveOrigin,
+    originTypeLabel,
     isAssignedToMe,
     lifecycleSteps,
     requiredFieldStatus,
@@ -832,7 +868,10 @@ export function useWorkOrderDetail() {
     completionNotes,
     openComplete,
     doComplete,
+    closeOpen,
     closeLoading,
+    closeIsFailure,
+    openClose,
     doClose,
     cancelOpen,
     cancelLoading,

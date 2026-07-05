@@ -41,7 +41,8 @@ import {
   woStatusLabel,
   priorityClass,
   priorityLabel,
-  mrTypeLabel,
+  failureClass,
+  failureLabel,
   operationalStatusLabel,
   fmtDate,
   formatBytes,
@@ -67,6 +68,8 @@ const {
   attachmentsLoading,
   isTerminal,
   isCancelled,
+  isCorrectiveOrigin,
+  originTypeLabel,
   lifecycleSteps,
   requiredFieldStatus,
   canEdit,
@@ -99,7 +102,10 @@ const {
   completionNotes,
   openComplete,
   doComplete,
+  closeOpen,
   closeLoading,
+  closeIsFailure,
+  openClose,
   doClose,
   cancelOpen,
   cancelLoading,
@@ -190,6 +196,14 @@ const cancelAssetStatusStr = computed({
   get: () => cancelAssetStatus.value ?? undefined,
   set: (v: string | undefined) => {
     cancelAssetStatus.value = v === 'down' || v === 'active' ? v : null
+  },
+})
+// Close: failure re-classification (corrective-origin WOs only). boolean|null <-> string.
+const closeIsFailureStr = computed<string | undefined>({
+  get: () =>
+    closeIsFailure.value === null ? undefined : closeIsFailure.value ? 'failure' : 'no_failure',
+  set: (v: string | undefined) => {
+    closeIsFailure.value = v === 'failure' ? true : v === 'no_failure' ? false : null
   },
 })
 
@@ -314,10 +328,15 @@ watch(
                 <span :class="priorityClass(record.priority)">{{
                   priorityLabel(record.priority)
                 }}</span>
+                <span
+                  v-if="isCorrectiveOrigin"
+                  :class="failureClass(record.maintenance_request?.is_failure)"
+                  :title="`Failure classification: ${failureLabel(record.maintenance_request?.is_failure)}`"
+                  >{{ failureLabel(record.maintenance_request?.is_failure) }}</span
+                >
               </div>
               <p class="detail-command-subtitle">
-                {{ mrTypeLabel(record.maintenance_request?.type ?? 'corrective') }} work order ·
-                {{ record.asset.name }}
+                {{ originTypeLabel ?? 'Corrective' }} work order · {{ record.asset.name }}
               </p>
             </div>
 
@@ -330,9 +349,7 @@ watch(
                 {{ startLoading ? 'Starting…' : 'Start' }}
               </Button>
               <Button v-if="canComplete" @click="openComplete">Complete…</Button>
-              <Button v-if="canClose" :disabled="closeLoading" @click="doClose">
-                {{ closeLoading ? 'Closing…' : 'Close' }}
-              </Button>
+              <Button v-if="canClose" @click="openClose">Close…</Button>
             </div>
           </div>
 
@@ -837,10 +854,16 @@ watch(
                       </RouterLink>
                     </p>
                   </div>
-                  <div class="detail-field">
+                  <div v-if="originTypeLabel" class="detail-field">
                     <span class="detail-field-label">Type</span>
+                    <p class="detail-field-value">{{ originTypeLabel }}</p>
+                  </div>
+                  <div v-if="isCorrectiveOrigin" class="detail-field">
+                    <span class="detail-field-label">Failure</span>
                     <p class="detail-field-value">
-                      {{ mrTypeLabel(record.maintenance_request.type) }}
+                      <span :class="failureClass(record.maintenance_request.is_failure)">{{
+                        failureLabel(record.maintenance_request.is_failure)
+                      }}</span>
                     </p>
                   </div>
                 </div>
@@ -912,6 +935,48 @@ watch(
           >
           <Button :disabled="completeLoading" @click="doComplete">
             {{ completeLoading ? 'Completing…' : 'Complete Work Order' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Close -->
+    <Dialog v-model:open="closeOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Close work order {{ record?.number }}?</DialogTitle>
+          <DialogDescription
+            >Closing finalises this work order. Closed work orders are permanent and cannot be
+            changed.</DialogDescription
+          >
+        </DialogHeader>
+        <div v-if="isCorrectiveOrigin" class="form-field">
+          <Label for="wo-close-failure"
+            >Is this a failure? <span class="field-required">*</span></Label
+          >
+          <Select v-model="closeIsFailureStr">
+            <SelectTrigger id="wo-close-failure"
+              ><SelectValue placeholder="Confirm the failure classification"
+            /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="failure">Yes — a genuine failure</SelectItem>
+              <SelectItem value="no_failure">No — not a failure</SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="form-help">
+            Pre-filled from the review decision — update it if inspection changed the outcome. Used
+            in the MTBF metric.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" :disabled="closeLoading" @click="closeOpen = false"
+            >Back</Button
+          >
+          <Button
+            :disabled="closeLoading || (isCorrectiveOrigin && closeIsFailure === null)"
+            @click="doClose"
+          >
+            {{ closeLoading ? 'Closing…' : 'Close Work Order' }}
           </Button>
         </DialogFooter>
       </DialogContent>

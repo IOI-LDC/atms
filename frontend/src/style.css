@@ -2019,6 +2019,23 @@
   border-color: oklch(0.577 0.245 27 / 0.2);
 }
 
+/* Failure classification badges (corrective MRs) */
+.status-failure {
+  background: oklch(0.577 0.245 27 / 0.1);
+  color: oklch(0.45 0.2 27);
+  border-color: oklch(0.577 0.245 27 / 0.2);
+}
+.status-no-failure {
+  background: oklch(0.53 0.145 142 / 0.12);
+  color: oklch(0.38 0.12 142);
+  border-color: oklch(0.53 0.145 142 / 0.25);
+}
+.status-unclassified {
+  background: oklch(0.966 0.008 245);
+  color: oklch(0.556 0.01 247);
+  border-color: oklch(0.922 0.011 247);
+}
+
 /* Priority badges */
 .priority-critical {
   background: oklch(0.577 0.245 27 / 0.1);

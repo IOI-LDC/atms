@@ -11,7 +11,7 @@ class MaintenanceHistoryResource extends JsonResource
     {
         return [
             'date' => $this->closed_at?->toDateString(),
-            'type' => $this->maintenanceRequest?->type,
+            'type' => $this->maintenanceRequest?->is_preventive ? 'preventive' : 'corrective',
             'work_order_number' => $this->number,
             'maintenance_request_number' => $this->maintenanceRequest?->number,
             'description' => $this->description,

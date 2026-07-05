@@ -88,7 +88,6 @@ class MaintenanceStatusGuardTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-'.uniqid(),
             'asset_id' => $asset->id,
-            'type' => 'corrective',
             'status' => 'converted',
             'priority' => 'high',
             'description' => 'Test',
@@ -118,7 +117,6 @@ class MaintenanceStatusGuardTest extends TestCase
         $mr = MaintenanceRequest::create([
             'number' => 'MR-'.uniqid(),
             'asset_id' => $asset->id,
-            'type' => 'corrective',
             'status' => 'pending_review',
             'priority' => 'high',
             'description' => 'Test',

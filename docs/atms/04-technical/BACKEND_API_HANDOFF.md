@@ -549,7 +549,7 @@ export interface AdminResetPasswordPayload {
 export interface MaintenanceRequest {
   id: number
   number: string                     // "MR-0001"
-  type: MaintenanceRequestType
+  type: MaintenanceRequestType       // derived from is_preventive server-side (not a stored column)
   status: MaintenanceRequestStatus
   priority: Priority
   description: string | null

@@ -43,7 +43,7 @@ class AssignmentSuppressionTest extends TestCase
         $assignment = AssetPmAssignment::create(['asset_id' => $asset->id, 'pm_rule_id' => $rule->id, 'is_active' => true, 'assigned_by' => $this->admin->id, 'last_triggered_date' => now()->subDays(31)]);
 
         $mr = MaintenanceRequest::create([
-            'number' => 'MR-1', 'asset_id' => $asset->id, 'type' => 'preventive', 'status' => 'rejected',
+            'number' => 'MR-1', 'asset_id' => $asset->id, 'status' => 'rejected',
             'priority' => 'medium', 'created_by' => $this->admin->id, 'is_preventive' => true, 'pm_rule_id' => $rule->id,
         ]);
 
@@ -70,7 +70,7 @@ class AssignmentSuppressionTest extends TestCase
         $assignment = AssetPmAssignment::create(['asset_id' => $asset->id, 'pm_rule_id' => $rule->id, 'is_active' => true, 'assigned_by' => $this->admin->id, 'last_triggered_date' => now()->subDays(31)]);
 
         $mr = MaintenanceRequest::create([
-            'number' => 'MR-2', 'asset_id' => $asset->id, 'type' => 'preventive', 'status' => 'rejected',
+            'number' => 'MR-2', 'asset_id' => $asset->id, 'status' => 'rejected',
             'priority' => 'medium', 'created_by' => $this->admin->id, 'is_preventive' => true, 'pm_rule_id' => $rule->id,
         ]);
 

@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\DB;
 
 class CloseWorkOrder
 {
-    public function execute(WorkOrder $workOrder, int $closedByUserId): WorkOrder
+    public function execute(WorkOrder $workOrder, int $closedByUserId, ?bool $isFailureOverride = null): WorkOrder
     {
-        return DB::transaction(function () use ($workOrder, $closedByUserId) {
+        return DB::transaction(function () use ($workOrder, $closedByUserId, $isFailureOverride) {
             $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();
 
@@ -41,6 +41,16 @@ class CloseWorkOrder
                 ->execute($locked, OperationalStatus::ACTIVE, [OperationalStatus::ACTIVE, OperationalStatus::INACTIVE]);
 
             $mr = $locked->maintenanceRequest;
+
+            // Ground-truth override: closing is the second chance to classify
+            // is_failure, since the technician has now physically inspected the
+            // asset. Only applies to corrective MRs; PM WOs are never failures.
+            if ($isFailureOverride !== null && $mr && ! $mr->is_preventive) {
+                $mrBefore = $mr->toArray();
+                $mr->update(['is_failure' => $isFailureOverride]);
+                $logger->log('close_work_order_update_mr_is_failure', $mr, $mrBefore, $mr->fresh()->toArray());
+            }
+
             if ($mr && $mr->pm_rule_id) {
                 $assignment = AssetPmAssignment::where('pm_rule_id', $mr->pm_rule_id)
                     ->where('asset_id', $mr->asset_id)

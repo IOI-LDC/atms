@@ -240,7 +240,6 @@ class PmDueCalculatorTest extends TestCase
             'maintenance_request_id' => MaintenanceRequest::create([
                 'number' => 'MR-SUP-'.uniqid(),
                 'asset_id' => $asset->id,
-                'type' => 'preventive',
                 'status' => 'rejected',
                 'priority' => 'medium',
                 'created_by' => $this->userId,
@@ -272,7 +271,6 @@ class PmDueCalculatorTest extends TestCase
             'maintenance_request_id' => MaintenanceRequest::create([
                 'number' => 'MR-SUP-'.uniqid(),
                 'asset_id' => $asset->id,
-                'type' => 'preventive',
                 'status' => 'rejected',
                 'priority' => 'medium',
                 'created_by' => $this->userId,

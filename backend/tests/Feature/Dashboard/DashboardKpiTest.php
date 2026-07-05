@@ -81,7 +81,7 @@ class DashboardKpiTest extends TestCase
         ]);
     }
 
-    public function test_mtbf_and_failure_rate_count_only_corrective_failures(): void
+    public function test_mtbf_and_failure_rate_count_only_classified_faults(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $asset = $this->createAsset();
@@ -90,7 +90,7 @@ class DashboardKpiTest extends TestCase
         $this->createCorrectiveMr($admin, $asset, 'MR-C2', now()->subDays(5));
         // Preventive MR must NOT count as a failure.
         MaintenanceRequest::forceCreate([
-            'number' => 'MR-P1', 'asset_id' => $asset->id, 'type' => 'preventive',
+            'number' => 'MR-P1', 'asset_id' => $asset->id,
             'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
             'description' => 'P1', 'created_by' => $admin->id, 'is_preventive' => true,
             'created_at' => now()->subDays(3),
@@ -102,6 +102,39 @@ class DashboardKpiTest extends TestCase
         $this->assertEquals(45.0, $kpis['mtbf']['days']); // 90 / 2
     }
 
+    public function test_mtbf_excludes_unclassified_and_no_fault_corrective_requests(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        // One real fault (counts).
+        $this->createCorrectiveMr($admin, $asset, 'MR-FAULT', now()->subDays(5));
+
+        // No-failure-found: corrective + is_failure = false. Must NOT count.
+        MaintenanceRequest::forceCreate([
+            'number' => 'MR-NOFAULT', 'asset_id' => $asset->id,
+            'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
+            'description' => 'No fault found', 'created_by' => $admin->id, 'is_preventive' => false,
+            'is_failure' => false,
+            'created_at' => now()->subDays(4),
+        ]);
+
+        // Pending review: corrective + is_failure = null. Must NOT count
+        // (unvalidated — the manager hasn't classified it yet).
+        MaintenanceRequest::forceCreate([
+            'number' => 'MR-PENDING', 'asset_id' => $asset->id,
+            'status' => MaintenanceRequestStatus::PENDING_REVIEW, 'priority' => 'high',
+            'description' => 'Awaiting review', 'created_by' => $admin->id, 'is_preventive' => false,
+            'is_failure' => null,
+            'created_at' => now()->subDays(3),
+        ]);
+
+        $kpis = $this->actingAs($admin)->getJson('/api/dashboard/kpis')->json('kpis');
+
+        $this->assertSame(1, $kpis['failure_rate']['failures']);
+        $this->assertEquals(90.0, $kpis['mtbf']['days']); // 90 / 1
+    }
+
     public function test_mttr_is_mean_assigned_to_closed_hours_for_corrective(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
@@ -111,7 +144,7 @@ class DashboardKpiTest extends TestCase
         $this->createCorrectiveWorkOrder($admin, $asset, 'WO-2', 5, 1);  // assigned -5h, closed -1h => 4h
         // Preventive WO excluded from MTTR.
         $preventiveMr = MaintenanceRequest::forceCreate([
-            'number' => 'MR-P', 'asset_id' => $asset->id, 'type' => 'preventive',
+            'number' => 'MR-P', 'asset_id' => $asset->id,
             'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
             'description' => 'P', 'created_by' => $admin->id, 'is_preventive' => true,
             'created_at' => now()->subDay(),
@@ -147,7 +180,7 @@ class DashboardKpiTest extends TestCase
 
         // Reading-triggered PM excluded from the denominator.
         MaintenanceRequest::forceCreate([
-            'number' => 'PM-R', 'asset_id' => $asset->id, 'type' => 'preventive',
+            'number' => 'PM-R', 'asset_id' => $asset->id,
             'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
             'description' => 'Reading', 'created_by' => $admin->id, 'is_preventive' => true,
             'triggered_by_date' => false, 'triggered_by_reading' => true,
@@ -168,14 +201,14 @@ class DashboardKpiTest extends TestCase
 
         // created -10d, reviewed -8d => 48h.
         MaintenanceRequest::forceCreate([
-            'number' => 'MR-1', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-1', 'asset_id' => $asset->id,
             'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
             'description' => '1', 'created_by' => $admin->id, 'is_preventive' => false,
             'created_at' => now()->subDays(10), 'reviewed_at' => now()->subDays(8),
         ]);
         // created -4d, cancelled -3d => 24h.
         MaintenanceRequest::forceCreate([
-            'number' => 'MR-2', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-2', 'asset_id' => $asset->id,
             'status' => MaintenanceRequestStatus::CANCELLED, 'priority' => 'high',
             'description' => '2', 'created_by' => $admin->id, 'is_preventive' => false,
             'created_at' => now()->subDays(4), 'cancelled_at' => now()->subDays(3),
@@ -266,9 +299,10 @@ class DashboardKpiTest extends TestCase
     private function createCorrectiveMr(User $admin, Asset $asset, string $number, $createdAt): MaintenanceRequest
     {
         return MaintenanceRequest::forceCreate([
-            'number' => $number, 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => $number, 'asset_id' => $asset->id,
             'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
             'description' => $number, 'created_by' => $admin->id, 'is_preventive' => false,
+            'is_failure' => true,
             'created_at' => $createdAt,
         ]);
     }
@@ -288,7 +322,7 @@ class DashboardKpiTest extends TestCase
     private function createPmRequest(User $admin, Asset $asset, string $number, string $triggerDate): MaintenanceRequest
     {
         return MaintenanceRequest::forceCreate([
-            'number' => $number, 'asset_id' => $asset->id, 'type' => 'preventive',
+            'number' => $number, 'asset_id' => $asset->id,
             'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
             'description' => $number, 'created_by' => $admin->id, 'is_preventive' => true,
             'triggered_by_date' => true, 'triggered_by_reading' => false, 'trigger_date' => $triggerDate,

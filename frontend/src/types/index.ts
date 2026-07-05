@@ -177,6 +177,9 @@ export interface MaintenanceRequest {
   asset: AssetRef
   created_by?: UserRef | null
   reviewed_by?: UserRef | null // Admin/Manager/Viewer
+  // Failure classification (corrective only) — null until reviewed. Drives the MTBF
+  // KPI. API field name is `is_failure`; always present on MaintenanceRequestResource.
+  is_failure?: boolean | null
   rejection_reason?: string | null // hidden from Logistics
   cancellation_reason?: string | null // hidden from Logistics
   is_preventive?: boolean // Admin/Manager/Viewer
@@ -197,6 +200,20 @@ export interface WorkOrderPart {
   notes: string | null
 }
 
+/**
+ * Partial MR embedded in a WorkOrder payload (WorkOrderResource) — only the fields
+ * the WO detail page needs to render the link + failure badge / close-override prompt
+ * without a second fetch. `type` is intentionally omitted (derive it from
+ * `is_preventive`); fetch the full request from GET /maintenance-requests/{id} when
+ * other fields are needed.
+ */
+export interface WorkOrderMaintenanceRequestRef {
+  id: number
+  number: string
+  is_preventive?: boolean | null
+  is_failure?: boolean | null
+}
+
 export interface WorkOrder {
   id: number
   number: string
@@ -215,7 +232,7 @@ export interface WorkOrder {
   cancelled_at?: string | null
   cancellation_reason?: string | null
   has_attachments?: number // Admin/Manager/Tech
-  maintenance_request?: MaintenanceRequest | null
+  maintenance_request?: WorkOrderMaintenanceRequestRef | null
   form?: WoFormInstance | null // Admin/Manager/Tech — present when the WO has an attached form
 }
 

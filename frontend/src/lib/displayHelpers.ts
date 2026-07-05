@@ -65,6 +65,19 @@ export function mrTypeLabel(t: string): string {
   return t === 'preventive' ? 'Preventive' : 'Corrective'
 }
 
+/** Failure classification label (corrective MRs only). null = not yet reviewed. */
+export function failureLabel(v: boolean | null | undefined): string {
+  if (v === true) return 'Failure'
+  if (v === false) return 'No failure'
+  return 'Not yet classified'
+}
+
+export function failureClass(v: boolean | null | undefined): string {
+  if (v === true) return 'status-badge status-failure'
+  if (v === false) return 'status-badge status-no-failure'
+  return 'status-badge status-unclassified'
+}
+
 export function operationalStatusLabel(s: string | null | undefined): string {
   if (!s) return '—'
   const m: Record<string, string> = {

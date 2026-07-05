@@ -27,7 +27,10 @@ class MaintenanceRequestResource extends JsonResource
         $data = [
             'id' => $this->id,
             'number' => $this->number,
-            'type' => $this->type,
+            'type' => $this->is_preventive ? 'preventive' : 'corrective',
+            // is_failure: nullable (true | false | null). null = not yet
+            // classified (pending review). Drives MTBF and the UI failure badge.
+            'is_failure' => $this->is_failure,
             'status' => $this->status?->value,
             'priority' => $this->priority,
             'description' => $this->description,

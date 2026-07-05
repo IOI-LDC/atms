@@ -51,7 +51,10 @@ class MaintenanceRequestIndexQuery
         }
 
         if ($request->filled('type')) {
-            $query->where('type', $request->input('type'));
+            // `type` is no longer a stored column; the `?type=` query param is
+            // translated to the stored `is_preventive` discriminator so existing
+            // API consumers keep working.
+            $query->where('is_preventive', $request->input('type') === 'preventive');
         }
 
         if ($request->filled('created_by')) {

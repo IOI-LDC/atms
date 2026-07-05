@@ -32,6 +32,8 @@ import {
   priorityLabel,
   priorityPickerLabel,
   mrTypeLabel,
+  failureClass,
+  failureLabel,
   fmtDate,
   formatBytes,
   roleLabel,
@@ -68,6 +70,7 @@ const {
   closeDeleteAttachment,
   doDeleteAttachment,
   isTerminal,
+  isCorrective,
   canEdit,
   canApprove,
   canReject,
@@ -78,6 +81,7 @@ const {
   saveEdit,
   approveOpen,
   approveLoading,
+  approveIsFailure,
   openApprove,
   doApprove,
   approveTechnicians,
@@ -105,6 +109,16 @@ const selectedApproveTechIdStr = computed({
     selectedApproveTechId.value !== null ? String(selectedApproveTechId.value) : '__none__',
   set: (v: string | undefined) => {
     selectedApproveTechId.value = !v || v === '__none__' ? null : Number(v)
+  },
+})
+
+// shadcn-vue Select emits strings; the failure decision is a boolean|null. undefined
+// keeps the placeholder showing until the reviewer explicitly picks failure/no_failure.
+const approveIsFailureStr = computed<string | undefined>({
+  get: () =>
+    approveIsFailure.value === null ? undefined : approveIsFailure.value ? 'failure' : 'no_failure',
+  set: (v: string | undefined) => {
+    approveIsFailure.value = v === 'failure' ? true : v === 'no_failure' ? false : null
   },
 })
 
@@ -152,6 +166,12 @@ watch(
                 <span :class="priorityClass(record.priority)">{{
                   priorityLabel(record.priority)
                 }}</span>
+                <span
+                  v-if="isCorrective"
+                  :class="failureClass(record.is_failure)"
+                  :title="`Failure classification: ${failureLabel(record.is_failure)}`"
+                  >{{ failureLabel(record.is_failure) }}</span
+                >
               </div>
               <p class="detail-command-subtitle">
                 {{ mrTypeLabel(record.type) }} maintenance request · {{ record.asset.name }}
@@ -423,6 +443,21 @@ watch(
             Approving converts this request into a Work Order. This cannot be undone.
           </DialogDescription>
         </DialogHeader>
+        <div v-if="isCorrective" class="form-field">
+          <Label for="approve-failure"
+            >Is this a failure? <span class="field-required">*</span></Label
+          >
+          <Select v-model="approveIsFailureStr">
+            <SelectTrigger id="approve-failure"
+              ><SelectValue placeholder="Classify this request"
+            /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="failure">Yes — a genuine failure</SelectItem>
+              <SelectItem value="no_failure">No — not a failure</SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="form-help">Required for corrective requests — used in the MTBF metric.</p>
+        </div>
         <div class="form-field">
           <Label for="approve-tech">Assign to <span class="field-optional">— optional</span></Label>
           <div v-if="approveTechniciansLoading" class="loading-state">Loading assignees…</div>
@@ -440,7 +475,10 @@ watch(
           <Button variant="outline" :disabled="approveLoading" @click="approveOpen = false"
             >Back</Button
           >
-          <Button :disabled="approveLoading" @click="doApprove">
+          <Button
+            :disabled="approveLoading || (isCorrective && approveIsFailure === null)"
+            @click="doApprove"
+          >
             {{ approveLoading ? 'Approving…' : 'Approve & Create Work Order' }}
           </Button>
         </DialogFooter>

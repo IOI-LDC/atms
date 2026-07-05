@@ -36,7 +36,6 @@ class CreateCorrectiveMaintenanceRequest
             $mr = MaintenanceRequest::create([
                 'number' => $number,
                 'asset_id' => $asset->id,
-                'type' => 'corrective',
                 'status' => MaintenanceRequestStatus::PENDING_REVIEW,
                 'priority' => $priority,
                 'description' => $description,

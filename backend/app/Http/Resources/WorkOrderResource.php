@@ -81,6 +81,19 @@ class WorkOrderResource extends JsonResource
             $data['form'] = $this->whenLoaded('workOrderForm', fn () => new WorkOrderFormResource($this->workOrderForm));
         }
 
+        // Expose the linked MR's failure classification + preventive flag so
+        // the WO detail page can render the badge / close-override prompt
+        // without a second fetch. Only corrective MRs carry a meaningful
+        // is_failure. `number` is included so the "Related maintenance request"
+        // link can display the MR number; `type` is omitted (derivable from
+        // is_preventive).
+        $data['maintenance_request'] = $this->whenLoaded('maintenanceRequest', fn () => [
+            'id' => $this->maintenanceRequest?->id,
+            'number' => $this->maintenanceRequest?->number,
+            'is_preventive' => $this->maintenanceRequest?->is_preventive,
+            'is_failure' => $this->maintenanceRequest?->is_failure,
+        ]);
+
         return $data;
     }
 }

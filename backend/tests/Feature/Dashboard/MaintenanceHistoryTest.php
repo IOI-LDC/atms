@@ -47,7 +47,7 @@ class MaintenanceHistoryTest extends TestCase
         $asset = $this->createAsset();
 
         $mr = MaintenanceRequest::create([
-            'number' => 'MR-001', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-001', 'asset_id' => $asset->id,
             'status' => 'converted', 'priority' => 'high', 'description' => 'Test',
             'created_by' => $admin->id, 'is_preventive' => false,
         ]);
@@ -74,7 +74,7 @@ class MaintenanceHistoryTest extends TestCase
         $asset = $this->createAsset();
 
         $mr = MaintenanceRequest::create([
-            'number' => 'MR-002', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-002', 'asset_id' => $asset->id,
             'status' => 'converted', 'priority' => 'high', 'description' => 'Test',
             'created_by' => $admin->id, 'is_preventive' => false,
         ]);
@@ -98,7 +98,7 @@ class MaintenanceHistoryTest extends TestCase
         $asset = $this->createAsset();
 
         $ownMr = MaintenanceRequest::create([
-            'number' => 'MR-OWN', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-OWN', 'asset_id' => $asset->id,
             'status' => 'converted', 'priority' => 'high', 'description' => 'Own',
             'created_by' => $requester->id, 'is_preventive' => false,
         ]);
@@ -109,7 +109,7 @@ class MaintenanceHistoryTest extends TestCase
         ]);
 
         $otherMr = MaintenanceRequest::create([
-            'number' => 'MR-OTHER', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-OTHER', 'asset_id' => $asset->id,
             'status' => 'converted', 'priority' => 'high', 'description' => 'Other',
             'created_by' => $admin->id, 'is_preventive' => false,
         ]);
@@ -142,7 +142,7 @@ class MaintenanceHistoryTest extends TestCase
         $asset = $this->createAsset();
 
         $mr = MaintenanceRequest::create([
-            'number' => 'MR-003', 'asset_id' => $asset->id, 'type' => 'corrective',
+            'number' => 'MR-003', 'asset_id' => $asset->id,
             'status' => 'converted', 'priority' => 'high', 'description' => 'Test',
             'created_by' => $admin->id, 'is_preventive' => false,
         ]);

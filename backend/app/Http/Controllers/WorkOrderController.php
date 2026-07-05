@@ -134,8 +134,18 @@ class WorkOrderController extends Controller
     {
         Gate::authorize('close', $workOrder);
 
+        // Optional ground-truth override: on close the manager may revise the
+        // MR's is_failure after inspecting the asset. Absent = keep existing value.
+        $validated = $request->validate([
+            'is_failure' => ['nullable', 'boolean'],
+        ]);
+
         try {
-            $wo = $action->execute($workOrder, $request->user()->id);
+            $wo = $action->execute(
+                $workOrder,
+                $request->user()->id,
+                array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null
+            );
 
             return response()->json(['message' => 'Work order closed.', 'data' => $wo]);
         } catch (\DomainException $e) {

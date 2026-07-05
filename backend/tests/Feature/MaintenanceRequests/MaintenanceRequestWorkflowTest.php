@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\MaintenanceRequests;
 
+use App\Enums\MaintenanceRequestStatus;
 use App\Enums\RoleCode;
 use App\Models\Asset;
+use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\UsageReadingType;
 use App\Models\User;
@@ -54,7 +56,7 @@ class MaintenanceRequestWorkflowTest extends TestCase
         $response->assertJsonStructure(['data' => ['id', 'number', 'status']]);
         $this->assertDatabaseHas('maintenance_requests', [
             'asset_id' => $asset->id,
-            'type' => 'corrective',
+            'is_preventive' => false,
             'status' => 'pending_review',
             'created_by' => $requester->id,
             'priority' => 'high',
@@ -217,8 +219,9 @@ class MaintenanceRequestWorkflowTest extends TestCase
         $mrId = $response->json('data.id');
 
         // First approval succeeds
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")
-            ->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         // Second approval fails (already converted)
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")
@@ -239,13 +242,16 @@ class MaintenanceRequestWorkflowTest extends TestCase
 
         $mrId = $response->json('data.id');
 
-        $approveResponse = $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve");
+        $approveResponse = $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => true,
+        ]);
         $approveResponse->assertOk();
 
         $this->assertDatabaseHas('maintenance_requests', [
             'id' => $mrId,
             'status' => 'converted',
             'reviewed_by' => $manager->id,
+            'is_failure' => true,
         ]);
 
         $this->assertDatabaseHas('work_orders', [
@@ -271,6 +277,7 @@ class MaintenanceRequestWorkflowTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
             'assignee_id' => $tech->id,
+            'is_failure' => true,
         ])->assertOk();
 
         $this->assertDatabaseHas('work_orders', [
@@ -296,6 +303,7 @@ class MaintenanceRequestWorkflowTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
             'assignee_id' => $assigneeManager->id,
+            'is_failure' => true,
         ])->assertOk();
 
         $this->assertDatabaseHas('work_orders', [
@@ -320,6 +328,7 @@ class MaintenanceRequestWorkflowTest extends TestCase
         // back — MR stays pending_review and no WO is created.
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
             'assignee_id' => $requester->id,
+            'is_failure' => true,
         ])->assertStatus(409);
 
         $this->assertDatabaseHas('maintenance_requests', [
@@ -343,7 +352,9 @@ class MaintenanceRequestWorkflowTest extends TestCase
             'priority' => 'high',
         ])->json('data.id');
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         $this->assertDatabaseHas('work_orders', [
             'maintenance_request_id' => $mrId,
@@ -365,7 +376,9 @@ class MaintenanceRequestWorkflowTest extends TestCase
 
         $mrId = $response->json('data.id');
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         $mr = DB::table('maintenance_requests')->find($mrId);
         $this->assertEquals('converted', $mr->status);
@@ -406,7 +419,9 @@ class MaintenanceRequestWorkflowTest extends TestCase
 
         $mrId = $response->json('data.id');
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")
             ->assertStatus(409);
@@ -436,7 +451,9 @@ class MaintenanceRequestWorkflowTest extends TestCase
 
         $mrId = $response->json('data.id');
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         $this->actingAs($requester)->postJson("/api/maintenance-requests/{$mrId}/cancel", [
             'reason' => 'Too late',
@@ -479,7 +496,9 @@ class MaintenanceRequestWorkflowTest extends TestCase
 
         $mrId = $response->json('data.id');
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         $this->assertDatabaseHas('work_orders', [
             'maintenance_request_id' => $mrId,
@@ -505,8 +524,12 @@ class MaintenanceRequestWorkflowTest extends TestCase
             'priority' => 'low',
         ]);
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$r1->json('data.id')}/approve")->assertOk();
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$r2->json('data.id')}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$r1->json('data.id')}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$r2->json('data.id')}/approve", [
+            'is_failure' => true,
+        ])->assertOk();
 
         $wo1 = DB::table('work_orders')->where('maintenance_request_id', $r1->json('data.id'))->first();
         $wo2 = DB::table('work_orders')->where('maintenance_request_id', $r2->json('data.id'))->first();
@@ -606,5 +629,87 @@ class MaintenanceRequestWorkflowTest extends TestCase
             'priority' => 'low',
             'meter_reading' => [],
         ])->assertStatus(422);
+    }
+
+    public function test_approving_corrective_request_requires_is_failure(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        $mrId = $this->actingAs($requester)->postJson('/api/maintenance-requests/corrective', [
+            'asset_id' => $asset->id,
+            'description' => 'Missing is_failure',
+            'priority' => 'high',
+        ])->json('data.id');
+
+        // is_failure is required for corrective approvals; absent -> 422.
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve")
+            ->assertStatus(422);
+
+        // MR stays pending_review; nothing was committed.
+        $this->assertDatabaseHas('maintenance_requests', [
+            'id' => $mrId,
+            'status' => 'pending_review',
+        ]);
+        $this->assertDatabaseMissing('work_orders', [
+            'maintenance_request_id' => $mrId,
+        ]);
+    }
+
+    public function test_approving_corrective_request_persists_is_failure_false(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        $mrId = $this->actingAs($requester)->postJson('/api/maintenance-requests/corrective', [
+            'asset_id' => $asset->id,
+            'description' => 'No-failure-found',
+            'priority' => 'medium',
+        ])->json('data.id');
+
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mrId}/approve", [
+            'is_failure' => false,
+        ])->assertOk();
+
+        // is_failure = false is a deliberate classification (no-fault-found) and
+        // must be persisted as such, not coerced to null.
+        $this->assertDatabaseHas('maintenance_requests', [
+            'id' => $mrId,
+            'status' => 'converted',
+            'is_failure' => false,
+        ]);
+    }
+
+    public function test_approving_preventive_request_does_not_require_is_failure(): void
+    {
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $asset = $this->createAsset();
+
+        // Build a preventive MR directly (PM MRs are system-generated, not
+        // created via the corrective endpoint).
+        $mr = MaintenanceRequest::forceCreate([
+            'number' => 'MR-'.str_pad((string) (MaintenanceRequest::max('id') + 1), 6, '0', STR_PAD_LEFT),
+            'asset_id' => $asset->id,
+            'status' => MaintenanceRequestStatus::PENDING_REVIEW,
+            'priority' => 'medium',
+            'description' => 'PM approval',
+            'created_by' => $manager->id,
+            'is_preventive' => true,
+            'triggered_by_date' => true,
+            'trigger_date' => now()->toDateString(),
+        ]);
+
+        // PM approval needs no is_failure; absent payload must succeed.
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")
+            ->assertOk();
+
+        // is_failure stays null on the PM MR — never classified, never a failure.
+        $this->assertDatabaseHas('maintenance_requests', [
+            'id' => $mr->id,
+            'status' => 'converted',
+            'is_failure' => null,
+        ]);
     }
 }

@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  * (Edit, Approve, Reject, Cancel) end-to-end.
  *
  * Creates: 12 demo assets, 5 demo users (1 manager + 4 requesters), and 200
- * maintenance requests spread across status / priority / type / creator / asset
+ * maintenance requests spread across status / priority / is_preventive / creator / asset
  * with created_at spanning ~18 months (for sort testing).
  *
  * Run:
@@ -112,8 +112,8 @@ class MaintenanceRequestDemoSeeder extends Seeder
             ->flatMap(fn ($p) => array_fill(0, 50, $p))
             ->shuffle()->values();
 
-        $types = collect(array_fill(0, 170, 'corrective'))
-            ->merge(array_fill(0, 30, 'preventive'))
+        $types = collect(array_fill(0, 170, false))
+            ->merge(array_fill(0, 30, true))
             ->shuffle()->values();
 
         $startId = (int) (MaintenanceRequest::max('id') ?? 0);
@@ -123,18 +123,17 @@ class MaintenanceRequestDemoSeeder extends Seeder
                 // Bias the first 50 to the admin so "My Requests" has content.
                 $creator = $i < 50 ? $admin : $creators[$i % $creators->count()];
                 $asset = $assets[$i % $assets->count()];
-                $type = $types[$i];
+                $isPreventive = $types[$i];
                 $createdAt = now()->subDays(rand(0, 540))->subHours(rand(0, 23));
 
                 $attrs = [
                     'number' => BusinessNumberSequence::next('MR', 'MR-'),
                     'asset_id' => $asset->id,
-                    'type' => $type,
                     'status' => $status,
                     'priority' => $priorities[$i],
                     'description' => fake()->sentence(rand(6, 14)),
                     'created_by' => $creator->id,
-                    'is_preventive' => $type === 'preventive',
+                    'is_preventive' => $isPreventive,
                     'created_at' => $createdAt,
                     'updated_at' => $createdAt,
                 ];
