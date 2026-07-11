@@ -77,7 +77,7 @@ following are explicitly excluded and remain in other systems:
 - **Multi-level approval workflow** — a single Maintenance Manager review step
   gates MR-to-WO conversion.
 - **External workflow notifications** — only account activation and
-  password-reset emails are sent (via Microsoft Power Automate).
+  password-reset emails are sent (via Microsoft Graph `sendMail`).
 - **Advanced reporting and BI** — basic dashboard KPIs are provided; no custom
   report builders or BI integration.
 - **ERP write-back** — the system does not update the ERP with maintenance or
@@ -171,7 +171,7 @@ activation attempts per minute.
 1. On the login page, select "Forgot Password."
 2. Enter your email address.
 3. If the email matches an active user account, the system sends a password
-   reset email through Power Automate.
+   reset email through Microsoft Graph.
 4. Click the link in the email.
 5. Enter your email, the reset token, and a new password.
 6. After a successful reset, you can log in with your new password.
@@ -2985,7 +2985,7 @@ system configuration, and master data.
   users cannot authenticate but their historical ownership and audit references
   remain intact. Deactivation is reversible.
 - **Reset Password (Admin):** Force a password reset for a user. Sends a reset
-  token through Power Automate. Admin does not set or view the new password.
+  token through Microsoft Graph. Admin does not set or view the new password.
 - **Role assignment:** Each user has exactly one fixed role. Roles are immutable
   system data — Admin cannot create, rename, or delete roles.
 
@@ -3098,7 +3098,7 @@ The Settings section provides system-wide configuration.
   can trigger a manual sync.
 - **Company Timezone:** Display timezone for the application. Default:
   Africa/Tripoli.
-- **Power Automate Email Integration:** Configuration for the email delivery
+- **Microsoft Graph Email Integration:** Configuration for the production email
   channel used for activation and password-reset emails.
 
 **Important:** Only Administrator can manage ERP connection, credentials, and
@@ -3459,8 +3459,8 @@ assets.
 request that was rejected or cancelled. Defines `suppressed_until_date` and/or
 `suppressed_until_reading` boundaries.
 
-**Power Automate:** Microsoft Power Automate, used as the email transport for
-account activation and password-reset emails.
+**Microsoft Graph `sendMail`:** The production email transport used for account
+activation and password-reset emails.
 
 **Ready (`ready`):** A sub-status indicating a component is fully maintained and
 available for installation (`parent_asset_id` is null). A spare.

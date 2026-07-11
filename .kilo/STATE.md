@@ -3,6 +3,18 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
+## Decision update — 2026-07-11
+
+- **Microsoft Graph `sendMail` is the only ATMS production email transport.**
+  Power Automate is retired and must not be implemented, configured, or retained
+  as a fallback. Development and automated tests use the fake transport.
+- **Phase 1 email scope is limited to account activation and password reset.**
+  Operational MR/WO emails are outside the current Phase 1 scope.
+- **Required backend follow-up:** implement Graph behind
+  `AccountEmailTransport`, wire `ACCOUNT_EMAIL_TRANSPORT=graph`, add the
+  `GRAPH_*` configuration, tests, queue serialization and 429 retry handling,
+  then remove the legacy Power Automate class, configuration, binding, and tests.
+
 
 ## Session — 2026-07-05
 
@@ -21,14 +33,14 @@
 
 ## Session — 2026-07-04
 
-- **Email transport pivoted to Microsoft Graph `sendMail` (replacing the Power Automate plan).** SMTP AUTH ruled out empirically — LDC M365 tenant `SmtpClientAuthenticationDisabled` → `535 5.7.139` (creds valid; policy block). XOAUTH2-over-SMTP is not a supported M365 app-only path. Power Automate viable but not chosen (avoids building/maintaining a flow). Chose **Graph `sendMail`** (OAuth2 client-credentials): reuses the existing token-acquisition code, sends from `notification@ldc.com.ly`, unaffected by the SMTP AUTH policy.
+- **Email transport pivoted to Microsoft Graph `sendMail` (replacing the Power Automate plan).** SMTP AUTH ruled out empirically — LDC M365 tenant `SmtpClientAuthenticationDisabled` → `535 5.7.139` (creds valid; policy block). XOAUTH2-over-SMTP is not a supported M365 app-only path. Power Automate is retired and will not be used. Chose **Graph `sendMail`** (OAuth2 client credentials), sending from `notification@ldc.com.ly`, unaffected by the SMTP AUTH policy.
   - **Azure provisioning DONE (2026-07-04):** separate Entra app from `LDC_ERP_*` (Client `6dd70b5f-…`, Tenant `a8a21afa-…`, Object `ffbb837a-…`); `Mail.Send` (Application) + tenant-wide admin consent granted; probe delivered test mail to both recipients (HTTP 202). Config in `backend/.env` as `GRAPH_TENANT_ID/CLIENT_ID/CLIENT_SECRET/MAILBOX`; `ACCOUNT_EMAIL_TRANSPORT` stays `fake` until the transport is built.
   - **Template:** shared Blade view `resources/views/emails/atms-notification.blade.php` (client-provided HTML adapted; amber `#d97706` accent, navy `#21274b` header, **no logo**, dynamic CTA). 3 scenarios rendered + test-sent (202 each): MR Created, WO Assigned, WO Completed.
   - **Routing decided:** MR Created → To: all active Managers, Cc: all Admins. WO Assigned/Reassigned → To: new assignee, Cc: action taker (notify on any change). WO Completed → To: all active Managers, Cc: completer. Greeting = To recipient only. From-name "ATMS Notifications", **no Reply-To**.
-  - **Unify activation/reset onto Graph: NO for now** — they stay on `AccountEmailTransport`; Graph pipeline = operational notifications only.
+  - **Superseded 2026-07-11:** Graph is the production implementation behind `AccountEmailTransport` for the in-scope activation and password-reset emails. Operational MR/WO notifications are outside current Phase 1.
   - **Throttle finding (important):** Exchange Online throttles concurrent app access per mailbox (~3–4) → `429 ApplicationThrottled` (and gateway `504`s) when blasting parallel sends. Production dispatch MUST be **serialized via the queue** + **retry-on-429 honouring `Retry-After`**.
   - **Docs updated:** `NOTIFICATIONS.md` (full rewrite), `ARCHITECTURE.md`, `CLAUDE.md`, `README.md`, `IMPLEMENTATION_PLAN.md`, `DEPLOYMENT.md`, `PHASE_1_GAP_ANALYSIS.md` (I-03, R-06).
-  - **NOT built yet (next, TDD):** `GraphMailTransport` (queue-serialized + 429 retry), 3 Mailables, wiring into WO/MR actions, tests.
+  - **NOT built yet (next, TDD):** Graph implementation behind `AccountEmailTransport` for activation/reset, queue serialization + 429 retry, configuration/binding, tests, and removal of the legacy Power Automate transport. Operational MR/WO Mailables and action wiring are future scope.
   - **Pre-release checklist (email):** frontend base URL NOT final (temp `atms.inova.krd` → official LDC subdomain); real user emails (demo has fakes); serialize+retry; prod secret/cert; Application Access Policy; queue worker.
 - **Self-service password change — DONE (committed `a03b078`).** `POST /api/auth/change-password` (authenticated; no current-password required per product decision); `ChangeUserPassword` action (invalidates all sessions + tokens, audits `user.password_changed`); `ChangePasswordRequest`; `UserPolicy::changePassword`. 7 tests; full suite **483 passed (1292 assertions)**.
 
@@ -80,7 +92,10 @@
     `from_location`/`to_location` objects directly; backend eager-loads them).
   - **No leftovers** — all 9 VPS issues fully resolved (frontend + backend).
 
-- **Power Automate Notification Integration — DOCUMENTED (2026-06-28):**
+- **Power Automate Notification Integration — HISTORICAL, SUPERSEDED 2026-07-11:**
+  - **Do not implement this design.** Power Automate is retired; Microsoft Graph
+    `sendMail` is the only production email transport. The following bullets are
+    retained only as session history.
   - Created `docs/03-backend/NOTIFICATIONS.md` — full spec for email delivery via
     company-standard Microsoft Power Automate.
   - Architecture: ATMS event → queued job → HTTP POST (JSON) → Power Automate
@@ -194,7 +209,7 @@ concerns). G-03 (location picker for non-Admins) still open.
 | Mock ERP | Fully deleted. `LdcErpHttpSource` skips sync gracefully when `LDC_ERP_PARTS_API` is empty. |
 | API token abilities | Read-only (`['read']`) blocked on POST/PUT/PATCH/DELETE → 403. Write (`['read','write']`) allowed all. SPA session never blocked. |
 | Git commit convention | When the user says "commit ALL" (capitalized), use `git add .` — stage everything including untracked files, then commit. |
-| Notifications / Email | Transactional emails delivered via **Microsoft Graph `sendMail`** (OAuth2 client-credentials) from `notification@ldc.com.ly`. SMTP AUTH ruled out (tenant `SmtpClientAuthenticationDisabled` → `535 5.7.139`); Power Automate viable but not chosen. Queued, throttle-aware transport (serialize per mailbox + retry on 429). Pivoted 2026-07-04 from the earlier Power Automate plan. |
+| Notifications / Email | Phase 1 activation and password-reset emails are delivered via **Microsoft Graph `sendMail`** (OAuth2 client credentials) from `notification@ldc.com.ly`. SMTP AUTH is ruled out (tenant `SmtpClientAuthenticationDisabled` → `535 5.7.139`); Power Automate is retired and will not be used. Queued, throttle-aware transport (serialize per mailbox + retry on 429). Operational MR/WO emails are outside current Phase 1. |
 | WO assignable roles | Admin/Manager can assign WO to active Technician OR Maintenance Manager (small teams, overloaded tech). Assignment authority remains solely Admin/Manager. (2026-06-28) |
 
 ## Pending — Blocked on ERP Team 🔴

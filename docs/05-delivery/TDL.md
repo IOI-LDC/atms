@@ -160,7 +160,7 @@ The "Add Asset" button stays disabled in production (no live impact either way).
 |---|-----|----------|------|--------|
 | G-01 | "Add Asset" button disabled — **deferred to Phase 3 / cancelled (2026-07-02, data-integrity decision)**. Final confirm/cancel pending. See decision #10 above. | ⏸ Deferred | `AssetsView.vue:81` | 0d (decision) |
 | G-02 | ~~Parts Management UI is a stub~~ — **DONE (2026-07-02, commit `56bd463`)**. `PartsView` + `PartDetailView` fully built; mock removed; WO picker reads live `GET /parts`. | ✅ Done | `PartsView.vue`, `PartDetailView.vue` | — |
-| G-03 | Location picker empty for Manager/Logistics | 🔴 Critical | `useLocations.ts:24-26` | 0.25d |
+| G-03 | ~~Location picker empty for Manager/Logistics~~ — **DONE (2026-07-03, commit `de85abe`)**. Role-conditional fetch: Admin hits `/admin/locations`; Manager/Logistics hit `/locations`; Technician/Requester skip. | ✅ Done | `useLocations.ts:28-34` | — |
 | G-05 | System Settings UI stub | 🟡 Medium | `SystemSettingsView.vue` | 0.5d |
 | G-06 | Audit Logs viewer stub | 🟡 Medium | `AuditLogsView.vue` | 0.5d |
 | G-08 | SharePoint import button disabled | 🟢 Low | `UsersView.vue:187-189` | 0.25d |

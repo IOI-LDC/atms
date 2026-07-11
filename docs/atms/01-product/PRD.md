@@ -121,7 +121,7 @@ and tab structure.
 - Advanced predictive maintenance
 - Multi-level approval workflow
 - External workflow notifications, excluding the included activation and
-  password-reset emails delivered through Microsoft Power Automate
+  password-reset emails delivered through Microsoft Graph `sendMail`
 - Advanced BI/reporting
 - ERP write-back
 - Offline mode

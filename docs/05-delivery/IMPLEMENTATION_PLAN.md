@@ -2,6 +2,14 @@
 
 > **Live blockers tracked in:** [TDL.md](./TDL.md)
 
+> ⚠️ **Two different "Phase N" schemes are in use.** The **commercial phases** in
+> [`LDC_ATMS_Two_Phase_Proposal.md`](../LDC_ATMS_Two_Phase_Proposal.md) and
+> [`SCOPE_CHANGE.md`](../00-project-rules/SCOPE_CHANGE.md) number Phase 1 = ATMS Core,
+> Phase 2 = AM/Assembly/write-back, Phase 3 = SM. The **build phases** below
+> (Phase 0–N) are an earlier, separate, more granular build-sequence scheme and are
+> unaffected by the commercial renumbering. When a doc says "Phase 1", check which
+> scheme it means before comparing to code.
+
 This plan covers implementation of the ATMS subsystem and future phases for SM
 and AM. All three subsystems share one Laravel backend and PostgreSQL database.
 
@@ -24,7 +32,7 @@ and AM. All three subsystems share one Laravel backend and PostgreSQL database.
 - Local employee directory
 - Administrator employee-to-user provisioning
 - One-time activation and password-reset flow
-- Microsoft Graph `sendMail` production transport for activation, password-reset, and operational (MR/WO) email (SMTP AUTH ruled out by tenant policy; Power Automate viable but not chosen)
+- Microsoft Graph `sendMail` production transport for the in-scope activation and password-reset emails (SMTP AUTH is ruled out by tenant policy; Power Automate is retired and will not be used)
 - Users and roles (5 roles)
 - Locations
 - Master data/dropdowns (including Asset Maintenance sub-statuses)

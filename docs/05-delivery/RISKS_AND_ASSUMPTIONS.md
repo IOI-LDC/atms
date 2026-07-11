@@ -11,7 +11,11 @@
   when stock is issued at Goods Receipt) is under discussion with LDC — see
   [`sm/01-product/LDC_MEETING_PARTS_WRITEBACK.md`](../sm/01-product/LDC_MEETING_PARTS_WRITEBACK.md).
 - ERP integration is **parts only**. Assets are managed fully within ATMS; no
-  ERP asset sync.
+  ERP asset sync. ⚠️ **OPEN DECISION (G-01):** whether ERP becomes the source of truth
+  for asset reference data in Phase 3 is **unresolved** — Path A (ERP asset sync,
+  remove manual create) vs Path B (manual create in ATMS). The "Add Asset" button is
+  disabled in production pending this call. Canonical tracking:
+  [`TDL.md`](./TDL.md) #10 + [`PHASE_1_GAP_ANALYSIS.md`](../PHASE_1_GAP_ANALYSIS.md) §4.1.
 - The system will be deployed for a single client environment.
 - Native mobile app is not part of MVP.
 - Financial tracking and labor tracking are excluded.

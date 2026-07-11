@@ -196,7 +196,7 @@ See [BACKUP_AND_RESTORE.md](./BACKUP_AND_RESTORE.md).
 
 ## SharePoint Integration
 
-ATMS is hosted as a standalone web application. SharePoint contains only a normal link to the ATMS URL. Users authenticate through ATMS itself using Sanctum SPA cookie authentication. Employee directory data is imported from SharePoint via the Power Automate employee import endpoint.
+ATMS is hosted as a standalone web application. SharePoint contains only a normal link to the ATMS URL. Users authenticate through ATMS itself using Sanctum SPA cookie authentication. Employee directory data is imported into the local employee directory through the configured SharePoint integration when available; Power Automate is not used by ATMS.
 
 ## Updating
 

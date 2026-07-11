@@ -366,7 +366,7 @@ Asset maintenance history is assembled from authoritative source records (MRs, W
 
 ### Email transport
 
-**Decision (2026-07-04):** production transport is **Microsoft Graph `sendMail`** (OAuth2 client-credentials), sending from `notification@ldc.com.ly`. SMTP AUTH is **ruled out** (LDC M365 tenant disables it — `SmtpClientAuthenticationDisabled`, verified `535 5.7.139`); Power Automate is a viable alternative but not chosen. Current code has `FakeAccountEmailTransport` (dev/test, default) and `PowerAutomateAccountEmailTransport`; a `GraphMailTransport` is to be built behind the same `ACCOUNT_EMAIL_TRANSPORT` switch (`fake` / `graph` / optional `power_automate`). Config: `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, `GRAPH_CLIENT_SECRET`, `GRAPH_MAILBOX` — a **separate Entra app** from the `LDC_ERP_*` (Dynamics 365 BC) app. Full design + Azure provisioning + secret/certificate expiry & renewal: `docs/03-backend/NOTIFICATIONS.md`.
+**Decision (2026-07-04, confirmed 2026-07-11):** production transport is **Microsoft Graph `sendMail`** (OAuth2 client credentials), sending from `notification@ldc.com.ly`. SMTP AUTH is **ruled out** (LDC M365 tenant disables it — `SmtpClientAuthenticationDisabled`, verified `535 5.7.139`). Power Automate is retired and must not remain as a runtime fallback. Current code still has legacy `PowerAutomateAccountEmailTransport`; replace it with a Graph implementation behind the `ACCOUNT_EMAIL_TRANSPORT` switch (`fake` / `graph`) and remove the legacy transport. Config: `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, `GRAPH_CLIENT_SECRET`, `GRAPH_MAILBOX` — a **separate Entra app** from the `LDC_ERP_*` (Dynamics 365 BC) app. Full design + Azure provisioning + secret/certificate expiry & renewal: `docs/03-backend/NOTIFICATIONS.md`.
 
 ### Audit log
 
@@ -463,7 +463,7 @@ Five human roles (Administrator, Maintenance Manager, Technician, Logistics, Req
 
 | Variable | Purpose |
 |---|---|
-| `ACCOUNT_EMAIL_TRANSPORT` | `fake` (default/dev), `graph` (production — Microsoft Graph sendMail), or `power_automate` (optional alt). SMTP ruled out (tenant disables SMTP AUTH). |
+| `ACCOUNT_EMAIL_TRANSPORT` | `fake` (default/development) or `graph` (production — Microsoft Graph sendMail). Power Automate is retired; SMTP is ruled out because the tenant disables SMTP AUTH. |
 | `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` / `GRAPH_CLIENT_SECRET` / `GRAPH_MAILBOX` | OAuth2 client-credentials + sender mailbox for Graph sendMail. **Separate Entra app** from the `LDC_ERP_*` app. |
 | `LDC_ERP_BASE_URL` | Base URL of the LDC ERP API |
 | `LDC_ERP_CLIENT_ID` / `LDC_ERP_CLIENT_SECRET` | OAuth2 client credentials for ERP token acquisition |
@@ -492,15 +492,17 @@ Do not add: labor hours/rates/costs/timesheets, category-level or template-level
 
 Full request/response shapes: `docs/atms/04-technical/BACKEND_API_REFERENCE.md`.
 
-## Phase 1 Gap Analysis (2026-06-27)
+## Phase 1 Gap Analysis (2026-06-27; rev 3 2026-07-11)
 
 A code-verified gap analysis is in [`docs/PHASE_1_GAP_ANALYSIS.md`](docs/PHASE_1_GAP_ANALYSIS.md).
 Key findings future sessions must know:
 
 - **Backend is solid** (zero TODO/FIXME; consistent action-query-controller architecture).
 - **Frontend has 2 stub views** remaining that look "complete" but show "coming soon": `SystemSettingsView`, `AuditLogsView`. (`PartsView`/`PartDetailView` were built — G-02 closed 2026-07-02, commit `56bd463`.) Backend for all is fully implemented.
-- **Critical code gaps:** G-02 ✅ CLOSED. G-03 (location picker empty for Manager/Logistics — `useLocations.ts` only loads for Admins despite `GET /api/locations` existing) is the **one remaining Critical gap**. G-04 (`CreateAsset` drops lifecycle fields) deferred to Phase 3 / cancelled with G-01 (create disabled → no live impact).
-- **G-01 (Add Asset disabled) — DEFERRED TO PHASE 3 / CANCELLED (2026-07-02)** on data-integrity grounds (ERP likely source of truth in Phase 3). Final confirm/cancel pending. See `TDL.md` #10 and `PHASE_1_GAP_ANALYSIS.md` §4.1.
+- **No Critical code gaps remain in Phase 1.** G-02 ✅ CLOSED. **G-03 (location picker for Manager/Logistics) ✅ CLOSED 2026-07-03 (`de85abe`)** — `useLocations.ts:28-34` now does a role-conditional fetch. **G-11 (Recently Relocated Assets widget) ✅ CLOSED (`de85abe`)** via `GET /api/dashboard/kpis`. G-04 (`CreateAsset` drops lifecycle fields) deferred to Phase 3 / cancelled with G-01 (create disabled → no live impact).
+- **Shipped after rev 2:** self-service password change (`POST /api/auth/change-password` + FE UI, `a03b078`); Dashboard KPI tiles (MTBF / MTTR / Failure Rate / PM Compliance / Avg MR Duration / Avg WO Duration, `de85abe`).
+- **Email transport: Microsoft Graph `sendMail` is the only production transport.** Power Automate is retired (not a fallback) and must be removed once Graph is wired. Phase 1 email scope = **activation + password-reset only**; operational MR/WO emails are outside current Phase 1. `ACCOUNT_EMAIL_TRANSPORT` accepts `fake` and `graph`. See `docs/03-backend/NOTIFICATIONS.md`.
+- **G-01 (Add Asset disabled) — DEFERRED TO PHASE 3 / CANCELLED (2026-07-02)** on data-integrity grounds (ERP likely source of truth in Phase 3). **OPEN DECISION — final confirm/cancel pending** (Path A: ERP asset sync vs Path B: manual create). Canonical tracking: `TDL.md` #10 + `PHASE_1_GAP_ANALYSIS.md` §4.1. The "Add Asset" button is disabled in production pending this call.
 - **Manager PM workflow is complete** — not a gap. The `RBAC.md` "known gap" note was outdated; Manager manages all PM assignments from Asset Detail → PM Rules section. Template create/edit is Admin-only by design.
 - **Asset Assembly does NOT exist in the backend** (despite earlier docs claiming it was "implemented"). No routes, no controller, no history table. Correct for Phase 1 scope; the frontend shows an honest "Phase 2" placeholder. (Phase reorganisation 2026-07-02: Assembly is Phase 2, SM is Phase 3 — see `.kilo/TLD.md`.)
 - **Parts sync blocked** on ERP team providing the BC parts API page name (`TDL.md` #1–2). Infrastructure is fully built; the UI runs on seed data (`PartSeeder`, 55 parts) in the meantime.

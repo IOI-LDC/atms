@@ -171,8 +171,8 @@ password.
 ## 17. Account Email Delivery
 
 Production activation and password-reset emails will be delivered through
-Microsoft Power Automate. These security emails are the only external email
-notifications included in MVP.
+Microsoft Graph `sendMail` using OAuth2 client credentials. These security
+emails are the only external email notifications included in MVP.
 
 ## 18. System Settings
 

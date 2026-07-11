@@ -158,7 +158,7 @@ resets. There is no self-registration.
 
 **Decision (2026-07-04):** Microsoft **Graph `sendMail`** (OAuth2 client-credentials) is the production transport for ATMS notification emails. Laravel owns token lifecycle, template rendering (Mailable + Blade), queuing, retry, and the audited outcome; Graph delivers through the corporate mailbox (`notification@ldc.com.ly`) via `POST https://graph.microsoft.com/v1.0/users/{mailbox}/sendMail`.
 
-SMTP AUTH is **not** used: the LDC M365 tenant disables it (`SmtpClientAuthenticationDisabled`, verified empirically — `535 5.7.139`). Power Automate remains a viable alternative but was not chosen; the transport is a swappable abstraction (`Fake` for dev/test, `Graph` for production). Full design, Azure provisioning, and secret/certificate expiry & renewal procedures: [`NOTIFICATIONS.md`](./NOTIFICATIONS.md).
+SMTP AUTH is **not** used: the LDC M365 tenant disables it (`SmtpClientAuthenticationDisabled`, verified empirically — `535 5.7.139`). Power Automate is retired and will not be used. The transport abstraction supports `Fake` for development/testing and Microsoft Graph for production. Full design, Azure provisioning, and secret/certificate expiry & renewal procedures: [`NOTIFICATIONS.md`](./NOTIFICATIONS.md).
 
 The Graph endpoint, tenant identifiers, application credentials, mailbox, and
 environment-specific details are deployment configuration (`GRAPH_*` env vars).

@@ -334,7 +334,7 @@ Tabs:
 - Sync history: list of past sync runs with timestamps and outcomes.
 - Manual ERP sync trigger (Admin and Maintenance Manager).
 - Company timezone and other system-level configuration.
-- Power Automate email integration settings.
+- Microsoft Graph email integration settings.
 
 ### 8b. Activity Logs
 - **Visible to:** Admin only.

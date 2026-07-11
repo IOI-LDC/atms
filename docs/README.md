@@ -28,7 +28,7 @@ Maintenance Requests can be generated in two ways:
 
 ### Source-of-truth boundaries
 
-- **Assets** are managed fully within ATMS. There is no ERP asset sync.
+- **Assets** are managed fully within ATMS. There is no ERP asset sync. ⚠️ **OPEN DECISION (G-01):** whether ERP becomes the source of truth for asset reference data in Phase 3 is **unresolved** — Path A (ERP asset sync, remove manual create) vs Path B (manual create in ATMS). The "Add Asset" button is disabled in production pending this call. Canonical tracking: [`docs/05-delivery/TDL.md`](05-delivery/TDL.md) #10 + [`docs/PHASE_1_GAP_ANALYSIS.md`](PHASE_1_GAP_ANALYSIS.md) §4.1.
 - **Parts** are owned by SM — ERP syncs parts into SM tables; ATMS reads parts only to populate a Work Order part-request form, and that form submits into SM's workflow.
 - **Asset location** is owned by AM — ATMS reads current location from AM tables for display only.
 - **ERP** remains the source of truth for parts reference data (synced into SM). It is no longer the source of truth for fixed assets.
@@ -72,7 +72,7 @@ The `03-backend/`, `00-project-rules/`, `05-delivery/`, and `operations/` folder
 - **ERP Sync:** Parts master data synced from LDC ERP into SM tables using client-credentials token auth. No asset sync.
 - **Attachments:** Laravel local storage on a persistent Docker volume
 - **Auth/RBAC:** Laravel Sanctum SPA cookie/session authentication with role-based permissions
-- **Notifications / Email Delivery:** Transactional emails (MR created, WO assigned, WO completed, account activation, password reset) are delivered via **Microsoft Graph `sendMail`** (OAuth2 client-credentials) from the corporate mailbox `notification@ldc.com.ly`. SMTP AUTH is ruled out (LDC M365 tenant disables it); Power Automate is a viable alternative but not chosen. Templates are rendered Laravel-side (Mailable + Blade) and sent via a queued, throttle-aware transport. See `03-backend/NOTIFICATIONS.md`.
+- **Notifications / Email Delivery:** The Phase 1 account activation and password-reset emails are delivered via **Microsoft Graph `sendMail`** (OAuth2 client credentials) from the corporate mailbox `notification@ldc.com.ly`. SMTP AUTH is ruled out because the LDC M365 tenant disables it. Power Automate is retired and will not be used. Templates are rendered Laravel-side and sent via a queued, throttle-aware transport. Operational MR/WO emails are outside the current Phase 1 scope. See `03-backend/NOTIFICATIONS.md`.
 - **Company Portal:** SharePoint contains a normal link to the separately hosted product web applications; they are not embedded in or deployed to SharePoint
 
 Redis and MinIO are optional future upgrades and are not part of the default MVP deployment.

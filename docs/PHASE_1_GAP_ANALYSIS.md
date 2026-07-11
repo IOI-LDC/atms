@@ -17,6 +17,24 @@
 >   Asset Assembly + Component PM cross-check + ERP parts write-back + Asset tag QR.
 >   See `.kilo/TLD.md` for the full Phase 2/3 tables.
 
+> **Revision 3 (2026-07-11):** Status updates reflecting continued build.
+> - **G-03 (location picker for non-Admins) — CLOSED.** The role-conditional fetch
+>   shipped in commit `de85abe` (2026-07-03); Manager/Logistics now hit
+>   `GET /api/locations`. This was the one remaining Critical code gap; Phase 1 has
+>   **no remaining Critical code gaps**.
+> - **G-11 (dashboard "Recently Relocated Assets" widget) — CLOSED.** Shipped via
+>   `GET /api/dashboard/kpis` (`RecentlyRelocatedAssetsQuery` + `DashboardKpiResource`,
+>   frontend `useDashboardKpis.ts`), commit `de85abe`.
+> - **Shipped after Revision 2:** self-service password change
+>   (`POST /api/auth/change-password` + FE UI, commit `a03b078`); Dashboard KPI tiles
+>   (MTBF / MTTR / Failure Rate / PM Compliance / Avg MR Duration / Avg WO Duration,
+>   commit `de85abe`).
+> - **Email transport clarified:** **Microsoft Graph `sendMail` is the only production
+>   transport; Power Automate is retired (not a fallback)** and must be removed once
+>   Graph is wired. **Phase 1 email scope = activation + password-reset only**;
+>   operational MR/WO emails are outside current Phase 1. `ACCOUNT_EMAIL_TRANSPORT`
+>   accepts `fake` and `graph`. Updated I-03 / R-06; removed I-05 (legacy transport).
+
 > **Revision note:** This report was rewritten after a line-by-line re-verification of
 > both the frontend (`frontend/src/`) and backend (`backend/app/`) codebases. The first
 > draft overstated completion status for several areas. The corrections below reflect
@@ -58,7 +76,7 @@ core workflows.
 |---|-----|----------|------|
 | **G-01** | Asset Creation UI is disabled — **DEFERRED TO PHASE 3 / CANCELLED** (data-integrity decision, 2026-07-02) | ⏸ Deferred | Decision |
 | **G-02** | ~~Parts Management is a stub~~ — **CLOSED (2026-07-02, `56bd463`)** | ✅ Done | Frontend |
-| **G-03** | **Location picker empty for non-Admins** — Manager/Logistics get no locations (blocks their core job) | **Critical** | Frontend |
+| **G-03** | ~~Location picker empty for non-Admins~~ — **CLOSED (2026-07-03, `de85abe`)**; Manager/Logistics now hit `GET /api/locations` | ✅ Done | Frontend |
 | **G-04** | ~~`CreateAsset` action drops lifecycle fields~~ — **DEFERRED TO PHASE 3 / CANCELLED** (create button disabled in prod; moot until manual create decision, 2026-07-02) | ⏸ Deferred | Backend |
 | **G-05** | **System Settings is a stub** — `SystemSettingsView` shows "coming soon" | **Medium** | Frontend |
 | **G-06** | **Audit Logs viewer is a stub** — `AuditLogsView` shows "coming soon" | **Medium** | Frontend |
@@ -66,13 +84,13 @@ core workflows.
 | **G-08** | SharePoint employee import button disabled (no handler) | Low | Frontend |
 | **G-09** | Effective Date field disabled in location update sheet | Low | Frontend |
 | **G-10** | `sinceLastService` hardcoded to `null` on WO detail | Low | Frontend |
-| **G-11** | Dashboard missing "Recently updated assets" widget | Low | Frontend |
+| **G-11** | ~~Dashboard missing "Recently relocated assets" widget~~ — **CLOSED (2026-07-03, `de85abe`)** via `GET /api/dashboard/kpis` | ✅ Done | Frontend |
 | **G-12** | Resend activation email not implemented | Low | Frontend |
 
-**Estimated effort to close all Phase 1 gaps: ~2–4 working days** (excluding the
-external ERP dependency). G-02 is now closed. G-01 and G-04 are deferred to Phase 3 /
-cancelled (data-integrity decision), removing them from the Phase 1 critical path.
-The one remaining Critical code gap is **G-03** (location picker for non-Admins, ~0.25d).
+**Estimated effort to close remaining Phase 1 gaps: ~2 working days** (excluding the
+external ERP dependency). G-02, G-03, and G-11 are now closed. G-01 and G-04 are
+deferred to Phase 3 / cancelled (data-integrity decision), removing them from the
+Phase 1 critical path. **There are no remaining Critical code gaps** in Phase 1.
 
 ---
 
@@ -203,22 +221,22 @@ for UAT, awaiting real ERP data.
 
 ---
 
-### 3.9 Simple Location Update — 🔴 PARTIALLY COMPLETE (was: Complete)
+### 3.9 Simple Location Update — ✅ COMPLETE (was: 🔴 PARTIALLY COMPLETE)
 
 | Aspect | Backend | Frontend | Status |
 |--------|---------|----------|--------|
 | Direct location update endpoint | `POST /api/assets/{asset}/location` ✓ | `UpdateLocationSheet` ✓ | ✅ |
-| Active-locations read endpoint | `GET /api/locations` ✓ | — | ✅ |
+| Active-locations read endpoint | `GET /api/locations` ✓ | `useLocations.ts` role-conditional fetch ✓ | ✅ |
 | Location history auto-creation | `AssetLocationHistory` ✓ | Timeline display ✓ | ✅ |
-| **Location picker for Manager/Logistics** | — | **`useLocations.ts:24-26` only loads for Admins; Manager/Logistics get an empty list** | 🔴 **G-03** |
+| **Location picker for Manager/Logistics** | `GET /api/locations` (active-only, policy-gated) ✓ | `useLocations.ts:28-34` — Admin hits `/admin/locations`; Manager/Logistics hit `/locations` ✓ | ✅ **G-03 CLOSED** |
 | Location CRUD (Admin) | `GET/POST/PATCH /api/admin/locations` ✓ | `ManageLocationsView` ✓ | ✅ |
 | Effective Date field | Backend ignores (hardcodes `now()`) | **Field is `disabled`** (`UpdateLocationSheet.vue:191`) | 🟡 G-09 |
 
-**Verdict:** The location update workflow has a **critical defect**: the very roles
-that need to update locations (Manager and Logistics) get an **empty location picker**,
-making the feature unusable for them. The composable has a `TODO` comment acknowledging
-this. The `GET /api/locations` read-only endpoint exists in the backend but the
-frontend composable is not calling it.
+**Verdict:** ✅ **G-03 CLOSED (2026-07-03, `de85abe`).** The role-conditional fetch is
+shipped — Admin loads the full list (incl. inactive) from `/admin/locations` for the
+CRUD table; Manager/Logistics load active-only from `/locations`; Technician/Requester
+skip the fetch (no `viewAny`, avoids a 403). The only remaining sub-item is the cosmetic
+**G-09** (Effective Date field disabled).
 
 ---
 
@@ -235,13 +253,14 @@ Requester. M2M API token auth with `EnsureTokenAbilities` is in place.
 
 ---
 
-### 3.12 Dashboard and Reporting — ⚠️ PARTIALLY COMPLETE
+### 3.12 Dashboard and Reporting — ✅ COMPLETE
 
 | Aspect | Status |
 |--------|--------|
 | Dashboard API (role-adaptive) | ✅ |
 | Pending MRs / Open WOs / Overdue PMs / Recently Closed WOs widgets | ✅ |
-| **Recently updated assets widget** | 🔴 **G-11** (missing per screen inventory) |
+| Dashboard KPI tiles (MTBF / MTTR / Failure Rate / PM Compliance / Avg MR Duration / Avg WO Duration) | ✅ (`GET /api/dashboard/kpis`, `de85abe`) |
+| **Recently relocated assets widget** | ✅ **G-11 CLOSED** (`RecentlyRelocatedAssetsQuery`, `de85abe`) |
 | Separate report screens | ⚠️ (dashboard likely satisfies "simple reports") |
 
 ---
@@ -317,31 +336,29 @@ See `.kilo/plans/1783038000000-parts-management-frontend.md`.
 
 ---
 
-### 4.3 G-03: Location Picker Empty for Non-Admins
+### 4.3 G-03: Location Picker Empty for Non-Admins — ✅ CLOSED (2026-07-03, `de85abe`)
 
-**Severity:** Critical
-**File:** `frontend/src/composables/useLocations.ts:24-29`
+**Status:** ✅ **Resolved.** The role-conditional fetch shipped in commit `de85abe`.
+**File:** `frontend/src/composables/useLocations.ts:24-34`
 
 ```ts
-// TODO: Switch to GET /api/locations once a non-admin endpoint is provided.
-// Until then, Admins see the full list; Manager/Logistics see empty.
+// Admin needs the full list (incl. inactive) for ManageLocationsView's
+// CRUD table. Manager/Logistics only reach the picker/filter, so the
+// active-only /locations endpoint is sufficient. Technician/Requester
+// lack viewAny — skip the fetch to avoid a 403.
 if (auth.isAdmin) {
   const res = await api.get<{ data: Location[] }>('/admin/locations')
+  locations.value = res.data ?? []
+} else if (auth.isManager || auth.isLogistics) {
+  const res = await api.get<{ data: Location[] }>('/locations')
   locations.value = res.data ?? []
 }
 ```
 
-The composable only loads locations when `auth.isAdmin`. Manager and Logistics users
-get an **empty list**, which breaks:
-- The location picker in `UpdateLocationSheet` (the core tool for Logistics/Manager).
-- The location filter bar on the Assets list page (for Managers).
-
-The backend **already has** `GET /api/locations` (returns active locations, accessible
-to Admin/Manager/Logistics per `LocationPolicy`). The frontend just isn't calling it.
-
-**Required:** Update `useLocations.ts` to call `GET /api/locations` for non-Admin
-roles (or unconditionally, since that endpoint returns active-only and is
-policy-gated).
+Admins load the full list (incl. inactive) from `/admin/locations` for the CRUD table;
+Manager and Logistics now load active-only from `GET /api/locations`; Technician and
+Requester skip the fetch (no `viewAny`, avoids a 403). The 403 path also surfaces a
+role-aware error message. The previously-quoted `TODO` comment has been removed.
 
 ---
 
@@ -460,7 +477,7 @@ not author them.
 **Backend:** `CompanySettingController` (show/update) — fully implemented.
 
 The Settings sidebar item → System tab shows a placeholder. ERP sync controls, company
-timezone, and Power Automate config are not exposed in the UI. **Medium** priority.
+timezone, and Microsoft Graph email config are not exposed in the UI. **Medium** priority.
 
 ---
 
@@ -520,10 +537,13 @@ The "X / Y since last service" indicator on WO detail never displays. **Low** pr
 
 ---
 
-### 9.7 G-11: Dashboard Missing "Recently Relocated Assets" Widget
+### 9.7 G-11: Dashboard "Recently Relocated Assets" Widget — ✅ CLOSED (2026-07-03, `de85abe`)
 
-**Source:** `SCREEN_INVENTORY.md` §1 lists "Recently relocated assets" as a required dashboard element.
-Neither the `DashboardController` nor `DashboardView` includes it. **Low** priority.
+**Status:** ✅ **Resolved.** Shipped as part of the Dashboard KPI endpoint
+(`GET /api/dashboard/kpis`). The `RecentlyRelocatedAssetsQuery` returns the latest 5
+relocations (within the rolling 90-day window), surfaced via
+`DashboardKpiResource` and the frontend `useDashboardKpis.ts` composable. **Low**
+priority items T-02–T-07 remain.
 
 ---
 
@@ -558,9 +578,9 @@ attachments, dashboard, and ERP sync. Identified gaps:
 |----|-----|----------|
 | I-01 | Production Docker Compose needs verification (services, volumes, env) | Medium |
 | I-02 | Backup/restore procedures need end-to-end verification | Medium |
-| I-03 | Graph `sendMail` email transport — Azure app provisioned + `Mail.Send` consented + probe passed (2026-07-04); **remaining**: Application Access Policy (restrict app to mailbox), prod secret/cert, final frontend URL for links. See `03-backend/NOTIFICATIONS.md`. | Low |
+| I-03 | **Email transport — Microsoft Graph `sendMail` is the only production transport.** Phase 1 email scope = **activation + password-reset only**; operational MR/WO emails are outside current Phase 1. Azure app provisioned + `Mail.Send` consented + probe passed (2026-07-04); **remaining**: `GraphMailTransport` (queue-serialized + 429 retry) wired into the activation/password-reset flows, Application Access Policy (restrict app to mailbox), prod secret/cert, final frontend URL for links. See `03-backend/NOTIFICATIONS.md`. | Medium |
 | I-04 | SSL/domain configuration pending (LDC IT) | Medium |
-| I-05 | SharePoint transport throws `RuntimeException` if selected (AppServiceProvider:40) | Low |
+| I-05 | ~~SharePoint transport throws `RuntimeException` if selected~~ — **legacy transport; superseded.** Power Automate is retired (not a fallback) and must be removed once Graph is wired. `ACCOUNT_EMAIL_TRANSPORT` now accepts `fake` and `graph` only. | — (remove in Graph build) |
 
 ---
 
@@ -570,9 +590,13 @@ attachments, dashboard, and ERP sync. Identified gaps:
 
 | Priority | ID | Action | Effort |
 |----------|----|--------|--------|
-| 🔴 P0 | G-03 | Fix `useLocations.ts` to call `GET /api/locations` for non-Admin roles | 0.25d |
+| ✅ Done | G-03 | ~~Fix `useLocations.ts` to call `GET /api/locations` for non-Admin roles~~ — CLOSED 2026-07-03 (`de85abe`) | — |
 | ✅ Done | G-02 | ~~Build `PartsView` + `PartDetailView`~~ — CLOSED 2026-07-02 (`56bd463`) | — |
 | ⏸ Deferred | G-04 | ~~Fix `CreateAsset::execute()` dropped lifecycle fields~~ — deferred to Phase 3 / cancelled (no live impact; create disabled) | — |
+
+> **No Critical code gaps remain in Phase 1.** The only items on the Phase 1 path
+> are P1 stubs (G-05/G-06), the external ERP parts-API blocker (G-07), and
+> production config (I-01–I-04).
 
 ### Deferred / Cancelled — G-01 Manual Asset Creation (2026-07-02)
 
@@ -598,7 +622,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 | 🟢 P2 | G-08 | Wire SharePoint import button or relabel | 0.25d |
 | 🟢 P2 | G-09 | Implement or remove Effective Date field | 0.25d |
 | 🟢 P2 | G-10 | Implement `sinceLastService` or remove the placeholder | 0.25d |
-| 🟢 P2 | G-11 | Add "Recently updated assets" dashboard widget | 0.5d |
+| ✅ Done | G-11 | ~~Add "Recently relocated assets" dashboard widget~~ — CLOSED 2026-07-03 (`de85abe`) | — |
 | 🟢 P2 | G-12 | Add resend-activation-email capability | 0.25d |
 | 🟢 P2 | T-02–T-07 | Remaining test coverage | 2.0d |
 | 🟢 P2 | — | Update `RBAC.md` "known gap" note (Manager PM access) | 0.1d |
@@ -611,10 +635,10 @@ attachments, dashboard, and ERP sync. Identified gaps:
 |---|------|-----------|--------|------------|
 | R-01 | ERP team delays parts API page name beyond Phase 1 | Medium | High — parts catalogue empty; G-02 UI is built but seeded, awaiting real ERP data | Seed parts manually for UAT (PartSeeder shipped); communicate blocker |
 | R-02 | Asset-creation strategy undecided at go-live (G-01) | Low | Low — **deferred to Phase 3 / cancelled (2026-07-02)**; create button disabled, no live impact | Confirm Path A/B (or full cancel) when Phase 3 SM work begins (see §4.1) |
-| R-03 | Logistics/Manager cannot update locations (G-03 empty picker) | **Certain** (current state) | High — core Logistics job blocked | Fix `useLocations.ts` (G-03) |
+| R-03 | ~~Logistics/Manager cannot update locations (G-03 empty picker)~~ — **resolved 2026-07-03 (`de85abe`)** | None (current state) | — | Role-conditional fetch shipped; G-03 closed |
 | R-04 | Newly created assets silently lose lifecycle fields (G-04) | None (current state) | None — **deferred to Phase 3 / cancelled**; create button disabled so the code path is unreachable in prod | Apply fix if/when manual create is revived in Phase 3 |
 | R-05 | Scope creep: client requests Phase 2/3 features during UAT | Medium | Medium | Maintain scope boundary document; change control |
-| R-06 | Email transport provisioning (Graph `sendMail`) — mostly done 2026-07-04 (Azure app + consent + probe); remaining: App Access Policy + official LDC frontend subdomain for links | Low | Low | SMTP not viable (tenant disabled `SmtpClientAuthenticationDisabled`); Graph is the path |
+| R-06 | Email transport provisioning — **Microsoft Graph `sendMail` is the only production transport** (Power Automate retired, not a fallback; SMTP not viable). Phase 1 email scope = activation + password-reset only. Azure app + consent + probe done 2026-07-04; **remaining**: `GraphMailTransport` wired into activation/password-reset flows, App Access Policy, official LDC frontend subdomain for links, removal of the legacy PA transport. | Medium | Medium — no production email until Graph is wired | See `03-backend/NOTIFICATIONS.md`. `ACCOUNT_EMAIL_TRANSPORT` accepts `fake` and `graph`. |
 
 ---
 
@@ -623,10 +647,10 @@ attachments, dashboard, and ERP sync. Identified gaps:
 To balance the gap list, the following Phase 1 capabilities are **fully implemented
 and functional** in both backend and frontend:
 
-- Authentication (login, logout, activate, forgot/reset password, rate limiting)
-- Dashboard (4 of 5 widgets)
+- Authentication (login, logout, activate, forgot/reset password, **self-service password change** — `a03b078`, rate limiting)
+- Dashboard (all 5 widgets + KPI tiles: MTBF / MTTR / Failure Rate / PM Compliance / Avg MR Duration / Avg WO Duration + "Recently Relocated Assets" — G-11 closed, `de85abe`)
 - Corrective Maintenance Requests (create, edit, cancel, list, detail)
-- Maintenance Approval workflow (approve → WO, reject with suppression, cancel)
+- Maintenance Approval workflow (approve → WO, reject with suppression, cancel, **is_failure classification**)
 - Work Order full lifecycle (assign, start, execute, complete, close, cancel)
 - Parts used on Work Orders (add/remove/quantity/notes)
 - Parts Reference catalogue (list, detail, ERP reference rail, attachments — G-02 closed)
@@ -634,6 +658,7 @@ and functional** in both backend and frontend:
 - Asset Tag generation and lookup
 - Asset detail view (metadata, readings, history, attachments, PM section)
 - Asset editing (operational fields, status, location, lifecycle fields via update)
+- Simple location update for all authorised roles (Admin/Manager/Logistics — G-03 closed, `de85abe`)
 - Location history
 - Attachments (assets, MRs, WOs)
 - Role-based access (5 roles + service, 17 policies)
@@ -646,5 +671,7 @@ and functional** in both backend and frontend:
 **Report prepared by:** Inova ATMS Delivery Team
 **Revision 2:** 2026-07-02 — G-02 closed; G-01 + G-04 deferred to Phase 3 / cancelled;
 SM reorganised into Phase 3.
-**Next review:** After the one remaining Critical gap (G-03 location picker) is closed
-and the G-01 confirm/cancel decision is finalised ahead of Phase 3.
+**Revision 3:** 2026-07-11 — G-03 and G-11 closed; password change + Dashboard KPIs
+shipped; email transport clarified (Graph-only, Phase 1 = activation + password-reset).
+**Next review:** Before Phase 3 begins, or when the G-01 confirm/cancel decision is
+finalised — whichever comes first.

@@ -99,7 +99,7 @@ The base workflow includes Maintenance Manager review and approval before a main
 Workflow emails, SMS, WhatsApp, push notifications, and escalation reminders
 are excluded unless agreed separately. The only included external notifications
 are account activation and password-reset emails delivered through Microsoft
-Power Automate. Basic in-system status visibility can be provided.
+Graph `sendMail`. Basic in-system status visibility can be provided.
 
 ## 18. Advanced Reporting and BI
 
@@ -135,5 +135,5 @@ interface. SharePoint or Microsoft Entra authentication and automatic access
 based on portal membership are excluded from MVP.
 
 SharePoint is limited to employee-directory import and a normal company-portal
-link to the separately hosted product application. Power Automate remains the
-production transport for activation and password-reset emails.
+link to the separately hosted product application. Microsoft Graph `sendMail`
+is the production transport for activation and password-reset emails.

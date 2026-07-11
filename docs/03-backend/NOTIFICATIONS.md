@@ -1,15 +1,15 @@
 # Notifications & Email
 
-## Status (2026-07-04)
+## Status (updated 2026-07-11)
 
 | Item | State |
 |---|---|
 | Production transport | **Microsoft Graph `sendMail`** (OAuth2 client-credentials) — chosen |
 | SMTP AUTH | **Ruled out** — LDC M365 tenant policy disables it (verified empirically) |
-| Power Automate | Viable alternative; **not** the chosen path. Kept as an optional transport behind the abstraction. |
-| Transport abstraction | To be built: `Fake` (dev/test) / `Graph` (prod) / optional `PowerAutomate` |
+| Power Automate | **Retired. It will not be used by ATMS.** |
+| Transport abstraction | `Fake` (development/testing) / `Graph` (production) |
 | Built notifications | Account activation, password reset (currently via `AccountEmailTransport`, `Fake` in dev) |
-| Planned notifications | MR Created, WO Assigned, WO Completed |
+| Future notifications | MR Created, WO Assigned, WO Completed — outside the current Phase 1 scope |
 | Implementation | In progress — design/provisioning phase |
 
 ---
@@ -30,13 +30,13 @@ ATMS (Laravel)                 Microsoft Graph            Recipient
 
 - **ATMS owns:** when to notify, whom to notify, what data to include, token lifecycle, retry, and the audited outcome.
 - **Microsoft Graph `sendMail` owns:** delivery through the corporate mailbox (`notification@ldc.com.ly`).
-- **Templates:** rendered **Laravel-side** (Mailable + Blade), because Graph `sendMail` takes the full message body (subject + HTML/text). This is the key difference from the Power Automate alternative (where the flow would own templates).
-- **Transport is a swappable abstraction:** `Fake` (dev/test, no external calls), `Graph` (production), with `PowerAutomate`/SMTP as optional alternates behind the same contract.
+- **Templates:** rendered **Laravel-side** because Graph `sendMail` takes the full message body (subject + HTML/text).
+- **Transport is a swappable abstraction:** `Fake` (development/testing, no external calls) and `Graph` (production). Power Automate is retired and is not an available production path.
 - **Throttling / concurrency (important):** Exchange Online limits concurrent app access per mailbox (~3–4). Blasting parallel `sendMail` calls to the one mailbox triggers `429 ApplicationThrottled` (and gateway `504`s). Dispatch MUST be **serialized** through the queue (limited per-mailbox concurrency) with **retry-on-429 honouring `Retry-After`**. Verified empirically 2026-07-04.
 
 ---
 
-## Why Graph `sendMail` (not SMTP, not Power Automate)
+## Why Graph `sendMail`
 
 ### SMTP — ruled out
 LDC's M365 tenant has **SMTP AUTH (Basic Auth) disabled**. Verified empirically 2026-07-04:
@@ -48,13 +48,13 @@ Visit https://aka.ms/smtp_auth_disabled
 
 The credentials are valid (the server recognised `notification@ldc.com.ly` and rejected on policy, not on password). Microsoft disables Basic-Auth SMTP tenant-wide by default. SMTP is therefore **not viable unless LDC IT re-enables SMTP AUTH for the mailbox** — which we are not pursuing. (OAuth2-over-SMTP / XOAUTH2 is also not a supported M365 path for app-only; the supported OAuth2 app-only path is Graph `sendMail`.)
 
-### Power Automate — viable, not chosen
-Power Automate would send via the M365 mailbox connector (unaffected by the SMTP AUTH policy) and own template rendering — it was the client's stated preference. We chose Graph instead to **avoid building/maintaining a PA flow** and to keep all templating in Laravel. PA remains available as an optional transport behind the abstraction if policy ever mandates it.
+### Power Automate — retired
+Power Automate is no longer part of the ATMS architecture and will not be used as a fallback. Microsoft Graph replaces it for production email delivery, keeping authentication, templates, queuing, retry handling, and delivery auditing inside Laravel.
 
 ### Graph `sendMail` — chosen
 - Pure OAuth2 (client-credentials → access token), **not SMTP**, so `SmtpClientAuthenticationDisabled` does not apply.
 - Sends **from `notification@ldc.com.ly`** via `POST https://graph.microsoft.com/v1.0/users/{mailbox}/sendMail`.
-- Reuses the token-acquisition pattern already in the codebase (`PowerAutomateAccountEmailTransport::getAccessToken()` does the client-credentials flow against `login.microsoftonline.com/{tenant}/oauth2/v2.0/token`, scope `https://graph.microsoft.com/.default`).
+- Uses the OAuth2 client-credentials flow against `login.microsoftonline.com/{tenant}/oauth2/v2.0/token` with scope `https://graph.microsoft.com/.default`.
 - Only IT ask: an Azure App Registration with `Mail.Send` (Application). No PA flow to build.
 
 ---
@@ -115,10 +115,10 @@ The container receives these via `compose.yaml`; after changing them, run `docke
 ### Built (current)
 | Trigger | Recipient | Notes |
 |---|---|---|
-| Account activation (one-time link) | The new user | `UserActivationNotification`; via `AccountEmailTransport` (`Fake` in dev). **Stays on this path for now** (unify deferred — see Resolved decisions). |
+| Account activation (one-time link) | The new user | `UserActivationNotification`; via `AccountEmailTransport` (`Fake` in development, Graph in production). |
 | Password reset (one-time link) | The requesting user | `PasswordResetNotification`; same path. |
 
-### Planned (Phase 1) — routing finalised 2026-07-04
+### Future operational notifications — outside current Phase 1
 | Trigger | To | Cc | Template heading |
 |---|---|---|---|
 | MR Created | All active Maintenance Managers | All active Administrators | "New Maintenance Request" |
@@ -131,7 +131,7 @@ The container receives these via `compose.yaml`; after changing them, run `docke
 - **Demo/dev caveat:** the demo DB uses faker emails, so role-based routing yields undeliverable addresses — test sends must use a hardcoded real recipient (`rawand.hawez@inova.krd`). Real routing works only in production with real user emails.
 
 ### Superseded / out of scope
-- The earlier generic `{ type, recipient_email, recipient_name, data }` Power Automate **webhook** envelope (unauthenticated HTTP trigger + `SendNotificationToPowerAutomate` job) is **superseded** by this Graph design.
+- The earlier Power Automate webhook design is retired and must not be implemented or configured.
 - **SM Order** notifications (`sm_order_submitted/approved/rejected`) remain **Phase 3** (Store Management is not built).
 
 ---
@@ -148,7 +148,7 @@ The container receives these via `compose.yaml`; after changing them, run `docke
 ## Resolved decisions (2026-07-04)
 1. **WO Completed routing:** To = all active Maintenance Managers; Cc = the user who completed the WO.
 2. **WO reassignment:** notify on **any assignee change**; Cc = the action taker.
-3. **Unify activation + reset onto Graph:** **No, for now** — they stay on `AccountEmailTransport`; the Graph pipeline is for operational notifications only (MR Created, WO Assigned, WO Completed).
+3. **Activation + reset transport:** Microsoft Graph `sendMail` is the production implementation behind `AccountEmailTransport`; the fake implementation remains for development and automated tests.
 4. **From-name / Reply-To:** From-name "ATMS Notifications"; **no Reply-To** (footer "do not reply" text only).
 5. **Branding:** keep amber `#d97706` accent + navy `#21274b` header; **no logo** (text header, consistent with other apps). Base HTML provided by the client, adapted into `resources/views/emails/atms-notification.blade.php`.
 
@@ -168,13 +168,6 @@ The container receives these via `compose.yaml`; after changing them, run `docke
 
 ---
 
-## Legacy reference (superseded)
+## Retired transport
 
-The sections below describe the original Power Automate webhook design. They are **superseded** by the Graph `sendMail` architecture above and retained for history only.
-
-<details>
-<summary>Original Power Automate webhook spec (superseded 2026-07-04)</summary>
-
-The original design delegated all email to a single HTTP-triggered Power Automate flow receiving a JSON envelope `{ type, recipient_email, recipient_name, data }`, routed by `type`, with the flow owning template rendering and sending via the company-approved Outlook 365 connector. A generic `App\Jobs\SendNotificationToPowerAutomate` job (`Http::retry(3, 1000)`) and per-event listeners were specified. This approach was replaced by Graph `sendMail` (Laravel owns templates; no PA flow) per the 2026-07-04 decision. The `config/services.php` `power_automate.webhook_url` reference is also superseded by the `account-email` / `GRAPH_*` configuration.
-
-</details>
+Power Automate was considered during discovery but is retired. Do not provision a flow, expose Power Automate settings, or retain it as a runtime fallback. Microsoft Graph `sendMail` is the only production email transport.
