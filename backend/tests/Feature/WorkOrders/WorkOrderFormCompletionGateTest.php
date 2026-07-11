@@ -91,7 +91,7 @@ class WorkOrderFormCompletionGateTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
@@ -173,7 +173,7 @@ class WorkOrderFormCompletionGateTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
         $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $this->tech->id])->assertOk();

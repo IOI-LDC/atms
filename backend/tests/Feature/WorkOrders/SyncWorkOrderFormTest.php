@@ -70,7 +70,7 @@ class SyncWorkOrderFormTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         return WorkOrder::where('maintenance_request_id', $mr->id)->first();
     }

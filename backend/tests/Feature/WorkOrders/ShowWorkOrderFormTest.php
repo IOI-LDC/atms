@@ -79,7 +79,7 @@ class ShowWorkOrderFormTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         return WorkOrder::where('maintenance_request_id', $mr->id)->first();
     }
@@ -135,7 +135,7 @@ class ShowWorkOrderFormTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
         $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
         $this->actingAs($this->admin)->getJson("/api/work-orders/{$wo->id}/form")->assertNotFound();

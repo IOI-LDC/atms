@@ -124,7 +124,7 @@ class MaintenanceStatusGuardTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])
             ->assertStatus(409)
             ->assertJsonPath('message', 'Cannot approve a maintenance request for an inactive asset.');
     }

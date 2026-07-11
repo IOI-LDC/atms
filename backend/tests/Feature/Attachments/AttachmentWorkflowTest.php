@@ -72,7 +72,7 @@ class AttachmentWorkflowTest extends TestCase
     private function createWorkOrder(User $requester, User $manager, ?Asset $asset = null): WorkOrder
     {
         $mr = $this->createMaintenanceRequest($requester, $asset);
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         return WorkOrder::where('maintenance_request_id', $mr->id)->first();
     }
@@ -539,7 +539,7 @@ class AttachmentWorkflowTest extends TestCase
             ->json('data.id');
 
         // Converting the MR locks its attachments against owner deletion.
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         $this->actingAs($requester)->deleteJson("/api/attachments/{$attachmentId}")->assertForbidden();
     }
@@ -570,7 +570,7 @@ class AttachmentWorkflowTest extends TestCase
             ->assertCreated()
             ->json('data.id');
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         // Admins are still unrestricted after conversion.
         $this->actingAs($admin)->deleteJson("/api/attachments/{$attachmentId}")->assertOk();
@@ -607,7 +607,7 @@ class AttachmentWorkflowTest extends TestCase
             ->assertCreated()
             ->json('data.id');
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         $this->assertFalse($this->canDeleteFor($mr->id, $owner, $attachmentId));
     }
@@ -641,7 +641,7 @@ class AttachmentWorkflowTest extends TestCase
         // Pending: admin can delete.
         $this->assertTrue($this->canDeleteFor($mr->id, $admin, $attachmentId));
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         // Converted: admin still can delete.
         $this->assertTrue($this->canDeleteFor($mr->id, $admin, $attachmentId));

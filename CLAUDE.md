@@ -236,27 +236,32 @@ docker compose exec api php artisan <command>
 
 ### Backend (Laravel)
 
+There is **no host PHP install** — PHP 8.4 lives only inside the `atms-api`
+container. Tests run on **PostgreSQL** (not SQLite) against a dedicated
+`atms_testing` database, so they must run via `docker exec`. See
+`docs/03-backend/TESTING.md` for the full guide.
+
 ```bash
-# Run all tests (in-memory SQLite, no containers required)
-cd backend && php artisan test
+# Full suite
+docker exec atms-api php artisan test --compact
 
 # Run a single test file
-php artisan test tests/Feature/MaintenanceRequests/CorrectiveMrTest.php
+docker exec atms-api php artisan test --compact tests/Feature/MaintenanceRequests/MaintenanceRequestWorkflowTest.php
 
-# Run a specific test method
-php artisan test --filter test_corrective_mr_can_be_created
+# Run a specific test method (recommended after editing a related file)
+docker exec atms-api php artisan test --compact --filter=test_approving_corrective_request_requires_is_failure
 
 # Run only the Feature suite
-php artisan test --testsuite Feature
+docker exec atms-api php artisan test --compact --testsuite Feature
 
 # Refresh the database and run all seeders
-php artisan migrate:fresh --seed
+docker exec atms-api php artisan migrate:fresh --seed
 
 # Queue worker (dev — already managed by the queue container)
-php artisan queue:work --tries=3
+docker exec atms-api php artisan queue:work --tries=3
 
 # Run the scheduler manually (fires all due jobs once)
-php artisan schedule:run
+docker exec atms-api php artisan schedule:run
 ```
 
 ### Integration / smoke tests

@@ -97,7 +97,7 @@ class FormSnapshotTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         $wo = \App\Models\WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
@@ -145,7 +145,7 @@ class FormSnapshotTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         $wo = \App\Models\WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
@@ -170,7 +170,7 @@ class FormSnapshotTest extends TestCase
             'is_preventive' => false,
         ]);
 
-        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
         $wo = \App\Models\WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
