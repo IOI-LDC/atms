@@ -10,7 +10,7 @@
 | Transport abstraction | `Fake` (development/testing) / `Graph` (production) |
 | Built notifications | Account activation, password reset (currently via `AccountEmailTransport`, `Fake` in dev) |
 | Future notifications | MR Created, WO Assigned, WO Completed — outside the current Phase 1 scope |
-| Implementation | In progress — design/provisioning phase |
+| Implementation | **Built in code** — `GraphAccountEmailTransport`, queued delivery lock, token cache, and 429 `Retry-After` retry |
 
 ---
 
@@ -76,10 +76,10 @@ Power Automate is no longer part of the ATMS architecture and will not be used a
 ### Application configuration (`backend/.env`)
 
 ```dotenv
-ACCOUNT_EMAIL_TRANSPORT=fake     # keep "fake" until the Graph transport is built and the probe passes; then "graph"
+ACCOUNT_EMAIL_TRANSPORT=fake     # development/tests; use "graph" in production after go-live validation
 GRAPH_TENANT_ID=                 # Directory (tenant) ID
 GRAPH_CLIENT_ID=                 # App (client) ID
-GRAPH_CLIENT_SECRET=             # secret value (or use GRAPH_CERT_PATH for a certificate)
+GRAPH_CLIENT_SECRET=             # secret value; certificate authentication needs a future client-assertion implementation
 GRAPH_MAILBOX=notification@ldc.com.ly
 ```
 
@@ -160,7 +160,7 @@ The container receives these via `compose.yaml`; after changing them, run `docke
 
 - [ ] **Frontend base URL not final.** Email CTA links currently use the temporary `https://atms.inova.krd`. This **MUST** be updated to the officially-provided **LDC subdomain** before client release. Make the base URL a **config value** (e.g. `APP_FRONTEND_URL`), not hardcoded, so it can be switched without code changes. (Broader impact beyond email: Caddy `APP_HOST`, Sanctum `SESSION_DOMAIN` / `SANCTUM_STATEFUL_DOMAINS`, CORS — track separately.)
 - [ ] **Real user email addresses.** Production users must have real, deliverable emails; the demo DB uses faker addresses, so role-based routing only delivers in prod.
-- [ ] **Serialize dispatch + retry-on-429.** Send via the queue with limited per-mailbox concurrency and retry honouring `Retry-After` (Exchange throttles ~3–4 concurrent — see Architecture). Do **not** fan out parallel sends to the one mailbox.
+- [x] **Serialize dispatch + retry-on-429.** Activation and reset notifications share one database-backed queue lock; Graph 429 responses retry using `Retry-After`.
 - [ ] **Production credential.** Set the production `GRAPH_CLIENT_SECRET` (or certificate) in the prod env; record the expiry and rotate before it lapses.
 - [ ] **Application Access Policy.** Restrict the app to `notification@ldc.com.ly` (`New-ApplicationAccessPolicy`) so it cannot send as arbitrary mailboxes.
 - [ ] **Mail.Send consent.** Confirmed granted tenant-wide (2026-07-04) — re-verify in the production tenant.

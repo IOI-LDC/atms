@@ -131,8 +131,8 @@ Administrator:
 2. The Administrator selects an imported employee and provisions them as a user,
    assigning one of the five fixed roles: Administrator, Maintenance Manager,
    Technician, Logistics, or Requester.
-3. The system sends an activation email to the user through Microsoft Power
-   Automate. This email contains a one-time activation link.
+3. The system sends an activation email to the user through Microsoft Graph.
+   This email contains a one-time activation link.
 4. The user clicks the activation link, sets their own password, and gains
    access.
 

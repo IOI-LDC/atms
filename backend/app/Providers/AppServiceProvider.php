@@ -12,7 +12,7 @@ use App\Services\Employees\CsvEmployeeDirectorySource;
 use App\Services\Employees\FakeEmployeeDirectorySource;
 use App\Services\Erp\LdcErpHttpSource;
 use App\Services\Notifications\FakeAccountEmailTransport;
-use App\Services\Notifications\PowerAutomateAccountEmailTransport;
+use App\Services\Notifications\GraphAccountEmailTransport;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Gate;
@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
             $transport = config('account-email.transport', 'fake');
 
             return match ($transport) {
-                'power_automate' => new PowerAutomateAccountEmailTransport,
+                'graph' => new GraphAccountEmailTransport,
                 default => new FakeAccountEmailTransport,
             };
         });

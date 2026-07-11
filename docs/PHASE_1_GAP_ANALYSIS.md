@@ -29,11 +29,11 @@
 >   (`POST /api/auth/change-password` + FE UI, commit `a03b078`); Dashboard KPI tiles
 >   (MTBF / MTTR / Failure Rate / PM Compliance / Avg MR Duration / Avg WO Duration,
 >   commit `de85abe`).
-> - **Email transport clarified:** **Microsoft Graph `sendMail` is the only production
->   transport; Power Automate is retired (not a fallback)** and must be removed once
->   Graph is wired. **Phase 1 email scope = activation + password-reset only**;
->   operational MR/WO emails are outside current Phase 1. `ACCOUNT_EMAIL_TRANSPORT`
->   accepts `fake` and `graph`. Updated I-03 / R-06; removed I-05 (legacy transport).
+> - **Email transport implemented:** **Microsoft Graph `sendMail` is the only
+>   production transport; Power Automate is removed.** The Graph transport is wired
+>   for activation and password-reset emails with a token cache, queue serialization,
+>   and 429 `Retry-After` retry. Operational MR/WO emails remain outside current
+>   Phase 1. `ACCOUNT_EMAIL_TRANSPORT` accepts `fake` and `graph`.
 
 > **Revision 4 (2026-07-11):** The documented asset-list location-filter defect was
 > corrected in `AssetIndexQuery`: the public `location_id` parameter now maps to
@@ -597,9 +597,9 @@ attachments, dashboard, and ERP sync. Identified gaps:
 |----|-----|----------|
 | I-01 | Production Docker Compose needs verification (services, volumes, env) | Medium |
 | I-02 | Backup/restore procedures need end-to-end verification | Medium |
-| I-03 | **Email transport — Microsoft Graph `sendMail` is the only production transport.** Phase 1 email scope = **activation + password-reset only**; operational MR/WO emails are outside current Phase 1. Azure app provisioned + `Mail.Send` consented + probe passed (2026-07-04); **remaining**: `GraphMailTransport` (queue-serialized + 429 retry) wired into the activation/password-reset flows, Application Access Policy (restrict app to mailbox), prod secret/cert, final frontend URL for links. See `03-backend/NOTIFICATIONS.md`. | Medium |
+| I-03 | **Email transport — Microsoft Graph `sendMail` is the only production transport.** Phase 1 scope = **activation + password-reset only**; the Graph transport, queue serialization, 429 `Retry-After` retry, config, and Power Automate removal are implemented. **Remaining go-live inputs:** Application Access Policy (restrict app to mailbox), production secret/certificate, official frontend URL for links, and real user email addresses. See `03-backend/NOTIFICATIONS.md`. | Medium |
 | I-04 | SSL/domain configuration pending (LDC IT) | Medium |
-| I-05 | ~~SharePoint transport throws `RuntimeException` if selected~~ — **legacy transport; superseded.** Power Automate is retired (not a fallback) and must be removed once Graph is wired. `ACCOUNT_EMAIL_TRANSPORT` now accepts `fake` and `graph` only. | — (remove in Graph build) |
+| I-05 | ~~Power Automate transport~~ — **removed.** `ACCOUNT_EMAIL_TRANSPORT` accepts `fake` and `graph` only. | ✅ Done |
 
 ---
 
@@ -657,7 +657,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 | R-03 | ~~Logistics/Manager cannot update locations (G-03 empty picker)~~ — **resolved 2026-07-03 (`de85abe`)** | None (current state) | — | Role-conditional fetch shipped; G-03 closed |
 | R-04 | Newly created assets silently lose lifecycle fields (G-04) | None (current state) | None — **deferred to Phase 3 / cancelled**; create button disabled so the code path is unreachable in prod | Apply fix if/when manual create is revived in Phase 3 |
 | R-05 | Scope creep: client requests Phase 2/3 features during UAT | Medium | Medium | Maintain scope boundary document; change control |
-| R-06 | Email transport provisioning — **Microsoft Graph `sendMail` is the only production transport** (Power Automate retired, not a fallback; SMTP not viable). Phase 1 email scope = activation + password-reset only. Azure app + consent + probe done 2026-07-04; **remaining**: `GraphMailTransport` wired into activation/password-reset flows, App Access Policy, official LDC frontend subdomain for links, removal of the legacy PA transport. | Medium | Medium — no production email until Graph is wired | See `03-backend/NOTIFICATIONS.md`. `ACCOUNT_EMAIL_TRANSPORT` accepts `fake` and `graph`. |
+| R-06 | Email transport provisioning — **Microsoft Graph `sendMail` is the only production transport** (Power Automate retired; SMTP not viable). Phase 1 scope = activation + password-reset only. The Graph transport is implemented; **remaining:** App Access Policy, production secret/certificate, official LDC frontend subdomain for links, real user emails, and production smoke verification. | Medium | Medium — no production email until go-live inputs are configured and verified | See `03-backend/NOTIFICATIONS.md`. `ACCOUNT_EMAIL_TRANSPORT` accepts `fake` and `graph`. |
 
 ---
 
