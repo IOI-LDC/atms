@@ -198,20 +198,27 @@ export function fmtDate(iso: string | null | undefined): string {
  */
 const COMPANY_TIMEZONE = 'Africa/Tripoli'
 
-/** ISO-8601 UTC → "01 Jul 2026, 10:00" in the company timezone. */
+/** ISO-8601 UTC → "2026-07-01 10:00:00" in the company timezone. */
 export function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return new Intl.DateTimeFormat('en-GB', {
+  // Assemble from parts so the output is a deterministic `yyyy-MM-dd HH:mm:ss`
+  // regardless of locale ordering/separators.
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: COMPANY_TIMEZONE,
-    day: '2-digit',
-    month: 'short',
     year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hour12: false,
-  }).format(d)
+  }).formatToParts(d)
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? ''
+  // Some engines emit "24" for midnight under hour12:false — normalise to "00".
+  const hour = get('hour') === '24' ? '00' : get('hour')
+  return `${get('year')}-${get('month')}-${get('day')} ${hour}:${get('minute')}:${get('second')}`
 }
 
 /** KPI days metric → "45d" / "1.5d"; null (no basis) → em dash. */

@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Switch } from '@/components/ui/switch'
 import {
   Select,
@@ -1112,7 +1113,7 @@ watch(
         </div>
         <div class="form-field">
           <Label for="wo-reading-at">Read at</Label>
-          <Input id="wo-reading-at" v-model="readingDraft.readAt" type="date" />
+          <DatePicker id="wo-reading-at" v-model="readingDraft.readAt" placeholder="Select a date" />
         </div>
         <div class="form-field">
           <Label for="wo-reading-notes">Notes <span class="field-optional">— optional</span></Label>
@@ -1281,7 +1282,11 @@ watch(
         </div>
         <div class="form-field">
           <Label for="wo-reading-edit-at">Read at</Label>
-          <Input id="wo-reading-edit-at" v-model="editReadingDraft.readAt" type="date" />
+          <DatePicker
+            id="wo-reading-edit-at"
+            v-model="editReadingDraft.readAt"
+            placeholder="Select a date"
+          />
         </div>
         <div class="form-field">
           <Label for="wo-reading-edit-notes"

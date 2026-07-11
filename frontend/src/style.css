@@ -4105,3 +4105,184 @@
     margin-bottom: 0.25rem;
   }
 }
+
+/* ── Audit Logs viewer ─────────────────────────────────────────────────────
+   Server-side cursor-paginated list — the one list not built on AppDataTable,
+   so it carries its own table + filter styling. */
+.audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.audit-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.audit-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.audit-filter-event {
+  min-width: 16rem;
+}
+
+.audit-filter-subject,
+.audit-filter-actor,
+.audit-filter-text {
+  min-width: 12rem;
+}
+
+.audit-filter-date {
+  min-width: 9rem;
+}
+
+.audit-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.audit-result-meta {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0;
+}
+
+.audit-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.audit-table thead th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.audit-table tbody td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.audit-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.audit-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.audit-row:hover {
+  background: var(--accent);
+}
+
+.audit-row:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.audit-cell-time {
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.audit-mono {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.audit-actor-system {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.audit-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+/* Row-detail sheet: JSON before/after panes */
+.audit-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.audit-json-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.audit-json-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.audit-json-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.audit-json-code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.625rem 0.75rem;
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  color: var(--foreground);
+}
+
+.audit-json-empty {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+  padding: 0.625rem 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 640px) {
+  .audit-json-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-filter-actions {
+    margin-left: 0;
+  }
+}
