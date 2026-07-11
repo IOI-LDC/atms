@@ -17,6 +17,11 @@ import type { FilterOption } from './dataTableSource'
  * - `type`         — hint for sort/formatting (`'date'` compares ISO strings).
  * - `minWidth`     — minimum column width in px (applied via `<colgroup>`).
  * - `comparator`   — custom sort ordering: `(valueA, valueB, rowA, rowB)`.
+ * - `searchFields` — extra row-property keys folded into the toolbar global
+ *                    search for this column. Use when a column visually renders
+ *                    more than its own `field` (e.g. the Name column also shows
+ *                    `erp_asset_code` as secondary text) so the search matches
+ *                    what the user sees. Not rendered or sorted — search only.
  */
 export interface AppColumnDef<T = Record<string, unknown>> {
   field: string
@@ -27,6 +32,7 @@ export interface AppColumnDef<T = Record<string, unknown>> {
   minWidth?: number
   align?: 'center' | 'right'
   comparator?: (valueA: unknown, valueB: unknown, rowA: T, rowB: T) => number
+  searchFields?: string[]
 }
 
 export type { FilterOption }

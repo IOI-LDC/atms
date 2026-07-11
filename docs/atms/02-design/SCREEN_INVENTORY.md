@@ -158,7 +158,8 @@ Tabs:
 ### Drill-down: Location History
 - Current location and past physical location changes.
 - Update action (Logistics, Manager, Admin only): current location, new
-  location, effective date, reason/notes.
+  location, reason/notes. The backend records the effective timestamp when the
+  update is processed.
 
 ---
 
@@ -213,11 +214,11 @@ Tabs:
   - **Asset** (pre-populated, read-only — shows asset tag + name)
   - **Current Location** (read-only, shown for context)
   - **New Location** (select from active locations list, required)
-  - **Effective Date** (datetime, defaults to now, required)
   - **Reason** (text, optional)
   - **Notes** (textarea, optional)
 - **Submission flow:** Validate → Confirm dialog → `POST /api/assets/{asset}/location`
-  → toast result → refresh list + location history.
+  → backend records `effective_at = now()` → toast result → refresh list +
+  location history.
 - A "View Location History" link per row navigates to
   `/assets/:assetId/location-history` (drill-down).
 - **Note:** This screen uses `GET /api/assets` filtered by active status to

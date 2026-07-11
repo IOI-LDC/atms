@@ -145,9 +145,11 @@ request, no approval chain, no arrival confirmation. The backend
 | Asset | Read-only display | N/A | Pre-populated from selected asset row (tag + name) |
 | Current Location | Read-only display | N/A | Shown for context; "No location assigned" if null |
 | New Location | Select dropdown | Yes | Active locations only. Exclude current location from options. |
-| Effective Date | DateTime picker | Yes | Defaults to now. Must be a valid date. |
 | Reason | Text input | No | Free text, max 255 characters |
 | Notes | Textarea | No | Free text |
+
+The effective timestamp is not user-entered. The backend records
+`effective_at = now()` when it processes the location update.
 
 **Submission flow:**
 1. User selects an asset row and clicks "Update Location".

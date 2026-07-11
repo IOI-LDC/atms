@@ -447,6 +447,12 @@ Five human roles (Administrator, Maintenance Manager, Technician, Logistics, Req
 - Dialogs: confirmations, rejection, cancellation, deactivation (short consequential)
 - Full pages: MR Review, WO Detail (complex workflow execution)
 
+### Dates & inputs (global — no exceptions)
+
+- **Date display format is `yyyy-MM-dd`; datetime is `yyyy-MM-dd HH:mm:ss`** (24h, seconds, company timezone). All date display routes through `fmtDate` / `fmtDateTime` in `lib/displayHelpers.ts` — keep it that way; don't format dates ad-hoc.
+- **Date input uses the shadcn-vue `DatePicker`** (`components/ui/date-picker`, a Calendar in `components/ui/calendar` over reka-ui + `@internationalized/date`) — **never native `<Input type="date">`/`datetime-local`** in feature code. v-model is a `yyyy-MM-dd` string; supports `min`/`max`/`clearable`. Add logical range validation (e.g. To ≥ From, no-future for historical data) where relevant.
+- **First server-side cursor list:** `AuditLogsView` intentionally does NOT use `fetchList`/`AppDataTable` (client-mode, whole-table-into-memory). Unbounded lists use `useAuditLogs`-style `load`/`loadMore`/`hasMore` with a "Load more" button.
+
 ## Docker services
 
 | Service | Description |
@@ -498,8 +504,8 @@ A code-verified gap analysis is in [`docs/PHASE_1_GAP_ANALYSIS.md`](docs/PHASE_1
 Key findings future sessions must know:
 
 - **Backend is solid** (zero TODO/FIXME; consistent action-query-controller architecture).
-- **Frontend has 2 stub views** remaining that look "complete" but show "coming soon": `SystemSettingsView`, `AuditLogsView`. (`PartsView`/`PartDetailView` were built — G-02 closed 2026-07-02, commit `56bd463`.) Backend for all is fully implemented.
-- **No Critical code gaps remain in Phase 1.** G-02 ✅ CLOSED. **G-03 (location picker for Manager/Logistics) ✅ CLOSED 2026-07-03 (`de85abe`)** — `useLocations.ts:28-34` now does a role-conditional fetch. **G-11 (Recently Relocated Assets widget) ✅ CLOSED (`de85abe`)** via `GET /api/dashboard/kpis`. G-04 (`CreateAsset` drops lifecycle fields) deferred to Phase 3 / cancelled with G-01 (create disabled → no live impact).
+- **Frontend has 1 stub view** remaining that looks "complete" but shows "coming soon": `SystemSettingsView`. (`PartsView`/`PartDetailView` were built — G-02 closed 2026-07-02, `56bd463`. `AuditLogsView` was built — G-06 closed 2026-07-11.) Backend for all is fully implemented.
+- **No Critical code gaps remain in Phase 1.** G-02 ✅ CLOSED. **G-03 (location picker for Manager/Logistics) ✅ CLOSED 2026-07-03 (`de85abe`)** — `useLocations.ts:28-34` now does a role-conditional fetch. **G-06 (Audit Logs viewer) ✅ CLOSED 2026-07-11** — first server-side cursor list (no `fetchList`/`AppDataTable`), event/subject/actor/date-range filters, before/after JSON detail sheet. **G-11 (Recently Relocated Assets widget) ✅ CLOSED (`de85abe`)** via `GET /api/dashboard/kpis`. G-04 (`CreateAsset` drops lifecycle fields) deferred to Phase 3 / cancelled with G-01 (create disabled → no live impact).
 - **Shipped after rev 2:** self-service password change (`POST /api/auth/change-password` + FE UI, `a03b078`); Dashboard KPI tiles (MTBF / MTTR / Failure Rate / PM Compliance / Avg MR Duration / Avg WO Duration, `de85abe`).
 - **Email transport: Microsoft Graph `sendMail` is the only production transport.** Power Automate is retired (not a fallback) and must be removed once Graph is wired. Phase 1 email scope = **activation + password-reset only**; operational MR/WO emails are outside current Phase 1. `ACCOUNT_EMAIL_TRANSPORT` accepts `fake` and `graph`. See `docs/03-backend/NOTIFICATIONS.md`.
 - **G-01 (Add Asset disabled) — DEFERRED TO PHASE 3 / CANCELLED (2026-07-02)** on data-integrity grounds (ERP likely source of truth in Phase 3). **OPEN DECISION — final confirm/cancel pending** (Path A: ERP asset sync vs Path B: manual create). Canonical tracking: `TDL.md` #10 + `PHASE_1_GAP_ANALYSIS.md` §4.1. The "Add Asset" button is disabled in production pending this call.

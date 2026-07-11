@@ -162,9 +162,9 @@ The "Add Asset" button stays disabled in production (no live impact either way).
 | G-02 | ~~Parts Management UI is a stub~~ — **DONE (2026-07-02, commit `56bd463`)**. `PartsView` + `PartDetailView` fully built; mock removed; WO picker reads live `GET /parts`. | ✅ Done | `PartsView.vue`, `PartDetailView.vue` | — |
 | G-03 | ~~Location picker empty for Manager/Logistics~~ — **DONE (2026-07-03, commit `de85abe`)**. Role-conditional fetch: Admin hits `/admin/locations`; Manager/Logistics hit `/locations`; Technician/Requester skip. | ✅ Done | `useLocations.ts:28-34` | — |
 | G-05 | System Settings UI stub | 🟡 Medium | `SystemSettingsView.vue` | 0.5d |
-| G-06 | Audit Logs viewer stub | 🟡 Medium | `AuditLogsView.vue` | 0.5d |
+| G-06 | ~~Audit Logs viewer stub~~ — **DONE (2026-07-11)**. `AuditLogsView` built: first server-side cursor list (no `fetchList`/`AppDataTable`), event/subject/actor/date-range filters, before/after JSON detail sheet. Added shadcn `DatePicker`/`Calendar` primitive (`@internationalized/date` now a direct dep) and global date format `yyyy-MM-dd` / `yyyy-MM-dd HH:mm:ss`. | ✅ Done | `AuditLogsView.vue`, `useAuditLogs.ts`, `auditColumns.ts`, `AuditLogDetailSheet.vue`, `ui/date-picker`, `ui/calendar` | — |
 | G-08 | SharePoint import button disabled | 🟢 Low | `UsersView.vue:187-189` | 0.25d |
-| G-09 | Effective Date field disabled in location update | 🟢 Low | `UpdateLocationSheet.vue:191` | 0.25d |
+| G-09 | ~~Effective Date field disabled in location update~~ — **DONE (2026-07-11)**. Removed the misleading non-submitted control; backend `effective_at = now()` remains authoritative for immediate Phase 1 moves. | ✅ Done | `UpdateLocationSheet.vue` | — |
 | G-10 | `sinceLastService` hardcoded null on WO detail | 🟢 Low | `useWorkOrderDetail.ts:110-111` | 0.25d |
 | G-11 | Dashboard missing "Recently updated assets" widget | 🟢 Low | `DashboardController` / `DashboardView` | 0.5d |
 | G-12 | Resend activation email not implemented | 🟢 Low | `ProvisionUserDialog.vue:74-75` | 0.25d |

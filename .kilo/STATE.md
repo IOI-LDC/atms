@@ -23,6 +23,11 @@
   `assets.current_location_id` in `AssetIndexQuery` instead of the nonexistent
   `assets.location_id`. Regression tests cover selected-location filtering and
   requester active-asset scoping. The delivery team will run the focused test.
+- **G-09 Effective Date UI mismatch — DONE.** Removed the disabled,
+  non-submitted datetime control from `UpdateLocationSheet`. Phase 1 moves take
+  effect immediately, and backend `effective_at = now()` remains authoritative.
+  Updated the relevant location UI/specification docs. Frontend type-check and
+  production build pass.
 
 ## Session — 2026-07-05
 

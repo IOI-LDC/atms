@@ -1,22 +1,8 @@
 <script setup lang="ts">
 import AppLayout from '@/components/app/AppLayout.vue'
-import KpiTile from '@/components/app/KpiTile.vue'
 import { Button } from '@/components/ui/button'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import {
-  RefreshCw,
-  ClipboardList,
-  Wrench,
-  CalendarClock,
-  Activity,
-  Timer,
-  TriangleAlert,
-  ShieldCheck,
-  FileClock,
-  ClipboardCheck,
-  ChevronRight,
-} from '@lucide/vue'
+import { CalendarClock, ClipboardList, RefreshCw, Wrench } from '@lucide/vue'
 import { useDashboard } from '@/composables/useDashboard'
 import { useDashboardKpis } from '@/composables/useDashboardKpis'
 import { useQuickActions } from '@/composables/useQuickActions'
@@ -34,8 +20,6 @@ import {
   fmtKpiHours,
   fmtKpiPercent,
 } from '@/lib/displayHelpers'
-
-const router = useRouter()
 
 const {
   data: dashData,
@@ -66,8 +50,6 @@ const {
 
 const { actions } = useQuickActions()
 
-// Single loader until both parallel calls have first resolved; afterwards each
-// section renders progressively and a manual refresh keeps stale data visible.
 const initialLoading = computed(
   () => (kpisLoading.value && !kpis.value) || (dashLoading.value && !dashData.value),
 )
@@ -81,13 +63,11 @@ function refreshAll() {
 
 <template>
   <AppLayout>
-    <div class="page-section">
+    <div class="page-section dashboard-briefing">
       <div class="page-header">
         <div class="page-heading">
           <h1 class="page-title">Maintenance Control Center</h1>
-          <p class="page-subtitle">
-            Central hub for scheduling, operations status, and asset reliability statistics.
-          </p>
+          <p class="page-subtitle">Today’s work, maintenance risk, and equipment reliability.</p>
         </div>
         <div class="page-actions">
           <span v-if="windowLabel" class="dashboard-window-note">
@@ -101,337 +81,265 @@ function refreshAll() {
         </div>
       </div>
 
+      <nav v-if="actions.length > 0" class="dashboard-briefing-quick" aria-label="Quick actions">
+        <span class="dashboard-briefing-quick-label">Quick Actions</span>
+        <div class="dashboard-briefing-quick-links">
+          <Button
+            v-for="action in actions"
+            :key="action.label"
+            variant="outline"
+            size="sm"
+            class="dashboard-briefing-quick-link"
+            as-child
+          >
+            <RouterLink :to="action.to">
+              <component :is="action.icon" />
+              {{ action.label }}
+            </RouterLink>
+          </Button>
+        </div>
+      </nav>
+
       <div v-if="initialLoading" class="loading-state">Loading dashboard…</div>
 
       <template v-else>
-        <!-- Split Command-Center Layout (Workspace Left, Command Panel Right) -->
-        <div class="dashboard-split-layout">
-          <!-- Left Panel: Main Workspace -->
-          <div class="dashboard-workspace-main">
-            <!-- ── Analytics & Reliability KPIs Row ────────────────── -->
-            <div v-if="kpisError && !kpis" class="error-state" role="alert">{{ kpisError }}</div>
+        <section
+          v-if="dashData && hasActionRequired"
+          class="dashboard-briefing-status"
+          aria-label="Operational status"
+        >
+          <RouterLink
+            v-if="showPendingMr"
+            to="/maintenance?tab=pending-approval"
+            class="dashboard-briefing-status-item"
+          >
+            <ClipboardList />
+            <span class="dashboard-briefing-status-label">Pending MR</span>
+            <strong>{{ dashData.summary.pending_maintenance_requests ?? 0 }}</strong>
+          </RouterLink>
+          <RouterLink
+            v-if="showOpenWo"
+            to="/work-orders?tab=open"
+            class="dashboard-briefing-status-item"
+          >
+            <Wrench />
+            <span class="dashboard-briefing-status-label">Open Work Orders</span>
+            <strong>{{ dashData.summary.open_work_orders ?? 0 }}</strong>
+          </RouterLink>
+          <RouterLink
+            v-if="showOverduePm"
+            to="/admin/pm-rules"
+            class="dashboard-briefing-status-item"
+          >
+            <CalendarClock />
+            <span class="dashboard-briefing-status-label">Overdue PM</span>
+            <strong>{{ dashData.summary.overdue_pm_assignments ?? 0 }}</strong>
+          </RouterLink>
+        </section>
 
-            <section v-else-if="kpis" class="kpi-section">
-              <!-- Reliability KPIs group -->
-              <div class="kpi-group">
-                <p class="kpi-group-label kpi-group-label-reliability">Reliability Performance</p>
-                <div class="kpi-grid-3 kpi-accent-reliability">
-                  <KpiTile
-                    :icon="Activity"
-                    title="MTBF"
-                    :value="fmtKpiDays(kpis.mtbf.days)"
-                    subtitle="Mean time between failures"
-                  />
-                  <KpiTile
-                    :icon="Timer"
-                    title="MTTR"
-                    :value="fmtKpiHours(kpis.mttr.hours)"
-                    subtitle="Mean time to repair"
-                  />
-                  <KpiTile
-                    :icon="TriangleAlert"
-                    title="Failure Rate"
-                    :value="kpis.failure_rate.failures"
-                    :subtitle="`${kpis.failure_rate.per_day.toFixed(3)}/day`"
-                  />
-                </div>
-              </div>
+        <div v-if="kpisError && !kpis" class="error-state" role="alert">{{ kpisError }}</div>
 
-              <!-- Process Performance KPIs group -->
-              <div class="kpi-group">
-                <p class="kpi-group-label kpi-group-label-process">Process Efficiency</p>
-                <div class="kpi-grid-3 kpi-accent-process">
-                  <KpiTile
-                    :icon="ShieldCheck"
-                    title="PM Compliance"
-                    :value="fmtKpiPercent(kpis.pm_compliance.percentage)"
-                    :subtitle="`${kpis.pm_compliance.compliant} / ${kpis.pm_compliance.total} on time`"
-                  />
-                  <KpiTile
-                    :icon="FileClock"
-                    title="Avg MR Duration"
-                    :value="fmtKpiHours(kpis.avg_mr_duration.hours)"
-                    subtitle="Created → resolved"
-                  />
-                  <KpiTile
-                    :icon="ClipboardCheck"
-                    title="Avg WO Duration"
-                    :value="fmtKpiHours(kpis.avg_wo_duration.hours)"
-                    subtitle="Created → closed"
-                  />
-                </div>
-              </div>
-            </section>
-
-            <!-- ── Detailed Data Lists Grid ─────────────────────────── -->
-            <div v-if="dashError && !dashData" class="error-state" role="alert">
-              {{ dashError }}
+        <div v-else-if="kpis" class="dashboard-briefing-metrics">
+          <section class="dashboard-briefing-metric-section dashboard-briefing-reliability">
+            <div class="dashboard-briefing-section-heading">
+              <h2>Equipment Reliability</h2>
+              <span>90-day pulse</span>
             </div>
-
-            <div
-              v-else-if="
-                dashData && (hasActionRequired || showRecentlyClosed || relocated.length > 0)
-              "
-              :class="[hasActionRequired ? 'dashboard-grid-redesigned' : 'dashboard-grid-stacked']"
-            >
-              <!-- Column 1: Action Required -->
-              <div v-if="hasActionRequired" class="dashboard-column-action">
-                <!-- Pending Maintenance Requests -->
-                <div v-if="showPendingMr" class="data-card">
-                  <div class="data-card-header">
-                    <h2 class="data-card-title">Pending Maintenance Requests</h2>
-                    <span class="data-card-count">{{
-                      dashData.summary.pending_maintenance_requests ?? 0
-                    }}</span>
-                  </div>
-                  <div class="data-card-content">
-                    <div v-if="pendingMrItems.length === 0" class="widget-empty">
-                      No pending requests.
-                    </div>
-                    <div v-else class="widget-list">
-                      <div class="widget-list-header">
-                        <span>Request / Asset</span>
-                        <span>Priority</span>
-                      </div>
-                      <RouterLink
-                        v-for="mr in pendingMrItems"
-                        :key="mr.id"
-                        :to="`/maintenance/requests/${mr.id}`"
-                        :class="['widget-list-item', 'widget-item-pending-mr']"
-                      >
-                        <span class="widget-item-main">
-                          <span class="widget-item-primary"
-                            >{{ mr.number }} — {{ mr.asset.name }}</span
-                          >
-                          <span class="widget-item-secondary"
-                            >{{ mr.created_by?.name ?? '—' }} · {{ fmtDate(mr.created_at) }}</span
-                          >
-                        </span>
-                        <span class="widget-item-meta">
-                          <span :class="priorityClass(mr.priority)">{{
-                            priorityLabel(mr.priority)
-                          }}</span>
-                        </span>
-                      </RouterLink>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Open Work Orders -->
-                <div v-if="showOpenWo" class="data-card">
-                  <div class="data-card-header">
-                    <h2 class="data-card-title">Open Work Orders</h2>
-                    <span class="data-card-count">{{
-                      dashData.summary.open_work_orders ?? 0
-                    }}</span>
-                  </div>
-                  <div class="data-card-content">
-                    <div v-if="openWoItems.length === 0" class="widget-empty">
-                      No open work orders.
-                    </div>
-                    <div v-else class="widget-list">
-                      <div class="widget-list-header">
-                        <span>Work Order / Asset</span>
-                        <span>Status</span>
-                      </div>
-                      <RouterLink
-                        v-for="wo in openWoItems"
-                        :key="wo.id"
-                        :to="`/work-orders/${wo.id}`"
-                        :class="['widget-list-item', 'widget-item-open-wo']"
-                      >
-                        <span class="widget-item-main">
-                          <span class="widget-item-primary"
-                            >{{ wo.number }} — {{ wo.asset.name }}</span
-                          >
-                          <span class="widget-item-secondary">{{
-                            wo.assigned_to?.name ?? 'Unassigned'
-                          }}</span>
-                        </span>
-                        <span class="widget-item-meta">
-                          <span :class="woStatusClass(wo.status)">{{
-                            woStatusLabel(wo.status)
-                          }}</span>
-                        </span>
-                      </RouterLink>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Overdue PM Assignments -->
-                <div v-if="showOverduePm" class="data-card">
-                  <div class="data-card-header">
-                    <h2 class="data-card-title">Overdue PM Assignments</h2>
-                    <span class="data-card-count">{{
-                      dashData.summary.overdue_pm_assignments ?? 0
-                    }}</span>
-                  </div>
-                  <div class="data-card-content">
-                    <div v-if="overduePmItems.length === 0" class="widget-empty">
-                      No overdue PM assignments.
-                    </div>
-                    <div v-else class="widget-list">
-                      <div class="widget-list-header">
-                        <span>Asset / PM Rule</span>
-                        <span>Status</span>
-                      </div>
-                      <RouterLink
-                        v-for="a in overduePmItems"
-                        :key="a.id"
-                        :to="`/assets/${a.asset?.id}`"
-                        :class="['widget-list-item', 'widget-item-overdue-pm']"
-                      >
-                        <span class="widget-item-main">
-                          <span class="widget-item-primary">{{ a.asset?.name }}</span>
-                          <span class="widget-item-secondary"
-                            >{{ a.rule.name }} · Due {{ pmDueLabel(a) }}</span
-                          >
-                        </span>
-                        <span class="widget-item-meta">
-                          <span :class="pmStatusClass(a.pm_status)">{{
-                            pmStatusLabel(a.pm_status)
-                          }}</span>
-                        </span>
-                      </RouterLink>
-                    </div>
-                  </div>
-                </div>
+            <div class="dashboard-briefing-metric-grid">
+              <div class="dashboard-briefing-metric">
+                <span>MTBF</span>
+                <strong>{{ fmtKpiDays(kpis.mtbf.days) }}</strong>
+                <small>Between failures</small>
               </div>
-
-              <!-- Column 2: Activity & Tracking -->
-              <div class="dashboard-column-tracking">
-                <!-- Recently Relocated Assets -->
-                <div v-if="kpis" class="data-card">
-                  <div class="data-card-header">
-                    <h2 class="data-card-title">Recently Relocated Assets</h2>
-                    <span class="data-card-count">{{ relocated.length }}</span>
-                  </div>
-                  <div class="data-card-content">
-                    <div v-if="relocated.length === 0" class="widget-empty">
-                      No asset relocations in the last {{ windowDays }} days.
-                    </div>
-                    <div v-else class="widget-list">
-                      <div class="widget-list-header">
-                        <span>Asset / Route</span>
-                        <span>Relocated At</span>
-                      </div>
-                      <RouterLink
-                        v-for="item in relocated"
-                        :key="item.id"
-                        :to="`/assets/${item.asset_id}`"
-                        :class="['widget-list-item', 'widget-item-relocated']"
-                      >
-                        <span class="widget-item-main">
-                          <span class="widget-item-primary">{{ item.asset.name }}</span>
-                          <span class="widget-item-secondary">
-                            {{ item.from_location?.name ?? '—' }}
-                            <span class="relocation-path-arrow">→</span>
-                            {{ item.to_location?.name ?? '—' }}
-                          </span>
-                        </span>
-                        <span class="widget-item-meta">
-                          <span class="widget-item-secondary">{{
-                            fmtDateTime(item.effective_at)
-                          }}</span>
-                        </span>
-                      </RouterLink>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Recently Closed Work Orders -->
-                <div v-if="showRecentlyClosed" class="data-card">
-                  <div class="data-card-header">
-                    <h2 class="data-card-title">Recently Closed Work Orders</h2>
-                    <span class="data-card-count">{{
-                      dashData.summary.recently_closed_work_orders ?? 0
-                    }}</span>
-                  </div>
-                  <div class="data-card-content">
-                    <div v-if="closedWoItems.length === 0" class="widget-empty">
-                      No work orders closed in the last 30 days.
-                    </div>
-                    <div v-else class="widget-list">
-                      <div class="widget-list-header">
-                        <span>Work Order / Asset</span>
-                        <span>Closed Date</span>
-                      </div>
-                      <RouterLink
-                        v-for="wo in closedWoItems"
-                        :key="wo.id"
-                        :to="`/work-orders/${wo.id}`"
-                        :class="['widget-list-item', 'widget-item-closed-wo']"
-                      >
-                        <span class="widget-item-main">
-                          <span class="widget-item-primary"
-                            >{{ wo.number }} — {{ wo.asset.name }}</span
-                          >
-                          <span class="widget-item-secondary">{{
-                            wo.assigned_to?.name ?? 'Unassigned'
-                          }}</span>
-                        </span>
-                        <span class="widget-item-meta">
-                          <span class="widget-item-secondary"
-                            >Closed {{ fmtDate(wo.closed_at) }}</span
-                          >
-                        </span>
-                      </RouterLink>
-                    </div>
-                  </div>
-                </div>
+              <div class="dashboard-briefing-metric">
+                <span>MTTR</span>
+                <strong>{{ fmtKpiHours(kpis.mttr.hours) }}</strong>
+                <small>To repair</small>
+              </div>
+              <div class="dashboard-briefing-metric">
+                <span>Failure rate</span>
+                <strong>{{ kpis.failure_rate.failures }}</strong>
+                <small>{{ kpis.failure_rate.per_day.toFixed(3) }}/day</small>
               </div>
             </div>
-          </div>
+          </section>
 
-          <!-- Right Panel: Sidebar Command Center -->
-          <aside class="dashboard-sidebar-command">
-            <!-- CTA Action Section -->
-            <div v-if="actions.length > 0" class="dashboard-sidebar-section">
-              <h3 class="dashboard-sidebar-title">Actions Hub</h3>
-              <div class="dashboard-sidebar-section">
-                <button
-                  v-for="a in actions"
-                  :key="a.label"
-                  class="dashboard-cta-btn"
-                  @click="router.push(a.to)"
+          <section class="dashboard-briefing-metric-section dashboard-briefing-process">
+            <div class="dashboard-briefing-section-heading">
+              <h2>Process Performance</h2>
+              <span>90-day pulse</span>
+            </div>
+            <div class="dashboard-briefing-metric-grid">
+              <div class="dashboard-briefing-metric">
+                <span>PM compliance</span>
+                <strong>{{ fmtKpiPercent(kpis.pm_compliance.percentage) }}</strong>
+                <small
+                  >{{ kpis.pm_compliance.compliant }} / {{ kpis.pm_compliance.total }} on
+                  time</small
                 >
-                  <span class="dashboard-cta-left">
-                    <component :is="a.icon" />
-                    {{ a.label }}
+              </div>
+              <div class="dashboard-briefing-metric">
+                <span>Avg MR</span>
+                <strong>{{ fmtKpiHours(kpis.avg_mr_duration.hours) }}</strong>
+                <small>To resolve</small>
+              </div>
+              <div class="dashboard-briefing-metric">
+                <span>Avg WO</span>
+                <strong>{{ fmtKpiHours(kpis.avg_wo_duration.hours) }}</strong>
+                <small>To close</small>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div v-if="dashError && !dashData" class="error-state" role="alert">
+          {{ dashError }}
+        </div>
+
+        <div
+          v-else-if="dashData && (hasActionRequired || showRecentlyClosed || relocated.length > 0)"
+          class="dashboard-briefing-workboard"
+        >
+          <section v-if="hasActionRequired" class="dashboard-briefing-work-section">
+            <div class="dashboard-briefing-section-heading">
+              <h2>Active Workboard</h2>
+              <span>What needs attention</span>
+            </div>
+
+            <div v-if="showPendingMr" class="dashboard-briefing-queue">
+              <div class="dashboard-briefing-queue-heading">
+                <h3>Pending Maintenance Requests</h3>
+                <span>{{ dashData.summary.pending_maintenance_requests ?? 0 }}</span>
+              </div>
+              <div v-if="pendingMrItems.length === 0" class="dashboard-briefing-empty">
+                No pending requests.
+              </div>
+              <div v-else class="dashboard-briefing-rows">
+                <RouterLink
+                  v-for="mr in pendingMrItems"
+                  :key="mr.id"
+                  :to="`/maintenance/requests/${mr.id}`"
+                  class="dashboard-briefing-row dashboard-briefing-row-request"
+                >
+                  <span class="dashboard-briefing-row-main">
+                    <strong>{{ mr.number }} — {{ mr.asset.name }}</strong>
+                    <small>{{ mr.created_by?.name ?? '—' }} · {{ fmtDate(mr.created_at) }}</small>
                   </span>
-                  <ChevronRight class="dashboard-cta-chevron" />
-                </button>
+                  <span :class="priorityClass(mr.priority)">{{ priorityLabel(mr.priority) }}</span>
+                </RouterLink>
               </div>
             </div>
 
-            <!-- Live Status indicators (Operational KPIs stacked vertically) -->
-            <div v-if="hasActionRequired" class="dashboard-sidebar-section">
-              <h3 class="dashboard-sidebar-title">Operational Status</h3>
-              <div class="dashboard-sidebar-section kpi-accent-operational">
-                <KpiTile
-                  v-if="showPendingMr"
-                  :icon="ClipboardList"
-                  title="Pending MR"
-                  :value="dashData?.summary.pending_maintenance_requests ?? 0"
-                  to="/maintenance?tab=pending-approval"
-                />
-                <KpiTile
-                  v-if="showOpenWo"
-                  :icon="Wrench"
-                  title="Open Work Orders"
-                  :value="dashData?.summary.open_work_orders ?? 0"
-                  to="/work-orders?tab=open"
-                />
-                <KpiTile
-                  v-if="showOverduePm"
-                  :icon="CalendarClock"
-                  title="Overdue PM Rules"
-                  :value="dashData?.summary.overdue_pm_assignments ?? 0"
-                  to="/admin/pm-rules"
-                />
+            <div v-if="showOpenWo" class="dashboard-briefing-queue">
+              <div class="dashboard-briefing-queue-heading">
+                <h3>Open Work Orders</h3>
+                <span>{{ dashData.summary.open_work_orders ?? 0 }}</span>
+              </div>
+              <div v-if="openWoItems.length === 0" class="dashboard-briefing-empty">
+                No open work orders.
+              </div>
+              <div v-else class="dashboard-briefing-rows">
+                <RouterLink
+                  v-for="wo in openWoItems"
+                  :key="wo.id"
+                  :to="`/work-orders/${wo.id}`"
+                  class="dashboard-briefing-row dashboard-briefing-row-work-order"
+                >
+                  <span class="dashboard-briefing-row-main">
+                    <strong>{{ wo.number }} — {{ wo.asset.name }}</strong>
+                    <small>{{ wo.assigned_to?.name ?? 'Unassigned' }}</small>
+                  </span>
+                  <span :class="woStatusClass(wo.status)">{{ woStatusLabel(wo.status) }}</span>
+                </RouterLink>
               </div>
             </div>
-          </aside>
+
+            <div v-if="showOverduePm" class="dashboard-briefing-queue">
+              <div class="dashboard-briefing-queue-heading">
+                <h3>Overdue PM Assignments</h3>
+                <span>{{ dashData.summary.overdue_pm_assignments ?? 0 }}</span>
+              </div>
+              <div v-if="overduePmItems.length === 0" class="dashboard-briefing-empty">
+                No overdue PM assignments.
+              </div>
+              <div v-else class="dashboard-briefing-rows">
+                <RouterLink
+                  v-for="assignment in overduePmItems"
+                  :key="assignment.id"
+                  :to="`/assets/${assignment.asset?.id}`"
+                  class="dashboard-briefing-row dashboard-briefing-row-overdue"
+                >
+                  <span class="dashboard-briefing-row-main">
+                    <strong>{{ assignment.asset?.name }}</strong>
+                    <small>{{ assignment.rule.name }} · Due {{ pmDueLabel(assignment) }}</small>
+                  </span>
+                  <span :class="pmStatusClass(assignment.pm_status)">{{
+                    pmStatusLabel(assignment.pm_status)
+                  }}</span>
+                </RouterLink>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-briefing-activity-section">
+            <div class="dashboard-briefing-section-heading">
+              <h2>Recent Activity</h2>
+              <span>Latest movements</span>
+            </div>
+
+            <div v-if="kpis" class="dashboard-briefing-queue">
+              <div class="dashboard-briefing-queue-heading">
+                <h3>Asset Relocations</h3>
+                <span>{{ relocated.length }}</span>
+              </div>
+              <div v-if="relocated.length === 0" class="dashboard-briefing-empty">
+                No asset relocations in the last {{ windowDays }} days.
+              </div>
+              <div v-else class="dashboard-briefing-rows">
+                <RouterLink
+                  v-for="item in relocated"
+                  :key="item.id"
+                  :to="`/assets/${item.asset_id}`"
+                  class="dashboard-briefing-row dashboard-briefing-row-activity"
+                >
+                  <span class="dashboard-briefing-row-main">
+                    <strong>{{ item.asset.name }}</strong>
+                    <small
+                      >{{ item.from_location?.name ?? '—' }} →
+                      {{ item.to_location?.name ?? '—' }}</small
+                    >
+                  </span>
+                  <small class="dashboard-briefing-row-date">{{
+                    fmtDateTime(item.effective_at)
+                  }}</small>
+                </RouterLink>
+              </div>
+            </div>
+
+            <div v-if="showRecentlyClosed" class="dashboard-briefing-queue">
+              <div class="dashboard-briefing-queue-heading">
+                <h3>Recently Closed</h3>
+                <span>{{ dashData.summary.recently_closed_work_orders ?? 0 }}</span>
+              </div>
+              <div v-if="closedWoItems.length === 0" class="dashboard-briefing-empty">
+                No work orders closed in the last 30 days.
+              </div>
+              <div v-else class="dashboard-briefing-rows">
+                <RouterLink
+                  v-for="wo in closedWoItems"
+                  :key="wo.id"
+                  :to="`/work-orders/${wo.id}`"
+                  class="dashboard-briefing-row dashboard-briefing-row-activity"
+                >
+                  <span class="dashboard-briefing-row-main">
+                    <strong>{{ wo.number }} — {{ wo.asset.name }}</strong>
+                    <small>{{ wo.assigned_to?.name ?? 'Unassigned' }}</small>
+                  </span>
+                  <small class="dashboard-briefing-row-date">{{ fmtDate(wo.closed_at) }}</small>
+                </RouterLink>
+              </div>
+            </div>
+          </section>
         </div>
       </template>
     </div>

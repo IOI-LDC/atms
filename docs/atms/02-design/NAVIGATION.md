@@ -131,10 +131,10 @@ Eight primary sidebar items.
 - **"Asset Location Update" tab** — Search and select an active asset, view its
   current location and location history, and update the asset's physical
   location. Uses a side-sheet form (`UpdateLocationSheet`) containing: target
-  location (select from active location list), effective date, optional reason,
-  and optional notes. Submitting creates a location history record via the
-  backend `UpdateAssetLocation` Action. No approval chain — a direct update
-  per the Phase 1 scope.
+  location (select from active location list), optional reason, and optional
+  notes. Submitting creates a location history record via the backend
+  `UpdateAssetLocation` Action with the server timestamp as `effective_at`. No
+  approval chain — a direct update per the Phase 1 scope.
 - **"Manage Locations" tab** — CRUD for location definitions. Administrator
   can create, edit, activate, and deactivate location records (name, type,
   code, description, parent location for hierarchy). Uses `POST/PATCH

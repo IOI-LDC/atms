@@ -27,6 +27,9 @@ export const assetColumns: ColumnDef<Asset>[] = [
     sortable: true,
     // Give the primary identifier more room — asset names are descriptive.
     minWidth: 320,
+    // The cell also renders erp_asset_code as secondary text, so fold it into
+    // the toolbar search (it's not a column of its own).
+    searchFields: ['erp_asset_code'],
   },
   {
     field: 'serial_number',

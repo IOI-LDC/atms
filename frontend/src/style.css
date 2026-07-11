@@ -1493,6 +1493,356 @@
   }
 }
 
+/* Dashboard briefing board — dashboard-content scope only. */
+.dashboard-briefing {
+  gap: 1.25rem;
+}
+
+.dashboard-briefing-quick {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  background-color: color-mix(in oklab, var(--primary) 6%, var(--background));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-briefing-quick-label {
+  flex-shrink: 0;
+  padding: 0 1rem;
+  border-right: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-quick-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dashboard-briefing-quick-link {
+  min-width: 7rem;
+  justify-content: flex-start;
+  background-color: var(--card);
+  color: var(--primary);
+  box-shadow: none;
+}
+
+.dashboard-briefing-quick-link:hover {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.dashboard-briefing-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-briefing-status-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-briefing-status-item + .dashboard-briefing-status-item {
+  border-left: 1px solid var(--border);
+}
+
+.dashboard-briefing-status-item:hover {
+  background-color: var(--muted);
+}
+
+.dashboard-briefing-status-item svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--primary);
+}
+
+.dashboard-briefing-status-item strong {
+  font-size: 1.125rem;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-status-label {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.dashboard-briefing-metric-section,
+.dashboard-briefing-work-section,
+.dashboard-briefing-activity-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.dashboard-briefing-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.dashboard-briefing-section-heading h2,
+.dashboard-briefing-section-heading h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-section-heading span {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.dashboard-briefing-reliability .dashboard-briefing-section-heading {
+  border-bottom-color: var(--chart-3);
+}
+
+.dashboard-briefing-process .dashboard-briefing-section-heading {
+  border-bottom-color: var(--chart-1);
+}
+
+.dashboard-briefing-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-briefing-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0 0.875rem;
+}
+
+.dashboard-briefing-metric:first-child {
+  padding-left: 0;
+}
+
+.dashboard-briefing-metric + .dashboard-briefing-metric {
+  border-left: 1px solid var(--border);
+}
+
+.dashboard-briefing-metric > span,
+.dashboard-briefing-metric > small {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-metric > span {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dashboard-briefing-metric > strong {
+  overflow: hidden;
+  font-size: 1.375rem;
+  line-height: 1.2;
+  color: var(--foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-metric > small {
+  font-size: 0.6875rem;
+}
+
+.dashboard-briefing-workboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: 1.5rem;
+}
+
+.dashboard-briefing-queue {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-briefing-queue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--muted);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-briefing-queue-heading h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-queue-heading > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background-color: var(--card);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.dashboard-briefing-empty {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.dashboard-briefing-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-briefing-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-briefing-row:hover {
+  background-color: var(--muted);
+}
+
+.dashboard-briefing-row-request {
+  border-left-color: var(--primary);
+}
+
+.dashboard-briefing-row-work-order {
+  border-left-color: var(--info);
+}
+
+.dashboard-briefing-row-overdue {
+  border-left-color: var(--destructive);
+}
+
+.dashboard-briefing-row-activity {
+  border-left-width: 0;
+}
+
+.dashboard-briefing-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.dashboard-briefing-row-main strong,
+.dashboard-briefing-row-main small,
+.dashboard-briefing-row-date {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-row-main strong {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-row-main small,
+.dashboard-briefing-row-date {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 1100px) {
+  .dashboard-briefing-metrics,
+  .dashboard-briefing-workboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-briefing-quick {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-briefing-quick-label {
+    padding: 0 0.75rem;
+    border-right: 0;
+  }
+
+  .dashboard-briefing-quick-links {
+    width: 100%;
+    padding: 0 0.75rem;
+  }
+
+  .dashboard-briefing-quick-link {
+    flex: 1 1 8rem;
+  }
+
+  .dashboard-briefing-status {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-briefing-status-item + .dashboard-briefing-status-item {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .dashboard-briefing-metric-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .dashboard-briefing-metric,
+  .dashboard-briefing-metric:first-child {
+    padding: 0;
+  }
+
+  .dashboard-briefing-metric + .dashboard-briefing-metric {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    Filters and Tables
    ═══════════════════════════════════════════════════════════════════ */
@@ -1753,35 +2103,135 @@
   font-size: 0.8125rem;
 }
 
-[data-sonner-toaster] [data-sonner-toast] {
+/* ═══════════════════════════════════════════════════════════════════
+   Toast (vue-sonner) — icon-chip cards with a faint type-tinted surface.
+   The glyph sits in a tinted rounded chip (same language as the KPI
+   tiles) and the whole card carries a soft wash of the type colour, so
+   type is triple-encoded: chip + glyph shape + surface tint. Overrides
+   win over vue-sonner/style.css by matching its [data-styled]
+   specificity and loading later in source.
+   ═══════════════════════════════════════════════════════════════════ */
+
+[data-sonner-toaster] {
+  --width: 22rem;
+  --border-radius: 12px;
+  --toast-icon-margin-start: 0;
+  --toast-icon-margin-end: 0;
+  --toast-svg-margin-start: 0;
+  --toast-svg-margin-end: 0;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  align-items: center;
   background: var(--card);
   border: 1px solid var(--border);
+  border-radius: 12px;
   color: var(--foreground);
-  box-shadow: var(--shadow-md);
+  box-shadow:
+    0 4px 14px -4px color-mix(in oklab, var(--primary) 18%, transparent),
+    0 2px 6px -2px oklch(0 0 0 / 0.06);
 }
+
+/* Glyph → tinted rounded chip. Neutral base; the type rules tint it. */
+[data-sonner-toast][data-styled='true'] [data-icon] {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+[data-sonner-toast][data-styled='true'] [data-icon] svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Text column */
+[data-sonner-toast][data-styled='true'] [data-content] {
+  gap: 0.125rem;
+}
+[data-sonner-toast][data-styled='true'] [data-title] {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.006em;
+  color: var(--foreground);
+}
+[data-sonner-toast][data-styled='true'] [data-description] {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+/* Per-type: faint surface wash + tinted chip + glyph colour. Surface
+   selector matches the base rule's specificity and loads later, so
+   `background` wins over the base card. */
 [data-sonner-toaster] [data-sonner-toast][data-type='success'] {
-  border-left: 4px solid var(--success);
+  background: color-mix(in oklab, var(--success) 11%, var(--card));
 }
-[data-sonner-toaster] [data-sonner-toast][data-type='success'] svg {
+[data-sonner-toast][data-type='success'] [data-icon] {
+  background: color-mix(in oklab, var(--success) 15%, transparent);
   color: var(--success);
 }
 [data-sonner-toaster] [data-sonner-toast][data-type='error'] {
-  border-left: 4px solid var(--destructive);
+  background: color-mix(in oklab, var(--destructive) 10%, var(--card));
 }
-[data-sonner-toaster] [data-sonner-toast][data-type='error'] svg {
+[data-sonner-toast][data-type='error'] [data-icon] {
+  background: color-mix(in oklab, var(--destructive) 15%, transparent);
   color: var(--destructive);
 }
 [data-sonner-toaster] [data-sonner-toast][data-type='warning'] {
-  border-left: 4px solid var(--warning);
+  background: color-mix(in oklab, var(--warning) 13%, var(--card));
 }
-[data-sonner-toaster] [data-sonner-toast][data-type='warning'] svg {
-  color: var(--warning);
+[data-sonner-toast][data-type='warning'] [data-icon] {
+  background: color-mix(in oklab, var(--warning) 20%, transparent);
+  color: oklch(0.5 0.13 75);
 }
 [data-sonner-toaster] [data-sonner-toast][data-type='info'] {
-  border-left: 4px solid var(--info);
+  background: color-mix(in oklab, var(--info) 11%, var(--card));
 }
-[data-sonner-toaster] [data-sonner-toast][data-type='info'] svg {
+[data-sonner-toast][data-type='info'] [data-icon] {
+  background: color-mix(in oklab, var(--info) 15%, transparent);
   color: var(--info);
+}
+[data-sonner-toaster] [data-sonner-toast][data-type='loading'] {
+  background: color-mix(in oklab, var(--primary) 9%, var(--card));
+}
+[data-sonner-toast][data-type='loading'] [data-icon] {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+/* Action button → primary; close button → quiet neutral chrome */
+[data-sonner-toast][data-styled='true'] [data-button] {
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+[data-sonner-toast][data-styled='true'] [data-close-button] {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+[data-sonner-toast][data-styled='true']:hover [data-close-button]:hover {
+  background: var(--muted);
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--border) 65%, black);
 }
 
 /* Dialog and sheet form helpers */

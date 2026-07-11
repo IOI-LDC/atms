@@ -43,8 +43,6 @@ const emit = defineEmits<{ close: []; saved: [] }>()
 
 // ── Form state ────────────────────────────────────────────────────────────────
 const locationId = ref<string>('')
-// Display-only: backend hardcodes now() as effective_at until API supports it
-const effectiveDate = ref<string>(new Date().toISOString().slice(0, 16))
 const reason = ref('')
 const notes = ref('')
 const saving = ref(false)
@@ -104,7 +102,6 @@ watch(
 
 function resetForm() {
   locationId.value = ''
-  effectiveDate.value = new Date().toISOString().slice(0, 16)
   reason.value = ''
   notes.value = ''
   validationErrors.value = null
@@ -200,17 +197,6 @@ const selectedLocation = computed(() =>
             <p v-if="validationErrors?.location_id" class="form-error">
               {{ validationErrors.location_id[0] }}
             </p>
-          </div>
-
-          <!-- Effective date (display-only until backend supports custom effective_at) -->
-          <div class="form-field">
-            <Label for="update-effective-date">Effective Date</Label>
-            <Input
-              id="update-effective-date"
-              type="datetime-local"
-              v-model="effectiveDate"
-              disabled
-            />
           </div>
 
           <!-- Reason -->

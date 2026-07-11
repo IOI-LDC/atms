@@ -130,6 +130,14 @@ const tanColumns = toTanColumns(cols.value)
 // TanStack's global filter is evaluated per (row, column); a row passes if ANY
 // column matches. We normalize values to a searchable string so object fields
 // (asset.name) and dates are matchable instead of "[object Object]".
+
+// Extra row-property fields folded into a column's global search (e.g. the Name
+// column also searches `erp_asset_code`, which it renders as secondary text but
+// isn't a column of its own). Keyed by column id.
+const searchFieldsByColumn = new Map<string, string[]>(
+  cols.value.filter((c) => c.searchFields?.length).map((c) => [c.field, c.searchFields!]),
+)
+
 function toSearchable(value: unknown): string {
   if (value == null) return ''
   if (typeof value === 'string') return value
@@ -148,7 +156,16 @@ const globalFilterFn: FilterFn<AnyRow> = (row, columnId, filterValue) => {
     .trim()
     .toLowerCase()
   if (q === '') return true
-  return toSearchable(row.getValue(columnId)).toLowerCase().includes(q)
+  if (toSearchable(row.getValue(columnId)).toLowerCase().includes(q)) return true
+  // Also match the column's extra searchable fields (read straight off the row).
+  const extra = searchFieldsByColumn.get(columnId)
+  return extra
+    ? extra.some((field) =>
+        toSearchable((row.original as Record<string, unknown>)[field])
+          .toLowerCase()
+          .includes(q),
+      )
+    : false
 }
 
 // ── Owned state (manual control so we can persist/restore) ───────────────────
@@ -198,6 +215,11 @@ const table = useVueTable<AnyRow>({
   },
   enableMultiSort: true,
   globalFilterFn,
+  // TanStack's default gates a column out of global search when the FIRST row's
+  // value isn't a string/number — so a nullable column (e.g. serial_number,
+  // null on most assets) silently drops out of search. Our globalFilterFn +
+  // toSearchable handle null/objects safely, so let every column participate.
+  getColumnCanGlobalFilter: () => true,
   getCoreRowModel: getCoreRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   getSortedRowModel: getSortedRowModel(),

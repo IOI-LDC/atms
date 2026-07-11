@@ -85,10 +85,10 @@ core workflows.
 | **G-03** | ~~Location picker empty for non-Admins~~ — **CLOSED (2026-07-03, `de85abe`)**; Manager/Logistics now hit `GET /api/locations` | ✅ Done | Frontend |
 | **G-04** | ~~`CreateAsset` action drops lifecycle fields~~ — **DEFERRED TO PHASE 3 / CANCELLED** (create button disabled in prod; moot until manual create decision, 2026-07-02) | ⏸ Deferred | Backend |
 | **G-05** | **System Settings is a stub** — `SystemSettingsView` shows "coming soon" | **Medium** | Frontend |
-| **G-06** | **Audit Logs viewer is a stub** — `AuditLogsView` shows "coming soon" | **Medium** | Frontend |
+| **G-06** | ~~Audit Logs viewer is a stub~~ — **CLOSED (2026-07-11)**; `AuditLogsView` built (server-side cursor, filters, JSON detail sheet) | ✅ Done | Frontend |
 | **G-07** | **Parts sync blocked** — ERP team has not provided the BC parts API page name | **High** | External |
 | **G-08** | SharePoint employee import button disabled (no handler) | Low | Frontend |
-| **G-09** | Effective Date field disabled in location update sheet | Low | Frontend |
+| **G-09** | ~~Effective Date field disabled in location update sheet~~ — **CLOSED (2026-07-11)**; misleading field removed, backend retains `effective_at = now()` | ✅ Done | Frontend |
 | **G-10** | `sinceLastService` hardcoded to `null` on WO detail | Low | Frontend |
 | **G-11** | ~~Dashboard missing "Recently relocated assets" widget~~ — **CLOSED (2026-07-03, `de85abe`)** via `GET /api/dashboard/kpis` | ✅ Done | Frontend |
 | **G-12** | Resend activation email not implemented | Low | Frontend |
@@ -237,13 +237,14 @@ for UAT, awaiting real ERP data.
 | Location history auto-creation | `AssetLocationHistory` ✓ | Timeline display ✓ | ✅ |
 | **Location picker for Manager/Logistics** | `GET /api/locations` (active-only, policy-gated) ✓ | `useLocations.ts:28-34` — Admin hits `/admin/locations`; Manager/Logistics hit `/locations` ✓ | ✅ **G-03 CLOSED** |
 | Location CRUD (Admin) | `GET/POST/PATCH /api/admin/locations` ✓ | `ManageLocationsView` ✓ | ✅ |
-| Effective Date field | Backend ignores (hardcodes `now()`) | **Field is `disabled`** (`UpdateLocationSheet.vue:191`) | 🟡 G-09 |
+| Effective timestamp | Backend records `now()` | No user-entered field; processing time is authoritative | ✅ **G-09 CLOSED** |
 
 **Verdict:** ✅ **G-03 CLOSED (2026-07-03, `de85abe`).** The role-conditional fetch is
 shipped — Admin loads the full list (incl. inactive) from `/admin/locations` for the
 CRUD table; Manager/Logistics load active-only from `/locations`; Technician/Requester
-skip the fetch (no `viewAny`, avoids a 403). The only remaining sub-item is the cosmetic
-**G-09** (Effective Date field disabled).
+skip the fetch (no `viewAny`, avoids a 403). **G-09 is also closed:** the disabled,
+unused Effective Date field was removed and the backend processing time remains the
+authoritative movement timestamp.
 
 ---
 
@@ -488,12 +489,21 @@ timezone, and Microsoft Graph email config are not exposed in the UI. **Medium**
 
 ---
 
-### 9.2 G-06: Audit Logs UI Stub
+### 9.2 G-06: Audit Logs UI — ✅ CLOSED (2026-07-11)
 
-**File:** `frontend/src/views/admin/AuditLogsView.vue` — "Audit log viewer coming soon."
+**File:** `frontend/src/views/admin/AuditLogsView.vue` — full viewer built.
 **Backend:** `AuditLogController::index` (filtered, cursor-paginated) — fully implemented.
 
-The Settings sidebar → Audit Logs tab shows a placeholder. **Medium** priority.
+The Settings → Audit Logs tab now renders a real viewer:
+- **First server-side cursor-paginated list** in the app — deliberately does NOT use
+  `fetchList`/`AppDataTable` (which load the entire table into memory). Uses
+  `useAuditLogs.ts` with `load`/`loadMore`/`hasMore` and a "Load more" button.
+- Filter bar: event (grouped select over all 65 events + free-text LIKE), subject
+  type (alias/FQCN), actor (from `/admin/users`), and a date range with To ≥ From /
+  no-future validation via the new `DatePicker`.
+- Row click opens `AuditLogDetailSheet.vue` with side-by-side before/after JSON panes.
+- Rewrote the stale `AuditLog` TS type (`old_values`/`new_values` → `before_state`/
+  `after_state`/`metadata`/…) and added `AuditActor`.
 
 ---
 
@@ -521,13 +531,15 @@ source. **Low** priority.
 
 ---
 
-### 9.5 G-09: Effective Date Field Disabled in Location Update
+### 9.5 G-09: Effective Date Field Disabled in Location Update — ✅ CLOSED (2026-07-11)
 
-**File:** `frontend/src/components/locations/UpdateLocationSheet.vue:191`
+**File:** `frontend/src/components/locations/UpdateLocationSheet.vue`
 
-The "Effective Date" `<Input>` is `disabled` and never sent in the `doSave()` payload.
-The backend hardcodes `effective_at = now()`. Either implement custom effective dates
-or remove the field to avoid confusion. **Low** priority.
+The disabled, non-submitted "Effective Date" control was removed. Phase 1 location
+updates take effect immediately, so `UpdateAssetLocation` continues to record
+`effective_at = now()` as the authoritative server processing time. This avoids
+implying support for backdated or scheduled movements that the workflow does not
+provide.
 
 ---
 
@@ -601,9 +613,9 @@ attachments, dashboard, and ERP sync. Identified gaps:
 | ✅ Done | G-02 | ~~Build `PartsView` + `PartDetailView`~~ — CLOSED 2026-07-02 (`56bd463`) | — |
 | ⏸ Deferred | G-04 | ~~Fix `CreateAsset::execute()` dropped lifecycle fields~~ — deferred to Phase 3 / cancelled (no live impact; create disabled) | — |
 
-> **No Critical code gaps remain in Phase 1.** The only items on the Phase 1 path
-> are P1 stubs (G-05/G-06), the external ERP parts-API blocker (G-07), and
-> production config (I-01–I-04).
+> **No Critical code gaps remain in Phase 1.** G-06 (Audit Logs) closed 2026-07-11.
+> The only items on the Phase 1 path are the P1 stub (G-05 System Settings), the
+> external ERP parts-API blocker (G-07), and production config (I-01–I-04).
 
 ### Deferred / Cancelled — G-01 Manual Asset Creation (2026-07-02)
 
@@ -617,7 +629,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 | Priority | ID | Action | Effort |
 |----------|----|--------|--------|
 | 🟡 P1 | G-05 | Build `SystemSettingsView` (timezone + ERP sync controls) | 0.5d |
-| 🟡 P1 | G-06 | Build `AuditLogsView` (filtered table) | 0.5d |
+| ✅ Done | G-06 | ~~Build `AuditLogsView` (filtered table)~~ — CLOSED 2026-07-11 (server-side cursor, filters, JSON detail sheet) | — |
 | 🟡 P1 | G-07 | Implement + test parts sync once ERP team provides page name | 1.5d |
 | 🟡 P1 | I-01–I-04 | Production config (Docker, backup, Graph email, SSL) | 2.5d |
 | 🟢 P2 | — | Delete 5 orphaned stub views (dead code cleanup) | 0.1d |
@@ -627,7 +639,7 @@ attachments, dashboard, and ERP sync. Identified gaps:
 | Priority | ID | Action | Effort |
 |----------|----|--------|--------|
 | 🟢 P2 | G-08 | Wire SharePoint import button or relabel | 0.25d |
-| 🟢 P2 | G-09 | Implement or remove Effective Date field | 0.25d |
+| ✅ Done | G-09 | ~~Implement or remove Effective Date field~~ — removed; backend `effective_at = now()` retained | — |
 | 🟢 P2 | G-10 | Implement `sinceLastService` or remove the placeholder | 0.25d |
 | ✅ Done | G-11 | ~~Add "Recently relocated assets" dashboard widget~~ — CLOSED 2026-07-03 (`de85abe`) | — |
 | 🟢 P2 | G-12 | Add resend-activation-email capability | 0.25d |
