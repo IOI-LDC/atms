@@ -105,7 +105,7 @@ export function operationalStatusClass(s: string | null | undefined): string {
 export function assetMaintenanceStatusLabel(s: string | null | undefined): string {
   if (!s) return '—'
   const m: Record<string, string> = {
-    enrolled: 'In maintenance program',
+    enrolled: 'In ATMS',
     withdrawn: 'Withdrawn',
   }
   return m[s] ?? s
