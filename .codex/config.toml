@@ -1,0 +1,10 @@
+[mcp_servers.laravel-boost]
+command = "docker"
+args = [
+    "exec",
+    "-i",
+    "atms-api",
+    "php",
+    "artisan",
+    "boost:mcp",
+]

@@ -175,3 +175,5 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - When the user asks a question, answer the question and STOP. Do not start implementing, editing, or investigating beyond what is needed to answer. Wait for the next instruction.
 - Do not chain follow-up actions (commits, pushes, refactors, "while I'm at it" changes) unless explicitly told to.
 - If an answer requires running a command, run only that, then report and wait.
+
+## Imported Claude Cowork project instructions
