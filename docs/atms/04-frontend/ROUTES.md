@@ -165,10 +165,10 @@ PM Rules is no longer a top-level route (`/pm-rules`).
 | `system`            | Admin only |
 | `audit-logs`        | Admin only |
 
-- **`system`** — ERP sync settings, sync history, company timezone, Power
-  Automate email integration, and other system-level configuration.
+- **`system`** — ERP sync settings, sync history, company timezone, Microsoft
+  Graph email integration, and other system-level configuration.
 - **`audit-logs`** — Read-only, append-only technical audit trail. Filterable
-  by event type, user, and date range.
+  by event (partial match), actor, subject type/id, and date range; cursor-paginated.
 
 ---
 

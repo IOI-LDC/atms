@@ -61,7 +61,7 @@ class AssetIndexQuery
         }
 
         if ($request->filled('location_id')) {
-            $query->where('location_id', $request->input('location_id'));
+            $query->where('current_location_id', $request->input('location_id'));
         }
     }
 

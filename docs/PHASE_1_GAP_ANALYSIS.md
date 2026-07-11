@@ -35,6 +35,12 @@
 >   operational MR/WO emails are outside current Phase 1. `ACCOUNT_EMAIL_TRANSPORT`
 >   accepts `fake` and `graph`. Updated I-03 / R-06; removed I-05 (legacy transport).
 
+> **Revision 4 (2026-07-11):** The documented asset-list location-filter defect was
+> corrected in `AssetIndexQuery`: the public `location_id` parameter now maps to
+> the persisted `current_location_id` column. Regression coverage was added to
+> `AssetResourceTest` for location selection and requester active-asset scoping.
+> Verification remains pending until the delivery team runs the focused test.
+
 > **Revision note:** This report was rewritten after a line-by-line re-verification of
 > both the frontend (`frontend/src/`) and backend (`backend/app/`) codebases. The first
 > draft overstated completion status for several areas. The corrections below reflect
@@ -86,6 +92,7 @@ core workflows.
 | **G-10** | `sinceLastService` hardcoded to `null` on WO detail | Low | Frontend |
 | **G-11** | ~~Dashboard missing "Recently relocated assets" widget~~ — **CLOSED (2026-07-03, `de85abe`)** via `GET /api/dashboard/kpis` | ✅ Done | Frontend |
 | **G-12** | Resend activation email not implemented | Low | Frontend |
+| **G-14** | ~~Asset API location filter queried nonexistent `location_id` column~~ — corrected to `current_location_id`; regression tests added, verification pending | 🟡 Pending verification | Backend |
 
 **Estimated effort to close remaining Phase 1 gaps: ~2 working days** (excluding the
 external ERP dependency). G-02, G-03, and G-11 are now closed. G-01 and G-04 are

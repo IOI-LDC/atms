@@ -16,6 +16,14 @@
   then remove the legacy Power Automate class, configuration, binding, and tests.
 
 
+## Session — 2026-07-11
+
+- **Asset API location filter correction — implementation applied, verification pending.**
+  `GET /api/assets?location_id={id}` preserves the public parameter and now filters
+  `assets.current_location_id` in `AssetIndexQuery` instead of the nonexistent
+  `assets.location_id`. Regression tests cover selected-location filtering and
+  requester active-asset scoping. The delivery team will run the focused test.
+
 ## Session — 2026-07-05
 
 - **`is_failure` failure-classification flag for corrective MRs — DONE (backend + frontend).** Nullable boolean on corrective MRs marking a real failure vs. no-fault-found/duplicate/etc. Classified **twice** by qualified roles (not the requester): required at **MR approval** (`POST /maintenance-requests/{id}/approve` — 422 if missing for corrective in `pending_review`), optional override at **WO closure** (`POST /work-orders/{id}/close`). Preventive MRs never classified (`null`). MTBF + Failure Rate now count `is_failure = true` (not every corrective event); MTTR unchanged.

@@ -169,6 +169,7 @@ The "Add Asset" button stays disabled in production (no live impact either way).
 | G-11 | Dashboard missing "Recently updated assets" widget | 🟢 Low | `DashboardController` / `DashboardView` | 0.5d |
 | G-12 | Resend activation email not implemented | 🟢 Low | `ProvisionUserDialog.vue:74-75` | 0.25d |
 | G-13 | Lists & Dropdowns — 6/8 groups decorative no-ops; priority hardcoded in 4 spots (MR create/edit, MR/WO filters) + backend `in:` rule; `master_data_items` table empty & unread by app runtime. Backend + frontend fix implemented (uncommitted). See `.kilo/plans/1783001396791-admin-lists-dropdowns-cleanup.md`. | 🔴 High | `useLists.ts`, `mrColumns.ts`, `woColumns.ts`, `WorkOrdersView.vue`, `MaintenanceRequestDetailView.vue` | — |
+| G-14 | Asset API location filter queried nonexistent `assets.location_id`; corrected to `current_location_id`. Regression tests added; focused verification pending delivery-team run. | 🟡 Pending verification | `AssetIndexQuery.php`, `AssetResourceTest.php` | — |
 
 ### Internal — Backend Defect
 

@@ -183,6 +183,71 @@ class AssetResourceTest extends TestCase
         $this->assertContains('Inactive', $names);
     }
 
+    public function test_assets_can_be_filtered_by_current_location(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $selectedLocation = Location::create([
+            'name' => 'Selected Location',
+            'type' => 'building',
+        ]);
+        $otherLocation = Location::create([
+            'name' => 'Other Location',
+            'type' => 'building',
+        ]);
+
+        $selectedAsset = Asset::create([
+            'erp_asset_code' => 'A-LOC-001',
+            'name' => 'Selected Asset',
+            'current_location_id' => $selectedLocation->id,
+            'is_active' => true,
+        ]);
+        $otherAsset = Asset::create([
+            'erp_asset_code' => 'A-LOC-002',
+            'name' => 'Other Asset',
+            'current_location_id' => $otherLocation->id,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->getJson("/api/assets?location_id={$selectedLocation->id}");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $selectedAsset->id)
+            ->assertJsonPath('data.0.current_location.id', $selectedLocation->id)
+            ->assertJsonMissing(['id' => $otherAsset->id]);
+    }
+
+    public function test_location_filter_preserves_requester_active_asset_scope(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $location = Location::create([
+            'name' => 'Scoped Location',
+            'type' => 'building',
+        ]);
+
+        $activeAsset = Asset::create([
+            'erp_asset_code' => 'A-LOC-003',
+            'name' => 'Active Scoped Asset',
+            'current_location_id' => $location->id,
+            'is_active' => true,
+        ]);
+        $inactiveAsset = Asset::create([
+            'erp_asset_code' => 'A-LOC-004',
+            'name' => 'Inactive Scoped Asset',
+            'current_location_id' => $location->id,
+            'is_active' => false,
+        ]);
+
+        $response = $this->actingAs($requester)
+            ->getJson("/api/assets?location_id={$location->id}");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $activeAsset->id)
+            ->assertJsonMissing(['id' => $inactiveAsset->id]);
+    }
+
     public function test_default_maintenance_status_serializes_as_enrolled(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);

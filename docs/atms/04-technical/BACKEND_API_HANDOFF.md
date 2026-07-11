@@ -767,8 +767,33 @@ export interface ErpSyncJob {
 
 export interface AuditLog {
   id: number
+  user_id: number | null
   event: string
-  // + actor/subject fields; see API reference
+  subject_type: string | null
+  subject_id: number | null
+  before_state: Record<string, unknown> | null
+  after_state: Record<string, unknown> | null
+  metadata: Record<string, unknown> | null
+  ip_address: string | null
+  user_agent: string | null
+  request_id: string | null
+  created_at: string
+  // Full User object (hidden: password/remember_token/role_id). Role NOT eager-loaded.
+  // Nullable (system/unauthenticated events + nullOnDelete) → render "System".
+  actor: AuditActor | null
+}
+
+// Trimmed User shape actually on the wire for `actor` (no role field).
+export interface AuditActor {
+  id: number
+  name: string
+  email: string
+  is_active: boolean
+  activated_at: string | null
+  emp_id: string | null
+  employee_id: number | null
+  created_at: string
+  updated_at: string
 }
 
 export interface CompanySettings {

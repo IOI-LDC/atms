@@ -100,6 +100,113 @@ class AuditLogTest extends TestCase
         // Attempting to hit standard mutation routes that we haven't defined
         $this->actingAs($admin)->postJson('/api/admin/audit-logs', [])->assertStatus(405);
         $this->actingAs($admin)->putJson("/api/admin/audit-logs/{$log->id}", [])->assertStatus(404);
-        $this->actingAs($admin)->deleteJson("/api/admin/audit-logs/{$log->id}")->assertStatus(404);
+        $this->actingAs($admin)->deleteJson("/api/admin/audit-logs/{$log->id}", [])->assertStatus(404);
+    }
+
+    public function test_per_page_is_respected_and_capped()
+    {
+        $admin = $this->createAdmin();
+        $logger = new AuditLogger;
+
+        // Seed 6 rows; ask for 5 — only 5 should return with a next_cursor.
+        for ($i = 0; $i < 6; $i++) {
+            $logger->log('test.per_page');
+        }
+
+        $response = $this->actingAs($admin)->getJson('/api/admin/audit-logs?per_page=5');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(5, 'data')
+            ->assertJsonPath('meta.next_cursor', function ($cursor) {
+                return $cursor !== null && $cursor !== '';
+            });
+
+        // An absurd per_page is capped at 500; with 6 rows total, all 6 return and
+        // there is no next_cursor.
+        $all = $this->actingAs($admin)->getJson('/api/admin/audit-logs?per_page=99999');
+
+        $all->assertStatus(200)
+            ->assertJsonCount(6, 'data')
+            ->assertJsonPath('meta.next_cursor', null);
+    }
+
+    public function test_event_filter_supports_partial_match()
+    {
+        $admin = $this->createAdmin();
+        $logger = new AuditLogger;
+        $logger->log('work_order.closed');
+        $logger->log('work_order.assigned');
+        $logger->log('auth.login');
+
+        // Partial match: ?event=work_order returns both work_order.* events, not auth.login.
+        $response = $this->actingAs($admin)->getJson('/api/admin/audit-logs?event=work_order');
+
+        $events = collect($response->json('data'))->pluck('event')->sort()->values();
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data');
+        $this->assertEquals(['work_order.assigned', 'work_order.closed'], $events->all());
+
+        // A full event name is a substring of itself, so exact-match still works.
+        $this->actingAs($admin)
+            ->getJson('/api/admin/audit-logs?event=auth.login')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.event', 'auth.login');
+    }
+
+    public function test_from_and_to_date_filters_scoped_correctly()
+    {
+        $admin = $this->createAdmin();
+
+        // Three logs at distinct, controlled timestamps. guard=[] lets us set
+        // created_at directly.
+        $t0 = '2026-01-10 00:00:00';
+        $t1 = '2026-02-10 00:00:00';
+        $t2 = '2026-03-10 00:00:00';
+
+        AuditLog::forceCreate(['event' => 'day.zero', 'created_at' => $t0]);
+        AuditLog::forceCreate(['event' => 'day.one', 'created_at' => $t1]);
+        AuditLog::forceCreate(['event' => 'day.two', 'created_at' => $t2]);
+
+        // ?from excludes t0.
+        $from = $this->actingAs($admin)->getJson('/api/admin/audit-logs?from='.$t1);
+        $from->assertStatus(200)->assertJsonCount(2, 'data');
+
+        // ?to excludes t2.
+        $to = $this->actingAs($admin)->getJson('/api/admin/audit-logs?to='.$t1);
+        $to->assertStatus(200)->assertJsonCount(2, 'data');
+
+        // ?from&to returns only the middle row.
+        $window = $this->actingAs($admin)->getJson('/api/admin/audit-logs?from='.$t1.'&to='.$t1);
+        $window->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.event', 'day.one');
+    }
+
+    public function test_filters_combine_with_cursor_pagination()
+    {
+        $admin = $this->createAdmin();
+        $logger = new AuditLogger;
+
+        // 3 matching + 2 non-matching events; ask for 2/page with an event filter.
+        for ($i = 0; $i < 3; $i++) {
+            $logger->log('work_order.started');
+        }
+        $logger->log('auth.logout');
+        $logger->log('user.updated');
+
+        $response = $this->actingAs($admin)
+            ->getJson('/api/admin/audit-logs?event=work_order&per_page=2');
+
+        // Page 1: 2 of the 3 matching rows, with a cursor to the rest. The 2
+        // non-matching rows never appear.
+        $events = collect($response->json('data'))->pluck('event');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.next_cursor', function ($cursor) {
+                return $cursor !== null && $cursor !== '';
+            });
+        $this->assertTrue($events->every(fn ($event) => $event === 'work_order.started'));
     }
 }

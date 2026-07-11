@@ -1665,15 +1665,41 @@ Dispatch background job to sync parts from ERP.
 
 ### GET `/api/admin/audit-logs`
 
-List audit log entries. Cursor-paginated (50 per page).
+List audit log entries. Cursor-paginated, newest-first by `id`. Append-only — no
+mutation routes exist (create/update/delete all return 404/405).
 
-**Auth:** Administrator only
+**Auth:** Administrator only (service role also allowed).
 
 **Query Parameters:**
 
-| Parameter | Type | Description |-----------|------|-------------| `event` | string | Filter by event name (e.g., `auth.login`, `attachment.uploaded`) | `user_id` | int | Filter by actor user ID | `subject_type` | string | Filter by subject type (e.g., `Asset`, `WorkOrder`) | `subject_id` | int | Filter by subject ID |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `per_page` | int | Page size. Default 50, capped at 500. (Audit rows carry wide JSON blobs, so the cap is deliberately lower than the 5000 list cap used elsewhere.) |
+| `event` | string | **Partial match (LIKE)** — e.g. `work_order` matches all `work_order.*` events. A full event name is a substring of itself, so exact-match callers keep working. |
+| `user_id` | int | Filter by actor user ID (exact). |
+| `subject_type` | string | Filter by subject type (exact). **Mixed forms:** morph aliases (`asset`, `part`, `maintenance_request`, `work_order`) and fully-qualified class names (`App\Models\User`, `App\Models\PmRule`, …). |
+| `subject_id` | int | Filter by subject ID (exact). |
+| `from` | datetime | `created_at >=` (ISO 8601). |
+| `to` | datetime | `created_at <=` (ISO 8601). |
+| `cursor` | string | Cursor pagination token (from `meta.next_cursor`). |
 
-**Response `200`:** Cursor-paginated list with `actor` relation loaded.
+**Response `200`:** Cursor-paginated list with the `actor` relation eager-loaded.
+Rows are serialized as raw model columns (no `AuditLogResource`):
+
+```
+id, user_id, event, subject_type, subject_id,
+before_state, after_state, metadata,
+ip_address, user_agent, request_id, created_at,
+actor  ← full User object | null
+```
+
+- `actor` is the full `User` model (hidden: `password`, `remember_token`,
+  `role_id`); role is **not** eager-loaded, so no role name is available.
+- `actor` is **nullable** (`nullOnDelete` + system/unauthenticated events) —
+  render "System" when null.
+- `before_state` / `after_state` / `metadata` are JSON blobs; sensitive keys
+  (password, token, secret, cookie, …) are auto-redacted to `[REDACTED]` by
+  `AuditLogger` before storage.
 
 ---
 
