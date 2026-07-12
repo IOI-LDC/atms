@@ -6,6 +6,7 @@ use App\Enums\AssetKind;
 use App\Enums\OperationalStatus;
 use App\Http\Resources\OverduePmReportItemResource;
 use App\Http\Resources\UpcomingPmItemResource;
+use App\Http\Resources\WorkOrderBacklogItemResource;
 use App\Models\User;
 use App\Queries\Reports\AgingBuckets;
 use App\Queries\Reports\AssetsByLocationReportQuery;
@@ -13,6 +14,7 @@ use App\Queries\Reports\OperationalStatusDistributionReportQuery;
 use App\Queries\Reports\OverduePmReportQuery;
 use App\Queries\Reports\PmComplianceReportQuery;
 use App\Queries\Reports\UpcomingPmReportQuery;
+use App\Queries\Reports\WorkOrderBacklogReportQuery;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -141,6 +143,26 @@ class ReportController extends Controller
     {
         Gate::authorize('viewDashboard', User::class);
 
-        return response()->json(['summary' => [], 'items' => []]);
+        $filters = $request->validate([
+            'location_id' => ['nullable', 'exists:locations,id'],
+            'assigned_to' => ['nullable', 'exists:users,id'],
+            'priority' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', Rule::in(['open', 'in_progress', 'both'])],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
+        ]);
+
+        $result = app(WorkOrderBacklogReportQuery::class)->handle(
+            (int) ($filters['per_page'] ?? 25),
+            [
+                'location_id' => $filters['location_id'] ?? null,
+                'assigned_to' => $filters['assigned_to'] ?? null,
+                'priority' => $filters['priority'] ?? null,
+                'status' => $filters['status'] ?? null,
+            ]
+        );
+
+        return WorkOrderBacklogItemResource::collection($result['paginator'])
+            ->additional(['summary' => $result['summary']])
+            ->toResponse($request);
     }
 }
