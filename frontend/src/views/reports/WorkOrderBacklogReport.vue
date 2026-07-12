@@ -196,6 +196,11 @@ onMounted(() => {
         </div>
 
         <template v-else>
+          <p class="report-result-meta">
+            Showing {{ rows.length }} {{ rows.length === 1 ? 'result' : 'results' }}
+            <span v-if="hasMore">· more available</span>
+          </p>
+
           <div class="report-table-wrap">
             <table class="report-table">
               <thead>

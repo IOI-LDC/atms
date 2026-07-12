@@ -4,10 +4,11 @@ import { Activity, CalendarCheck, HardDrive, ListTodo, Package, Gauge } from '@l
 /**
  * Static catalogue of the ATMS Phase 1 reports (spec: `docs/atms/01-product/REPORTS.md`).
  *
- * This backs the Reports landing page only. Every report is currently a
- * placeholder — no report endpoints exist yet, so `status` is `planned` for all
- * buildable reports, `deferred` for R-5 (no dependable downtime source, D-1),
- * and `conditional` for R-12 (depends on assembly-scope confirmation, D-3).
+ * This backs the Reports landing page only. Pass 1 (Must tier) is live:
+ * R-1, R-2, R-7, R-8, R-10A, and R-14 are `available` and route to their pages
+ * at `/reports/{slug}`. The rest are `planned` (endpoint not built yet) or
+ * `deferred` (R-5 no downtime source D-1; R-10B/R-11/R-12 Phase 2). Deferred
+ * reports are hidden by the landing page (see `plannedThemes` below).
  *
  * When a report's backend endpoint lands, flip its `status` to `available` and
  * add its route (`/reports/{slug}`). Keep this list in sync with the spec.
