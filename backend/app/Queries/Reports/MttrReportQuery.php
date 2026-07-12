@@ -25,6 +25,7 @@ class MttrReportQuery
     {
         $orders = WorkOrder::whereHas('maintenanceRequest', fn ($q) => $q->where('is_preventive', false))
             ->where('status', WorkOrderStatus::CLOSED)
+            ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$from, $to])
             ->whereNotNull('assigned_at')
             ->when($filters['location_id'] ?? null, fn ($q, $v) =>

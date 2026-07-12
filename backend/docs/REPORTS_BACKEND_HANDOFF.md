@@ -1,6 +1,6 @@
 # Reports Pass 1 & 2 — Backend Completion & Frontend Handoff
 
-> **Status:** ✅ Complete (645 tests, 1817 assertions)
+> **Status:** ✅ Complete (18 endpoints; full suite last verified: 651 tests, 1,858 assertions)
 > **Date:** 2026-07-12
 > **Branch:** feat/reports-pass1-frontend (not pushed)
 > **Plans:** `.kilo/plans/1783838549346-reports-pass1-backend.md`, `.kilo/plans/1783838549347-reports-pass2-backend.md`
@@ -9,7 +9,7 @@
 
 ## Overview
 
-12 read-only report endpoints under `GET /api/reports/*`. Pass 1 delivered 6 Must-tier reports (R-1, R-2, R-7, R-8, R-10A, R-14). Pass 2 delivered 6 additional reports (R-3, R-4, R-6, R-9, R-13, R-15, R-16, R-18, R-19, R-20, R-21). R-17 (Parts Consumption) is complete per clarified scope. R-5, R-10B, R-11, R-12 are deferred (blocked by missing infrastructure).
+18 read-only report endpoints are available under `GET /api/reports/*`. Pass 1 delivered 6 Must-tier reports (R-1, R-2, R-7, R-8, R-10A, R-14). Pass 2 delivered 12 additional reports (R-3, R-4, R-6, R-9, R-13, R-15 through R-21). R-5, R-10B, R-11, and R-12 remain deferred (blocked by missing infrastructure or Phase 2 scope).
 
 All endpoints require authentication (`auth:sanctum`) and the `dashboard:view` token ability. All 5 roles (Administrator, Maintenance Manager, Technician, Logistics, Requester) have access. Reports are **org-wide** — no per-role row scoping.
 
@@ -266,18 +266,20 @@ GET /api/reports/booking
 ```
 GET /api/reports/technician-workload
 ```
-**Response shape:** `{ summary, items }` (non-paginated)
+**Response shape:** `{ summary, data, meta }` (cursor-paginated, 25/page)
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `from` | date? | 30 days ago | Window start |
+| `from` | date? | 90 days ago | Window start |
 | `to` | date? | today | Window end (must be ≥ `from`) |
+| `technician_id` | int? | — | Filter by assignee user ID |
+| `per_page` | int (1–500) | 25 | Items per page |
 
-**Summary:** `total_work_orders`, `total_open`, `total_in_progress`, `total_completed`, `total_cancelled`
+**Summary:** `total_work_orders`, `total_assigned`, `total_open`, `total_in_progress`, `total_completed`, `total_cancelled`, `total_backlog`, `avg_duration_hours`, `avg_backlog_age_days`.
 
-**Per-technician items:** `technician_id`, `technician_name`, `total_count`, `open_count`, `in_progress_count`, `completed_count`, `cancelled_count`, `avg_duration_hours` (float|null). Sorted by `total_count` descending.
+**Per-technician rows:** `technician_id`, `technician_name`, `total_count`, `open_count`, `in_progress_count`, `completed_count`, `cancelled_count`, `backlog_count`, `avg_duration_hours` (float|null), `avg_backlog_age_days` (float|null). Completed counts and duration include WOs in either `completed` or `closed` status; backlog is `open` + `in_progress`. Sorted by `total_count DESC`, then `technician_id ASC` for stable cursor traversal.
 
-**Note:** Operational workload only — no productivity/labor metrics.
+**Note:** Operational workload only — no productivity/labor metrics. `meta.next_cursor` / `meta.prev_cursor` are returned; this endpoint does not include a `links` object.
 
 ---
 
@@ -285,16 +287,20 @@ GET /api/reports/technician-workload
 ```
 GET /api/reports/throughput
 ```
-**Response shape:** `{ summary, items }` (non-paginated)
+**Response shape:** `{ summary, data, meta }` (cursor-paginated, 25/page)
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `from` | date? | 30 days ago | Window start |
+| `from` | date? | 90 days ago | Window start |
 | `to` | date? | today | Window end (must be ≥ `from`) |
+| `status` | enum? | — | One MR or WO status; applies only to the source that supports it |
+| `per_page` | int (1–500) | 25 | Daily rows per page |
 
-**Summary:** `total_work_orders`, `open_count`, `in_progress_count`, `completed_count`, `closed_count`, `cancelled_count`
+**Summary:** `mr_created`, `mr_pending_review`, `mr_converted`, `mr_rejected`, `mr_cancelled`, `wo_created`, `wo_open`, `wo_in_progress`, `wo_completed`, `wo_closed`, `wo_cancelled`, `avg_conversion_hours` (float|null).
 
-**Items (per day):** `date`, `total_count`, `open_count`, `in_progress_count`, `completed_count`, `closed_count`, `cancelled_count`. Sorted by date descending.
+**Daily rows:** `date` plus the corresponding MR/WO lifecycle counts in the summary (except `avg_conversion_hours`), sorted by date descending. Each count is placed on the day of its actual lifecycle event: MR created/pending review uses `created_at`; converted/rejected uses `reviewed_at`; MR cancelled uses `cancelled_at`; WO created/open uses `created_at`; WO in progress uses `started_at`; WO completed/closed/cancelled use their matching timestamps.
+
+**Note:** `avg_conversion_hours` is the mean interval from MR creation to the first linked WO creation for MRs converted in the selected window. `meta.next_cursor` / `meta.prev_cursor` are returned; this endpoint does not include a `links` object.
 
 ---
 
@@ -348,18 +354,24 @@ GET /api/reports/asset-movement
 ```
 GET /api/reports/form-results
 ```
-**Response shape:** `{ summary, items }` (non-paginated)
+**Response shape:** `{ summary, data, links, meta }` (cursor-paginated, 25/page)
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `from` | date? | 30 days ago | Window start |
+| `from` | date? | 90 days ago | Window start |
 | `to` | date? | today | Window end (must be ≥ `from`) |
+| `asset_id` | int? | — | Filter by work-order asset |
+| `fa_subclass_code` | string? | — | Filter by work-order asset FA subclass code |
+| `field_uuid` | string? | — | Filter by form-field UUID |
+| `per_page` | int (1–500) | 25 | Rows per page |
 
-**Summary:** `total_fields` (int)
+**Summary:** `total_fields`, `boolean_true_count`, `boolean_false_count`, `numeric_pre_post_count`, `numeric_comparisons`.
 
-**Per-field items (grouped by label):** `label`, `field_type` (`boolean`/`numeric`/`text`), `has_pre_post`, `unit`, `response_count`. Boolean fields additionally: `true_count`, `false_count`. Numeric fields with pre/post additionally: `avg_pre_value`, `avg_post_value`, `avg_change`. Sorted by label.
+**Numeric comparisons:** `numeric_comparisons` is an array grouped by `field_uuid` + `label` + `unit`. Each entry includes `comparison_count`, `avg_pre_value`, `avg_post_value`, and `avg_change`. Only valid numeric pre/post pairs are counted.
 
-**Note:** Field types are from the `FormFieldType` enum. Numeric comparisons are same-field+unit only; no pass/fail labels.
+**Per-row fields:** `id`, `field_uuid`, `label`, `field_type` (`boolean`/`numeric`/`text`), `has_pre_post`, `unit`, `pre_value`, `post_value`, `notes`, plus minimal `work_order: { id, number }` and `asset: { id, name, erp_asset_code, fa_subclass_code }` context. Rows are ordered by `field_uuid`, then `id`.
+
+**Note:** The date filter is applied to the related work order's `created_at`. Field types are from the `FormFieldType` enum. Numeric comparisons are same-field+unit only; no pass/fail labels.
 
 ---
 
@@ -474,12 +486,13 @@ R-8 and R-14 inherit field visibility from `MaintenanceRequestResource` / `WorkO
 
 ---
 
-## Pagination (R-8, R-14)
+## Pagination
 
-- Cursor-based (NOT offset). `meta.next_cursor` is string|null.
+- R-8, R-9, R-14 through R-21 are cursor-based (NOT offset). `meta.next_cursor` is string|null.
 - Pass: `?cursor=<urlencoded_value>` (NOT a header or body param).
-- `links.next` URL includes all current filters + `per_page`.
-- Deterministic ordering guaranteed via `id` tie-breaker.
+- Resource-backed endpoints expose `links.next`; R-15 and R-16 expose cursor metadata only.
+- Current filters and `per_page` are retained when a next-page URL is returned.
+- Each endpoint uses deterministic ordering appropriate to its row type.
 
 ---
 
@@ -487,7 +500,7 @@ R-8 and R-14 inherit field visibility from `MaintenanceRequestResource` / `WorkO
 
 | File | Purpose |
 |------|---------|
-| `app/Http/Controllers/ReportController.php` | 6 endpoint methods |
+| `app/Http/Controllers/ReportController.php` | 18 endpoint methods |
 | `app/Queries/Reports/AgingBuckets.php` | Shared bucket/days helper |
 | `app/Queries/Reports/UpcomingPmReportQuery.php` | R-1 query |
 | `app/Queries/Reports/AssetsByLocationReportQuery.php` | R-2 query |
@@ -513,10 +526,11 @@ R-8 and R-14 inherit field visibility from `MaintenanceRequestResource` / `WorkO
 | `app/Http/Resources/PartsConsumptionReportItemResource.php` | R-17 item shape |
 | `app/Http/Resources/MeterProgressionReportItemResource.php` | R-20 item shape |
 | `app/Http/Resources/PmSuppressionReportItemResource.php` | R-21 item shape |
+| `app/Http/Resources/FormResultReportItemResource.php` | R-19 item shape |
 | `database/migrations/2026_07_12_142507_add_report_indexes.php` | 4 report composite indexes (Pass 1) |
 | `database/migrations/2026_07_12_180412_add_asset_location_histories_index.php` | R-18 cursor pagination index |
-| `routes/api.php` | `reports/` prefix group (all 17 endpoints) |
-| `tests/Feature/Reports/` | 15 test files, 645 tests, 1817 assertions |
+| `routes/api.php` | `reports/` prefix group (all 18 endpoints) |
+| `tests/Feature/Reports/` | 19 report test files; full suite last verified: 651 tests, 1,858 assertions |
 
 ---
 

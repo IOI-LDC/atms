@@ -3,7 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetKind;
+use App\Enums\MaintenanceRequestStatus;
 use App\Enums\OperationalStatus;
+use App\Enums\WorkOrderStatus;
+use App\Http\Resources\AssetLocationHistoryResource;
+use App\Http\Resources\AssetResource;
+use App\Http\Resources\FormResultReportItemResource;
 use App\Http\Resources\OverduePmReportItemResource;
 use App\Http\Resources\MeterProgressionReportItemResource;
 use App\Http\Resources\PartsConsumptionReportItemResource;
@@ -201,7 +206,7 @@ class ReportController extends Controller
         ]);
 
         $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
         $result = app(MtbfReportQuery::class)->handle(
             $from,
@@ -230,7 +235,7 @@ class ReportController extends Controller
         ]);
 
         $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
         $result = app(MttrReportQuery::class)->handle(
             $from,
@@ -260,7 +265,7 @@ class ReportController extends Controller
         ]);
 
         $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
         $result = app(BadActorReportQuery::class)->handle(
             $from,
@@ -289,7 +294,7 @@ class ReportController extends Controller
         ]);
 
         $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
         $result = app(PmComplianceReportQuery::class)->handle(
             $from,
@@ -324,14 +329,9 @@ class ReportController extends Controller
 
         $result['paginator']->appends($request->query());
 
-        $paginatorArray = $result['paginator']->toArray();
-
-        return response()->json([
-            'summary' => $result['summary'],
-            'data' => $paginatorArray['data'],
-            'links' => $paginatorArray['links'] ?? [],
-            'meta' => $paginatorArray['meta'] ?? [],
-        ]);
+        return AssetResource::collection($result['paginator'])
+            ->additional(['summary' => $result['summary']])
+            ->toResponse($request);
     }
 
     public function booking(Request $request): \Illuminate\Http\JsonResponse
@@ -358,31 +358,76 @@ class ReportController extends Controller
         $filters = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'technician_id' => ['nullable', 'exists:users,id'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
         ]);
 
-        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(30);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
-        $result = app(TechnicianWorkloadReportQuery::class)->handle($from, $to);
+        $result = app(TechnicianWorkloadReportQuery::class)->handle(
+            (int) ($filters['per_page'] ?? 25),
+            $from,
+            $to,
+            ['technician_id' => $filters['technician_id'] ?? null]
+        );
 
-        return response()->json($result);
+        $result['paginator']->appends($request->query());
+
+        $paginatorArray = $result['paginator']->toArray();
+
+        return response()->json([
+            'summary' => $result['summary'],
+            'data' => $paginatorArray['data'],
+            'meta' => [
+                'path' => $paginatorArray['path'],
+                'per_page' => $paginatorArray['per_page'],
+                'next_cursor' => $paginatorArray['next_cursor'] ?? null,
+                'prev_cursor' => $paginatorArray['prev_cursor'] ?? null,
+            ],
+        ]);
     }
 
     public function throughput(Request $request): \Illuminate\Http\JsonResponse
     {
         Gate::authorize('viewDashboard', User::class);
 
+        $statusValues = array_values(array_unique([
+            ...array_column(MaintenanceRequestStatus::cases(), 'value'),
+            ...array_column(WorkOrderStatus::cases(), 'value'),
+        ]));
+
         $filters = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'status' => ['nullable', Rule::in($statusValues)],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
         ]);
 
-        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(30);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
-        $result = app(ThroughputReportQuery::class)->handle($from, $to);
+        $result = app(ThroughputReportQuery::class)->handle(
+            (int) ($filters['per_page'] ?? 25),
+            $from,
+            $to,
+            ['status' => $filters['status'] ?? null]
+        );
 
-        return response()->json($result);
+        $result['paginator']->appends($request->query());
+
+        $paginatorArray = $result['paginator']->toArray();
+
+        return response()->json([
+            'summary' => $result['summary'],
+            'data' => $paginatorArray['data'],
+            'meta' => [
+                'path' => $paginatorArray['path'],
+                'per_page' => $paginatorArray['per_page'],
+                'next_cursor' => $paginatorArray['next_cursor'] ?? null,
+                'prev_cursor' => $paginatorArray['prev_cursor'] ?? null,
+            ],
+        ]);
     }
 
     public function partsConsumption(Request $request): \Illuminate\Http\JsonResponse
@@ -460,14 +505,31 @@ class ReportController extends Controller
         $filters = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'asset_id' => ['nullable', 'exists:assets,id'],
+            'fa_subclass_code' => ['nullable', 'string', 'max:255'],
+            'field_uuid' => ['nullable', 'string', 'max:36'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
         ]);
 
-        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(30);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
-        $result = app(FormResultsReportQuery::class)->handle($from, $to);
+        $result = app(FormResultsReportQuery::class)->handle(
+            (int) ($filters['per_page'] ?? 25),
+            $from,
+            $to,
+            [
+                'asset_id' => $filters['asset_id'] ?? null,
+                'fa_subclass_code' => $filters['fa_subclass_code'] ?? null,
+                'field_uuid' => $filters['field_uuid'] ?? null,
+            ]
+        );
 
-        return response()->json($result);
+        $result['paginator']->appends($request->query());
+
+        return FormResultReportItemResource::collection($result['paginator'])
+            ->additional(['summary' => $result['summary']])
+            ->toResponse($request);
     }
 
     public function assetMovement(Request $request): \Illuminate\Http\JsonResponse
@@ -484,7 +546,7 @@ class ReportController extends Controller
         ]);
 
         $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
-        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+        $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now();
 
         $result = app(AssetMovementReportQuery::class)->handle(
             (int) ($filters['per_page'] ?? 25),
@@ -499,24 +561,8 @@ class ReportController extends Controller
 
         $result['paginator']->appends($request->query());
 
-        $paginatorArray = $result['paginator']->toArray();
-
-        return response()->json([
-            'summary' => $result['summary'],
-            'data' => $paginatorArray['data'],
-            'links' => [
-                'first' => $paginatorArray['path'].'?per_page='.$paginatorArray['per_page'],
-                'last' => null,
-                'prev' => $paginatorArray['prev_page_url'],
-                'next' => $paginatorArray['next_page_url'],
-            ],
-            'meta' => [
-                'path' => $paginatorArray['path'],
-                'per_page' => $paginatorArray['per_page'],
-                'next_cursor' => $paginatorArray['next_cursor'],
-                'prev_cursor' => $paginatorArray['prev_cursor'],
-                'current_page' => 1,
-            ],
-        ]);
+        return AssetLocationHistoryResource::collection($result['paginator'])
+            ->additional(['summary' => $result['summary']])
+            ->toResponse($request);
     }
 }

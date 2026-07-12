@@ -88,6 +88,13 @@ class TechnicianWorkloadReportTest extends TestCase
             'started_at' => now()->subHours(10),
             'completed_at' => now(),
         ]);
+        $this->createWorkOrder([
+            'assigned_to_user_id' => $tech1->id,
+            'status' => WorkOrderStatus::CLOSED,
+            'started_at' => now()->subHours(4),
+            'completed_at' => now(),
+            'closed_at' => now(),
+        ]);
 
         // Tech2: 1 open, 1 cancelled
         $this->createWorkOrder(['assigned_to_user_id' => $tech2->id, 'status' => WorkOrderStatus::OPEN]);
@@ -95,19 +102,53 @@ class TechnicianWorkloadReportTest extends TestCase
 
         $json = $this->actingAs($this->admin)->getJson('/api/reports/technician-workload')->json();
 
-        $this->assertSame(6, $json['summary']['total_work_orders']);
+        $this->assertSame(7, $json['summary']['total_work_orders']);
         $this->assertSame(3, $json['summary']['total_open']);
         $this->assertSame(1, $json['summary']['total_in_progress']);
-        $this->assertSame(1, $json['summary']['total_completed']);
+        $this->assertSame(2, $json['summary']['total_completed']);
         $this->assertSame(1, $json['summary']['total_cancelled']);
-        $this->assertCount(2, $json['items']);
+        $this->assertCount(2, $json['data']);
 
         // Tech1 should have higher workload
-        $tech1Item = collect($json['items'])->firstWhere('technician_id', $tech1->id);
+        $tech1Item = collect($json['data'])->firstWhere('technician_id', $tech1->id);
         $this->assertSame(2, $tech1Item['open_count']);
         $this->assertSame(1, $tech1Item['in_progress_count']);
-        $this->assertSame(1, $tech1Item['completed_count']);
-        $this->assertNotNull($tech1Item['avg_duration_hours']);
+        $this->assertSame(2, $tech1Item['completed_count']);
+        $this->assertSame(3, $tech1Item['backlog_count']);
+        $this->assertEquals(7.0, $tech1Item['avg_duration_hours']);
+        $this->assertGreaterThanOrEqual(0, $tech1Item['avg_backlog_age_days']);
+        $this->assertSame($tech1->name, $tech1Item['technician_name']);
+        $this->assertSame(4, $json['summary']['total_backlog']);
+        $this->assertEquals(7.0, $json['summary']['avg_duration_hours']);
+    }
+
+    public function test_cursor_pagination_traverses_each_technician_once(): void
+    {
+        $technicians = collect(range(1, 3))->map(fn () => $this->createUser(RoleCode::TECHNICIAN));
+
+        foreach ($technicians as $technician) {
+            $this->createWorkOrder([
+                'assigned_to_user_id' => $technician->id,
+                'status' => WorkOrderStatus::OPEN,
+            ]);
+        }
+
+        $first = $this->actingAs($this->admin)
+            ->getJson('/api/reports/technician-workload?per_page=2')
+            ->assertOk()
+            ->json();
+
+        $this->assertCount(2, $first['data']);
+        $this->assertNotNull($first['meta']['next_cursor']);
+
+        $second = $this->actingAs($this->admin)
+            ->getJson('/api/reports/technician-workload?per_page=2&cursor='.$first['meta']['next_cursor'])
+            ->assertOk()
+            ->json();
+
+        $this->assertCount(1, $second['data']);
+        $ids = collect($first['data'])->merge($second['data'])->pluck('technician_id');
+        $this->assertCount(3, $ids->unique());
     }
 
     public function test_respects_date_window(): void
@@ -125,7 +166,7 @@ class TechnicianWorkloadReportTest extends TestCase
         $this->createWorkOrder([
             'assigned_to_user_id' => $tech->id,
             'status' => WorkOrderStatus::OPEN,
-            'created_at' => now()->subDays(60),
+            'created_at' => now()->subDays(100),
         ]);
 
         $json = $this->actingAs($this->admin)->getJson('/api/reports/technician-workload')->json();
@@ -143,6 +184,6 @@ class TechnicianWorkloadReportTest extends TestCase
         $this->assertSame(0, $json['summary']['total_in_progress']);
         $this->assertSame(0, $json['summary']['total_completed']);
         $this->assertSame(0, $json['summary']['total_cancelled']);
-        $this->assertSame([], $json['items']);
+        $this->assertSame([], $json['data']);
     }
 }

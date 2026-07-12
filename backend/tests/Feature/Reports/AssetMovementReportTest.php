@@ -214,7 +214,7 @@ class AssetMovementReportTest extends TestCase
             ->json();
 
         $this->assertSame(1, $json['summary']['total_movements']);
-        $this->assertSame($locA->id, $json['data'][0]['from_location_id']);
+        $this->assertSame($locA->id, $json['data'][0]['from_location']['id']);
     }
 
     public function test_filters_by_to_location(): void
@@ -246,7 +246,7 @@ class AssetMovementReportTest extends TestCase
             ->json();
 
         $this->assertSame(1, $json['summary']['total_movements']);
-        $this->assertSame($locB->id, $json['data'][0]['to_location_id']);
+        $this->assertSame($locB->id, $json['data'][0]['to_location']['id']);
     }
 
     public function test_pagination_traversal(): void
