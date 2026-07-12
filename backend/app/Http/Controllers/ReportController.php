@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetKind;
 use App\Enums\OperationalStatus;
+use App\Http\Resources\UpcomingPmItemResource;
 use App\Models\User;
 use App\Queries\Reports\AssetsByLocationReportQuery;
 use App\Queries\Reports\OperationalStatusDistributionReportQuery;
+use App\Queries\Reports\UpcomingPmReportQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -17,7 +19,24 @@ class ReportController extends Controller
     {
         Gate::authorize('viewDashboard', User::class);
 
-        return response()->json(['summary' => [], 'items' => []]);
+        $filters = $request->validate([
+            'days' => ['nullable', 'integer', 'min:1', 'max:365'],
+            'location_id' => ['nullable', 'exists:locations,id'],
+            'pm_rule_id' => ['nullable', 'exists:pm_rules,id'],
+        ]);
+
+        $result = app(UpcomingPmReportQuery::class)->handle(
+            (int) ($filters['days'] ?? 30),
+            [
+                'location_id' => $filters['location_id'] ?? null,
+                'pm_rule_id' => $filters['pm_rule_id'] ?? null,
+            ]
+        );
+
+        return response()->json([
+            'summary' => $result['summary'],
+            'items' => UpcomingPmItemResource::collection($result['items'])->resolve($request),
+        ]);
     }
 
     public function assetsByLocation(Request $request): \Illuminate\Http\JsonResponse
