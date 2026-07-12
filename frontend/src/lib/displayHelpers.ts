@@ -187,6 +187,22 @@ export function faSubclassLabel(code: string): string {
   return FA_SUBCLASS_LABELS[code] ?? code
 }
 
+/** R-21 PM suppression decision-type label. */
+export function pmDecisionTypeLabel(s: string | null | undefined): string {
+  if (!s) return '—'
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** R-21 PM suppression decision-type badge class. Extends .status-badge. */
+export function pmDecisionTypeClass(s: string | null | undefined): string {
+  const m: Record<string, string> = {
+    approved: 'status-badge status-completed',
+    rejected: 'status-badge status-rejected',
+    cancelled: 'status-badge status-cancelled',
+  }
+  return m[s ?? ''] ?? 'status-badge'
+}
+
 /** R-1 chain-status label — where an upcoming PM sits in the MR→WO lifecycle. */
 export function pmChainStatusLabel(s: string | null | undefined): string {
   const m: Record<string, string> = {

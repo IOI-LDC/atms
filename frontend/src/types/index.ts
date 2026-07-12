@@ -631,6 +631,124 @@ export interface WoBacklogReportPage extends CursorPage<WoBacklogItem> {
   }
 }
 
+// ── Reports Pass 2 (stable-contract subset) ──────────────────────────────────
+// R-3 MTBF, R-4 MTTR, R-6 Bad-Actor, R-13 Booking, R-17 Parts, R-20 Meter, R-21
+// Suppression. (R-9/R-15/R-16/R-18/R-19 pending backend rework — not typed yet.)
+// The "category" group-by resolves to fa_subclass_code server-side.
+
+export type MtbfGroupBy = 'asset' | 'category' | 'location'
+export type MttrGroupBy = 'asset' | 'category' | 'technician'
+
+// R-3 MTBF / Failure Rate by dimension
+export interface MtbfRow {
+  group_key: string | number | null
+  group_label: string | null
+  failure_count: number
+  mtbf_days: number | null
+  failure_rate_per_day: number
+}
+export interface MtbfReport {
+  summary: { mtbf_days: number | null; failure_count: number; failure_rate_per_day: number }
+  items: MtbfRow[]
+}
+
+// R-4 MTTR by dimension
+export interface MttrRow {
+  group_key: string | number | null
+  group_label: string | null
+  repair_count: number
+  mttr_hours: number | null
+}
+export interface MttrReport {
+  summary: { mttr_hours: number | null; repair_count: number }
+  items: MttrRow[]
+}
+
+// R-6 Bad-Actor / Breakdown Analysis
+export interface BadActorRow {
+  group_key: string | number | null
+  group_label: string | null
+  failure_count: number
+}
+export interface BadActorReport {
+  summary: { total_failures: number }
+  items: BadActorRow[]
+}
+
+// R-13 Asset Booking / Availability
+export interface BookingRow {
+  location_id: number | null
+  location_name: string | null
+  total_count: number
+  booked_count: number
+  available_count: number
+}
+export interface BookingReport {
+  summary: { total_assets: number; booked_count: number; available_count: number }
+  items: BookingRow[]
+}
+
+// R-17 Parts Consumption (cursor)
+export interface PartsConsumptionItem {
+  part_id: number
+  part_code: string
+  part_name: string
+  unit_of_measure: string | null
+  fa_subclass_code: string | null
+  total_quantity: number
+  line_item_count: number
+  work_order_count: number
+}
+export interface PartsConsumptionReportPage extends CursorPage<PartsConsumptionItem> {
+  // total_quantity/unit_of_measure are null when the query mixes units (unfiltered).
+  summary: {
+    total_line_items: number
+    distinct_parts: number
+    distinct_work_orders: number
+    total_quantity: number | null
+    unit_of_measure: string | null
+  }
+}
+
+// R-20 Meter Reading Progression (cursor)
+export interface MeterProgressionItem {
+  id: number
+  asset: { id: number | null; name: string | null; erp_asset_code: string | null }
+  reading_type: { id: number | null; name: string | null; unit: string | null }
+  reading_value: number
+  previous_reading_value: number | null
+  delta: number | null
+  reading_at: string | null
+  confirmed_at: string | null
+  source: string | null
+}
+export interface MeterProgressionReportPage extends CursorPage<MeterProgressionItem> {
+  summary: { total_readings: number; confirmed_readings: number }
+}
+
+// R-21 PM Suppression Register (cursor)
+export interface PmSuppressionItem {
+  id: number
+  decision_type: string | null
+  trigger_type: PmTriggerType | null
+  triggered_by_date: boolean | null
+  triggered_by_reading: boolean | null
+  trigger_date: string | null
+  trigger_reading_value: number | null
+  trigger_reading_type: { id: number; name: string; unit: string } | null
+  suppressed_until_date: string | null
+  suppressed_until_reading: number | null
+  pm_rule: { id: number | null; name: string | null }
+  asset: { id: number | null; name: string | null; erp_asset_code: string | null }
+  maintenance_request: { id: number | null; number: string | null }
+  decided_by: { id: number | null; name: string | null }
+  decided_at: string | null
+  reason: string | null
+}
+export interface PmSuppressionReportPage extends CursorPage<PmSuppressionItem> {
+  summary: { total_suppressions: number }
+}
+
 // ── Mutation response wrappers ────────────────────────────────────────────────
 
 export interface MessageResponse {

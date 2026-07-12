@@ -152,6 +152,42 @@ const router = createRouter({
       name: 'report-upcoming-pm-schedule',
       component: () => import('@/views/reports/UpcomingPmReport.vue'),
     },
+    // Pass 2 (stable-contract subset)
+    {
+      path: '/reports/mtbf-failure-rate',
+      name: 'report-mtbf-failure-rate',
+      component: () => import('@/views/reports/MtbfReport.vue'),
+    },
+    {
+      path: '/reports/mttr',
+      name: 'report-mttr',
+      component: () => import('@/views/reports/MttrReport.vue'),
+    },
+    {
+      path: '/reports/bad-actor-analysis',
+      name: 'report-bad-actor-analysis',
+      component: () => import('@/views/reports/BadActorReport.vue'),
+    },
+    {
+      path: '/reports/asset-booking',
+      name: 'report-asset-booking',
+      component: () => import('@/views/reports/BookingReport.vue'),
+    },
+    {
+      path: '/reports/parts-consumption',
+      name: 'report-parts-consumption',
+      component: () => import('@/views/reports/PartsConsumptionReport.vue'),
+    },
+    {
+      path: '/reports/meter-reading-progression',
+      name: 'report-meter-reading-progression',
+      component: () => import('@/views/reports/MeterProgressionReport.vue'),
+    },
+    {
+      path: '/reports/pm-suppression-register',
+      name: 'report-pm-suppression-register',
+      component: () => import('@/views/reports/PmSuppressionReport.vue'),
+    },
 
     // ── User Manual ───────────────────────────────────────────────────────────
     {

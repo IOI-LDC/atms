@@ -49,3 +49,41 @@ export const PM_HORIZON_OPTIONS: { value: string; label: string }[] = [
   { value: '60', label: 'Next 60 days' },
   { value: '90', label: 'Next 90 days' },
 ]
+
+/** R-3 MTBF / R-6 Bad-Actor dimension. "category" resolves to fa_subclass_code server-side. */
+export const DIMENSION_GROUP_BY_OPTIONS: { value: 'asset' | 'category' | 'location'; label: string }[] =
+  [
+    { value: 'asset', label: 'Asset' },
+    { value: 'category', label: 'Asset Class' },
+    { value: 'location', label: 'Location' },
+  ]
+
+/** R-4 MTTR dimension (technician instead of location). */
+export const MTTR_GROUP_BY_OPTIONS: { value: 'asset' | 'category' | 'technician'; label: string }[] =
+  [
+    { value: 'asset', label: 'Asset' },
+    { value: 'category', label: 'Asset Class' },
+    { value: 'technician', label: 'Technician' },
+  ]
+
+/** R-6 Bad-Actor "top N" cap. */
+export const BAD_ACTOR_LIMIT_OPTIONS: { value: string; label: string }[] = [
+  { value: '10', label: 'Top 10' },
+  { value: '25', label: 'Top 25' },
+  { value: '50', label: 'Top 50' },
+]
+
+/** R-21 PM suppression decision types. Backend validates only these two (Rule::in). */
+export const PM_DECISION_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'cancelled', label: 'Cancelled' },
+]
+
+/** Backward date window [from, to] as yyyy-MM-dd strings (company-local calendar day). */
+export function reportDateWindow(days: number): { from: string; to: string } {
+  const to = new Date()
+  const from = new Date(to)
+  from.setDate(from.getDate() - days)
+  const iso = (d: Date) => d.toLocaleDateString('en-CA')
+  return { from: iso(from), to: iso(to) }
+}
