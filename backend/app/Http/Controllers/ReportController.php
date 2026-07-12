@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetKind;
+use App\Enums\OperationalStatus;
 use App\Models\User;
+use App\Queries\Reports\AssetsByLocationReportQuery;
 use App\Queries\Reports\OperationalStatusDistributionReportQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -22,7 +24,21 @@ class ReportController extends Controller
     {
         Gate::authorize('viewDashboard', User::class);
 
-        return response()->json(['summary' => [], 'items' => []]);
+        $filters = $request->validate([
+            'category' => ['nullable', 'string', 'max:100'],
+            'asset_kind' => ['nullable', Rule::enum(AssetKind::class)],
+            'operational_status' => ['nullable', Rule::enum(OperationalStatus::class)],
+            'include_inactive' => ['nullable', 'boolean'],
+        ]);
+
+        $result = app(AssetsByLocationReportQuery::class)->handle([
+            'category' => $filters['category'] ?? null,
+            'asset_kind' => $filters['asset_kind'] ?? null,
+            'operational_status' => $filters['operational_status'] ?? null,
+            'include_inactive' => (bool) ($filters['include_inactive'] ?? false),
+        ]);
+
+        return response()->json($result);
     }
 
     public function pmCompliance(Request $request): \Illuminate\Http\JsonResponse
