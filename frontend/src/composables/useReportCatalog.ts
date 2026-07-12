@@ -123,7 +123,7 @@ export function useReportCatalog(): {
           slug: 'pm-coverage',
           title: 'PM Coverage / Gaps',
           question: 'Which active assets have no active PM assignment?',
-          status: 'planned',
+          status: 'available',
         },
       ],
     },
@@ -198,14 +198,14 @@ export function useReportCatalog(): {
           title: 'Workload by Technician',
           question:
             'Assigned vs completed work orders and avg duration per technician (operational workload only).',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'R-16',
           slug: 'throughput',
           title: 'MR / WO Throughput',
           question: 'Counts by status over the period, plus average conversion time.',
-          status: 'planned',
+          status: 'available',
         },
       ],
     },
@@ -226,7 +226,7 @@ export function useReportCatalog(): {
           slug: 'asset-movement-log',
           title: 'Asset Movement Log',
           question: 'Relocations in the period, by from → to route and category.',
-          status: 'planned',
+          status: 'available',
         },
       ],
     },
@@ -241,7 +241,7 @@ export function useReportCatalog(): {
           title: 'Work Order Form Results',
           question:
             'What pre/post inspection results were recorded, by asset, FA subclass, field, and period?',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'R-20',

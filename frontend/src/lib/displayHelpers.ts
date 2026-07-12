@@ -424,6 +424,13 @@ export function woFormFieldTypeLabel(t: string): string {
   return m[t] ?? t
 }
 
+/** Format a captured WO-form field value for display (booleans → Yes/No). */
+export function woFieldValueDisplay(fieldType: string, value: string | null): string {
+  if (value == null || value === '') return '—'
+  if (fieldType === 'boolean') return value === '1' || value === 'true' ? 'Yes' : 'No'
+  return value
+}
+
 export function partStatusLabel(isActive: boolean): string {
   return isActive ? 'Active' : 'Inactive'
 }

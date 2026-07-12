@@ -749,6 +749,132 @@ export interface PmSuppressionReportPage extends CursorPage<PmSuppressionItem> {
   summary: { total_suppressions: number }
 }
 
+// ── Reports Pass 2 (reworked subset: R-9, R-15, R-16, R-18, R-19) ─────────────
+// R-15/R-16 return a cursor `meta` but NO `links` object.
+
+// R-9 PM Coverage — cursor; items are role-gated AssetResource objects.
+export interface PmCoverageReportPage extends CursorPage<Asset> {
+  summary: {
+    total_assets: number
+    covered_assets: number
+    uncovered_assets: number
+    coverage_pct: number | null
+  }
+}
+
+// R-15 Technician Workload — cursor (meta only, no links).
+export interface TechnicianWorkloadRow {
+  technician_id: number
+  technician_name: string
+  total_count: number
+  open_count: number
+  in_progress_count: number
+  completed_count: number
+  cancelled_count: number
+  backlog_count: number
+  avg_duration_hours: number | null
+  avg_backlog_age_days: number | null
+}
+export interface TechnicianWorkloadReportPage {
+  summary: {
+    total_work_orders: number
+    total_assigned: number
+    total_open: number
+    total_in_progress: number
+    total_completed: number
+    total_cancelled: number
+    total_backlog: number
+    avg_duration_hours: number | null
+    avg_backlog_age_days: number | null
+  }
+  data: TechnicianWorkloadRow[]
+  meta: { next_cursor: string | null; prev_cursor: string | null }
+}
+
+// R-16 MR/WO Throughput — cursor (meta only, no links). One row per day.
+export interface ThroughputRow {
+  date: string
+  mr_created: number
+  mr_pending_review: number
+  mr_converted: number
+  mr_rejected: number
+  mr_cancelled: number
+  wo_created: number
+  wo_open: number
+  wo_in_progress: number
+  wo_completed: number
+  wo_closed: number
+  wo_cancelled: number
+}
+export interface ThroughputReportPage {
+  summary: {
+    mr_created: number
+    mr_pending_review: number
+    mr_converted: number
+    mr_rejected: number
+    mr_cancelled: number
+    wo_created: number
+    wo_open: number
+    wo_in_progress: number
+    wo_completed: number
+    wo_closed: number
+    wo_cancelled: number
+    avg_conversion_hours: number | null
+  }
+  data: ThroughputRow[]
+  meta: { next_cursor: string | null; prev_cursor: string | null }
+}
+
+// R-18 Asset Movement — cursor. Nested via AssetLocationHistoryResource.
+export interface AssetMovementItem {
+  id: number
+  asset_id: number
+  asset: { id: number; name: string; erp_asset_code: string; asset_tag: string | null }
+  from_location: { id: number; name: string } | null // null on first placement
+  to_location: { id: number; name: string } | null
+  effective_at: string
+  reason: string | null
+  notes: string | null
+  changed_by_user_id: number // no name exposed by the resource
+  created_at: string
+}
+export interface AssetMovementReportPage extends CursorPage<AssetMovementItem> {
+  summary: { total_movements: number; unique_assets_moved: number }
+}
+
+// R-19 Work Order Form Results — cursor; paginated field values + numeric summary.
+export interface FormNumericComparison {
+  field_uuid: string
+  label: string
+  unit: string | null
+  comparison_count: number
+  avg_pre_value: number | null
+  avg_post_value: number | null
+  avg_change: number | null
+}
+export interface FormResultRow {
+  id: number
+  field_uuid: string
+  label: string
+  field_type: WoFormFieldType
+  has_pre_post: boolean
+  unit: string | null
+  pre_value: string | null
+  post_value: string | null
+  notes: string | null
+  work_order: { id: number; number: string }
+  asset: { id: number; name: string; erp_asset_code: string; fa_subclass_code: string | null }
+}
+export interface FormResultsReportPage extends CursorPage<FormResultRow> {
+  summary: {
+    total_fields: number
+    boolean_true_count: number
+    boolean_false_count: number
+    numeric_pre_post_count: number
+    numeric_comparisons: FormNumericComparison[]
+  }
+}
+
 // ── Mutation response wrappers ────────────────────────────────────────────────
 
 export interface MessageResponse {

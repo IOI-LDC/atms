@@ -188,6 +188,32 @@ const router = createRouter({
       name: 'report-pm-suppression-register',
       component: () => import('@/views/reports/PmSuppressionReport.vue'),
     },
+    // Pass 2 (reworked subset)
+    {
+      path: '/reports/pm-coverage',
+      name: 'report-pm-coverage',
+      component: () => import('@/views/reports/PmCoverageReport.vue'),
+    },
+    {
+      path: '/reports/technician-workload',
+      name: 'report-technician-workload',
+      component: () => import('@/views/reports/TechnicianWorkloadReport.vue'),
+    },
+    {
+      path: '/reports/throughput',
+      name: 'report-throughput',
+      component: () => import('@/views/reports/ThroughputReport.vue'),
+    },
+    {
+      path: '/reports/asset-movement-log',
+      name: 'report-asset-movement-log',
+      component: () => import('@/views/reports/AssetMovementReport.vue'),
+    },
+    {
+      path: '/reports/wo-form-results',
+      name: 'report-wo-form-results',
+      component: () => import('@/views/reports/FormResultsReport.vue'),
+    },
 
     // ── User Manual ───────────────────────────────────────────────────────────
     {

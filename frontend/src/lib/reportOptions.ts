@@ -79,6 +79,18 @@ export const PM_DECISION_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
+/** R-16 throughput status — union of MR + WO statuses; applies to whichever source supports it. */
+export const THROUGHPUT_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'pending_review', label: 'MR: Pending Review' },
+  { value: 'converted', label: 'MR: Converted' },
+  { value: 'rejected', label: 'MR: Rejected' },
+  { value: 'open', label: 'WO: Open' },
+  { value: 'in_progress', label: 'WO: In Progress' },
+  { value: 'completed', label: 'WO: Completed' },
+  { value: 'closed', label: 'WO: Closed' },
+  { value: 'cancelled', label: 'Cancelled (MR or WO)' },
+]
+
 /** Backward date window [from, to] as yyyy-MM-dd strings (company-local calendar day). */
 export function reportDateWindow(days: number): { from: string; to: string } {
   const to = new Date()
