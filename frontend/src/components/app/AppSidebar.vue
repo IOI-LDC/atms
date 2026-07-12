@@ -21,6 +21,7 @@ import {
   Package,
   Shield,
   MapPin,
+  ChartColumn,
 } from '@lucide/vue'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -89,6 +90,13 @@ const navItems: NavItemDef[] = [
     to: () => '/locations?tab=asset-location-update',
     isActiveFor: (p) => p === '/locations' || p.startsWith('/locations/'),
     visibleTo: (r) => r.isAdminOrManager || r.isLogistics,
+  },
+  {
+    label: 'Reports',
+    icon: ChartColumn,
+    to: () => '/reports',
+    isActiveFor: (p) => p === '/reports' || p.startsWith('/reports/'),
+    visibleTo: () => true,
   },
   {
     label: 'Admin',

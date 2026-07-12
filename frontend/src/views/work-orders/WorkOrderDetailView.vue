@@ -9,6 +9,7 @@ import {
   UserPenIcon,
   EyeIcon,
   Trash2Icon,
+  TriangleAlert,
 } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import DetailNotFound from '@/components/app/DetailNotFound.vue'
@@ -27,6 +28,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -131,6 +133,9 @@ const {
   readingDraft,
   assetReadings,
   readingsLoading,
+  lastReadingForDraft,
+  readingBelowLast,
+  lowerReadingAcknowledged,
   sinceLastService,
   openRecordReading,
   doRecordReading,
@@ -1110,6 +1115,28 @@ watch(
         <div class="form-field">
           <Label for="wo-reading-value">Value <span class="field-required">*</span></Label>
           <Input id="wo-reading-value" v-model="readingValueStr" type="number" />
+          <p v-if="lastReadingForDraft" class="reading-last-hint">
+            Last recorded:
+            <b>{{ lastReadingForDraft.value.toLocaleString() }} {{ lastReadingForDraft.unit }}</b>
+            · {{ fmtDate(lastReadingForDraft.readAt)
+            }}<span v-if="lastReadingForDraft.confirmed"> · confirmed</span>
+          </p>
+        </div>
+        <div v-if="readingBelowLast" class="form-field">
+          <div class="reading-warning" role="alert">
+            <TriangleAlert class="reading-warning-icon" aria-hidden="true" />
+            <span>
+              This is lower than the last recorded reading of
+              <b>{{ lastReadingForDraft?.value.toLocaleString() }} {{ lastReadingForDraft?.unit }}</b
+              >. Meter readings normally only increase.
+            </span>
+          </div>
+          <div class="reading-ack">
+            <Checkbox id="wo-reading-ack" v-model="lowerReadingAcknowledged" />
+            <Label for="wo-reading-ack" class="reading-ack-label"
+              >This lower reading is correct (e.g. the meter was reset or replaced).</Label
+            >
+          </div>
         </div>
         <div class="form-field">
           <Label for="wo-reading-at">Read at</Label>
@@ -1130,7 +1157,10 @@ watch(
           >
           <Button
             :disabled="
-              readingLoading || readingTypeIdStr === undefined || readingDraft.value == null
+              readingLoading ||
+              readingTypeIdStr === undefined ||
+              readingDraft.value == null ||
+              (readingBelowLast && !lowerReadingAcknowledged)
             "
             @click="doRecordReading"
           >

@@ -7,6 +7,15 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  CalendarClock,
+  CheckCircle2,
+  ClipboardList,
+  Gauge,
+  History,
+  ShieldCheck,
+  Wrench,
+} from '@lucide/vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -53,36 +62,98 @@ async function handleSubmit() {
           <span class="auth-brand-name">ATMS</span>
         </div>
         <div class="auth-brand-hero">
-          <h2 class="auth-brand-title">Enterprise Reliability at Your Fingertips</h2>
+          <h2 class="auth-brand-title">Maintenance Operations, Connected</h2>
           <p class="auth-brand-subtitle">
-            ATMS orchestrates asset lifecycles, work orders, and compliance data into a unified
-            operational control hub.
+            Manage asset records, maintenance requests, work orders, and preventive maintenance in
+            one controlled workspace.
           </p>
         </div>
 
-        <!-- Live KPI Card Mockup (for premium enterprise aesthetics) -->
-        <div class="auth-kpi-showcase">
-          <div class="auth-kpi-card">
-            <div class="auth-kpi-header">
-              <span class="auth-kpi-tag">Operations Status</span>
-              <div class="auth-kpi-status-dot"></div>
-            </div>
-            <div class="auth-kpi-metric">
-              <span class="auth-kpi-number">98.4%</span>
-              <span class="auth-kpi-label">PM Compliance</span>
-            </div>
-            <div class="auth-kpi-grid">
-              <div class="auth-kpi-item">
-                <span class="auth-kpi-val">2.4h</span>
-                <span class="auth-kpi-lbl">Avg MTTR</span>
-              </div>
-              <div class="auth-kpi-item">
-                <span class="auth-kpi-val">12</span>
-                <span class="auth-kpi-lbl">Active WOs</span>
-              </div>
-            </div>
+        <section class="auth-workflow-diagram" aria-labelledby="auth-workflow-heading">
+          <div class="auth-workflow-header">
+            <h3 id="auth-workflow-heading">ATMS Maintenance Workflow</h3>
+            <p>From maintenance need to verified asset history</p>
           </div>
-        </div>
+
+          <div class="auth-workflow-sources">
+            <article class="auth-workflow-source">
+              <span class="auth-workflow-source-icon"><ClipboardList /></span>
+              <span class="auth-workflow-copy">
+                <strong>Corrective MR</strong>
+                <small>User-submitted issue with an optional meter reading</small>
+              </span>
+            </article>
+            <article class="auth-workflow-source">
+              <span class="auth-workflow-source-icon"><CalendarClock /></span>
+              <span class="auth-workflow-copy">
+                <strong>Preventive MR</strong>
+                <small>System-generated from a date or meter trigger</small>
+              </span>
+            </article>
+          </div>
+
+          <div class="auth-workflow-merge" aria-hidden="true">
+            <span>Pending Review</span>
+          </div>
+
+          <div class="auth-workflow-approval">
+            <ShieldCheck />
+            <span class="auth-workflow-copy">
+              <strong>Approve &amp; Create Work Order</strong>
+              <small>Manager review converts the MR into an assigned execution record</small>
+            </span>
+          </div>
+
+          <div class="auth-workflow-connector" aria-hidden="true"></div>
+
+          <div class="auth-workflow-work-order">
+            <div class="auth-workflow-work-order-title">
+              <Wrench />
+              <span>
+                <strong>Work Order</strong>
+                <small>Controlled execution lifecycle</small>
+              </span>
+            </div>
+
+            <ol class="auth-workflow-lifecycle">
+              <li>
+                <span>01</span>
+                <strong>Open &amp; Assigned</strong>
+                <small>Technician selected</small>
+              </li>
+              <li>
+                <span>02</span>
+                <strong>In Progress</strong>
+                <small>Work and parts recorded</small>
+              </li>
+              <li>
+                <Gauge />
+                <strong>Completed</strong>
+                <small>Optional meter update</small>
+              </li>
+              <li>
+                <CheckCircle2 />
+                <strong>Closed</strong>
+                <small>PM baseline updated</small>
+              </li>
+            </ol>
+          </div>
+
+          <div class="auth-workflow-connector" aria-hidden="true"></div>
+
+          <div class="auth-workflow-history">
+            <History />
+            <span class="auth-workflow-copy">
+              <strong>Maintenance History</strong>
+              <small>The closed Work Order remains an immutable asset record</small>
+            </span>
+          </div>
+
+          <div class="auth-workflow-footer">
+            <span><ShieldCheck /> Role-based decisions</span>
+            <span><History /> Audited activity</span>
+          </div>
+        </section>
       </div>
       <!-- Background glowing gradient circles -->
       <div class="auth-brand-glow-1"></div>
@@ -95,7 +166,7 @@ async function handleSubmit() {
         <!-- Mobile logo/header (Hidden on Desktop) -->
         <div class="auth-mobile-header">
           <img src="@/assets/logo.svg" alt="ATMS" class="auth-mobile-logo" />
-          <h1 class="auth-mobile-title">ATMS</h1>
+          <span class="auth-mobile-title">ATMS</span>
         </div>
 
         <div class="auth-form-header">

@@ -105,6 +105,21 @@ const router = createRouter({
       name: 'locations',
       component: () => import('@/views/locations/LocationsView.vue'),
     },
+    // ── Locations (Logistics "Find & Move" preview — temporary) ────────────────
+    // Standalone preview route for the redesigned search-first location-update
+    // flow. To be folded into /locations (role-based) once approved.
+    {
+      path: '/locations2',
+      name: 'locations2',
+      component: () => import('@/views/locations/LogisticsLocationView.vue'),
+    },
+
+    // ── Reports ───────────────────────────────────────────────────────────────
+    {
+      path: '/reports',
+      name: 'reports',
+      component: () => import('@/views/reports/ReportsView.vue'),
+    },
 
     // ── User Manual ───────────────────────────────────────────────────────────
     {

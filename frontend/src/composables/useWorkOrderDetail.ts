@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -226,6 +226,49 @@ export function useWorkOrderDetail() {
   })
   const assetReadings = ref<AssetMeterReading[]>([])
   const readingsLoading = ref(false)
+
+  // ── Last-reading guard ─────────────────────────────────────────────────────
+  // Most recent reading for the type selected in the record draft, so operators
+  // see the previous value and can be warned before entering a lower one.
+  const lastReadingForDraft = computed<{
+    value: number
+    readAt: string
+    unit: string
+    confirmed: boolean
+  } | null>(() => {
+    const typeId = readingDraft.value.typeId
+    if (typeId == null) return null
+    const forType = assetReadings.value.filter((r) => r.usage_reading_type_id === typeId)
+    if (forType.length === 0) return null
+    const latest = [...forType].sort((a, b) => {
+      const byDate = (b.reading_at ?? '').localeCompare(a.reading_at ?? '')
+      return byDate !== 0 ? byDate : b.id - a.id
+    })[0]
+    if (!latest) return null
+    return {
+      value: Number(latest.reading_value),
+      readAt: latest.reading_at,
+      unit: readingTypes.value.find((t) => t.id === typeId)?.unit ?? '',
+      confirmed: latest.confirmed_at != null,
+    }
+  })
+
+  // True when the drafted value is below the last recorded reading for its type.
+  const readingBelowLast = computed<boolean>(() => {
+    const last = lastReadingForDraft.value
+    const v = readingDraft.value.value
+    return last != null && v != null && v < last.value
+  })
+
+  // A lower-than-last value must be explicitly acknowledged before it can save.
+  // Reset the acknowledgement whenever the type or value changes.
+  const lowerReadingAcknowledged = ref(false)
+  watch(
+    () => [readingDraft.value.typeId, readingDraft.value.value],
+    () => {
+      lowerReadingAcknowledged.value = false
+    },
+  )
 
   // Edit + delete are role-gated (Admin/Manager/Technician). Confirmed readings
   // are immutable on the backend (409), so the UI hides actions for them.
@@ -576,6 +619,8 @@ export function useWorkOrderDetail() {
 
   async function doRecordReading() {
     if (!record.value || !readingDraft.value.typeId || readingDraft.value.value == null) return
+    // Warn + require confirm: a lower-than-last value must be acknowledged first.
+    if (readingBelowLast.value && !lowerReadingAcknowledged.value) return
     readingLoading.value = true
     try {
       await api.post(`/assets/${record.value.asset.id}/meter-readings`, {
@@ -898,6 +943,9 @@ export function useWorkOrderDetail() {
     readingDraft,
     assetReadings,
     readingsLoading,
+    lastReadingForDraft,
+    readingBelowLast,
+    lowerReadingAcknowledged,
     sinceLastService,
     openRecordReading,
     doRecordReading,

@@ -74,7 +74,9 @@ async function loadHistory() {
     const res = await api.get<{ data: AssetLocationHistoryItem[] }>(
       `/assets/${props.asset.id}/location-history`,
     )
-    history.value = (res.data ?? []).slice(0, 3)
+    // Cap the compact in-sheet timeline to the 5 most recent moves so it stays
+    // scannable and doesn't crowd the form (endpoint returns newest-first).
+    history.value = (res.data ?? []).slice(0, 5)
   } catch {
     history.value = []
   } finally {
@@ -234,8 +236,9 @@ const selectedLocation = computed(() =>
             <div v-for="h in history" :key="h.id" class="compact-timeline-item">
               <span class="compact-timeline-date">{{ fmtDate(h.effective_at) }}</span>
               <span class="compact-timeline-summary">
-                Moved{{ h.to_location_id ? ' to new location' : ''
-                }}<template v-if="h.reason"> — {{ h.reason }}</template>
+                <template v-if="h.from_location">{{ h.from_location.name }} → </template>
+                <b>{{ h.to_location?.name ?? 'Unknown location' }}</b>
+                <template v-if="h.reason"> — {{ h.reason }}</template>
               </span>
             </div>
           </div>
