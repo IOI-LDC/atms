@@ -21,6 +21,7 @@ use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardKpiController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ListOptionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MaintenanceRequestController;
@@ -47,6 +48,15 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/kpis', [DashboardKpiController::class, 'index']);
+
+    Route::prefix('reports')->group(function () {
+        Route::get('/upcoming-pm', [ReportController::class, 'upcomingPm']);
+        Route::get('/assets-by-location', [ReportController::class, 'assetsByLocation']);
+        Route::get('/pm-compliance', [ReportController::class, 'pmCompliance']);
+        Route::get('/overdue-pm', [ReportController::class, 'overduePm']);
+        Route::get('/asset-status-distribution', [ReportController::class, 'assetStatusDistribution']);
+        Route::get('/wo-backlog', [ReportController::class, 'woBacklog']);
+    });
 
     Route::get('/locations', [LocationController::class, 'index']);
 
