@@ -8,7 +8,9 @@ use App\Http\Resources\UpcomingPmItemResource;
 use App\Models\User;
 use App\Queries\Reports\AssetsByLocationReportQuery;
 use App\Queries\Reports\OperationalStatusDistributionReportQuery;
+use App\Queries\Reports\PmComplianceReportQuery;
 use App\Queries\Reports\UpcomingPmReportQuery;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -64,7 +66,28 @@ class ReportController extends Controller
     {
         Gate::authorize('viewDashboard', User::class);
 
-        return response()->json(['summary' => [], 'items' => []]);
+        $filters = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'group_by' => ['nullable', Rule::in(['rule', 'asset', 'location'])],
+            'location_id' => ['nullable', 'exists:locations,id'],
+            'pm_rule_id' => ['nullable', 'exists:pm_rules,id'],
+        ]);
+
+        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->subDays(90);
+        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
+
+        $result = app(PmComplianceReportQuery::class)->handle(
+            $from,
+            $to,
+            $filters['group_by'] ?? 'rule',
+            [
+                'location_id' => $filters['location_id'] ?? null,
+                'pm_rule_id' => $filters['pm_rule_id'] ?? null,
+            ]
+        );
+
+        return response()->json($result);
     }
 
     public function overduePm(Request $request): \Illuminate\Http\JsonResponse
