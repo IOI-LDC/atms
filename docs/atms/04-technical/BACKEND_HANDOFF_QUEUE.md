@@ -11,10 +11,10 @@
 | # | Area | Item | Frontend today | Priority (suggested) |
 |---|---|---|---|---|
 | A1 | Find & Move | Search should also match `asset_tag` | Placeholder says "name or code" | High |
-| A2 | Find & Move | `withCount('childAssets')` on assets index | Components heads-up stays hidden | Medium |
+| A2 | Find & Move / Asset Assembly | Return `child_assets_count` when component awareness is enabled | Components heads-up stays hidden | Phase 2 |
 | A3 | Find & Move | "Recent relocations" endpoint (last N) | Shows ≤5 from dashboard feed | Medium |
 | A4 | Asset Assembly (Phase 2) | Children listing + atomic cascade move | Cascade seam only; not active | Phase 2 |
-| B | Meter readings | Reject a decreasing reading (monotonicity) | Warn + confirm at WO dialog only | High |
+| B | Meter readings | Decide whether to support an audited meter-reset workflow | Decreasing confirmed readings are already rejected | Product decision |
 
 ---
 
@@ -31,17 +31,25 @@ same pattern as the existing `name`/`erp_asset_code` clauses).
 
 **Where:** `app/Queries/Assets/AssetIndexQuery.php` (the `search` branch).
 
+**Backend verification:** Add focused feature coverage for tag matches while
+preserving existing name/code search, role scoping, and cursor pagination.
+
 **Frontend effect when done:** the combobox finds assets by tag; update the
 placeholder from "name or code" to include "tag".
 
-### A2 — Include `child_assets_count` on the assets index
+### A2 — Component count on the assets index (Phase 2)
+
+> **Deferred to Phase 2.** Asset Assembly and component-aware movement are outside
+> Phase 1. There is no Phase 1 backend pickup for this item.
 
 **Problem:** `AssetIndexQuery` does `->with('currentLocation')` but not
 `->withCount('childAssets')`. `AssetResource` exposes `child_assets_count` via
 `whenCounted('childAssets')`, so it is **absent** from list responses.
 
-**Desired:** Add `->withCount('childAssets')` to the index query (and, if cheap,
-the `show` endpoint) so `child_assets_count` is returned.
+**Phase 2 desired outcome:** Return `child_assets_count` when the consuming flow
+needs component awareness. The Phase 2 design should decide whether this belongs
+on every assets-index response or is opt-in, to avoid adding an unnecessary count
+subquery to all Phase 1 asset searches.
 
 **Where:** `app/Queries/Assets/AssetIndexQuery.php`.
 
@@ -66,14 +74,25 @@ carries `asset`, `from_location`, `to_location`, `effective_at`, `reason`).
 - Any window bound, or purely "last N"? *(Recommend last N, no window.)*
 - Role visibility — mirror the dashboard (all authenticated). *(Recommend yes.)*
 
+**Required API safeguards:**
+
+- Validate `limit` as an integer with a conservative upper bound (recommended
+  default 10, maximum 50).
+- Order deterministically by `effective_at DESC`, then `id DESC`, so equal
+  timestamps do not reorder between requests.
+- Verify the production query plan and add an index compatible with the final
+  filter/order pattern if data volume warrants it.
+- Cover authentication/authorization, default and maximum limits, newest-first
+  ordering, and equal-timestamp ordering in feature tests.
+
 **Frontend effect when done:** point `useRecentMoves` at the new endpoint; the
 panel then shows the real last 10.
 
 ### A4 — Asset Assembly cascade (Phase 2)
 
-> Conditional on Asset Assembly being in the agreed delivery scope. The frontend
-> move flow is already modelled as "primary asset + optional cascade set" so this
-> drops in without a redesign.
+> **Deferred to Phase 2; no Phase 1 backend pickup.** The frontend move flow is
+> already modelled as "primary asset + optional cascade set" so this can be
+> activated when the Phase 2 assembly contract is agreed.
 
 **Problem:** When a **parent** asset moves, its installed **children** should
 move with it. Today there is no way to (a) list a parent's components or
@@ -101,37 +120,41 @@ physically co-located; highlight children already at a different location).
 
 ---
 
-## B. Meter readings — reject a decreasing value (monotonicity)
+## B. Meter readings — decide whether to support legitimate meter resets
 
-**Problem:** `AssetMeterReadingController::store` validates only
-`reading_value => ['required','numeric']`, and `RecordMeterReading` has no
-monotonicity check. A reading **lower** than the asset's previous reading (same
-`usage_reading_type_id`) is accepted from **any** path — the WO record-reading
-dialog, Asset Detail, PM, or a direct API call. This corrupts reading-triggered
-PM and reliability metrics. The frontend now warns + requires an explicit
-acknowledgement at the WO dialog, but that guard is bypassable, so the
-authoritative rule must live server-side.
+**Current backend behavior (verified):** Recording creates an **unconfirmed**
+reading. `ConfirmMeterReading` compares it with the latest confirmed reading for
+the same asset and usage-reading type. A lower value or an earlier reading date
+is rejected with `409`; equal values are allowed. Confirmed readings cannot be
+edited, and reading-triggered PM calculations use confirmed readings only.
 
-**Desired:** Reject a decreasing reading with `422` — `reading_value` must be
-≥ the latest reading for that asset + reading type — while still allowing a
-legitimate meter **reset**.
+Therefore, decreasing readings do **not** currently create an authoritative PM
+or reliability-data corruption gap. Server-side monotonicity already exists at
+the correct transition: confirmation.
 
-**Decisions for the team (please confirm):**
-- **Baseline** — compare against the latest reading by `reading_at`, or the max
-  value ever recorded for that asset+type? *(Recommend latest confirmed;
-  consider max as stricter — needs verification.)*
-- **Legitimate resets** (meter/engine replacement) — provide an explicit
-  override so a lower value can be saved intentionally (e.g. an
-  `is_reset` / `allow_decrease` flag on the request, or a dedicated reset
-  action). The frontend already captures an explicit acknowledgement it can
-  send. *(Recommend a request flag — needs verification.)*
-- **Equal values** — allow (same reading re-entered)? *(Recommend allow.)*
-- **Scope** — apply the same rule to the `update` path, not just `store`?
-  *(Recommend yes.)*
+**Open product decision:** Must ATMS support a legitimate reset after a meter,
+engine, or counter replacement?
 
-**Where:** `app/Http/Controllers/AssetMeterReadingController.php` (`store` +
-`update`) and `app/Actions/Assets/RecordMeterReading.php`.
+- **If no:** close this item; the existing confirmation rule is sufficient.
+- **If yes:** design a dedicated, privileged, audited meter-reset action. Do not
+  expose a general `allow_decrease` flag on the ordinary record/update request,
+  because that would turn the authoritative invariant into a caller-controlled
+  bypass.
 
-**Frontend effect when done:** `doRecordReading` already surfaces the API error
-message, so a clear 422 message displays to the user as-is; no frontend change
-required.
+**Reset workflow requirements if approved:**
+
+- Explicit authorization for the role permitted to approve a reset.
+- Required reset reason and effective date, with optional replacement reference.
+- Atomic creation/confirmation of the new baseline and a complete audit trail of
+  the previous confirmed value, new value, actor, reason, and timestamp.
+- Subsequent confirmations compare against the approved reset baseline.
+- Feature tests for unauthorized reset attempts, required reason, audit output,
+  transactional rollback, and post-reset monotonicity.
+
+**Likely backend touchpoints:** a dedicated Form Request, controller/action,
+authorization rule, route, audit event, and focused feature tests. Preserve the
+existing `ConfirmMeterReading` rejection behavior for ordinary confirmations.
+
+**Frontend effect if resets are approved:** a frontend change will be required
+to invoke the privileged reset workflow and capture its mandatory reason. The
+current WO-dialog acknowledgement is local UI state and is not a reset request.

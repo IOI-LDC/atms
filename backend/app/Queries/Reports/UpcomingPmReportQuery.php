@@ -17,8 +17,10 @@ use Illuminate\Support\Collection;
  * (mirrors EvaluatePmRulesJob: active assignment + active rule + enrolled
  * asset, date-triggered only), then projects next_due from the calculator's
  * null-policy (never-triggered = due-now, excluded from the forward window).
- * Chain status is resolved in bulk (2 queries) to avoid the N+1 of
- * AssetPmAssignment::hasActiveChain().
+ * Chain status is resolved in bulk (3 queries: pending MRs + active WOs +
+ * eager-loaded MR relation) to avoid the N+1 of
+ * AssetPmAssignment::hasActiveChain(). Output is sorted by next_due_date
+ * (soonest first) for deterministic ordering.
  */
 class UpcomingPmReportQuery
 {
@@ -62,7 +64,7 @@ class UpcomingPmReportQuery
                 'days_until_due' => abs((int) $today->diffInDays($nextDue)),
                 'chain_status' => $chainStatus["{$a->asset_id}_{$a->pm_rule_id}"] ?? 'not_yet_generated',
             ];
-        })->filter()->values();
+        })->filter()->sortBy('next_due_date')->values();
 
         return [
             'summary' => [
@@ -75,8 +77,9 @@ class UpcomingPmReportQuery
     }
 
     /**
-     * Bulk-resolve chain status for an assignment set in 2 queries (pending PM
-     * MRs + active WOs), keyed by "asset_id|pm_rule_id". Replaces the per-row
+     * Bulk-resolve chain status for an assignment set in 3 queries (pending PM
+     * MRs + active WOs + eager-loaded MR relation), keyed by
+     * "asset_id|pm_rule_id". Replaces the per-row
      * AssetPmAssignment::hasActiveChain() (2 queries each = N+1).
      *
      * @return array<string, string>

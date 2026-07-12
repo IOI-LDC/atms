@@ -243,4 +243,51 @@ class PmComplianceReportTest extends TestCase
         $this->assertNull($json['summary']['percentage']);
         $this->assertSame([], $json['items']);
     }
+
+    public function test_location_filter_applies(): void
+    {
+        $rule = $this->createRule('Rule-A');
+        $locA = Location::create(['name' => 'Loc-A', 'type' => 'building']);
+        $locB = Location::create(['name' => 'Loc-B', 'type' => 'building']);
+        $assetA = $this->createAsset(['current_location_id' => $locA->id]);
+        $assetB = $this->createAsset(['current_location_id' => $locB->id]);
+        $triggerDate = now()->subDays(5)->toDateString();
+
+        $onTime = $this->createPmRequest($rule, $assetA, 'PM-A', $triggerDate);
+        $this->closeWorkOrder($onTime, now()->subDays(6)->toDateString());
+        $late = $this->createPmRequest($rule, $assetB, 'PM-B', $triggerDate);
+        $this->closeWorkOrder($late, now()->subDays(3)->toDateString());
+
+        $json = $this->actingAs($this->admin)
+            ->getJson('/api/reports/pm-compliance?location_id='.$locA->id)->json();
+
+        $this->assertSame(1, $json['summary']['total']);
+        $this->assertSame(1, $json['summary']['compliant']);
+    }
+
+    public function test_pm_rule_filter_applies(): void
+    {
+        $ruleA = $this->createRule('Rule-A');
+        $ruleB = $this->createRule('Rule-B');
+        $asset = $this->createAsset();
+        $triggerDate = now()->subDays(5)->toDateString();
+
+        $onTimeA = $this->createPmRequest($ruleA, $asset, 'PM-A', $triggerDate);
+        $this->closeWorkOrder($onTimeA, now()->subDays(6)->toDateString());
+        $lateB = $this->createPmRequest($ruleB, $asset, 'PM-B', $triggerDate);
+        $this->closeWorkOrder($lateB, now()->subDays(3)->toDateString());
+
+        $json = $this->actingAs($this->admin)
+            ->getJson('/api/reports/pm-compliance?pm_rule_id='.$ruleA->id)->json();
+
+        $this->assertSame(1, $json['summary']['total']);
+        $this->assertSame(1, $json['summary']['compliant']);
+    }
+
+    public function test_from_after_to_returns_422(): void
+    {
+        $this->actingAs($this->admin)
+            ->getJson('/api/reports/pm-compliance?from=2026-12-01&to=2026-01-01')
+            ->assertStatus(422);
+    }
 }

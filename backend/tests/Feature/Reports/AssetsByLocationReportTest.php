@@ -127,15 +127,15 @@ class AssetsByLocationReportTest extends TestCase
         $this->assertSame(1, $row['booked_count']);
     }
 
-    public function test_category_filter_applies(): void
+    public function test_fa_subclass_code_filter_applies(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $loc = $this->createLocation('Loc-A');
-        $this->createAsset(['current_location_id' => $loc->id, 'category' => 'HVAC']);
-        $this->createAsset(['current_location_id' => $loc->id, 'category' => 'HVAC']);
-        $this->createAsset(['current_location_id' => $loc->id, 'category' => 'Pumps']);
+        $this->createAsset(['current_location_id' => $loc->id, 'fa_subclass_code' => 'HVAC']);
+        $this->createAsset(['current_location_id' => $loc->id, 'fa_subclass_code' => 'HVAC']);
+        $this->createAsset(['current_location_id' => $loc->id, 'fa_subclass_code' => 'Pumps']);
 
-        $json = $this->actingAs($admin)->getJson('/api/reports/assets-by-location?category=HVAC')->json();
+        $json = $this->actingAs($admin)->getJson('/api/reports/assets-by-location?fa_subclass_code=HVAC')->json();
 
         $this->assertSame(2, $json['summary']['total_assets']);
     }
@@ -188,5 +188,28 @@ class AssetsByLocationReportTest extends TestCase
 
         $this->assertArrayNotHasKey('by_maintenance_status', $items[0]);
         $this->assertArrayNotHasKey('sub_status', $items[0]);
+    }
+
+    public function test_operational_status_filter_applies(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $loc = $this->createLocation('Loc-A');
+        $this->createAsset([
+            'current_location_id' => $loc->id,
+            'operational_status' => OperationalStatus::ACTIVE,
+        ]);
+        $this->createAsset([
+            'current_location_id' => $loc->id,
+            'operational_status' => OperationalStatus::DOWN,
+        ]);
+
+        $json = $this->actingAs($admin)
+            ->getJson('/api/reports/assets-by-location?operational_status=active')->json();
+
+        $this->assertSame(1, $json['summary']['total_assets']);
+        $row = $this->findRow($json['items'], $loc->id);
+        $this->assertSame(1, $row['asset_count']);
+        $this->assertSame(1, $row['by_operational_status']['active']);
+        $this->assertSame(0, $row['by_operational_status']['down']);
     }
 }

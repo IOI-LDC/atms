@@ -56,6 +56,18 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
         Route::get('/overdue-pm', [ReportController::class, 'overduePm']);
         Route::get('/asset-status-distribution', [ReportController::class, 'assetStatusDistribution']);
         Route::get('/wo-backlog', [ReportController::class, 'woBacklog']);
+        Route::get('/mtbf', [ReportController::class, 'mtbf']);
+        Route::get('/mttr', [ReportController::class, 'mttr']);
+        Route::get('/bad-actors', [ReportController::class, 'badActors']);
+        Route::get('/pm-coverage', [ReportController::class, 'pmCoverage']);
+        Route::get('/booking', [ReportController::class, 'booking']);
+        Route::get('/technician-workload', [ReportController::class, 'technicianWorkload']);
+        Route::get('/throughput', [ReportController::class, 'throughput']);
+        Route::get('/parts-consumption', [ReportController::class, 'partsConsumption']);
+        Route::get('/asset-movement', [ReportController::class, 'assetMovement']);
+        Route::get('/form-results', [ReportController::class, 'formResults']);
+        Route::get('/meter-progression', [ReportController::class, 'meterProgression']);
+        Route::get('/pm-suppression', [ReportController::class, 'pmSuppression']);
     });
 
     Route::get('/locations', [LocationController::class, 'index']);

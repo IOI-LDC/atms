@@ -33,24 +33,13 @@ class ListActiveLocationsTest extends TestCase
         Location::create(['name' => 'Active Workshop', 'type' => 'workshop', 'code' => 'AW', 'is_active' => true]);
         Location::create(['name' => 'Inactive Yard', 'type' => 'yard', 'code' => 'IY', 'is_active' => false]);
 
-        foreach ([RoleCode::ADMINISTRATOR, RoleCode::MAINTENANCE_MANAGER, RoleCode::LOGISTICS] as $role) {
+        foreach ([RoleCode::ADMINISTRATOR, RoleCode::MAINTENANCE_MANAGER, RoleCode::TECHNICIAN, RoleCode::LOGISTICS, RoleCode::REQUESTER] as $role) {
             $this->actingAs($this->createUser($role))
                 ->getJson('/api/locations')
                 ->assertOk()
                 ->assertJsonCount(1, 'data')
                 ->assertJsonFragment(['name' => 'Active Workshop', 'code' => 'AW', 'is_active' => true])
                 ->assertJsonMissing(['name' => 'Inactive Yard']);
-        }
-    }
-
-    public function test_unauthorized_roles_are_forbidden(): void
-    {
-        Location::create(['name' => 'Site', 'type' => 'site', 'is_active' => true]);
-
-        foreach ([RoleCode::TECHNICIAN, RoleCode::REQUESTER] as $role) {
-            $this->actingAs($this->createUser($role))
-                ->getJson('/api/locations')
-                ->assertForbidden();
         }
     }
 

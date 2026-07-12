@@ -16,13 +16,13 @@ use Illuminate\Support\Collection;
 class AssetsByLocationReportQuery
 {
     /**
-     * @param  array{category?: ?string, asset_kind?: ?string, operational_status?: ?string, include_inactive?: bool}  $filters
+     * @param  array{fa_subclass_code?: ?string, asset_kind?: ?string, operational_status?: ?string, include_inactive?: bool}  $filters
      * @return array{summary: array{total_assets: int, total_locations: int, total_booked: int}, items: array<int, array<string, mixed>>}
      */
     public function handle(array $filters): array
     {
         $base = Asset::query()
-            ->when($filters['category'] ?? null, fn ($q, $v) => $q->where('category', $v))
+            ->when($filters['fa_subclass_code'] ?? null, fn ($q, $v) => $q->where('fa_subclass_code', $v))
             ->when($filters['asset_kind'] ?? null, fn ($q, $v) => $q->where('asset_kind', $v))
             ->when($filters['operational_status'] ?? null, fn ($q, $v) => $q->where('operational_status', $v))
             ->when(! ($filters['include_inactive'] ?? false), fn ($q) => $q->where('is_active', true));
@@ -38,6 +38,7 @@ class AssetsByLocationReportQuery
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as component_count', [AssetKind::COMPONENT->value])
             ->selectRaw('sum(case when is_booked = true then 1 else 0 end) as booked_count')
             ->groupBy('current_location_id')
+            ->orderByRaw('current_location_id IS NULL, current_location_id')
             ->get();
 
         $locationNames = Location::whereIn('id', $rows->pluck('current_location_id')->filter())

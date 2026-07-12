@@ -3,11 +3,13 @@
 namespace Tests\Feature\Reports;
 
 use App\Enums\MaintenanceRequestStatus;
+use App\Enums\PmTriggerType;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
 use App\Models\Location;
 use App\Models\MaintenanceRequest;
+use App\Models\PmRule;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -275,5 +277,59 @@ class OverduePmReportTest extends TestCase
             $json['summary']['by_bucket']
         );
         $this->assertSame([], $json['data']);
+    }
+
+    public function test_pm_rule_filter_applies(): void
+    {
+        $ruleA = PmRule::create([
+            'name' => 'Rule-A',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'is_active' => true,
+            'created_by' => $this->admin->id,
+        ]);
+        $ruleB = PmRule::create([
+            'name' => 'Rule-B',
+            'trigger_type' => PmTriggerType::DATE,
+            'interval_days' => 30,
+            'is_active' => true,
+            'created_by' => $this->admin->id,
+        ]);
+        $assetA = $this->createAsset();
+        $assetB = $this->createAsset();
+        $this->createOverduePmMr($assetA, now()->subDays(10)->toDateString(), ['pm_rule_id' => $ruleA->id]);
+        $this->createOverduePmMr($assetB, now()->subDays(10)->toDateString(), ['pm_rule_id' => $ruleB->id]);
+
+        $json = $this->actingAs($this->admin)
+            ->getJson('/api/reports/overdue-pm?pm_rule_id='.$ruleA->id)->json();
+
+        $this->assertSame(1, $json['summary']['total']);
+        $this->assertCount(1, $json['data']);
+    }
+
+    public function test_invalid_priority_returns_422(): void
+    {
+        $this->actingAs($this->admin)
+            ->getJson('/api/reports/overdue-pm?priority=hig')
+            ->assertStatus(422);
+    }
+
+    public function test_pagination_links_preserve_filters(): void
+    {
+        $locA = Location::create(['name' => 'Loc-A', 'type' => 'building']);
+        $assetA = $this->createAsset(['current_location_id' => $locA->id]);
+        // Create 3 overdue PMs to trigger pagination (per_page=2).
+        foreach (range(1, 3) as $i) {
+            $this->createOverduePmMr($assetA, now()->subDays(10)->toDateString(), ['priority' => 'high']);
+        }
+
+        $json = $this->actingAs($this->admin)
+            ->getJson('/api/reports/overdue-pm?per_page=2&location_id='.$locA->id.'&priority=high')
+            ->json();
+
+        $this->assertNotNull($json['links']['next']);
+        $this->assertStringContainsString('location_id='.$locA->id, $json['links']['next']);
+        $this->assertStringContainsString('priority=high', $json['links']['next']);
+        $this->assertStringContainsString('per_page=2', $json['links']['next']);
     }
 }

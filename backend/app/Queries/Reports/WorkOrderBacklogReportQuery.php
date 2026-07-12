@@ -34,21 +34,49 @@ class WorkOrderBacklogReportQuery
             ->when($filters['priority'] ?? null, fn ($q, $v) => $q->where('priority', $v));
 
         $today = now()->startOfDay();
-        $summaryRows = (clone $base)->select('created_at', 'priority')->get();
-        $perBucket = array_fill_keys(AgingBuckets::BUCKETS, 0);
+
+        // Summary via SQL aggregation: bucket counts use datetime cutoffs
+        // matching AgingBuckets::daysFrom (diffInDays truncates, so the
+        // boundary between 0-7 and 8-30 is at $today - 8 days 00:00:00).
+        // Priority counts use a separate GROUP BY query.
+        $cutoff8 = $today->copy()->subDays(8);
+        $cutoff31 = $today->copy()->subDays(31);
+        $cutoff91 = $today->copy()->subDays(91);
+
+        $summaryRow = (clone $base)->selectRaw('
+            COUNT(*) as total,
+            COALESCE(SUM(CASE WHEN created_at > ? THEN 1 ELSE 0 END), 0) as bucket_0_7,
+            COALESCE(SUM(CASE WHEN created_at <= ? AND created_at > ? THEN 1 ELSE 0 END), 0) as bucket_8_30,
+            COALESCE(SUM(CASE WHEN created_at <= ? AND created_at > ? THEN 1 ELSE 0 END), 0) as bucket_31_90,
+            COALESCE(SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END), 0) as bucket_91_plus
+        ', [
+            $cutoff8, $cutoff8, $cutoff31, $cutoff31, $cutoff91, $cutoff91,
+        ])->first();
+
+        $priorityRows = (clone $base)
+            ->selectRaw('priority, COUNT(*) as count')
+            ->groupBy('priority')
+            ->get();
+
         $byPriority = [];
-        foreach ($summaryRows as $wo) {
-            $perBucket[AgingBuckets::bucket(AgingBuckets::daysFrom($today, $wo->created_at))]++;
-            $byPriority[$wo->priority] = ($byPriority[$wo->priority] ?? 0) + 1;
+        foreach ($priorityRows as $row) {
+            $byPriority[$row->priority] = (int) $row->count;
         }
+
         $summary = [
-            'total' => $summaryRows->count(),
-            'by_bucket' => $perBucket,
+            'total' => (int) ($summaryRow->total ?? 0),
+            'by_bucket' => [
+                '0-7' => (int) ($summaryRow->bucket_0_7 ?? 0),
+                '8-30' => (int) ($summaryRow->bucket_8_30 ?? 0),
+                '31-90' => (int) ($summaryRow->bucket_31_90 ?? 0),
+                '91+' => (int) ($summaryRow->bucket_91_plus ?? 0),
+            ],
             'by_priority' => $byPriority,
         ];
 
         $paginator = (clone $base)
-            ->with(['asset.currentLocation', 'assignedTo', 'assignedBy', 'attachments', 'maintenanceRequest'])
+            ->with(['asset.currentLocation', 'assignedTo', 'assignedBy', 'maintenanceRequest'])
+            ->withCount('attachments')
             ->orderBy('created_at')
             ->orderBy('id')
             ->cursorPaginate($perPage);

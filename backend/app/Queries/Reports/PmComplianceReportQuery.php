@@ -49,7 +49,7 @@ class PmComplianceReportQuery
                 'total' => $total,
                 'percentage' => $total > 0 ? round($compliant / $total * 100, 1) : null,
             ];
-        })->values();
+        })->sortBy(fn ($item) => [$item['group_label'] === null, $item['group_label'] ?? ''])->values();
 
         $total = $due->count();
         $compliant = $due->filter($isCompliant)->count();

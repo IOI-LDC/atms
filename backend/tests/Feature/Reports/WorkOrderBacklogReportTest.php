@@ -277,4 +277,41 @@ class WorkOrderBacklogReportTest extends TestCase
         $this->assertSame([], $json['summary']['by_priority']);
         $this->assertSame([], $json['data']);
     }
+
+    public function test_priority_filter_applies(): void
+    {
+        $this->createWo(WorkOrderStatus::OPEN, ['priority' => 'high']);
+        $this->createWo(WorkOrderStatus::OPEN, ['priority' => 'low']);
+
+        $json = $this->actingAs($this->admin)
+            ->getJson('/api/reports/wo-backlog?priority=high')->json();
+
+        $this->assertSame(1, $json['summary']['total']);
+        $this->assertCount(1, $json['data']);
+        $this->assertSame('high', $json['data'][0]['priority']);
+    }
+
+    public function test_invalid_priority_returns_422(): void
+    {
+        $this->actingAs($this->admin)
+            ->getJson('/api/reports/wo-backlog?priority=urgent')
+            ->assertStatus(422);
+    }
+
+    public function test_pagination_links_preserve_filters(): void
+    {
+        // Create 3 WOs to trigger pagination (per_page=2).
+        foreach (range(1, 3) as $i) {
+            $this->createWo(WorkOrderStatus::OPEN, ['priority' => 'critical']);
+        }
+
+        $json = $this->actingAs($this->admin)
+            ->getJson('/api/reports/wo-backlog?per_page=2&priority=critical&status=open')
+            ->json();
+
+        $this->assertNotNull($json['links']['next']);
+        $this->assertStringContainsString('priority=critical', $json['links']['next']);
+        $this->assertStringContainsString('status=open', $json['links']['next']);
+        $this->assertStringContainsString('per_page=2', $json['links']['next']);
+    }
 }
