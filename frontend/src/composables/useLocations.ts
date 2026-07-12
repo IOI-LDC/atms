@@ -22,13 +22,13 @@ export function useLocations() {
     locationsError.value = null
     try {
       // Admin needs the full list (incl. inactive) for ManageLocationsView's
-      // CRUD table. Manager/Logistics only reach the picker/filter, so the
-      // active-only /locations endpoint is sufficient. Technician/Requester
-      // lack viewAny — skip the fetch to avoid a 403.
+      // CRUD table via /admin/locations. Every other authenticated role reads
+      // the active-only /locations endpoint — now open to all roles (incl.
+      // Technician/Requester) to back the report location filters.
       if (auth.isAdmin) {
         const res = await api.get<{ data: Location[] }>('/admin/locations')
         locations.value = res.data ?? []
-      } else if (auth.isManager || auth.isLogistics) {
+      } else {
         const res = await api.get<{ data: Location[] }>('/locations')
         locations.value = res.data ?? []
       }

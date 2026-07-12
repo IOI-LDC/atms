@@ -48,10 +48,13 @@ const STATUS_META: Record<ReportStatus, ReportStatusMeta> = {
 }
 
 export function useReportCatalog(): {
-  themes: ReportThemeGroup[]
+  /** Live reports, flattened — shown first as a prominent "Available now" grid. */
+  availableReports: ReportCatalogItem[]
+  /** Not-yet-built reports, grouped by theme. Deferred reports are excluded. */
+  plannedThemes: ReportThemeGroup[]
   statusMeta: Record<ReportStatus, ReportStatusMeta>
 } {
-  const themes: ReportThemeGroup[] = [
+  const allThemes: ReportThemeGroup[] = [
     {
       key: 'reliability',
       title: 'Reliability & Availability',
@@ -98,21 +101,21 @@ export function useReportCatalog(): {
           slug: 'upcoming-pm-schedule',
           title: 'Upcoming PM Schedule',
           question: 'Which assets have a PM due in the next 30 days?',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'R-7',
           slug: 'pm-compliance',
           title: 'PM Compliance',
           question: 'On-time PM completion % by rule, asset, location, and period.',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'R-8',
           slug: 'overdue-pm',
           title: 'Overdue PM',
           question: 'Which PMs are past due and not closed, by aging bucket?',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'R-9',
@@ -133,29 +136,39 @@ export function useReportCatalog(): {
           slug: 'assets-by-location',
           title: 'Asset Distribution by Location',
           question: 'Where are our assets, and how many are at each location?',
-          status: 'planned',
+          status: 'available',
         },
         {
-          id: 'R-10',
+          id: 'R-10A',
           slug: 'asset-status-distribution',
-          title: 'Asset Status Distribution',
-          question: 'How is the fleet split across operational and maintenance states?',
-          status: 'planned',
+          title: 'Operational Status Distribution',
+          question:
+            'How is the fleet split across operational states — Active, Under Maintenance, Down, Inactive?',
+          status: 'available',
+        },
+        {
+          id: 'R-10B',
+          slug: 'maintenance-lifecycle-status',
+          title: 'Maintenance Lifecycle Status Distribution',
+          question: 'How is the fleet split across ERP-derived maintenance lifecycle states?',
+          status: 'deferred',
+          note: 'Deferred to Phase 2 — depends on ERP-derived maintenance lifecycle state.',
         },
         {
           id: 'R-11',
           slug: 'lost-decommissioned-assets',
           title: 'Lost / Decommissioned Assets',
           question: 'Counts of LIH, DBR, Disposed, and Scrapped in the period.',
-          status: 'planned',
+          status: 'deferred',
+          note: 'Deferred to Phase 2 — depends on ERP-derived maintenance lifecycle state.',
         },
         {
           id: 'R-12',
           slug: 'spare-rotor-pool',
           title: 'Spare / Rotor Pool',
           question: 'Components Ready (spare) vs Installed — spare availability by category.',
-          status: 'conditional',
-          note: 'Conditional on the asset-assembly / component delivery scope (D-3).',
+          status: 'deferred',
+          note: 'Deferred to Phase 2 — depends on the asset-assembly / component model (D-3).',
         },
         {
           id: 'R-13',
@@ -176,7 +189,7 @@ export function useReportCatalog(): {
           slug: 'wo-backlog',
           title: 'WO Backlog / Aging',
           question: 'Open and in-progress work orders by age bucket and priority.',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'R-15',
@@ -247,5 +260,16 @@ export function useReportCatalog(): {
     },
   ]
 
-  return { themes, statusMeta: STATUS_META }
+  // Live reports surface first as a flat "Available now" grid.
+  const availableReports: ReportCatalogItem[] = allThemes
+    .flatMap((theme) => theme.items)
+    .filter((item) => item.status === 'available')
+
+  // Remaining themed sections show only planned reports; deferred are hidden for
+  // now (kept in the catalogue data above so they're easy to reinstate later).
+  const plannedThemes: ReportThemeGroup[] = allThemes
+    .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.status === 'planned') }))
+    .filter((theme) => theme.items.length > 0)
+
+  return { availableReports, plannedThemes, statusMeta: STATUS_META }
 }

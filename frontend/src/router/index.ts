@@ -120,6 +120,38 @@ const router = createRouter({
       name: 'reports',
       component: () => import('@/views/reports/ReportsView.vue'),
     },
+    // Per-report pages (Pass 1 Must tier). Any authenticated role may view —
+    // reports are org-wide program views (backend Gate: viewDashboard).
+    {
+      path: '/reports/asset-status-distribution',
+      name: 'report-asset-status-distribution',
+      component: () => import('@/views/reports/OperationalStatusReport.vue'),
+    },
+    {
+      path: '/reports/assets-by-location',
+      name: 'report-assets-by-location',
+      component: () => import('@/views/reports/AssetsByLocationReport.vue'),
+    },
+    {
+      path: '/reports/pm-compliance',
+      name: 'report-pm-compliance',
+      component: () => import('@/views/reports/PmComplianceReport.vue'),
+    },
+    {
+      path: '/reports/overdue-pm',
+      name: 'report-overdue-pm',
+      component: () => import('@/views/reports/OverduePmReport.vue'),
+    },
+    {
+      path: '/reports/wo-backlog',
+      name: 'report-wo-backlog',
+      component: () => import('@/views/reports/WorkOrderBacklogReport.vue'),
+    },
+    {
+      path: '/reports/upcoming-pm-schedule',
+      name: 'report-upcoming-pm-schedule',
+      component: () => import('@/views/reports/UpcomingPmReport.vue'),
+    },
 
     // ── User Manual ───────────────────────────────────────────────────────────
     {

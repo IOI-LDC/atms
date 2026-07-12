@@ -187,6 +187,44 @@ export function faSubclassLabel(code: string): string {
   return FA_SUBCLASS_LABELS[code] ?? code
 }
 
+/** R-1 chain-status label — where an upcoming PM sits in the MR→WO lifecycle. */
+export function pmChainStatusLabel(s: string | null | undefined): string {
+  const m: Record<string, string> = {
+    not_yet_generated: 'Not yet generated',
+    generated_mr_pending: 'Request pending',
+    wo_open: 'Work order open',
+    wo_completed: 'Work order completed',
+  }
+  return m[s ?? ''] ?? '—'
+}
+
+/** R-1 chain-status badge class. Extends .status-badge. */
+export function pmChainStatusClass(s: string | null | undefined): string {
+  const m: Record<string, string> = {
+    not_yet_generated: 'status-badge status-unclassified',
+    generated_mr_pending: 'status-badge status-pending',
+    wo_open: 'status-badge status-open',
+    wo_completed: 'status-badge status-completed',
+  }
+  return m[s ?? ''] ?? 'status-badge'
+}
+
+/** Aging-bucket badge class (R-8 overdue PM, R-14 WO backlog). Extends .status-badge. */
+export function agingBucketClass(bucket: string | null | undefined): string {
+  const m: Record<string, string> = {
+    '0-7': 'status-badge report-bucket-0-7',
+    '8-30': 'status-badge report-bucket-8-30',
+    '31-90': 'status-badge report-bucket-31-90',
+    '91+': 'status-badge report-bucket-91',
+  }
+  return m[bucket ?? ''] ?? 'status-badge'
+}
+
+/** Aging-bucket display label — `91+` = ≥91 days. */
+export function agingBucketLabel(bucket: string | null | undefined): string {
+  return bucket ? `${bucket} days` : '—'
+}
+
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   return iso.slice(0, 10)

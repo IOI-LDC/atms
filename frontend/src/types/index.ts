@@ -533,6 +533,104 @@ export interface CursorPage<T> {
   meta: CursorMeta
 }
 
+// ── Reports (GET /api/reports/*) ──────────────────────────────────────────────
+// Read-only, parameterised aggregations. Spec: docs/atms/01-product/REPORTS.md;
+// contract: .kilo/plans/1783838549346-reports-pass1-backend.md. Two response
+// shapes: bounded `{ summary, items }` (R-1/R-2/R-7/R-10A) and cursor-paginated
+// `{ summary, data, links, meta }` (R-8/R-14, summary merged in via additional()).
+
+/** Aging bucket label. `91+` = ≥91 days (labels are honest — `31-90` includes day 90). */
+export type AgingBucket = '0-7' | '8-30' | '31-90' | '91+'
+
+// R-10A Operational Status Distribution
+export interface OperationalStatusDistributionRow {
+  status: string // OperationalStatus value: active | under_maintenance | down | inactive
+  count: number
+}
+export interface OperationalStatusDistributionReport {
+  summary: { total: number }
+  items: OperationalStatusDistributionRow[]
+}
+
+// R-2 Asset Distribution by Location
+export interface AssetsByLocationRow {
+  location_id: number | null
+  location_name: string | null // "Unassigned" when is_unassigned
+  is_unassigned: boolean
+  asset_count: number
+  by_operational_status: { active: number; under_maintenance: number; down: number; inactive: number }
+  by_asset_kind: { standalone: number; package: number; component: number }
+  booked_count: number
+}
+export interface AssetsByLocationReport {
+  summary: { total_assets: number; total_locations: number; total_booked: number }
+  items: AssetsByLocationRow[]
+}
+
+// R-7 PM Compliance (group_by: rule | asset | location)
+export type PmComplianceGroupBy = 'rule' | 'asset' | 'location'
+export interface PmComplianceRow {
+  group_key: string | number | null
+  group_label: string | null
+  compliant: number
+  total: number
+  percentage: number | null // null when total = 0
+}
+export interface PmComplianceReport {
+  summary: { compliant: number; total: number; percentage: number | null }
+  items: PmComplianceRow[]
+}
+
+// R-1 Upcoming PM Schedule (date-triggered only)
+export type PmChainStatus =
+  | 'not_yet_generated'
+  | 'generated_mr_pending'
+  | 'wo_open'
+  | 'wo_completed'
+export interface UpcomingPmItem {
+  assignment_id: number
+  asset: { id: number; name: string; asset_tag: string | null; erp_asset_code: string }
+  // Always an object; inner id/name are null when the asset has no current location.
+  location: { id: number | null; name: string | null }
+  pm_rule: { id: number; name: string }
+  trigger_type: PmTriggerType
+  next_due_date: string // ISO date
+  days_until_due: number
+  chain_status: PmChainStatus
+}
+export interface UpcomingPmReport {
+  summary: {
+    total: number
+    by_trigger_type: Record<string, number>
+    by_due_week: Record<string, number> // ISO week key "2026-W28" → count
+  }
+  items: UpcomingPmItem[]
+}
+
+// R-8 Overdue PM (cursor-paginated; item extends MaintenanceRequest)
+export interface OverduePmItem extends MaintenanceRequest {
+  days_overdue: number
+  bucket: AgingBucket
+}
+export interface OverduePmReportPage extends CursorPage<OverduePmItem> {
+  // Facet context (D8): all 4 buckets over the scoped set, independent of the
+  // `bucket` row filter. `total` is the scoped grand total.
+  summary: { total: number; by_bucket: Record<AgingBucket, number> }
+}
+
+// R-14 WO Backlog / Aging (cursor-paginated; item extends WorkOrder)
+export interface WoBacklogItem extends WorkOrder {
+  age_days: number
+  bucket: AgingBucket
+}
+export interface WoBacklogReportPage extends CursorPage<WoBacklogItem> {
+  summary: {
+    total: number
+    by_bucket: Record<AgingBucket, number>
+    by_priority: Record<string, number>
+  }
+}
+
 // ── Mutation response wrappers ────────────────────────────────────────────────
 
 export interface MessageResponse {
