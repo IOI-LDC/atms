@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetKind;
 use App\Enums\OperationalStatus;
+use App\Http\Resources\OverduePmReportItemResource;
 use App\Http\Resources\UpcomingPmItemResource;
 use App\Models\User;
+use App\Queries\Reports\AgingBuckets;
 use App\Queries\Reports\AssetsByLocationReportQuery;
 use App\Queries\Reports\OperationalStatusDistributionReportQuery;
+use App\Queries\Reports\OverduePmReportQuery;
 use App\Queries\Reports\PmComplianceReportQuery;
 use App\Queries\Reports\UpcomingPmReportQuery;
 use Carbon\Carbon;
@@ -94,7 +97,27 @@ class ReportController extends Controller
     {
         Gate::authorize('viewDashboard', User::class);
 
-        return response()->json(['summary' => [], 'items' => []]);
+        $filters = $request->validate([
+            'location_id' => ['nullable', 'exists:locations,id'],
+            'pm_rule_id' => ['nullable', 'exists:pm_rules,id'],
+            'priority' => ['nullable', 'string', 'max:50'],
+            'bucket' => ['nullable', Rule::in(AgingBuckets::BUCKETS)],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
+        ]);
+
+        $result = app(OverduePmReportQuery::class)->handle(
+            (int) ($filters['per_page'] ?? 25),
+            [
+                'location_id' => $filters['location_id'] ?? null,
+                'pm_rule_id' => $filters['pm_rule_id'] ?? null,
+                'priority' => $filters['priority'] ?? null,
+                'bucket' => $filters['bucket'] ?? null,
+            ]
+        );
+
+        return OverduePmReportItemResource::collection($result['paginator'])
+            ->additional(['summary' => $result['summary']])
+            ->toResponse($request);
     }
 
     public function assetStatusDistribution(Request $request): \Illuminate\Http\JsonResponse
