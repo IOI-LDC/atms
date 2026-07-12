@@ -49,8 +49,8 @@ const STATUS_META: Record<ReportStatus, ReportStatusMeta> = {
 }
 
 export function useReportCatalog(): {
-  /** Live reports, flattened — shown first as a prominent "Available now" grid. */
-  availableReports: ReportCatalogItem[]
+  /** Live reports, grouped by theme. */
+  availableThemes: ReportThemeGroup[]
   /** Not-yet-built reports, grouped by theme. Deferred reports are excluded. */
   plannedThemes: ReportThemeGroup[]
   statusMeta: Record<ReportStatus, ReportStatusMeta>
@@ -261,10 +261,10 @@ export function useReportCatalog(): {
     },
   ]
 
-  // Live reports surface first as a flat "Available now" grid.
-  const availableReports: ReportCatalogItem[] = allThemes
-    .flatMap((theme) => theme.items)
-    .filter((item) => item.status === 'available')
+  // Live reports grouped by theme.
+  const availableThemes: ReportThemeGroup[] = allThemes
+    .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.status === 'available') }))
+    .filter((theme) => theme.items.length > 0)
 
   // Remaining themed sections show only planned reports; deferred are hidden for
   // now (kept in the catalogue data above so they're easy to reinstate later).
@@ -272,5 +272,5 @@ export function useReportCatalog(): {
     .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.status === 'planned') }))
     .filter((theme) => theme.items.length > 0)
 
-  return { availableReports, plannedThemes, statusMeta: STATUS_META }
+  return { availableThemes, plannedThemes, statusMeta: STATUS_META }
 }

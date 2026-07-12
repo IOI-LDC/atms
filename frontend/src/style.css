@@ -5257,11 +5257,15 @@
   font-style: italic;
 }
 
-/* Section divider between "Available now" and the planned themes. */
-.report-section-label {
-  margin: 0.75rem 0 0;
-  padding-top: 1rem;
+/* Section divider between available and planned themes. */
+.report-section-divider {
+  margin: 2rem 0 1.5rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--border);
+}
+
+.report-section-label {
+  margin: 0;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;

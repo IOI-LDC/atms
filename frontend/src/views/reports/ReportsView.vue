@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { ArrowRight, CircleCheck } from '@lucide/vue'
+import { ArrowRight } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import { useReportCatalog } from '@/composables/useReportCatalog'
 
-const { availableReports, plannedThemes, statusMeta } = useReportCatalog()
+const { availableThemes, plannedThemes, statusMeta } = useReportCatalog()
 </script>
 
 <template>
@@ -20,17 +20,17 @@ const { availableReports, plannedThemes, statusMeta } = useReportCatalog()
         </div>
       </div>
 
-      <!-- ── Available now ──────────────────────────────────────────────────── -->
-      <section v-if="availableReports.length" class="report-theme">
+      <!-- ── Available reports grouped by theme ───────────────────────────── -->
+      <section v-for="theme in availableThemes" :key="theme.key" class="report-theme">
         <header class="report-theme-header">
-          <CircleCheck class="report-theme-icon" aria-hidden="true" />
-          <h2 class="report-theme-title">Available now</h2>
-          <span class="report-theme-count">{{ availableReports.length }}</span>
+          <component :is="theme.icon" class="report-theme-icon" aria-hidden="true" />
+          <h2 class="report-theme-title">{{ theme.title }}</h2>
+          <span class="report-theme-count">{{ theme.items.length }}</span>
         </header>
 
         <div class="card-grid">
           <RouterLink
-            v-for="item in availableReports"
+            v-for="item in theme.items"
             :key="item.id"
             :to="`/reports/${item.slug}`"
             class="data-card report-card report-card-available"
@@ -51,9 +51,11 @@ const { availableReports, plannedThemes, statusMeta } = useReportCatalog()
         </div>
       </section>
 
-      <!-- ── Planned (grouped by theme; deferred hidden) ────────────────────── -->
+      <!-- ── Planned reports (if any; grouped by theme; deferred hidden) ───── -->
       <template v-if="plannedThemes.length">
-        <p class="report-section-label">Planned</p>
+        <div class="report-section-divider">
+          <h2 class="report-section-label">Coming soon</h2>
+        </div>
 
         <section v-for="theme in plannedThemes" :key="theme.key" class="report-theme">
           <header class="report-theme-header">
