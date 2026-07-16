@@ -34,6 +34,12 @@ export const partColumns: ColumnDef<Part>[] = [
     sortable: false,
   },
   {
+    field: 'available_quantity',
+    header: 'Qty',
+    sortable: true,
+    type: 'number',
+  },
+  {
     field: 'is_active',
     header: 'Status',
     sortable: false,

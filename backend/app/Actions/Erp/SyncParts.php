@@ -59,6 +59,7 @@ class SyncParts
                                 'name' => $external->name,
                                 'description' => $external->description,
                                 'unit_of_measure' => $external->unitOfMeasure,
+                                'available_quantity' => $external->availableQuantity,
                                 'category' => $external->category,
                                 'erp_status' => $external->status,
                                 'erp_raw_data' => $external->rawData,

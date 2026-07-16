@@ -14,6 +14,7 @@ class Part extends Model
         'description',
         'unit_of_measure',
         'category',
+        'available_quantity',
         'erp_status',
         'erp_raw_data',
         'erp_last_synced_at',
@@ -27,6 +28,7 @@ class Part extends Model
     protected $casts = [
         'erp_raw_data' => 'array',
         'erp_last_synced_at' => 'datetime',
+        'available_quantity' => 'decimal:3',
         'is_active' => 'boolean',
     ];
 

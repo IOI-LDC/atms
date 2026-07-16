@@ -36,6 +36,7 @@ class PartResourceTest extends TestCase
             'description' => 'A test part',
             'unit_of_measure' => 'ea',
             'category' => 'bearing',
+            'available_quantity' => 12.500,
             'erp_status' => 'active',
             'erp_raw_data' => ['internal' => 'data'],
             'erp_last_synced_at' => now(),
@@ -87,6 +88,34 @@ class PartResourceTest extends TestCase
         $this->assertArrayNotHasKey('erp_last_synced_at', $data);
         $this->assertArrayHasKey('name', $data);
         $this->assertArrayHasKey('erp_part_code', $data);
+    }
+
+    public function test_available_quantity_is_exposed_to_part_users(): void
+    {
+        $technician = $this->createUser(RoleCode::TECHNICIAN);
+        $this->createPart(['available_quantity' => 7.250]);
+
+        $response = $this->actingAs($technician)->getJson('/api/parts');
+
+        $response->assertStatus(200);
+        $this->assertSame(7.25, $response->json('data.0.available_quantity'));
+    }
+
+    public function test_available_quantity_can_be_sorted(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createPart(['name' => 'Alpha Part', 'available_quantity' => 1]);
+        $this->createPart([
+            'erp_part_id' => 'ERP-P002',
+            'erp_part_code' => 'PC-002',
+            'name' => 'Zulu Part',
+            'available_quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($admin)->getJson('/api/parts?sort=available_quantity:desc');
+
+        $response->assertStatus(200);
+        $this->assertSame(['Zulu Part', 'Alpha Part'], collect($response->json('data'))->pluck('name')->all());
     }
 
     public function test_non_admin_non_manager_only_sees_active_parts(): void

@@ -64,6 +64,11 @@ function goDetail(payload: { row: Part }) {
             {{ row.unit_of_measure ?? '—' }}
           </span>
 
+          <span v-else-if="column.field === 'available_quantity'">
+            <span v-if="row.available_quantity <= 0" class="status-badge status-inactive">Out of stock</span>
+            <template v-else>{{ row.available_quantity }}</template>
+          </span>
+
           <span v-else-if="column.field === 'is_active'" :class="partStatusClass(row.is_active)">
             {{ partStatusLabel(row.is_active) }}
           </span>

@@ -157,6 +157,7 @@ export interface Part {
   description: string | null
   unit_of_measure: string | null
   category: string | null
+  available_quantity: number
   is_active: boolean
   erp_status?: string | null
   erp_last_synced_at?: string | null

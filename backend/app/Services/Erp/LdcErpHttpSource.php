@@ -52,6 +52,7 @@ class LdcErpHttpSource implements ErpSource
                 name: $item['name'],
                 description: $item['description'] ?? null,
                 unitOfMeasure: $item['unit_of_measure'] ?? 'EA',
+                availableQuantity: (float) $item['available_quantity'],
                 category: $item['category'] ?? null,
                 status: $item['status'],
                 updatedAt: $item['updated_at'],

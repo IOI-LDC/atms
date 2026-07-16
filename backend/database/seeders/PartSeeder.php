@@ -24,6 +24,10 @@ class PartSeeder extends Seeder
 {
     public function run(): void
     {
+        if (Part::whereNotNull('erp_part_id')->exists()) {
+            return;
+        }
+
         foreach ($this->parts() as $code => $part) {
             Part::firstOrCreate(
                 ['erp_part_code' => $code],

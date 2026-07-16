@@ -184,12 +184,14 @@ function onListKeydown(event: KeyboardEvent) {
             variant="ghost"
             role="option"
             :aria-selected="model?.id === part.id"
+            :disabled="part.available_quantity <= 0"
             class="asset-combobox-option"
             @click="choose(part)"
           >
             <CheckIcon v-if="model?.id === part.id" class="asset-combobox-check" />
             <span class="asset-combobox-option-name">{{ part.name }}</span>
             <span class="asset-combobox-option-code">{{ part.erp_part_code }}</span>
+            <span v-if="part.available_quantity <= 0" class="status-badge status-inactive">Out of stock</span>
           </Button>
         </template>
         <div v-else class="asset-combobox-empty">

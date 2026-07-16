@@ -10,6 +10,7 @@ class ExternalPartData
         public string $name,
         public ?string $description,
         public string $unitOfMeasure,
+        public float $availableQuantity,
         public ?string $category,
         public string $status,
         public string $updatedAt,

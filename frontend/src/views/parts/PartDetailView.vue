@@ -145,6 +145,13 @@ watch(
                     <p class="detail-field-value">{{ record.unit_of_measure ?? '—' }}</p>
                   </div>
                   <div class="detail-field">
+                    <span class="detail-field-label">Available Quantity</span>
+                    <p class="detail-field-value">
+                      <span v-if="record.available_quantity <= 0" class="status-badge status-inactive">Out of stock</span>
+                      <template v-else>{{ record.available_quantity }}</template>
+                    </p>
+                  </div>
+                  <div class="detail-field">
                     <span class="detail-field-label">Status</span>
                     <p class="detail-field-value">
                       <span :class="partStatusClass(record.is_active)">

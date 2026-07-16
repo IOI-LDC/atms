@@ -62,6 +62,7 @@ class ErpSyncTest extends TestCase
                             'code' => 'PRT-001',
                             'name' => 'Belt',
                             'unit_of_measure' => 'EA',
+                            'available_quantity' => 7.25,
                             'status' => 'active',
                             'updated_at' => now()->toIso8601String(),
                         ],
@@ -75,6 +76,7 @@ class ErpSyncTest extends TestCase
                             'code' => 'PRT-002',
                             'name' => 'Filter',
                             'unit_of_measure' => 'EA',
+                            'available_quantity' => 0,
                             'status' => 'inactive',
                             'updated_at' => now()->toIso8601String(),
                         ],
@@ -92,6 +94,7 @@ class ErpSyncTest extends TestCase
 
         $this->assertDatabaseHas('parts', [
             'erp_part_code' => 'PRT-001',
+            'available_quantity' => 7.25,
             'is_active' => true,
         ]);
 

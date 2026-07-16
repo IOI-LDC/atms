@@ -68,4 +68,18 @@ class PartSeederTest extends TestCase
 
         $this->assertSame($codes->count(), $codes->unique()->count());
     }
+
+    public function test_does_not_add_placeholder_parts_when_erp_parts_exist(): void
+    {
+        Part::create([
+            'erp_part_id' => '478a85a2-c971-f011-8eef-6045bd6acac2',
+            'erp_part_code' => '7HF 400ML',
+            'name' => 'ERP Part',
+        ]);
+
+        $this->seed(PartSeeder::class);
+
+        $this->assertSame(1, Part::count());
+        $this->assertDatabaseMissing('parts', ['erp_part_code' => 'MM-ROT-675']);
+    }
 }

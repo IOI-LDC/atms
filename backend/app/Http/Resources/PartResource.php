@@ -21,6 +21,7 @@ class PartResource extends JsonResource
             'description' => $this->description,
             'unit_of_measure' => $this->unit_of_measure,
             'category' => $this->category,
+            'available_quantity' => (float) $this->available_quantity,
             'is_active' => $this->is_active,
             'created_at' => $this->created_at?->toIso8601String(),
         ];

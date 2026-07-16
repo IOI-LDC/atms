@@ -12,6 +12,7 @@ class PartIndexQuery
     protected array $allowedSorts = [
         'name' => 'name',
         'erp_part_code' => 'erp_part_code',
+        'available_quantity' => 'available_quantity',
     ];
 
     public function build(Request $request): CursorPaginator
