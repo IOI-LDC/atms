@@ -38,9 +38,17 @@ const router = createRouter({
     },
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
+    // The client-facing /dashboard shows a placeholder until LDC provides their
+    // own requirements — the real (assumption-based) dashboard is kept intact and
+    // reachable internally at /dashboard-real (not linked in the sidebar).
     {
       path: '/dashboard',
       name: 'dashboard',
+      component: () => import('@/views/DashboardPlaceholderView.vue'),
+    },
+    {
+      path: '/dashboard-real',
+      name: 'dashboard-real',
       component: () => import('@/views/DashboardView.vue'),
     },
 
@@ -115,9 +123,18 @@ const router = createRouter({
     },
 
     // ── Reports ───────────────────────────────────────────────────────────────
+    // The client-facing /reports shows a placeholder until LDC provides their own
+    // requirements — the real reports index is kept intact and reachable internally
+    // at /reports-real (not linked in the sidebar). Individual /reports/:slug pages
+    // below remain unchanged and continue to work.
     {
       path: '/reports',
       name: 'reports',
+      component: () => import('@/views/reports/ReportsPlaceholderView.vue'),
+    },
+    {
+      path: '/reports-real',
+      name: 'reports-real',
       component: () => import('@/views/reports/ReportsView.vue'),
     },
     // Per-report pages (Pass 1 Must tier). Any authenticated role may view —

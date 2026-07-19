@@ -95,3 +95,40 @@ workflow whose post-reset readings are still monotonic against the new baseline.
 **Next action:** Ask the project owner whether real meter or counter replacement is
 an operational scenario ATMS must support. No implementation work starts before the
 answer is recorded.
+
+## R-004 — MR edit view supports attachments
+
+**Status:** Captured
+
+**Priority:** High
+
+**Source:** Product discussion, 2026-07-17
+
+**Problem:** The `attachments` table and the MR attachment API endpoints (`GET / POST
+/api/maintenance-requests/{maintenanceRequest}/attachments`) already exist, but the
+frontend maintenance-request edit/detail view does not expose an attachment section.
+Users cannot upload, view, download, or delete attachments on a submitted or pending
+MR from the UI.
+
+**Desired outcome:** The MR detail view exposes a standard attachment section,
+consistent with the existing attachment UX on assets, work orders, and parts.
+
+**Scope:** The `/maintenance/requests/:requestId` frontend view, `MaintenanceRequest`
+attachment composable/hook, and new feature tests for the attachment flow on an MR.
+
+**Out of scope:** Backend API changes (endpoints already exist), batch uploads,
+inline preview, or attachment limits beyond the existing per-file 20 MB / accepted
+MIME types.
+
+**Acceptance criteria:**
+1. A user viewing an MR detail page can see any existing attachments.
+2. A user with permission can upload one or more attachments on a pending or
+   submitted MR.
+3. A user with permission can download an existing attachment.
+4. A user with permission can soft-delete an attachment.
+5. The UX matches the existing attachment patterns on assets, work orders, and parts.
+6. The flow has focused feature tests covering list, upload, download, and delete.
+
+**Next action:** Product owner approves the requirement. Once approved, add the
+attachment section to the MR detail view using the existing attachment composables
+and the already-available API endpoints.

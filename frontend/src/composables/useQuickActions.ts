@@ -15,8 +15,11 @@ export interface QuickAction {
  * that screen (see AppSidebar.vue), with the same per-role default tab so a
  * quick action always lands where the nav item would. Icons mirror the
  * sidebar's so the shortcut is visually recognizable as the same destination.
+ *
+ * Pass `only` (an allowlist of labels) to restrict the result to a subset while
+ * keeping the same role-gating — e.g. `useQuickActions(['New MR', 'Locations'])`.
  */
-export function useQuickActions() {
+export function useQuickActions(only?: readonly string[]) {
   const auth = useAuthStore()
 
   const actions = computed<QuickAction[]>(() => {
@@ -62,7 +65,7 @@ export function useQuickActions() {
       })
     }
 
-    return list
+    return only ? list.filter((action) => only.includes(action.label)) : list
   })
 
   return { actions }
