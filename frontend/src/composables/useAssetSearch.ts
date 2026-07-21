@@ -7,8 +7,12 @@ import type { Asset, CursorPage } from '@/types'
  * string, the result set, and a busy flag. Selection lives in the caller
  * (the AssetCombobox binds it via v-model), so this stays free of any
  * form/persistence concerns.
+ *
+ * @param options.maintenanceStatus Optional `maintenance_status` filter
+ *   (`enrolled` | `withdrawn`) forwarded to `GET /assets` — used by the
+ *   work-creating pickers to offer only `enrolled` assets. Omit to search all.
  */
-export function useAssetSearch() {
+export function useAssetSearch(options: { maintenanceStatus?: string } = {}) {
   const query = ref('')
   const results = ref<Asset[]>([])
   const busy = ref(false)
@@ -18,7 +22,13 @@ export function useAssetSearch() {
   async function fetchAssets() {
     busy.value = true
     try {
-      const params = query.value.trim() ? { search: query.value, per_page: 10 } : { per_page: 10 }
+      const params: Record<string, string | number> = { per_page: 10 }
+      if (query.value.trim()) {
+        params.search = query.value
+      }
+      if (options.maintenanceStatus) {
+        params.maintenance_status = options.maintenanceStatus
+      }
       const res = await api.get<CursorPage<Asset>>('/assets', params)
       results.value = res.data
     } catch {

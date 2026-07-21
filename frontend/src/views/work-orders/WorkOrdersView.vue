@@ -244,7 +244,7 @@ function goDetail(payload: { row: MaintenanceRequest }) {
       <div class="create-sheet-body">
         <div class="form-field">
           <Label for="asset">Asset <span class="field-required">*</span></Label>
-          <AssetCombobox v-model="selectedAsset" />
+          <AssetCombobox v-model="selectedAsset" maintenance-status="enrolled" />
         </div>
         <div class="form-field">
           <Label for="priority">Priority <span class="field-required">*</span></Label>

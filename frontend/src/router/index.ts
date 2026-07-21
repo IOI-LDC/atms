@@ -108,18 +108,19 @@ const router = createRouter({
     },
 
     // ── Locations ─────────────────────────────────────────────────────────────
+    // Primary Locations experience: search-first "Find & Move" view with tabs
+    // (Asset Location Update + admin-only Manage Locations).
     {
       path: '/locations',
       name: 'locations',
-      component: () => import('@/views/locations/LocationsView.vue'),
+      component: () => import('@/views/locations/LogisticsLocationView.vue'),
     },
-    // ── Locations (Logistics "Find & Move" preview — temporary) ────────────────
-    // Standalone preview route for the redesigned search-first location-update
-    // flow. To be folded into /locations (role-based) once approved.
+    // Legacy tabbed Locations view (original Asset Location Update flow), kept
+    // reachable at /locations2 during transition.
     {
       path: '/locations2',
       name: 'locations2',
-      component: () => import('@/views/locations/LogisticsLocationView.vue'),
+      component: () => import('@/views/locations/LocationsView.vue'),
     },
 
     // ── Reports ───────────────────────────────────────────────────────────────

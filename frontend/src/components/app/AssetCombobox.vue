@@ -17,11 +17,15 @@ import type { Asset } from '@/types'
 const props = defineProps<{
   inputId?: string
   disablePortal?: boolean
+  /** Restrict results to a maintenance_status (`enrolled` | `withdrawn`). Omit = all. */
+  maintenanceStatus?: string
 }>()
 
 const model = defineModel<{ id: number; label: string } | null>({ required: true })
 
-const { query, results, busy, search, loadInitial, reset } = useAssetSearch()
+const { query, results, busy, search, loadInitial, reset } = useAssetSearch({
+  maintenanceStatus: props.maintenanceStatus,
+})
 
 const open = ref(false)
 const listEl = ref<HTMLElement | null>(null)

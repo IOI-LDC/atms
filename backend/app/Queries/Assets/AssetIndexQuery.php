@@ -56,6 +56,10 @@ class AssetIndexQuery
             $query->where('operational_status', $request->input('operational_status'));
         }
 
+        if ($request->filled('maintenance_status')) {
+            $query->where('maintenance_status', $request->input('maintenance_status'));
+        }
+
         if ($request->filled('category')) {
             $query->where('category', $request->input('category'));
         }

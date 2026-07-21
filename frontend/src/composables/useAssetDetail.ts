@@ -22,7 +22,6 @@ import type {
 interface AssetEditDraft {
   name: string
   description: string
-  fa_subclass_code: string
   serial_number: string
   model: string
   manufacturer: string
@@ -80,7 +79,6 @@ export function useAssetDetail() {
   const draft = ref<AssetEditDraft>({
     name: '',
     description: '',
-    fa_subclass_code: '',
     serial_number: '',
     model: '',
     manufacturer: '',
@@ -233,7 +231,6 @@ export function useAssetDetail() {
     draft.value = {
       name: record.value.name,
       description: record.value.description ?? '',
-      fa_subclass_code: record.value.fa_subclass_code ?? '',
       serial_number: record.value.serial_number ?? '',
       model: record.value.model ?? '',
       manufacturer: record.value.manufacturer ?? '',
@@ -280,7 +277,6 @@ export function useAssetDetail() {
       const payload: Record<string, unknown> = {
         name: draft.value.name.trim(),
         description: draft.value.description.trim() || null,
-        fa_subclass_code: draft.value.fa_subclass_code || null,
         serial_number: draft.value.serial_number.trim() || null,
         model: draft.value.model.trim() || null,
         manufacturer: draft.value.manufacturer.trim() || null,

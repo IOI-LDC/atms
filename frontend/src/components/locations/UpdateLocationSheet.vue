@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dialog'
 import api, { ApiError } from '@/lib/api'
 import { toast } from 'vue-sonner'
-import { fmtDate } from '@/lib/displayHelpers'
+import { fmtDate, assetKindLabel, faSubclassLabel } from '@/lib/displayHelpers'
 import type { Asset, Location, AssetLocationHistoryItem } from '@/types'
 
 const props = defineProps<{
@@ -53,6 +53,17 @@ const error = ref<string | null>(null)
 const availableLocations = computed(() =>
   props.locations.filter((l) => l.id !== props.asset.current_location?.id),
 )
+
+// Compact one-line identifier strip under the title: only present fields show.
+const assetMeta = computed(() => {
+  const a = props.asset
+  const items: { label: string; value: string }[] = []
+  if (a.erp_asset_code) items.push({ label: 'FA', value: a.erp_asset_code })
+  if (a.serial_number) items.push({ label: 'SN', value: a.serial_number })
+  if (a.fa_subclass_code) items.push({ label: 'Class', value: faSubclassLabel(a.fa_subclass_code) })
+  if (a.asset_kind) items.push({ label: 'Kind', value: assetKindLabel(a.asset_kind) })
+  return items
+})
 
 const locationGroups = computed(() => {
   const groups: Record<string, Location[]> = {}
@@ -159,6 +170,12 @@ const selectedLocation = computed(() =>
           <SheetDescription>
             {{ asset.asset_tag ? `${asset.asset_tag} — ` : '' }}{{ asset.name }}
           </SheetDescription>
+          <div v-if="assetMeta.length" class="asset-meta-strip">
+            <span v-for="item in assetMeta" :key="item.label" class="asset-meta-item">
+              <span class="asset-meta-label">{{ item.label }}</span>
+              <span class="asset-meta-value">{{ item.value }}</span>
+            </span>
+          </div>
         </SheetHeader>
       </div>
 

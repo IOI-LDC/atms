@@ -32,10 +32,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { FileInput } from '@/components/ui/file-input'
+import { Badge } from '@/components/ui/badge'
 import { useAssetDetail } from '@/composables/useAssetDetail'
-import { useListOptions } from '@/composables/useListOptions'
 import { openAttachmentInNewTab } from '@/lib/attachments'
-import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
 import {
   assetMaintenanceStatusClass,
   assetMaintenanceStatusLabel,
@@ -114,8 +113,6 @@ const {
   doDeleteAttachment,
 } = useAssetDetail()
 
-const { faSubclasses, loadFaSubclasses } = useListOptions()
-const faSubclassOptions = computed(() => toFaSubclassFilterOptions(faSubclasses.value))
 
 // FileInput primitive — its open() method is triggered via ref.
 const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
@@ -175,7 +172,6 @@ watch(
     void loadLocationHistory(newId)
     void loadReadings(newId)
     void loadAttachments(newId)
-    void loadFaSubclasses()
     // Logistics receives 403 on maintenance-history — the composable handles it silently.
     if (!auth.isLogistics) void loadMaintenanceHistory(newId)
   },
@@ -563,7 +559,16 @@ watch(
       <SheetContent side="right" class="create-sheet">
         <SheetHeader class="create-sheet-header">
           <SheetTitle>Edit Asset</SheetTitle>
-          <SheetDescription> Update operational details for {{ record?.name }}. </SheetDescription>
+          <SheetDescription>
+            Update operational details for {{ record?.name }}. Asset Class is managed by ERP and
+            cannot be edited here.
+          </SheetDescription>
+          <div class="sheet-header-meta">
+            <Badge variant="secondary">
+              Asset Class:
+              {{ record?.fa_subclass_code ? faSubclassLabel(record.fa_subclass_code) : 'Not classified' }}
+            </Badge>
+          </div>
         </SheetHeader>
 
         <div class="create-sheet-body">
@@ -618,36 +623,6 @@ watch(
               <Input id="edit-name" v-model="draft.name" placeholder="Asset name" />
               <p v-if="validationErrors?.name" class="form-error">
                 {{ validationErrors.name[0] }}
-              </p>
-            </div>
-
-            <!-- Asset Class — editable Select for Admin/Manager -->
-            <div class="form-field">
-              <Label for="edit-fa-subclass">Asset Class</Label>
-              <Select
-                :model-value="draft.fa_subclass_code || '__none__'"
-                @update:model-value="
-                  (v) => {
-                    const s = String(v)
-                    draft.fa_subclass_code = s === '__none__' ? '' : s
-                  }
-                "
-              >
-                <SelectTrigger id="edit-fa-subclass">
-                  <SelectValue placeholder="Not classified" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Not classified</SelectItem>
-                  <SelectItem
-                    v-for="opt in faSubclassOptions"
-                    :key="opt.value"
-                    :value="opt.value"
-                    >{{ opt.label }}</SelectItem
-                  >
-                </SelectContent>
-              </Select>
-              <p v-if="validationErrors?.fa_subclass_code" class="form-error">
-                {{ validationErrors.fa_subclass_code[0] }}
               </p>
             </div>
 

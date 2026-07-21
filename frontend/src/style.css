@@ -4067,6 +4067,54 @@
   flex-shrink: 0;
 }
 
+.sheet-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Compact one-line asset identifier strip (Update Location sheet header):
+   tiny uppercase captions + emphasized values, separated by hairline dividers. */
+.asset-meta-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.875rem;
+  margin-top: 0.625rem;
+}
+
+.asset-meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  position: relative;
+}
+
+.asset-meta-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -0.5rem;
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 1px;
+  background: var(--border);
+}
+
+.asset-meta-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.asset-meta-value {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
 .create-sheet-body {
   flex: 1;
   overflow-y: auto;

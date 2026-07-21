@@ -18,6 +18,9 @@ import { useRecentMoves } from '@/composables/useRecentMoves'
 import { useLocationAssets } from '@/composables/useLocationAssets'
 import { assetKindLabel, assetKindClass, fmtDate } from '@/lib/displayHelpers'
 import { MapPin, TriangleAlert } from '@lucide/vue'
+import { useRoute, useRouter } from 'vue-router'
+import ManageLocationsView from './ManageLocationsView.vue'
+import { useAuthStore } from '@/stores/auth.store'
 
 const { activeLocations, loadLocations } = useLocations()
 const { recentMoves, recentLoading, loadRecentMoves } = useRecentMoves()
@@ -49,6 +52,31 @@ onMounted(() => {
   loadLocations()
   loadRecentMoves()
 })
+
+// ── Tabs: Asset Location Update (default) + admin-only Manage Locations ───────
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+
+const tabDefs = computed(() => {
+  const tabs = [{ key: 'asset-location-update', label: 'Asset Location Update' }]
+  if (auth.isAdmin) {
+    tabs.push({ key: 'manage-locations', label: 'Manage Locations' })
+  }
+  return tabs
+})
+
+const activeTab = computed(() => {
+  const q = route.query.tab as string | undefined
+  if (q && tabDefs.value.some((t) => t.key === q)) return q
+  return 'asset-location-update'
+})
+
+watch(activeTab, (newTab) => {
+  if (route.query.tab !== newTab) {
+    router.replace({ query: { tab: newTab } })
+  }
+})
 </script>
 
 <template>
@@ -56,11 +84,22 @@ onMounted(() => {
     <div class="page-section">
       <div class="page-header">
         <div class="page-heading">
-          <h1 class="page-title">Update Asset Location</h1>
-          <p class="page-subtitle">Find an asset and record where it is now.</p>
+          <h1 class="page-title">Locations</h1>
+          <p class="page-subtitle">Track and manage physical asset locations</p>
         </div>
       </div>
 
+      <nav class="view-tabs">
+        <RouterLink
+          v-for="tab in tabDefs"
+          :key="tab.key"
+          :to="{ query: { tab: tab.key } }"
+          :class="['view-tab', activeTab === tab.key ? 'view-tab-active' : 'view-tab-normal']"
+          >{{ tab.label }}</RouterLink
+        >
+      </nav>
+
+      <template v-if="activeTab === 'asset-location-update'">
       <!-- Narrow by location, then browse its assets or search directly. -->
       <div class="filter-bar move-filter-bar">
         <div class="move-filter-field">
@@ -169,6 +208,11 @@ onMounted(() => {
           </div>
         </div>
       </section>
+      </template>
+
+      <template v-else-if="activeTab === 'manage-locations' && auth.isAdmin">
+        <ManageLocationsView />
+      </template>
     </div>
 
     <!-- Reuse the existing move sheet (current location, picker, reason/notes, history, confirm). -->

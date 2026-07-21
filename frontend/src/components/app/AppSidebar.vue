@@ -87,7 +87,7 @@ const navItems: NavItemDef[] = [
   {
     label: 'Locations',
     icon: MapPin,
-    to: () => '/locations?tab=asset-location-update',
+    to: () => '/locations',
     isActiveFor: (p) => p === '/locations' || p.startsWith('/locations/'),
     visibleTo: (r) => r.isAdminOrManager || r.isLogistics,
   },
