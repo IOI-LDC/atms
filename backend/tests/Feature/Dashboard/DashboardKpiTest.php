@@ -3,6 +3,7 @@
 namespace Tests\Feature\Dashboard;
 
 use App\Enums\MaintenanceRequestStatus;
+use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
@@ -76,6 +77,15 @@ class DashboardKpiTest extends TestCase
                 'pm_compliance' => ['compliant', 'total', 'percentage'],
                 'avg_mr_duration' => ['hours'],
                 'avg_wo_duration' => ['hours'],
+                'asset_health' => [
+                    'availability' => ['percentage'],
+                    'by_status' => ['active', 'under_maintenance', 'down', 'inactive'],
+                    'total',
+                ],
+                'workforce' => [
+                    'wo_backlog' => ['total', 'trend_pct'],
+                    'completion_rate' => ['closed', 'created', 'percentage'],
+                ],
             ],
             'recently_relocated_assets',
         ]);
@@ -266,6 +276,11 @@ class DashboardKpiTest extends TestCase
         $this->assertNull($json['kpis']['avg_mr_duration']['hours']);
         $this->assertNull($json['kpis']['avg_wo_duration']['hours']);
         $this->assertSame(0, $json['kpis']['failure_rate']['failures']);
+        $this->assertNull($json['kpis']['asset_health']['availability']['percentage']);
+        $this->assertSame(0, $json['kpis']['asset_health']['total']);
+        $this->assertSame(0, $json['kpis']['workforce']['wo_backlog']['total']);
+        $this->assertNull($json['kpis']['workforce']['wo_backlog']['trend_pct']);
+        $this->assertNull($json['kpis']['workforce']['completion_rate']['percentage']);
         $this->assertSame([], $json['recently_relocated_assets']);
     }
 
@@ -294,6 +309,86 @@ class DashboardKpiTest extends TestCase
         $this->assertSame('Move-1', $relocated[0]['reason']); // newest first
         $this->assertSame($asset->id, $relocated[0]['asset']['id']); // asset reference surfaced
         $this->assertSame($asset->name, $relocated[0]['asset']['name']);
+    }
+
+    public function test_asset_health_availability_and_status_counts(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+
+        $this->createAssetWithStatus('A-1', OperationalStatus::ACTIVE);
+        $this->createAssetWithStatus('A-2', OperationalStatus::ACTIVE);
+        $this->createAssetWithStatus('A-3', OperationalStatus::UNDER_MAINTENANCE);
+        $this->createAssetWithStatus('A-4', OperationalStatus::DOWN);
+
+        $health = $this->actingAs($admin)->getJson('/api/dashboard/kpis')->json('kpis.asset_health');
+
+        $this->assertSame(4, $health['total']);
+        $this->assertEquals(50.0, $health['availability']['percentage']); // 2 active / 4 total
+        $this->assertSame(2, $health['by_status']['active']);
+        $this->assertSame(1, $health['by_status']['under_maintenance']);
+        $this->assertSame(1, $health['by_status']['down']);
+        $this->assertSame(0, $health['by_status']['inactive']);
+    }
+
+    public function test_workforce_backlog_counts_open_and_in_progress(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-OPEN', WorkOrderStatus::OPEN);
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-PROG', WorkOrderStatus::IN_PROGRESS);
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-COMP', WorkOrderStatus::COMPLETED, ['completed_at' => now()->subDay()]);
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-CLOSED', WorkOrderStatus::CLOSED, [
+            'completed_at' => now()->subDays(2), 'closed_at' => now()->subDay(),
+        ]);
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-CANCEL', WorkOrderStatus::CANCELLED, ['cancelled_at' => now()->subDay()]);
+
+        $backlog = $this->actingAs($admin)->getJson('/api/dashboard/kpis')->json('kpis.workforce.wo_backlog');
+
+        $this->assertSame(2, $backlog['total']);
+    }
+
+    public function test_workforce_backlog_trend_compares_to_window_start(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        // Created before window start, still open -> in both prior and current backlog.
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-STILL-OPEN', WorkOrderStatus::OPEN, [
+            'created_at' => now()->subDays(100),
+        ]);
+        // Created before window start, completed within window -> in prior backlog only.
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-DONE', WorkOrderStatus::COMPLETED, [
+            'created_at' => now()->subDays(100), 'completed_at' => now()->subDays(50),
+        ]);
+
+        $backlog = $this->actingAs($admin)->getJson('/api/dashboard/kpis')->json('kpis.workforce.wo_backlog');
+
+        $this->assertSame(1, $backlog['total']); // only WO-STILL-OPEN is open/in-progress now
+        $this->assertEquals(-50.0, $backlog['trend_pct']); // (1 - 2) / 2 * 100
+    }
+
+    public function test_workforce_completion_rate_closed_over_created_in_window(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-C1', WorkOrderStatus::CLOSED, [
+            'created_at' => now()->subDays(10), 'completed_at' => now()->subDays(6), 'closed_at' => now()->subDays(5),
+        ]);
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-C2', WorkOrderStatus::CLOSED, [
+            'created_at' => now()->subDays(10), 'completed_at' => now()->subDays(4), 'closed_at' => now()->subDays(3),
+        ]);
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-OPEN', WorkOrderStatus::OPEN, ['created_at' => now()->subDays(10)]);
+        $this->createWorkOrderWithStatus($admin, $asset, 'WO-CXL', WorkOrderStatus::CANCELLED, [
+            'created_at' => now()->subDays(10), 'cancelled_at' => now()->subDays(2),
+        ]);
+
+        $rate = $this->actingAs($admin)->getJson('/api/dashboard/kpis')->json('kpis.workforce.completion_rate');
+
+        $this->assertSame(4, $rate['created']);
+        $this->assertSame(2, $rate['closed']);
+        $this->assertEquals(50.0, $rate['percentage']); // 2 closed / 4 created
     }
 
     private function createCorrectiveMr(User $admin, Asset $asset, string $number, $createdAt): MaintenanceRequest
@@ -338,5 +433,33 @@ class DashboardKpiTest extends TestCase
             'assigned_at' => now()->subDays(20), 'closed_at' => $closedDate, 'closed_by_user_id' => $admin->id,
             'created_at' => now()->subDays(20),
         ]);
+    }
+
+    private function createAssetWithStatus(string $code, OperationalStatus $status): Asset
+    {
+        $location = Location::firstOrCreate(['name' => 'Loc', 'type' => 'building']);
+
+        return Asset::create([
+            'erp_asset_code' => $code, 'name' => "Asset {$code}",
+            'is_active' => true, 'current_location_id' => $location->id,
+            'operational_status' => $status,
+        ]);
+    }
+
+    private function createWorkOrderWithStatus(User $admin, Asset $asset, string $number, WorkOrderStatus $status, array $attributes = []): WorkOrder
+    {
+        $createdAt = $attributes['created_at'] ?? now();
+
+        $mr = MaintenanceRequest::forceCreate([
+            'number' => "MR-{$number}", 'asset_id' => $asset->id,
+            'status' => MaintenanceRequestStatus::CONVERTED, 'priority' => 'high',
+            'description' => $number, 'created_by' => $admin->id, 'is_preventive' => false,
+            'created_at' => $createdAt,
+        ]);
+
+        return WorkOrder::forceCreate(array_merge([
+            'number' => $number, 'asset_id' => $asset->id, 'maintenance_request_id' => $mr->id,
+            'status' => $status, 'priority' => 'high', 'created_at' => $createdAt,
+        ], $attributes));
     }
 }

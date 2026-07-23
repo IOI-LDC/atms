@@ -508,6 +508,18 @@ export interface DashboardKpiResponse {
     pm_compliance: { compliant: number; total: number; percentage: number | null }
     avg_mr_duration: { hours: number | null }
     avg_wo_duration: { hours: number | null }
+    // Org-wide executive metrics (asset snapshot + workforce window). Always
+    // present in the payload; inner scalars are null when there's no basis
+    // (e.g. zero assets, zero created WOs, zero prior backlog).
+    asset_health: {
+      availability: { percentage: number | null }
+      by_status: { active: number; under_maintenance: number; down: number; inactive: number }
+      total: number
+    }
+    workforce: {
+      wo_backlog: { total: number; trend_pct: number | null }
+      completion_rate: { closed: number; created: number; percentage: number | null }
+    }
   }
   recently_relocated_assets: RelocatedAssetItem[]
 }

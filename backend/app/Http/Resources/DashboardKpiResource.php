@@ -24,6 +24,15 @@ class DashboardKpiResource extends JsonResource
      *         pm_compliance: array{compliant: int, total: int, percentage: float|null},
      *         avg_mr_duration: array{hours: float|null},
      *         avg_wo_duration: array{hours: float|null},
+     *         asset_health: array{
+     *             availability: array{percentage: float|null},
+     *             by_status: array{active: int, under_maintenance: int, down: int, inactive: int},
+     *             total: int,
+     *         },
+     *         workforce: array{
+     *             wo_backlog: array{total: int, trend_pct: float|null},
+     *             completion_rate: array{closed: int, created: int, percentage: float|null},
+     *         },
      *     },
      *     recently_relocated_assets: array<int, mixed>,
      * }  $resource
@@ -43,6 +52,8 @@ class DashboardKpiResource extends JsonResource
                 'pm_compliance' => $this->resource['kpis']['pm_compliance'],
                 'avg_mr_duration' => $this->resource['kpis']['avg_mr_duration'],
                 'avg_wo_duration' => $this->resource['kpis']['avg_wo_duration'],
+                'asset_health' => $this->resource['kpis']['asset_health'],
+                'workforce' => $this->resource['kpis']['workforce'],
             ],
             'recently_relocated_assets' => $this->resource['recently_relocated_assets'],
         ];

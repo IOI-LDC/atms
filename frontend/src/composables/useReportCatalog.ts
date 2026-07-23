@@ -26,6 +26,8 @@ export interface ReportCatalogItem {
   status: ReportStatus
   /** Short reason shown for deferred/conditional reports. */
   note?: string
+  /** Pass 1 Must-tier report (R-1, R-2, R-7, R-8, R-10A, R-14). */
+  pass1?: boolean
 }
 
 export interface ReportThemeGroup {
@@ -51,6 +53,8 @@ const STATUS_META: Record<ReportStatus, ReportStatusMeta> = {
 export function useReportCatalog(): {
   /** Live reports, grouped by theme. */
   availableThemes: ReportThemeGroup[]
+  /** Pass 1 Must-tier reports, grouped by theme. */
+  mustTierThemes: ReportThemeGroup[]
   /** Not-yet-built reports, grouped by theme. Deferred reports are excluded. */
   plannedThemes: ReportThemeGroup[]
   statusMeta: Record<ReportStatus, ReportStatusMeta>
@@ -103,6 +107,7 @@ export function useReportCatalog(): {
           title: 'Upcoming PM Schedule',
           question: 'Which assets have a PM due in the next 30 days?',
           status: 'available',
+          pass1: true,
         },
         {
           id: 'R-7',
@@ -110,6 +115,7 @@ export function useReportCatalog(): {
           title: 'PM Compliance',
           question: 'On-time PM completion % by rule, asset, location, and period.',
           status: 'available',
+          pass1: true,
         },
         {
           id: 'R-8',
@@ -117,6 +123,7 @@ export function useReportCatalog(): {
           title: 'Overdue PM',
           question: 'Which PMs are past due and not closed, by aging bucket?',
           status: 'available',
+          pass1: true,
         },
         {
           id: 'R-9',
@@ -138,6 +145,7 @@ export function useReportCatalog(): {
           title: 'Asset Distribution by Location',
           question: 'Where are our assets, and how many are at each location?',
           status: 'available',
+          pass1: true,
         },
         {
           id: 'R-10A',
@@ -146,6 +154,7 @@ export function useReportCatalog(): {
           question:
             'How is the fleet split across operational states — Active, Under Maintenance, Down, Inactive?',
           status: 'available',
+          pass1: true,
         },
         {
           id: 'R-10B',
@@ -191,6 +200,7 @@ export function useReportCatalog(): {
           title: 'WO Backlog / Aging',
           question: 'Open and in-progress work orders by age bucket and priority.',
           status: 'available',
+          pass1: true,
         },
         {
           id: 'R-15',
@@ -266,11 +276,16 @@ export function useReportCatalog(): {
     .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.status === 'available') }))
     .filter((theme) => theme.items.length > 0)
 
+  // Pass 1 Must-tier reports (R-1, R-2, R-7, R-8, R-10A, R-14), grouped by theme.
+  const mustTierThemes: ReportThemeGroup[] = allThemes
+    .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.pass1 === true) }))
+    .filter((theme) => theme.items.length > 0)
+
   // Remaining themed sections show only planned reports; deferred are hidden for
   // now (kept in the catalogue data above so they're easy to reinstate later).
   const plannedThemes: ReportThemeGroup[] = allThemes
     .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.status === 'planned') }))
     .filter((theme) => theme.items.length > 0)
 
-  return { availableThemes, plannedThemes, statusMeta: STATUS_META }
+  return { availableThemes, mustTierThemes, plannedThemes, statusMeta: STATUS_META }
 }
