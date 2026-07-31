@@ -138,7 +138,7 @@ export interface Asset {
   maintenance_sub_status: AssetMaintenanceSubStatus | null
   asset_kind: AssetKind | null
   asset_tag: string | null
-  is_booked?: boolean // availability marker — reserved for a Job/Project
+  is_booked?: boolean // derived — true when an active booking covers today
   parent_asset_id: number | null
   child_assets_count?: number
   current_location?: LocationRef | null
@@ -148,6 +148,20 @@ export interface Asset {
   erp_raw_data?: Record<string, unknown> // Admin only
   created_at: string
   updated_at: string
+}
+
+export interface Booking {
+  id: number
+  asset_id: number
+  asset?: { id: number; name: string; asset_tag: string | null }
+  booked_by?: { id: number; name: string }
+  booked_from: string
+  booked_until: string
+  booking_reference: string | null
+  notes: string | null
+  status: 'active' | 'cancelled' | 'released'
+  cancelled_at: string | null
+  created_at: string
 }
 
 export interface AssetMeterReading {
@@ -568,6 +582,12 @@ export interface RelocatedAssetItem {
   created_at: string
 }
 
+/** A data-completeness ratio in the Programme Readiness band. */
+export interface ReadinessMetric {
+  covered: number
+  percentage: number | null
+}
+
 export interface DashboardKpiResponse {
   window: { days: number; from: string; to: string } // ISO 8601 bounds (UTC)
   kpis: {
@@ -582,12 +602,33 @@ export interface DashboardKpiResponse {
     // (e.g. zero assets, zero created WOs, zero prior backlog).
     asset_health: {
       availability: { percentage: number | null }
+      // Two independent axes — an asset can be booked AND under maintenance at
+      // once, so these never sum across each other. Withdrawal and its
+      // sub-statuses are ERP-owned and deliberately absent from ATMS reporting.
       by_status: { active: number; under_maintenance: number; down: number; inactive: number }
+      by_booking: { booked: number; available: number }
       total: number
     }
     workforce: {
       wo_backlog: { total: number; trend_pct: number | null }
       completion_rate: { closed: number; created: number; percentage: number | null }
+    }
+    // Current-state, window-independent — the dashboard carries no date range.
+    utilisation: {
+      percentage: number | null
+      eligible: number
+      deployed_eligible: number
+      by_bucket: { deployed: number; idle: number; maintenance: number }
+      unlocated: number
+      unclassified: number
+      booked: number
+      total: number
+    }
+    readiness: {
+      total: number
+      pm_coverage: ReadinessMetric
+      location_recorded: ReadinessMetric
+      baseline_reading: ReadinessMetric
     }
   }
   recently_relocated_assets: RelocatedAssetItem[]

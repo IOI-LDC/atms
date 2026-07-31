@@ -3,9 +3,11 @@
 namespace Tests\Feature\Reports;
 
 use App\Enums\AssetKind;
+use App\Enums\BookingStatus;
 use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
 use App\Models\Asset;
+use App\Models\Booking;
 use App\Models\Location;
 use App\Models\Role;
 use App\Models\User;
@@ -103,11 +105,18 @@ class AssetsByLocationReportTest extends TestCase
             'operational_status' => OperationalStatus::DOWN,
             'asset_kind' => AssetKind::COMPONENT,
         ]);
-        $this->createAsset([
+        $bookedAsset = $this->createAsset([
             'current_location_id' => $loc->id,
             'operational_status' => OperationalStatus::ACTIVE,
             'asset_kind' => AssetKind::PACKAGE,
-            'is_booked' => true,
+        ]);
+
+        Booking::create([
+            'asset_id' => $bookedAsset->id,
+            'booked_by' => $admin->id,
+            'booked_from' => now()->subDay()->toDateString(),
+            'booked_until' => now()->addDays(30)->toDateString(),
+            'status' => BookingStatus::ACTIVE,
         ]);
 
         $row = $this->findRow(

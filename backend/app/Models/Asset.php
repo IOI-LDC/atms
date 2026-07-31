@@ -29,7 +29,6 @@ class Asset extends Model
         'erp_raw_data',
         'erp_last_synced_at',
         'is_active',
-        'is_booked',
         'maintenance_status',
         'maintenance_sub_status',
         'asset_kind',
@@ -51,7 +50,6 @@ class Asset extends Model
             'erp_last_synced_at' => 'datetime',
             'size_inches' => SizeCast::class,
             'is_active' => 'boolean',
-            'is_booked' => 'boolean',
             'asset_tag_generated_at' => 'datetime',
             'operational_status' => OperationalStatus::class,
             'maintenance_status' => MaintenanceStatus::class,
@@ -61,19 +59,30 @@ class Asset extends Model
     }
 
     /**
-     * Auto-clear booking when an asset is deactivated or removed from the
-     * maintenance program. A decommissioned asset cannot remain booked.
+     * Auto-release active bookings when an asset is deactivated or removed
+     * from the maintenance program.
      */
     protected static function booted(): void
     {
-        static::updating(function (Asset $asset) {
-            if ($asset->is_booked && (
-                ($asset->isDirty('is_active') && ! $asset->is_active)
-                || ($asset->isDirty('maintenance_status') && $asset->maintenance_status === MaintenanceStatus::WITHDRAWN)
-            )) {
-                $asset->is_booked = false;
+        static::updated(function (Asset $asset) {
+            $shouldRelease = ($asset->isDirty('is_active') && ! $asset->is_active)
+                || ($asset->isDirty('maintenance_status') && $asset->maintenance_status === MaintenanceStatus::WITHDRAWN);
+
+            if ($shouldRelease) {
+                $asset->bookings()->active()->update([
+                    'status' => \App\Enums\BookingStatus::RELEASED,
+                    'cancelled_at' => now(),
+                ]);
             }
         });
+    }
+
+    /**
+     * Whether the asset is currently booked (derived from active bookings covering today).
+     */
+    public function getIsBookedAttribute(): bool
+    {
+        return $this->bookings()->coveringDate()->exists();
     }
 
     public function currentLocation(): BelongsTo
@@ -122,6 +131,11 @@ class Asset extends Model
     public function pmAssignments(): HasMany
     {
         return $this->hasMany(AssetPmAssignment::class);
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
     }
 
     public function attachments(): MorphMany

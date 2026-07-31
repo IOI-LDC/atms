@@ -649,6 +649,55 @@
   grid-template-columns: 1fr;
 }
 
+/* Booking list (right rail, compact clickable rows). */
+.booking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.booking-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.booking-list-item:hover {
+  background: var(--accent);
+}
+
+.booking-list-ref {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Booking overlap conflict warning (inside booking form dialog). */
+.booking-conflict-warning {
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  background: oklch(0.6 0.24 27 / 0.06);
+  border: 1px solid oklch(0.6 0.24 27 / 0.18);
+}
+
+.booking-conflict-list {
+  margin: 0.375rem 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
 /* Completion-checklist progress count (shown in the WO form card header) */
 .wo-checklist-count {
   font-size: 0.75rem;
@@ -2938,6 +2987,7 @@
 .status-unclassified,
 .status-activation-pending,
 .status-booked,
+.status-released,
 .badge-kind-package,
 .badge-kind-component,
 .priority-high,
@@ -2998,6 +3048,7 @@
 .status-cancelled,
 .status-inactive,
 .status-unclassified,
+.status-released,
 .pm-level-custom,
 .role-requester {
   background: oklch(0.6 0.008 260 / 0.14);
@@ -6749,3 +6800,395 @@
     print-color-adjust: exact;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Dashboard (/dashboard, DashboardView.vue)
+   ───────────────────────────────────────────────────────────────────
+   A 12-column grid with one repeating motif — the triad. Rows divide
+   into equal siblings so every band is internally symmetric:
+   triad → full → pair → pair → triad → pair.
+   Current-state only; there is no date range on this screen.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1rem;
+}
+
+.dash-span-4 { grid-column: span 4; }
+.dash-span-6 { grid-column: span 6; }
+.dash-span-12 { grid-column: span 12; }
+
+.dash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 1rem 1.15rem;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-premium-sm);
+}
+
+.dash-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dash-label {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.dash-note {
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+.dash-empty {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+
+/* ── Attention triad ─────────────────────────────────────────────── */
+
+.dash-attn {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1.15rem;
+}
+
+.dash-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--border);
+}
+
+.dash-dot-critical { background-color: var(--destructive); }
+.dash-dot-warning { background-color: var(--warning); }
+
+.dash-attn-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.dash-attn-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-attn-label {
+  font-size: 0.73rem;
+  color: var(--muted-foreground);
+}
+
+.dash-attn-link {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dash-attn-link:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+/* ── Utilisation band ────────────────────────────────────────────── */
+
+.dash-util {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  gap: 1.75rem;
+  align-items: center;
+}
+
+.dash-util-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dash-util-value {
+  font-size: 2.6rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-util-basis {
+  font-size: 0.73rem;
+  color: var(--muted-foreground);
+}
+
+.dash-util-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.dash-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.dash-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-legend-item strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dash-swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background-color: var(--muted);
+}
+
+.dash-swatch-deployed { background-color: var(--success); }
+.dash-swatch-idle { background-color: color-mix(in oklch, var(--info) 45%, transparent); }
+.dash-swatch-maintenance { background-color: var(--warning); }
+.dash-swatch-unlocated { background-color: var(--border); }
+.dash-swatch-unclassified { background-color: color-mix(in oklch, var(--destructive) 40%, transparent); }
+
+/* ── Metric triads (reliability / process) ───────────────────────── */
+
+.dash-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.dash-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.dash-metric .dash-label {
+  font-size: 0.63rem;
+}
+
+.dash-metric-value {
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-metric-unit {
+  margin-left: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* ── Asset status ────────────────────────────────────────────────── */
+
+.dash-divider {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background-color: var(--border);
+}
+
+/* ── Location breakdown ──────────────────────────────────────────── */
+
+.dash-loc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* Name stacked above its bar, with breathing room between the two. */
+.dash-loc-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.dash-loc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-loc-group-label {
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.dash-loc-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  /* Align the count to the location name, not to the middle of the
+     name-plus-bar block, so the number reads as belonging to the label. */
+  align-items: start;
+  font-size: 0.8rem;
+}
+
+.dash-loc-count {
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Readiness triad ─────────────────────────────────────────────── */
+
+.dash-ready-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.dash-ready-value {
+  font-size: 1.85rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-ready-of {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+
+/* ── Workboard + activity lists ──────────────────────────────────── */
+
+.dash-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dash-row:first-child {
+  border-top: 0;
+}
+
+a.dash-row:hover {
+  color: var(--primary);
+}
+
+.dash-row-main {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-row-main strong {
+  font-weight: 600;
+}
+
+.dash-row-when {
+  font-size: 0.73rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.dash-tag {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .dash-span-4,
+  .dash-span-6 {
+    grid-column: span 12;
+  }
+
+  .dash-util {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Asset status — plain count rows, operational states above the separator and
+   Booked below it. Booking is a different axis, not a fifth operational state:
+   an asset can be Booked and Under Maintenance at once, so the counts either
+   side of the rule deliberately do not sum. */
+
+.dash-status-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  font-size: 0.85rem;
+}
+
+.dash-status-name {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--foreground);
+}
+
+.dash-status-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-dot-active { background-color: var(--success); }
+.dash-dot-muted { background-color: var(--muted-foreground); opacity: 0.45; }
+.dash-dot-info { background-color: var(--info); }

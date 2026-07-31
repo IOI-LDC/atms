@@ -1,96 +1,100 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import AppLayout from '@/components/app/AppLayout.vue'
+import { Progress } from '@/components/ui/progress'
+import { SegmentedBar } from '@/components/ui/segmented-bar'
 import { Button } from '@/components/ui/button'
-import { computed } from 'vue'
-import { CalendarClock, ClipboardList, RefreshCw, Wrench } from '@lucide/vue'
 import { useDashboard } from '@/composables/useDashboard'
 import { useDashboardKpis } from '@/composables/useDashboardKpis'
+import { useAssetsByLocationReport } from '@/composables/useAssetsByLocationReport'
 import { useQuickActions } from '@/composables/useQuickActions'
-import {
-  woStatusClass,
-  woStatusLabel,
-  priorityClass,
-  priorityLabel,
-  pmStatusClass,
-  pmStatusLabel,
-  pmDueLabel,
-  fmtDate,
-  fmtDateTime,
-  fmtKpiDays,
-  fmtKpiHours,
-  fmtKpiPercent,
-} from '@/lib/displayHelpers'
+import { fmtDate, fmtKpiDays, fmtKpiHours, fmtKpiPercent } from '@/lib/displayHelpers'
 
 const {
   data: dashData,
   loading: dashLoading,
   error: dashError,
-  reload: reloadDash,
   showPendingMr,
   showOpenWo,
   showOverduePm,
-  showRecentlyClosed,
   pendingMrItems,
   openWoItems,
-  overduePmItems,
-  closedWoItems,
-  hasActionRequired,
 } = useDashboard()
 
 const {
-  loading: kpisLoading,
-  error: kpisError,
-  reload: reloadKpis,
+  loading: kpiLoading,
+  error: kpiError,
   kpis,
   relocated,
-  windowDays,
   windowLabel,
-  windowRange,
+  utilisation,
+  utilisationSegments,
+  utilisationBasis,
+  readinessMetrics,
+  operationalStatusRows,
+  bookedRow,
 } = useDashboardKpis()
 
-const { actions } = useQuickActions()
+const { data: locationData, load: loadLocations } = useAssetsByLocationReport()
 
-const initialLoading = computed(
-  () => (kpisLoading.value && !kpis.value) || (dashLoading.value && !dashData.value),
+// Role-gated: a Requester sees only New MR, since Update Location is
+// Admin/Manager/Logistics. The composable owns that gating.
+const { actions: quickActions } = useQuickActions(['New MR', 'Update Location'])
+
+onMounted(() => loadLocations())
+
+const initialLoading = computed(() => dashLoading.value && kpiLoading.value)
+
+const downCount = computed(() => kpis.value?.asset_health.by_status.down ?? 0)
+const overduePmCount = computed(() => dashData.value?.summary.overdue_pm_assignments ?? 0)
+const pendingMrCount = computed(() => dashData.value?.summary.pending_maintenance_requests ?? 0)
+
+/** Newest first, capped at five so both closing columns hold the same height. */
+const workboardItems = computed(() =>
+  [
+    ...pendingMrItems.value.map((mr) => ({
+      id: `mr-${mr.id}`,
+      tag: 'Request',
+      to: `/maintenance/requests/${mr.id}`,
+      main: `${mr.number} — ${mr.asset?.name ?? 'Unknown asset'}`,
+      when: mr.created_at,
+    })),
+    ...openWoItems.value.map((wo) => ({
+      id: `wo-${wo.id}`,
+      tag: 'Work order',
+      to: `/work-orders/${wo.id}`,
+      main: `${wo.number} — ${wo.asset?.name ?? 'Unknown asset'}`,
+      when: wo.created_at,
+    })),
+  ]
+    .sort((a, b) => (a.when < b.when ? 1 : -1))
+    .slice(0, 5),
 )
-const refreshing = computed(() => kpisLoading.value || dashLoading.value)
 
-function refreshAll() {
-  reloadDash()
-  reloadKpis()
-}
+const recentMoves = computed(() => relocated.value.slice(0, 5))
+
+const topLocations = computed(() => (locationData.value?.items ?? []).slice(0, 6))
+const locationMax = computed(() =>
+  Math.max(1, ...topLocations.value.map((row) => row.asset_count ?? 0)),
+)
 </script>
 
 <template>
   <AppLayout>
-    <div class="page-section dashboard-briefing">
+    <div class="page-section">
       <div class="page-header">
         <div class="page-heading">
-          <h1 class="page-title">Maintenance Control Center</h1>
-          <p class="page-subtitle">Today’s work, maintenance risk, and equipment reliability.</p>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">
+            Current state of the asset register and maintenance programme.
+          </p>
         </div>
-        <div class="page-actions">
-          <span v-if="windowLabel" class="dashboard-window-note">
-            {{ windowLabel }}
-            <span v-if="windowRange" class="dashboard-window-range">{{ windowRange }}</span>
-          </span>
-          <Button variant="outline" size="sm" :disabled="refreshing" @click="refreshAll">
-            <RefreshCw />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <nav v-if="actions.length > 0" class="dashboard-briefing-quick" aria-label="Quick actions">
-        <span class="dashboard-briefing-quick-label">Quick Actions</span>
-        <div class="dashboard-briefing-quick-links">
+        <div v-if="quickActions.length > 0" class="page-actions">
           <Button
-            v-for="action in actions"
+            v-for="action in quickActions"
             :key="action.label"
-            variant="outline"
-            size="sm"
-            class="dashboard-briefing-quick-link"
             as-child
+            :variant="action.label === 'New MR' ? 'default' : 'outline'"
           >
             <RouterLink :to="action.to">
               <component :is="action.icon" />
@@ -98,248 +102,255 @@ function refreshAll() {
             </RouterLink>
           </Button>
         </div>
-      </nav>
+      </div>
 
       <div v-if="initialLoading" class="loading-state">Loading dashboard…</div>
 
       <template v-else>
-        <section
-          v-if="dashData && hasActionRequired"
-          class="dashboard-briefing-status"
-          aria-label="Operational status"
-        >
-          <RouterLink
-            v-if="showPendingMr"
-            to="/maintenance?tab=pending-approval"
-            class="dashboard-briefing-status-item"
-          >
-            <ClipboardList />
-            <span class="dashboard-briefing-status-label">Pending MR</span>
-            <strong>{{ dashData.summary.pending_maintenance_requests ?? 0 }}</strong>
-          </RouterLink>
-          <RouterLink
-            v-if="showOpenWo"
-            to="/work-orders?tab=open"
-            class="dashboard-briefing-status-item"
-          >
-            <Wrench />
-            <span class="dashboard-briefing-status-label">Open Work Orders</span>
-            <strong>{{ dashData.summary.open_work_orders ?? 0 }}</strong>
-          </RouterLink>
-          <RouterLink
-            v-if="showOverduePm"
-            to="/admin/pm-rules"
-            class="dashboard-briefing-status-item"
-          >
-            <CalendarClock />
-            <span class="dashboard-briefing-status-label">Overdue PM</span>
-            <strong>{{ dashData.summary.overdue_pm_assignments ?? 0 }}</strong>
-          </RouterLink>
-        </section>
+        <div v-if="dashError && kpiError" class="error-state" role="alert">{{ kpiError }}</div>
 
-        <div v-if="kpisError && !kpis" class="error-state" role="alert">{{ kpisError }}</div>
+        <!-- ── Needs attention ──────────────────────────────────────── -->
+        <div class="dash-grid">
+          <div class="dash-card dash-attn dash-span-4">
+            <span class="dash-dot" :class="{ 'dash-dot-critical': downCount > 0 }"></span>
+            <span class="dash-attn-body">
+              <span class="dash-attn-value">{{ downCount }}</span>
+              <span class="dash-attn-label">
+                {{ downCount === 1 ? 'asset down' : 'assets down' }}
+              </span>
+            </span>
+            <RouterLink class="dash-attn-link" to="/assets">View</RouterLink>
+          </div>
 
-        <div v-else-if="kpis" class="dashboard-briefing-metrics">
-          <section class="dashboard-briefing-metric-section dashboard-briefing-reliability">
-            <div class="dashboard-briefing-section-heading">
-              <h2>Equipment Reliability</h2>
-              <span>90-day pulse</span>
-            </div>
-            <div class="dashboard-briefing-metric-grid">
-              <div class="dashboard-briefing-metric">
-                <span>MTBF</span>
-                <strong>{{ fmtKpiDays(kpis.mtbf.days) }}</strong>
-                <small>Between failures</small>
-              </div>
-              <div class="dashboard-briefing-metric">
-                <span>MTTR</span>
-                <strong>{{ fmtKpiHours(kpis.mttr.hours) }}</strong>
-                <small>To repair</small>
-              </div>
-              <div class="dashboard-briefing-metric">
-                <span>Failure rate</span>
-                <strong>{{ kpis.failure_rate.failures }}</strong>
-                <small>{{ kpis.failure_rate.per_day.toFixed(3) }}/day</small>
-              </div>
-            </div>
-          </section>
+          <div v-if="showOverduePm" class="dash-card dash-attn dash-span-4">
+            <span class="dash-dot" :class="{ 'dash-dot-warning': overduePmCount > 0 }"></span>
+            <span class="dash-attn-body">
+              <span class="dash-attn-value">{{ overduePmCount }}</span>
+              <span class="dash-attn-label">PM overdue</span>
+            </span>
+            <RouterLink class="dash-attn-link" to="/reports/overdue-pm">View</RouterLink>
+          </div>
 
-          <section class="dashboard-briefing-metric-section dashboard-briefing-process">
-            <div class="dashboard-briefing-section-heading">
-              <h2>Process Performance</h2>
-              <span>90-day pulse</span>
-            </div>
-            <div class="dashboard-briefing-metric-grid">
-              <div class="dashboard-briefing-metric">
-                <span>PM compliance</span>
-                <strong>{{ fmtKpiPercent(kpis.pm_compliance.percentage) }}</strong>
-                <small
-                  >{{ kpis.pm_compliance.compliant }} / {{ kpis.pm_compliance.total }} on
-                  time</small
-                >
-              </div>
-              <div class="dashboard-briefing-metric">
-                <span>Avg MR</span>
-                <strong>{{ fmtKpiHours(kpis.avg_mr_duration.hours) }}</strong>
-                <small>To resolve</small>
-              </div>
-              <div class="dashboard-briefing-metric">
-                <span>Avg WO</span>
-                <strong>{{ fmtKpiHours(kpis.avg_wo_duration.hours) }}</strong>
-                <small>To close</small>
-              </div>
-            </div>
-          </section>
+          <div v-if="showPendingMr" class="dash-card dash-attn dash-span-4">
+            <span class="dash-dot" :class="{ 'dash-dot-warning': pendingMrCount > 0 }"></span>
+            <span class="dash-attn-body">
+              <span class="dash-attn-value">{{ pendingMrCount }}</span>
+              <span class="dash-attn-label">
+                {{ pendingMrCount === 1 ? 'request pending review' : 'requests pending review' }}
+              </span>
+            </span>
+            <RouterLink class="dash-attn-link" to="/maintenance">Review</RouterLink>
+          </div>
         </div>
 
-        <div v-if="dashError && !dashData" class="error-state" role="alert">
-          {{ dashError }}
+        <!-- ── Utilisation ──────────────────────────────────────────── -->
+        <div class="dash-grid">
+          <div class="dash-card dash-span-12">
+            <div class="dash-card-head">
+              <p class="dash-label">Utilisation</p>
+              <span class="dash-note">
+                Deployed = rig &amp; well site · excludes assets down or under maintenance
+              </span>
+            </div>
+            <div class="dash-util">
+              <div class="dash-util-figure">
+                <span class="dash-util-value">{{ fmtKpiPercent(utilisation?.percentage) }}</span>
+                <span class="dash-util-basis">{{ utilisationBasis }}</span>
+              </div>
+              <div class="dash-util-right">
+                <SegmentedBar
+                  :segments="utilisationSegments"
+                  ariaLabel="Assets by deployment state"
+                />
+                <div class="dash-legend">
+                  <span
+                    v-for="segment in utilisationSegments"
+                    :key="segment.key"
+                    class="dash-legend-item"
+                  >
+                    <span class="dash-swatch" :class="`dash-swatch-${segment.key}`"></span>
+                    {{ segment.label }} <strong>{{ segment.count }}</strong>
+                  </span>
+                </div>
+                <div class="dash-legend">
+                  <span class="dash-legend-item">
+                    Committed for upcoming jobs
+                    <strong>{{ utilisation?.booked ?? 0 }}</strong> of
+                    {{ utilisation?.total ?? 0 }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div
-          v-else-if="dashData && (hasActionRequired || showRecentlyClosed || relocated.length > 0)"
-          class="dashboard-briefing-workboard"
-        >
-          <section v-if="hasActionRequired" class="dashboard-briefing-work-section">
-            <div class="dashboard-briefing-section-heading">
-              <h2>Active Workboard</h2>
-              <span>What needs attention</span>
+        <!-- ── Reliability | Process performance ─────────────────────── -->
+        <div class="dash-grid">
+          <div class="dash-card dash-span-6">
+            <div class="dash-card-head">
+              <p class="dash-label">Equipment reliability</p>
+              <span class="dash-note">{{ windowLabel }}</span>
             </div>
+            <div class="dash-metric-grid">
+              <div class="dash-metric">
+                <p class="dash-label">MTBF</p>
+                <span v-if="kpis?.mtbf.days != null" class="dash-metric-value">
+                  {{ fmtKpiDays(kpis.mtbf.days) }}
+                </span>
+                <span v-else class="dash-empty">No failures yet</span>
+              </div>
+              <div class="dash-metric">
+                <p class="dash-label">MTTR</p>
+                <span v-if="kpis?.mttr.hours != null" class="dash-metric-value">
+                  {{ fmtKpiHours(kpis.mttr.hours) }}
+                </span>
+                <span v-else class="dash-empty">No repairs closed</span>
+              </div>
+              <div class="dash-metric">
+                <p class="dash-label">Failures</p>
+                <span v-if="kpis && kpis.failure_rate.failures > 0" class="dash-metric-value">
+                  {{ kpis.failure_rate.failures }}
+                  <span class="dash-metric-unit">recorded</span>
+                </span>
+                <span v-else class="dash-empty">None recorded</span>
+              </div>
+            </div>
+          </div>
 
-            <div v-if="showPendingMr" class="dashboard-briefing-queue">
-              <div class="dashboard-briefing-queue-heading">
-                <h3>Pending Maintenance Requests</h3>
-                <span>{{ dashData.summary.pending_maintenance_requests ?? 0 }}</span>
+          <div class="dash-card dash-span-6">
+            <div class="dash-card-head">
+              <p class="dash-label">Process performance</p>
+              <span class="dash-note">{{ windowLabel }}</span>
+            </div>
+            <div class="dash-metric-grid">
+              <div class="dash-metric">
+                <p class="dash-label">PM compliance</p>
+                <span v-if="kpis?.pm_compliance.percentage != null" class="dash-metric-value">
+                  {{ fmtKpiPercent(kpis.pm_compliance.percentage) }}
+                </span>
+                <span v-else class="dash-empty">None due yet</span>
               </div>
-              <div v-if="pendingMrItems.length === 0" class="dashboard-briefing-empty">
-                No pending requests.
+              <div class="dash-metric">
+                <p class="dash-label">Avg request</p>
+                <span v-if="kpis?.avg_mr_duration.hours != null" class="dash-metric-value">
+                  {{ fmtKpiHours(kpis.avg_mr_duration.hours) }}
+                </span>
+                <span v-else class="dash-empty">None resolved</span>
               </div>
-              <div v-else class="dashboard-briefing-rows">
-                <RouterLink
-                  v-for="mr in pendingMrItems"
-                  :key="mr.id"
-                  :to="`/maintenance/requests/${mr.id}`"
-                  class="dashboard-briefing-row dashboard-briefing-row-request"
-                >
-                  <span class="dashboard-briefing-row-main">
-                    <strong>{{ mr.number }} — {{ mr.asset.name }}</strong>
-                    <small>{{ mr.created_by?.name ?? '—' }} · {{ fmtDate(mr.created_at) }}</small>
-                  </span>
-                  <span :class="priorityClass(mr.priority)">{{ priorityLabel(mr.priority) }}</span>
-                </RouterLink>
+              <div class="dash-metric">
+                <p class="dash-label">Avg work order</p>
+                <span v-if="kpis?.avg_wo_duration.hours != null" class="dash-metric-value">
+                  {{ fmtKpiHours(kpis.avg_wo_duration.hours) }}
+                </span>
+                <span v-else class="dash-empty">None closed</span>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div v-if="showOpenWo" class="dashboard-briefing-queue">
-              <div class="dashboard-briefing-queue-heading">
-                <h3>Open Work Orders</h3>
-                <span>{{ dashData.summary.open_work_orders ?? 0 }}</span>
-              </div>
-              <div v-if="openWoItems.length === 0" class="dashboard-briefing-empty">
-                No open work orders.
-              </div>
-              <div v-else class="dashboard-briefing-rows">
-                <RouterLink
-                  v-for="wo in openWoItems"
-                  :key="wo.id"
-                  :to="`/work-orders/${wo.id}`"
-                  class="dashboard-briefing-row dashboard-briefing-row-work-order"
-                >
-                  <span class="dashboard-briefing-row-main">
-                    <strong>{{ wo.number }} — {{ wo.asset.name }}</strong>
-                    <small>{{ wo.assigned_to?.name ?? 'Unassigned' }}</small>
-                  </span>
-                  <span :class="woStatusClass(wo.status)">{{ woStatusLabel(wo.status) }}</span>
-                </RouterLink>
+        <!-- ── Asset status | By location ────────────────────────────── -->
+        <div class="dash-grid">
+          <div class="dash-card dash-span-6">
+            <div class="dash-card-head">
+              <p class="dash-label">Asset status</p>
+              <span class="dash-note">{{ kpis?.asset_health.total ?? 0 }} assets in ATMS</span>
+            </div>
+            <div class="dash-status-list">
+              <div v-for="row in operationalStatusRows" :key="row.key" class="dash-status-row">
+                <span class="dash-status-name">
+                  <span class="dash-dot" :class="`dash-dot-${row.tone}`"></span>
+                  {{ row.label }}
+                </span>
+                <span class="dash-status-count">{{ row.count }}</span>
               </div>
             </div>
+            <hr class="dash-divider" />
+            <div v-if="bookedRow" class="dash-status-row">
+              <span class="dash-status-name">
+                <span class="dash-dot" :class="`dash-dot-${bookedRow.tone}`"></span>
+                {{ bookedRow.label }}
+              </span>
+              <span class="dash-status-count">{{ bookedRow.count }}</span>
+            </div>
+          </div>
 
-            <div v-if="showOverduePm" class="dashboard-briefing-queue">
-              <div class="dashboard-briefing-queue-heading">
-                <h3>Overdue PM Assignments</h3>
-                <span>{{ dashData.summary.overdue_pm_assignments ?? 0 }}</span>
-              </div>
-              <div v-if="overduePmItems.length === 0" class="dashboard-briefing-empty">
-                No overdue PM assignments.
-              </div>
-              <div v-else class="dashboard-briefing-rows">
-                <RouterLink
-                  v-for="assignment in overduePmItems"
-                  :key="assignment.id"
-                  :to="`/assets/${assignment.asset?.id}`"
-                  class="dashboard-briefing-row dashboard-briefing-row-overdue"
-                >
-                  <span class="dashboard-briefing-row-main">
-                    <strong>{{ assignment.asset?.name }}</strong>
-                    <small>{{ assignment.rule.name }} · Due {{ pmDueLabel(assignment) }}</small>
-                  </span>
-                  <span :class="pmStatusClass(assignment.pm_status)">{{
-                    pmStatusLabel(assignment.pm_status)
-                  }}</span>
-                </RouterLink>
+          <div class="dash-card dash-span-6">
+            <div class="dash-card-head">
+              <p class="dash-label">By location</p>
+              <span class="dash-note">
+                {{ locationData?.summary.total_locations ?? 0 }} locations
+              </span>
+            </div>
+            <div v-if="topLocations.length === 0" class="dash-empty">
+              No locations recorded yet.
+            </div>
+            <div v-else class="dash-loc-group">
+              <div
+                v-for="row in topLocations"
+                :key="row.location_id ?? 'unassigned'"
+                class="dash-loc-row"
+              >
+                <span class="dash-loc-label">
+                  <span class="dash-loc-name">{{ row.location_name ?? 'Unassigned' }}</span>
+                  <Progress :value="((row.asset_count ?? 0) / locationMax) * 100" />
+                </span>
+                <span class="dash-loc-count">{{ row.asset_count ?? 0 }}</span>
               </div>
             </div>
-          </section>
+          </div>
+        </div>
 
-          <section class="dashboard-briefing-activity-section">
-            <div class="dashboard-briefing-section-heading">
-              <h2>Recent Activity</h2>
-              <span>Latest movements</span>
+        <!-- ── Programme readiness ───────────────────────────────────── -->
+        <div class="dash-grid">
+          <div v-for="metric in readinessMetrics" :key="metric.key" class="dash-card dash-span-4">
+            <p class="dash-label">{{ metric.label }}</p>
+            <div class="dash-ready-figure">
+              <span class="dash-ready-value">{{ metric.covered }}</span>
+              <span class="dash-ready-of">of {{ metric.total }} assets</span>
             </div>
+            <Progress :value="metric.percentage ?? 0" variant="soon" />
+          </div>
+        </div>
 
-            <div v-if="kpis" class="dashboard-briefing-queue">
-              <div class="dashboard-briefing-queue-heading">
-                <h3>Asset Relocations</h3>
-                <span>{{ relocated.length }}</span>
-              </div>
-              <div v-if="relocated.length === 0" class="dashboard-briefing-empty">
-                No asset relocations in the last {{ windowDays }} days.
-              </div>
-              <div v-else class="dashboard-briefing-rows">
-                <RouterLink
-                  v-for="item in relocated"
-                  :key="item.id"
-                  :to="`/assets/${item.asset_id}`"
-                  class="dashboard-briefing-row dashboard-briefing-row-activity"
-                >
-                  <span class="dashboard-briefing-row-main">
-                    <strong>{{ item.asset.name }}</strong>
-                    <small
-                      >{{ item.from_location?.name ?? '—' }} →
-                      {{ item.to_location?.name ?? '—' }}</small
-                    >
-                  </span>
-                  <small class="dashboard-briefing-row-date">{{
-                    fmtDateTime(item.effective_at)
-                  }}</small>
-                </RouterLink>
-              </div>
+        <!-- ── Active workboard | Recent moves ───────────────────────── -->
+        <div class="dash-grid">
+          <div v-if="showPendingMr || showOpenWo" class="dash-card dash-span-6">
+            <div class="dash-card-head">
+              <p class="dash-label">Active workboard</p>
+              <span class="dash-note">Latest 5</span>
             </div>
+            <div v-if="workboardItems.length === 0" class="dash-empty">Nothing needs action.</div>
+            <div v-else class="dash-list">
+              <RouterLink
+                v-for="item in workboardItems"
+                :key="item.id"
+                :to="item.to"
+                class="dash-row"
+              >
+                <span class="dash-tag">{{ item.tag }}</span>
+                <span class="dash-row-main">{{ item.main }}</span>
+                <span class="dash-row-when">{{ fmtDate(item.when) }}</span>
+              </RouterLink>
+            </div>
+          </div>
 
-            <div v-if="showRecentlyClosed" class="dashboard-briefing-queue">
-              <div class="dashboard-briefing-queue-heading">
-                <h3>Recently Closed</h3>
-                <span>{{ dashData.summary.recently_closed_work_orders ?? 0 }}</span>
-              </div>
-              <div v-if="closedWoItems.length === 0" class="dashboard-briefing-empty">
-                No work orders closed in the last 30 days.
-              </div>
-              <div v-else class="dashboard-briefing-rows">
-                <RouterLink
-                  v-for="wo in closedWoItems"
-                  :key="wo.id"
-                  :to="`/work-orders/${wo.id}`"
-                  class="dashboard-briefing-row dashboard-briefing-row-activity"
-                >
-                  <span class="dashboard-briefing-row-main">
-                    <strong>{{ wo.number }} — {{ wo.asset.name }}</strong>
-                    <small>{{ wo.assigned_to?.name ?? 'Unassigned' }}</small>
-                  </span>
-                  <small class="dashboard-briefing-row-date">{{ fmtDate(wo.closed_at) }}</small>
-                </RouterLink>
+          <div class="dash-card dash-span-6">
+            <div class="dash-card-head">
+              <p class="dash-label">Recent asset moves</p>
+              <span class="dash-note">Latest 5</span>
+            </div>
+            <div v-if="recentMoves.length === 0" class="dash-empty">No moves recorded yet.</div>
+            <div v-else class="dash-list">
+              <div v-for="move in recentMoves" :key="move.id" class="dash-row">
+                <span class="dash-tag">Move</span>
+                <span class="dash-row-main">
+                  <strong>{{ move.asset?.name ?? 'Unknown asset' }}</strong>
+                  moved to {{ move.to_location?.name ?? 'Unknown' }}
+                </span>
+                <span class="dash-row-when">{{ fmtDate(move.effective_at) }}</span>
               </div>
             </div>
-          </section>
+          </div>
         </div>
       </template>
     </div>

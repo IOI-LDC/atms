@@ -38,18 +38,21 @@ const router = createRouter({
     },
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
-    // The client-facing /dashboard shows a placeholder until LDC provides their
-    // own requirements — the real (assumption-based) dashboard is kept intact and
-    // reachable internally at /dashboard-real (not linked in the sidebar).
+    // /dashboard + DashboardView.vue is THE dashboard — final, client-facing, and
+    // the only one that ships. It is not a placeholder; do not add another.
+    // /dashboard-verification is a disposable admin-only copy of the earlier
+    // assumption-based design, kept for internal comparison and unlinked from the
+    // sidebar. Delete it once the dashboard is signed off.
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: () => import('@/views/DashboardPlaceholderView.vue'),
+      component: () => import('@/views/DashboardView.vue'),
     },
     {
-      path: '/dashboard-real',
-      name: 'dashboard-real',
-      component: () => import('@/views/DashboardView.vue'),
+      path: '/dashboard-verification',
+      name: 'dashboard-verification',
+      component: () => import('@/views/DashboardVerificationView.vue'),
+      meta: { requiresAdmin: true },
     },
 
     // ── My Profile (account details, role & access) ──────────────────────────
@@ -122,19 +125,12 @@ const router = createRouter({
       name: 'locations',
       component: () => import('@/views/locations/LogisticsLocationView.vue'),
     },
-    // Legacy tabbed Locations view (original Asset Location Update flow), kept
-    // reachable at /locations2 during transition.
-    {
-      path: '/locations2',
-      name: 'locations2',
-      component: () => import('@/views/locations/LocationsView.vue'),
-    },
-
     // ── Reports ───────────────────────────────────────────────────────────────
     // The client-facing /reports shows a placeholder until LDC provides their own
-    // requirements — the real reports index is kept intact and reachable internally
-    // at /reports-real (not linked in the sidebar). Individual /reports/:slug pages
-    // below remain unchanged and continue to work.
+    // requirements — the real reports index is kept intact for internal
+    // verification at /reports-real: admin-only and not linked in the sidebar. It
+    // is not part of the shipped product. Individual /reports/:slug pages below
+    // remain unchanged and continue to work.
     {
       path: '/reports',
       name: 'reports',
@@ -144,6 +140,7 @@ const router = createRouter({
       path: '/reports-real',
       name: 'reports-real',
       component: () => import('@/views/reports/ReportsView.vue'),
+      meta: { requiresAdmin: true },
     },
     // Per-report pages (Pass 1 Must tier). Any authenticated role may view —
     // reports are org-wide program views (backend Gate: viewDashboard).

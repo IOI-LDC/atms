@@ -3,13 +3,14 @@
 namespace App\Queries\Reports;
 
 use App\Models\Asset;
+use App\Models\Booking;
 
 /**
  * R-13: Asset Booking / Availability.
  *
  * Shows booked vs freely-available assets by location. An asset is "booked"
- * when is_booked = true, otherwise it's available. Groups by location to
- * show availability per site.
+ * when it has an active booking covering today. Groups by location to show
+ * availability per site.
  */
 class BookingReportQuery
 {
@@ -19,21 +20,29 @@ class BookingReportQuery
      */
     public function handle(array $filters): array
     {
+        $today = now()->toDateString();
+
+        // IDs of assets with an active booking covering today
+        $bookedAssetIds = Booking::active()
+            ->where('booked_from', '<=', $today)
+            ->where('booked_until', '>=', $today)
+            ->pluck('asset_id');
+
         $assets = Asset::where('is_active', true)
             ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->where('current_location_id', $v))
             ->when($filters['asset_kind'] ?? null, fn ($q, $v) => $q->where('asset_kind', $v))
             ->with('currentLocation')
-            ->get(['id', 'current_location_id', 'is_booked']);
+            ->get(['id', 'current_location_id']);
 
         $totalAssets = $assets->count();
-        $bookedCount = $assets->where('is_booked', true)->count();
+        $bookedCount = $assets->whereIn('id', $bookedAssetIds)->count();
         $availableCount = $totalAssets - $bookedCount;
 
         // Group by location
         $grouped = $assets->groupBy('current_location_id');
 
-        $items = $grouped->map(function ($locationAssets, $locationId) {
-            $booked = $locationAssets->where('is_booked', true)->count();
+        $items = $grouped->map(function ($locationAssets, $locationId) use ($bookedAssetIds) {
+            $booked = $locationAssets->whereIn('id', $bookedAssetIds)->count();
             $available = $locationAssets->count() - $booked;
             $first = $locationAssets->first();
 

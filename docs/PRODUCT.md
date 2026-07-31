@@ -117,8 +117,14 @@ template globally.
   reading type. A valid correction is a new reading, not editing history.
 - Phase 1 location update is a direct action that writes a location-history row.
   It has no movement request, arrival confirmation, gate-pass, or custody flow.
-- Booking reserves an asset for a job/project and is released by location change or
-  asset inactivation. It does not replace maintenance status.
+- Booking reserves an asset for a job/project over a date range (`booked_from` /
+  `booked_until`) with an optional job reference and the identity of who committed
+  the booking. Bookings live in a dedicated `bookings` table so full history is
+  preserved (active → cancelled / released). An asset's `is_booked` state is
+  derived: it is booked when an active booking covers today. Overlapping bookings
+  on the same asset are rejected. Booking is released automatically by asset
+  inactivation or withdrawal from the maintenance program. It does not replace
+  maintenance status.
 - An active WO-form template is selected by FA subclass. A WO snapshots it at
   creation; syncing newer template changes is explicit and may be deferred. Fields
   with `has_pre_post` require both values; other required fields require their post

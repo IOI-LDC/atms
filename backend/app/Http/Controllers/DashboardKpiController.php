@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Resources\AssetLocationHistoryResource;
 use App\Http\Resources\DashboardKpiResource;
 use App\Models\User;
+use App\Queries\Dashboard\AssetUtilisationQuery;
 use App\Queries\Dashboard\Kpis\AssetHealthKpiQuery;
 use App\Queries\Dashboard\Kpis\ProcessPerformanceKpiQuery;
 use App\Queries\Dashboard\Kpis\ReliabilityKpiQuery;
 use App\Queries\Dashboard\Kpis\WorkforceKpiQuery;
+use App\Queries\Dashboard\ProgramReadinessQuery;
 use App\Queries\Dashboard\RecentlyRelocatedAssetsQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -30,6 +32,10 @@ class DashboardKpiController extends Controller
                 app(ProcessPerformanceKpiQuery::class)->handle($since, $now),
                 app(AssetHealthKpiQuery::class)->handle(),
                 app(WorkforceKpiQuery::class)->handle($since, $now),
+                // Current-state, window-independent: the dashboard carries no
+                // date range, so these ignore $since/$now by design.
+                app(AssetUtilisationQuery::class)->handle(),
+                app(ProgramReadinessQuery::class)->handle(),
             ),
             'recently_relocated_assets' => AssetLocationHistoryResource::collection(
                 app(RecentlyRelocatedAssetsQuery::class)->handle($since, $now)

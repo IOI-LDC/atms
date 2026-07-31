@@ -37,6 +37,8 @@ withDefaults(
   <span v-else class="identity" :class="{ 'identity-stacked': stacked }">
     <span class="identity-name">{{ asset.name }}</span>
 
-    <AssetIdentityBadges :asset="asset" :show-tag="showTag" />
+    <AssetIdentityBadges :asset="asset" :show-tag="showTag">
+      <slot />
+    </AssetIdentityBadges>
   </span>
 </template>

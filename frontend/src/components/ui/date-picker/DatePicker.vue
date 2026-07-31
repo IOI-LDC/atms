@@ -21,6 +21,8 @@ const props = withDefaults(
     disabled?: boolean
     /** Show an inline "Clear" action inside the popover. */
     clearable?: boolean
+    /** Render popover inline (no portal) — required inside a modal Dialog. */
+    disablePortal?: boolean
     class?: HTMLAttributes['class']
   }>(),
   {
@@ -30,6 +32,7 @@ const props = withDefaults(
     max: null,
     disabled: false,
     clearable: true,
+    disablePortal: false,
   },
 )
 
@@ -89,7 +92,7 @@ function clear() {
         <span>{{ displayLabel }}</span>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="w-auto p-0" align="start">
+    <PopoverContent class="w-auto p-0" align="start" :disable-portal="disablePortal">
       <Calendar
         :model-value="dateValue"
         :min-value="minValue"

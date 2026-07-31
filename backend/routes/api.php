@@ -150,8 +150,10 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::post('/assets/{asset}/attachments', [AttachmentController::class, 'uploadForAsset']);
 
     Route::post('/assets/{asset}/location', [AssetLocationController::class, 'update']);
-    Route::post('/assets/{asset}/book', [AssetBookingController::class, 'book']);
-    Route::post('/assets/{asset}/unbook', [AssetBookingController::class, 'unbook']);
+    Route::get('/assets/{asset}/bookings', [AssetBookingController::class, 'index']);
+    Route::post('/assets/{asset}/bookings', [AssetBookingController::class, 'store']);
+    Route::put('/assets/{asset}/bookings/{booking}', [AssetBookingController::class, 'update']);
+    Route::post('/assets/{asset}/bookings/{booking}/cancel', [AssetBookingController::class, 'cancel']);
     Route::post('/assets/{asset}/meter-readings', [AssetMeterReadingController::class, 'store']);
     Route::post('/assets/{asset}/meter-readings/{reading}/confirm', [AssetMeterReadingController::class, 'confirm']);
     Route::patch('/assets/{asset}/meter-readings/{reading}', [AssetMeterReadingController::class, 'update']);

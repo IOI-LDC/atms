@@ -6,6 +6,7 @@ import type {
   Asset,
   AssetLocationHistoryItem,
   AssetMeterReading,
+  Booking,
   MaintenanceHistoryItem,
   Attachment,
   Location,
@@ -63,14 +64,35 @@ export function useAssetDetail() {
 
   // ── Permissions (client UX hints — backend gate remains authoritative) ────
   const canEdit = computed(() => auth.isAdminOrManager)
-  // Booking is togglable by Admin, Manager, and Logistics (backend gate authoritative).
-  const canToggleBooking = computed(() => auth.isAdminOrManager || auth.isLogistics)
+  // Booking is manageable by Admin, Manager, and Logistics (backend gate authoritative).
+  const canManageBooking = computed(() => auth.isAdminOrManager || auth.isLogistics)
   // Logistics cannot see ERP reference fields or maintenance history (API 403)
   const canViewSensitive = computed(() => !auth.isLogistics)
 
   // ── Booking state ───────────────────────────────────────────────────────────
-  const bookingConfirmOpen = ref(false)
+  const bookings = ref<Booking[]>([])
+  const bookingsLoading = ref(false)
+  const bookingFormOpen = ref(false)
   const bookingLoading = ref(false)
+  const bookingForm = ref({
+    booked_from: '',
+    booked_until: '',
+    booking_reference: '',
+    notes: '',
+  })
+  const cancelBookingTarget = ref<Booking | null>(null)
+  const cancelBookingLoading = ref(false)
+  const bookingError = ref('')
+  const bookingConflicts = ref<Booking[] | null>(null)
+  const bookingEditTarget = ref<Booking | null>(null)
+  const bookingDetailTarget = ref<Booking | null>(null)
+
+  function openBookingDetail(booking: Booking) {
+    bookingDetailTarget.value = booking
+  }
+  function closeBookingDetail() {
+    bookingDetailTarget.value = null
+  }
 
   // ── Edit state ────────────────────────────────────────────────────────────
   const editOpen = ref(false)
@@ -426,28 +448,121 @@ export function useAssetDetail() {
   }
 
   // ── Booking actions ─────────────────────────────────────────────────────────
-  function requestToggleBooking() {
-    bookingConfirmOpen.value = true
-  }
-  function closeBookingConfirm() {
-    bookingConfirmOpen.value = false
+  async function loadBookings() {
+    if (!record.value) return
+    bookingsLoading.value = true
+    try {
+      const res = await api.get<{ data: Booking[] }>(`/assets/${record.value.id}/bookings`)
+      bookings.value = res.data
+    } catch {
+      bookings.value = []
+    } finally {
+      bookingsLoading.value = false
+    }
   }
 
-  async function doToggleBooking() {
-    if (!record.value) {
+  function openBookingForm() {
+    bookingForm.value = { booked_from: '', booked_until: '', booking_reference: '', notes: '' }
+    bookingError.value = ''
+    bookingConflicts.value = null
+    bookingEditTarget.value = null
+    bookingFormOpen.value = true
+  }
+  function closeBookingForm() {
+    bookingFormOpen.value = false
+    bookingConflicts.value = null
+  }
+
+  function openEditBooking(booking: Booking) {
+    bookingForm.value = {
+      booked_from: booking.booked_from,
+      booked_until: booking.booked_until,
+      booking_reference: booking.booking_reference ?? '',
+      notes: booking.notes ?? '',
+    }
+    bookingError.value = ''
+    bookingConflicts.value = null
+    bookingEditTarget.value = booking
+    bookingFormOpen.value = true
+  }
+
+  async function doCreateBooking(force = false) {
+    if (!record.value) return
+    const { booked_from, booked_until } = bookingForm.value
+    if (booked_until < booked_from) {
+      bookingError.value = 'End date must not be before the start date.'
       return
     }
+    bookingError.value = ''
+    bookingConflicts.value = null
     bookingLoading.value = true
-    const endpoint = record.value.is_booked ? 'unbook' : 'book'
     try {
-      const res = await api.post<{ data: Asset }>(`/assets/${record.value.id}/${endpoint}`)
-      record.value = res.data
-      bookingConfirmOpen.value = false
-      toast.success(endpoint === 'book' ? 'Asset booked.' : 'Asset unbooked.')
+      await api.post(`/assets/${record.value.id}/bookings`, {
+        booked_from,
+        booked_until,
+        booking_reference: bookingForm.value.booking_reference || null,
+        notes: bookingForm.value.notes || null,
+        force,
+      })
+      bookingFormOpen.value = false
+      toast.success('Asset booked.')
+      await Promise.all([load(record.value.id), loadBookings()])
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && e.data?.conflicts) {
+        bookingConflicts.value = e.data.conflicts as Booking[]
+      } else {
+        toast.error(e instanceof ApiError ? e.message : 'Failed to create booking.')
+      }
+    } finally {
+      bookingLoading.value = false
+    }
+  }
+
+  async function doUpdateBooking() {
+    if (!record.value || !bookingEditTarget.value) return
+    const { booked_from, booked_until } = bookingForm.value
+    if (booked_until < booked_from) {
+      bookingError.value = 'End date must not be before the start date.'
+      return
+    }
+    bookingError.value = ''
+    bookingLoading.value = true
+    try {
+      await api.put(`/assets/${record.value.id}/bookings/${bookingEditTarget.value.id}`, {
+        booked_from,
+        booked_until,
+        booking_reference: bookingForm.value.booking_reference || null,
+        notes: bookingForm.value.notes || null,
+      })
+      bookingFormOpen.value = false
+      toast.success('Booking updated.')
+      await loadBookings()
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to update booking.')
     } finally {
       bookingLoading.value = false
+    }
+  }
+
+  function openCancelBooking(booking: Booking) {
+    cancelBookingTarget.value = booking
+  }
+  function closeCancelBooking() {
+    cancelBookingTarget.value = null
+  }
+
+  async function doCancelBooking() {
+    if (!record.value || !cancelBookingTarget.value) return
+    cancelBookingLoading.value = true
+    try {
+      await api.post(`/assets/${record.value.id}/bookings/${cancelBookingTarget.value.id}/cancel`)
+      cancelBookingTarget.value = null
+      toast.success('Booking cancelled.')
+      await Promise.all([load(record.value.id), loadBookings()])
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to cancel booking.')
+    } finally {
+      cancelBookingLoading.value = false
     }
   }
 
@@ -466,13 +581,30 @@ export function useAssetDetail() {
     // Permissions
     canEdit,
     canViewSensitive,
-    canToggleBooking,
+    canManageBooking,
     // Booking
-    bookingConfirmOpen,
+    bookings,
+    bookingsLoading,
+    bookingFormOpen,
     bookingLoading,
-    requestToggleBooking,
-    closeBookingConfirm,
-    doToggleBooking,
+    bookingForm,
+    bookingError,
+    bookingConflicts,
+    bookingEditTarget,
+    bookingDetailTarget,
+    openBookingDetail,
+    closeBookingDetail,
+    cancelBookingTarget,
+    cancelBookingLoading,
+    loadBookings,
+    openBookingForm,
+    closeBookingForm,
+    openEditBooking,
+    doCreateBooking,
+    doUpdateBooking,
+    openCancelBooking,
+    closeCancelBooking,
+    doCancelBooking,
     // Edit
     editOpen,
     confirmEditOpen,

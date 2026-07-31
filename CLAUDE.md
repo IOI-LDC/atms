@@ -97,6 +97,15 @@ SPA uses Sanctum cookie/session auth (`statefulApi()`, proxies trusted at `*`). 
 - `vite-plugin-vue-devtools` is installed but intentionally disabled in `vite.config.ts` (its fixed overlay added a blank page to every print); re-enable only if you re-check print output.
 - Feature flags are build-time Vite env vars in `src/lib/features.ts` — flipping one requires a rebuild.
 
+## Progress tracking (keep current)
+
+`.kilo/STATE.md` and `.kilo/TLD.md` are the project's progress files and must be updated as work happens — not at the end of a project, and not only when asked.
+
+- **`.kilo/STATE.md`** — session log, newest section first. Add a `## Session — YYYY-MM-DD` entry for what was done, what was decided, what broke and why, and anything a future session would otherwise rediscover the hard way. Record decisions with their reasoning so they aren't reopened.
+- **`.kilo/TLD.md`** — the live tracker: 🔴 In Progress, 🟡 Recently Completed (things the other side of the stack needs to know, e.g. an API contract change), 🟠 Deferred (**every deferred item needs a trigger** — "later" is not one), 🟢 Done, 🔵 External Blockers.
+
+Read both at the start of a session; update them during or immediately after the work.
+
 ## Conventions worth knowing
 
 - Times are stored in UTC; display timezone is `Africa/Tripoli`.

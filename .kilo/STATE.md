@@ -3,6 +3,218 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
+## Session — 2026-07-31
+
+- **D-008 Proper Booking model — BUILT (full-stack).** Replaced the bare `is_booked`
+  boolean toggle with a dedicated `bookings` table. Schema: `asset_id`, `booked_by`
+  (FK→users), `booked_from`/`booked_until` (dates), `booking_reference` (nullable),
+  `notes` (nullable), `status` enum (`active`/`cancelled`/`released`), `cancelled_at`,
+  timestamps. Composite index on `(asset_id, status, booked_from, booked_until)`.
+  - **Backend:** `BookingStatus` enum; `Booking` model with `active`/`coveringDate`/
+    `overlapping` scopes; `BookingResource`; `BookingPolicy` (Admin/Manager/Logistics);
+    `CreateAssetBooking` (overlap detection), `CancelAssetBooking`, `ReleaseAssetBookings`
+    actions; rewritten `AssetBookingController` with 3 endpoints
+    (`GET/POST /assets/{id}/bookings`, `POST /assets/{id}/bookings/{booking}/cancel`);
+    `Asset.is_booked` is now a derived accessor (`getIsBookedAttribute`);
+    `Asset.booted()` releases bookings on deactivation/withdrawal;
+    `UpdateAssetLocation` no longer clears booking (location change ≠ release);
+    `BookingReportQuery`, `AssetHealthKpiQuery`, `AssetUtilisationQuery`,
+    `AssetsByLocationReportQuery` all migrated to query the bookings table;
+    data migration backfills existing `is_booked=true` rows then drops the column.
+  - **Frontend:** `Booking` TS interface; `useAssetDetail` composable rewritten
+    (form-based create with date pickers + reference + notes, cancel confirm dialog,
+    `loadBookings` on mount); `AssetDetailView.vue` booking form dialog + cancel
+    dialog replace the old one-click toggle.
+  - **Frontend enhancements (same session):** Bookings card moved to right rail
+    (compact Reference + Status rows, clickable); row click → detail Dialog showing
+    all fields; Edit button → pre-filled form Dialog (`PUT` endpoint);
+    overlap → 409 with `conflicts` array → inline warning + "Book Anyway" force
+    button; `AssetIdentityBadges` gained a `<slot>` so the "Booked" badge renders
+    inline with serial/size/category badges in the asset list; `DatePicker` gained
+    `disablePortal` prop for use inside modal Dialogs (§8.3 fix); `.status-released`
+    badge class added (grey, same as cancelled).
+  - **Backend enhancements:** `UpdateAssetBooking` action + `PUT /assets/{id}/bookings/{booking}`
+    route; `BookingOverlapException` carries conflicting bookings; `store` accepts
+    `force: true` to bypass overlap; `BookingPolicy@update` added.
+  - **Verified:** 933 tests passed (2759 assertions), Pint clean, `vue-tsc --build`
+    clean. Old `ToggleAssetBooking` action is now dead code (can be deleted).
+  - **API contract change:** `POST /assets/{id}/book` and `/unbook` are **removed**.
+    New endpoints return `BookingResource` (201 on create). `AssetResource.is_booked`
+    is still emitted (derived) — no frontend list-view breakage.
+
+- **Git history reset by the user.** The repository was re-initialised: a single
+  `Initial commit` (1075 tracked files) on `main`, empty reflog. **No prior commit
+  or file version is recoverable** — there is no diff baseline, and `git checkout`
+  cannot restore a previous state of any file. Commit at natural stopping points.
+- **`CLAUDE.md` rewritten from scratch** at the repo root, derived only from live
+  code, config, and a verified test run. `backend/CLAUDE.md` and
+  `frontend/CLAUDE.md` are gone — **one root file now**, by user decision. Covers:
+  container-only backend commands (no host PHP/Composer), the
+  controller→Action→Resource flow, cursor pagination everywhere, the root-`.env`
+  precedence trap, and the `phpunit.xml` forced-`<env>`+`<server>`-twin rule.
+  Closes deferred item **D-002**.
+- **Verified baseline on the new initial commit:** backend **911 passed (2666
+  assertions, 24s)**; frontend `vue-tsc --build` clean.
+- **Frontend route cleanup.** `/locations2` and `views/locations/LocationsView.vue`
+  deleted (nothing referenced either; `ManageLocationsView` survives via
+  `LogisticsLocationView`). ⚠️ **`views/locations/AssetLocationUpdateView.vue` is
+  now orphaned** — `LocationsView` was its only consumer. Left in place pending a
+  keep/delete decision.
+- **`/dashboard-real` and `/reports-real` gated with `meta: { requiresAdmin: true }`.**
+  They carried no guard, so they shipped in the production bundle and were
+  reachable by any authenticated user who typed the URL. They exist purely for
+  internal verification and are **never** to reach the client product.
+
+### Dashboard — BUILT 2026-07-31 (design notes below it)
+
+**`/dashboard` is THE dashboard — final, client-facing, the only one that ships.**
+Components renamed to stop the placeholder confusion recurring:
+
+| Route | Component | Status |
+|---|---|---|
+| `/dashboard` | `DashboardView.vue` | **Final.** Rebuilt to the approved layout |
+| `/dashboard-verification` | `DashboardVerificationView.vue` | Admin-only, disposable, delete after sign-off |
+
+**Backend (926 → 933 tests passing, Pint clean):**
+
+- **`App\Enums\AssetDeployment`** — ⚠️ **the single source of truth for "out for
+  work vs idle."** If LDC defines deployment differently, change
+  `forLocationType()` and nothing else. Mapping: `rig` + `well_site` → DEPLOYED,
+  `yard` + `building` → IDLE, `workshop` → MAINTENANCE. Workshop is deliberately
+  its own bucket — counting maintenance as idle makes the maintenance function
+  look like dead time.
+- **`App\Enums\LocationType`** — the `locations.type` vocabulary. Deliberately
+  **not** cast on the Location model: LDC can add a type at any time and a cast
+  would throw on hydration. Read via `tryFrom()`; an unknown type is reported as
+  `unclassified` rather than absorbed into a bucket, so a new type is visible
+  instead of silently distorting the percentage. A test asserts every type in the
+  database maps.
+- **`AssetUtilisationQuery`** — population is active + enrolled. Denominator
+  (`eligible`) excludes DOWN / UNDER_MAINTENANCE and anything unlocated;
+  `unlocated` is reported separately so the data gap stays visible instead of
+  being hidden inside a ratio.
+- **`ProgramReadinessQuery`** — PM coverage, location recorded, baseline reading.
+- `AssetHealthKpiQuery` gained `by_booking` (the second status axis). All of it is
+  served from the existing
+  `GET /api/dashboard/kpis` under new `utilisation` and `readiness` keys —
+  window-independent by design, since the dashboard has no date range.
+
+**Frontend:** `DashboardView.vue` rebuilt to the 12-column grid
+(triad → full → pair → pair → triad → pair); derived values live in
+`useDashboardKpis` (`utilisationSegments`, `utilisationBasis`, `readinessMetrics`,
+`statusAxes`), not the view. New `components/ui/segmented-bar` primitive holds the
+data-driven segment widths so no feature file carries an inline style. Empty
+states are written copy ("No failures yet"), never an em-dash.
+
+**⛔ SCOPE RULE (user decision 2026-07-31): withdrawal is ERP territory.**
+`maintenance_status = withdrawn` and every `maintenance_sub_status`
+(`lih`, `dbr`, `disposed`, `scrapped`, `other`, `installed`, `ready`) are owned and
+managed in the ERP. **ATMS must not surface, count, or report them** — do not add a
+"Withdrawn" axis, a disposal count, or a sub-status breakdown to any dashboard or
+report. `by_maintenance_status` was built and then **removed** for this reason.
+The `maintenance_status = enrolled` filter stays as an internal population guard
+(withdrawn assets are excluded from ATMS metrics); it is never displayed.
+
+**Asset status card = plain count rows** (user decision, after two rejected bar
+treatments). Four operational rows — **Active, Under Maintenance, Down, Inactive,
+always all four even at zero** — then an `<hr>`, then **Booked**. Each row carries a
+7px status dot; no bars in this card. Booking sits below the separator because it
+is a **different axis, not a fifth operational state**: an asset can be Booked and
+Under Maintenance at once, so the counts either side of the rule deliberately do
+not sum. ⚠️ Two earlier attempts were rejected — a per-axis progress fill (each row
+a different numerator, so one visual meant three things) and 100%-stacked bars per
+axis. Don't reintroduce either.
+
+**Still open (raised, not resolved):** `operational_status = 'inactive'` and the
+record-level `is_active = false` are two different concepts sharing the word
+"Inactive", and the dashboard shows the first while silently filtering out the
+second. A display-only rename (e.g. Inactive → Retired) would fix it without a
+migration. No decision taken.
+
+⚠️ **Known gap:** the closing pair's right-hand column is **Recent asset moves**
+(from the existing relocated feed), not the full "Recent activity" in the design.
+A unified activity feed needs a new `audit_logs`-backed endpoint — not built.
+
+### Dashboard + Reports redesign — design notes
+
+LDC issued dashboard and reporting requirements; clarification questions are with
+them. Findings from reading the schema against those requirements:
+
+- **"Asset status" is three independent axes in ATMS**, not one. LDC's
+  available / in use / maintenance / disposed maps across `is_booked`,
+  `operational_status`, and `maintenance_status` + `maintenance_sub_status`. An
+  asset can be booked *and* under maintenance *and* enrolled at once, so "count by
+  status" needs three breakdowns or LDC must nominate one axis.
+- ⚠️ **Disposal DOES exist in the model.** `MaintenanceSubStatus` already defines
+  `DISPOSED` and `SCRAPPED`, alongside `MaintenanceStatus::WITHDRAWN` (enforced —
+  withdrawn assets are blocked from MR creation, approval, and WO assignment) and
+  an `erp_status` column. Unused today (all 400 assets `enrolled`/`active`), but
+  the reply to LDC saying disposal "will not be an ATMS status" overstates it.
+- **No asset status history table.** `asset_location_histories` gives location over
+  time; `operational_status`/`maintenance_status` are overwritten in place, with
+  past values surviving only inside `audit_logs` before/after blobs. **A
+  date-filtered status report is therefore unanswerable** without a schema
+  addition — only "current status, created/updated in range".
+- **No export capability exists anywhere** (the sole download path is attachments).
+  CSV, xlsx, and PDF are all net-new. CSV streams cheaply from the existing cursor
+  queries; PDF has a working precedent in `PartRequestPrintView.vue` (standalone
+  print-styled route, browser print, no library); xlsx needs a new dependency.
+- **Report 1 field "Assigned To" has no source** — assets have no custodian column;
+  only work orders have an assignee.
+- **Date-range is a REPORTS-only control (user decision 2026-07-31).** The
+  dashboard is current-state only, no date filters.
+
+**Asset utilisation — agreed new metric, definable on existing data.**
+`locations.type` already carries the taxonomy: `rig` + `well_site` = deployed,
+`yard` + `building` = idle, `workshop` = maintenance. Point-in-time utilisation
+(deployed ÷ eligible, excluding down/under-maintenance) belongs on the dashboard;
+the windowed **rate** (asset-days deployed ÷ asset-days eligible, reconstructed
+from `asset_location_histories.effective_at`) belongs in reports.
+⚠️ **Blocked on data: 396 of 400 assets have `current_location_id = NULL`** and
+only 5 movement rows exist, so utilisation reads ~0% until location data is
+captured.
+
+**Proper Booking — REQUIRED (decided 2026-07-31, redesigned 2026-07-31 as separate table).** `is_booked` is a bare boolean toggled by `ToggleAssetBooking`, but Operations book **up to three months ahead** for future jobs. Today ATMS cannot say what a booking is *for*, *when* it runs, or *who* committed the asset, and cannot detect overlaps. "Booked but still on yard" therefore carries **no** signal — it is the normal state for most of a booking's life.
+
+**Redesigned as a dedicated `bookings` table** (not columns on `assets`) so full history is preserved:
+
+| Column | Type | Purpose |
+|---|---|---|
+| `id` | bigint PK | |
+| `asset_id` | FK → assets | Which asset is committed |
+| `booked_by` | FK → users | Who made the commitment (accountability) |
+| `booked_from` | date | Start of the commitment window |
+| `booked_until` | date | End of the commitment window |
+| `booking_reference` | string, nullable | The job/project the asset is committed to |
+| `notes` | text, nullable | Free-form context |
+| `status` | enum: `active`, `cancelled`, `released` | Lifecycle state |
+| `cancelled_at` | timestamp, nullable | When cancelled/released |
+| `timestamps` | | created_at / updated_at |
+
+`is_booked` on `assets` becomes **derived** — EXISTS an active booking whose window covers today — and the stored boolean column is dropped after data migration. This unlocks: commitments by month, upcoming mobilisations, overlap/double-booking detection, a truthful "available" count, and full audit history of who booked what and when.
+
+**Key behaviours:**
+- Overlap detection: reject a new booking if an active booking on the same asset overlaps the requested date range.
+- Auto-release: asset deactivation or withdrawal from maintenance sets matching active bookings to `released`.
+- History preserved: cancelled/released rows are never deleted.
+- Location change does NOT auto-release (corrected from earlier doc — code only released on deactivation/withdrawal).
+
+**Build before go-live** — migrating live booking data afterwards is far more expensive. Overlap-blocking pending LDC answer (external blocker #5b).
+
+**Layout agreed (visual proposal):** 12-column grid, rhythm
+triad → full → pair → pair → triad → full; every row divides into equal siblings.
+Bands: Attention · Utilisation (hero) · Reliability | Process Performance ·
+Fleet status | By location · Program readiness · Recent activity. State colour
+confined to 7px dots and thin bar segments — no filled cards. Empty states are
+written copy ("No failures yet"), not em-dashes, so the first months don't look
+broken. Mockup: https://claude.ai/code/artifact/50ede17e-5c1c-4854-8055-b1ea8627f974
+- **"Program readiness" band is a deliberate addition** (PM coverage 1/400,
+  location recorded 4/400, baseline reading 8/400). It is the only band with
+  meaningful numbers pre-adoption and it drives the data capture that makes every
+  other metric work. Intended to be dropped once coverage approaches 100%.
+- **Equipment Reliability + Process Performance stay on the dashboard** (user
+  decision) despite currently having no data to show.
+
 ## Decision update — 2026-07-11
 
 - **Microsoft Graph `sendMail` is the only ATMS production email transport.**
@@ -330,7 +542,7 @@ concerns). G-03 (location picker for non-Admins) still open.
 | Asset tag ownership codes | `L` = LDC (we maintain), `X` = External (we don't) |
 | Asset maintenance status | `enrolled`/`withdrawn` (renamed from `Active`/`Inactive` to kill the `operational_status='active'` collision) — gates MR/WO/PM workflows. Sub-statuses `installed`/`ready`/`lih`/`dbr`/`disposed`/`scrapped`/`other` (lowercased), informational only. Display labels: enrolled→"In maintenance program", withdrawn→"Withdrawn". Input shims (`LegacyAssetStatusNormalizer`) accept both cases until Plan 3 removes them. (2026-07-02) |
 | Asset operational status | Separate axis from maintenance_status — informational only, no workflow gating. |
-| Asset booking (`is_booked`) | Availability marker for Operations to reserve an asset for a Job/Project. Boolean, no job reference stored. Auto-releases on location change or deactivation/inactivation. Does NOT gate MR/WO/PM. Toggled by Admin/Manager/Logistics. (2026-06-27) |
+| Asset booking | Dedicated `bookings` table (redesigned 2026-07-31). Date-ranged (`booked_from`/`booked_until`), job reference, booked-by user, status lifecycle (`active`/`cancelled`/`released`). `is_booked` on assets is derived (active booking covering today). Overlap detection rejects conflicts. Auto-releases on deactivation/withdrawal only (NOT location change). Does NOT gate MR/WO/PM. Toggled by Admin/Manager/Logistics. Supersedes the 2026-06-27 bare-boolean design. |
 | Employee directory source | CSV-backed (`CsvEmployeeDirectorySource`, `EMPLOYEE_CSV_PATH`), not DB import. `EMPLOYEE_VISIBLE_EMP_IDS` whitelist controls who appears in the list. Provisioning upserts a single Employee row to DB. (2026-06-27) |
 | Migration strategy for erp_asset_id | Edit original migration (SQLite `:memory:` runs `migrate:fresh`). Production one-time `ALTER TABLE DROP COLUMN`. |
 | Mock ERP | Fully deleted. `LdcErpHttpSource` skips sync gracefully when `LDC_ERP_PARTS_API` is empty. |
@@ -357,7 +569,9 @@ concerns). G-03 (location picker for non-Admins) still open.
 
 ## Known Inconsistencies
 
-- **`CLAUDE.md`** references old `frontend/` paths — stale but out of scope for Phase 1 backend cleanup. Frontend rename is deferred.
+- ~~**`CLAUDE.md`** references old `frontend/` paths~~ — resolved 2026-07-31; the
+  file was rewritten from live code. The `frontend/` → `atms/` rename (D-001)
+  remains deferred, so current paths are correct as written.
 
 > ✅ **Phase 1 complete (2026-06-25)** — 8 tasks implemented, 304 tests passing, 2 rounds code review resolved, all documentation updated. See `.kilo/plans/1782388457617-phase1-backend-cleanup-and-features.md` for full execution log and post-review fixes.
 

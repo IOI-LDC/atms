@@ -36,5 +36,6 @@ withDefaults(
       {{ asset.maintenance_category.name }}
     </span>
     <span v-if="showTag && asset.asset_tag" class="identity-tag">{{ asset.asset_tag }}</span>
+    <slot />
   </span>
 </template>

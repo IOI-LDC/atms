@@ -5,6 +5,7 @@ namespace App\Queries\Reports;
 use App\Enums\AssetKind;
 use App\Enums\OperationalStatus;
 use App\Models\Asset;
+use App\Models\Booking;
 use App\Models\Location;
 use Illuminate\Support\Collection;
 
@@ -27,6 +28,8 @@ class AssetsByLocationReportQuery
             ->when($filters['operational_status'] ?? null, fn ($q, $v) => $q->where('operational_status', $v))
             ->when(! ($filters['include_inactive'] ?? false), fn ($q) => $q->where('is_active', true));
 
+        $today = now()->toDateString();
+
         $rows = (clone $base)
             ->selectRaw('current_location_id, count(*) as asset_count')
             ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as active_count', [OperationalStatus::ACTIVE->value])
@@ -36,7 +39,7 @@ class AssetsByLocationReportQuery
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as standalone_count', [AssetKind::ASSET->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as package_count', [AssetKind::PACKAGE->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as component_count', [AssetKind::COMPONENT->value])
-            ->selectRaw('sum(case when is_booked = true then 1 else 0 end) as booked_count')
+            ->selectRaw('sum(case when assets.id in (select asset_id from bookings where status = ? and booked_from <= ? and booked_until >= ?) then 1 else 0 end) as booked_count', ['active', $today, $today])
             ->groupBy('current_location_id')
             ->orderByRaw('current_location_id IS NULL, current_location_id')
             ->get();

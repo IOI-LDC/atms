@@ -3,6 +3,8 @@
 namespace App\Queries\Dashboard\Kpis;
 
 use App\Enums\OperationalStatus;
+use App\Models\Asset;
+use App\Models\Booking;
 use App\Queries\Reports\OperationalStatusDistributionReportQuery;
 
 /**
@@ -50,8 +52,32 @@ class AssetHealthKpiQuery
                     'down' => $byStatus[OperationalStatus::DOWN->value] ?? 0,
                     'inactive' => $byStatus[OperationalStatus::INACTIVE->value] ?? 0,
                 ],
+                'by_booking' => $this->bookingCounts(),
                 'total' => $total,
             ],
         ];
+    }
+
+    /**
+     * Booking is a separate axis from operational status: an asset can be booked
+     * and under maintenance at the same time. Counted over non-deactivated
+     * assets, matching the distribution above.
+     *
+     * @return array{booked: int, available: int}
+     */
+    private function bookingCounts(): array
+    {
+        $today = now()->toDateString();
+
+        $bookedAssetIds = Booking::active()
+            ->where('booked_from', '<=', $today)
+            ->where('booked_until', '>=', $today)
+            ->pluck('asset_id');
+
+        $activeAssets = Asset::where('is_active', true);
+        $total = (clone $activeAssets)->count();
+        $booked = (clone $activeAssets)->whereIn('id', $bookedAssetIds)->count();
+
+        return ['booked' => $booked, 'available' => $total - $booked];
     }
 }

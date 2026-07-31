@@ -168,8 +168,9 @@ function goDetail(payload: { row: Asset }) {
             </span>
 
             <span v-else-if="column.field === 'name'" class="table-cell-stack">
-              <AssetIdentity :asset="row" stacked />
-              <span v-if="row.is_booked" class="status-badge status-booked">Booked</span>
+              <AssetIdentity :asset="row" stacked>
+                <span v-if="row.is_booked" class="status-badge status-booked">Booked</span>
+              </AssetIdentity>
             </span>
 
             <span v-else-if="column.field === 'fa_subclass_code'">

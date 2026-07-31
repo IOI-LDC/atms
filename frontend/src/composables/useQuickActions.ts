@@ -47,8 +47,10 @@ export function useQuickActions(only?: readonly string[]) {
     })
 
     if (auth.isAdminOrManager || auth.isLogistics) {
+      // Labelled for the action, not the screen — the link lands on the
+      // asset-location-update tab, not a locations index.
       list.push({
-        label: 'Locations',
+        label: 'Update Location',
         icon: MapPin,
         to: { path: '/locations', query: { tab: 'asset-location-update' } },
       })

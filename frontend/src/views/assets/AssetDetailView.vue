@@ -6,6 +6,7 @@ import AppLayout from '@/components/app/AppLayout.vue'
 import DetailNotFound from '@/components/app/DetailNotFound.vue'
 import AssetPmSection from '@/components/assets/AssetPmSection.vue'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -72,12 +73,29 @@ const {
   loadAttachments,
   canEdit,
   canViewSensitive,
-  canToggleBooking,
-  bookingConfirmOpen,
+  canManageBooking,
+  bookings,
+  bookingsLoading,
+  bookingFormOpen,
   bookingLoading,
-  requestToggleBooking,
-  closeBookingConfirm,
-  doToggleBooking,
+  bookingForm,
+  bookingError,
+  bookingConflicts,
+  bookingEditTarget,
+  bookingDetailTarget,
+  openBookingDetail,
+  closeBookingDetail,
+  cancelBookingTarget,
+  cancelBookingLoading,
+  loadBookings,
+  openBookingForm,
+  closeBookingForm,
+  openEditBooking,
+  doCreateBooking,
+  doUpdateBooking,
+  openCancelBooking,
+  closeCancelBooking,
+  doCancelBooking,
   editOpen,
   confirmEditOpen,
   saving,
@@ -195,6 +213,7 @@ watch(
     void loadLocationHistory(newId)
     void loadReadings(newId)
     void loadAttachments(newId)
+    void loadBookings()
     // Backs the Edit Asset Size / Maintenance Category dropdowns.
     void loadMaintenanceCategories()
     void loadAssetSizes()
@@ -250,11 +269,11 @@ watch(
 
             <div class="detail-command-actions">
               <Button
-                v-if="canToggleBooking"
+                v-if="canManageBooking"
                 size="sm"
                 variant="outline"
-                @click="requestToggleBooking"
-                >{{ record.is_booked ? 'Unbook' : 'Book' }}</Button
+                @click="openBookingForm"
+                >Book</Button
               >
               <Button v-if="canEdit" size="sm" @click="openEdit">Edit Asset</Button>
             </div>
@@ -363,43 +382,6 @@ watch(
               </div>
             </div>
 
-            <!-- ── Location History card ──────────────────────────────────── -->
-            <div class="data-card">
-              <div class="data-card-header">
-                <h2 class="data-card-title">Location History</h2>
-              </div>
-              <div class="data-card-content">
-                <div v-if="locationHistoryLoading" class="loading-state">
-                  Loading location history…
-                </div>
-                <div v-else-if="locationHistory.length === 0" class="empty-state">
-                  No location changes recorded.
-                </div>
-                <table v-else class="detail-table">
-                  <thead class="detail-table-head">
-                    <tr>
-                      <th>Effective Date</th>
-                      <th>From</th>
-                      <th>To</th>
-                      <th>Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="h in locationHistory" :key="h.id" class="detail-table-row">
-                      <td class="detail-table-cell">{{ fmtDate(h.effective_at) }}</td>
-                      <td class="detail-table-cell detail-field-muted">
-                        {{ h.from_location?.name ?? '—' }}
-                      </td>
-                      <td class="detail-table-cell">
-                        {{ h.to_location?.name ?? '—' }}
-                      </td>
-                      <td class="detail-table-cell">{{ h.reason ?? '—' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
             <!-- ── Maintenance History card (not Logistics) ───────────────── -->
             <div v-if="!auth.isLogistics" class="data-card">
               <div class="data-card-header">
@@ -494,6 +476,63 @@ watch(
           </div>
 
           <aside class="detail-rail">
+            <!-- ── Bookings ─────────────────────────────────────────────── -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Bookings</h2>
+              </div>
+              <div class="data-card-content">
+                <div v-if="bookingsLoading" class="loading-state">Loading bookings…</div>
+                <div v-else-if="bookings.length === 0" class="empty-state">No bookings recorded.</div>
+                <ul v-else class="booking-list">
+                  <li
+                    v-for="b in bookings"
+                    :key="b.id"
+                    class="booking-list-item"
+                    @click="openBookingDetail(b)"
+                  >
+                    <span class="booking-list-ref">{{ b.booking_reference || 'No reference' }}</span>
+                    <span :class="`status-badge status-${b.status}`">{{ b.status }}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- ── Location History ─────────────────────────────────────── -->
+            <div class="data-card">
+              <div class="data-card-header">
+                <h2 class="data-card-title">Location History</h2>
+              </div>
+              <div class="data-card-content">
+                <div v-if="locationHistoryLoading" class="loading-state">
+                  Loading location history…
+                </div>
+                <div v-else-if="locationHistory.length === 0" class="empty-state">
+                  No location changes recorded.
+                </div>
+                <table v-else class="detail-table">
+                  <thead class="detail-table-head">
+                    <tr>
+                      <th>Date</th>
+                      <th>From</th>
+                      <th>To</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="h in locationHistory" :key="h.id" class="detail-table-row">
+                      <td class="detail-table-cell">{{ fmtDate(h.effective_at) }}</td>
+                      <td class="detail-table-cell detail-field-muted">
+                        {{ h.from_location?.name ?? '—' }}
+                      </td>
+                      <td class="detail-table-cell">
+                        {{ h.to_location?.name ?? '—' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <!-- ── ERP Reference (not Logistics) ────────────────────────── -->
             <div v-if="canViewSensitive" class="data-card">
               <div class="data-card-header">
@@ -904,38 +943,192 @@ watch(
       </SheetContent>
     </Sheet>
 
-    <!-- ── Confirm Edit dialog ─────────────────────────────────────────────── -->
+    <!-- ── Booking form dialog ─────────────────────────────────────────────── -->
     <Dialog
-      :open="bookingConfirmOpen"
+      :open="bookingFormOpen"
       @update:open="
         (v) => {
-          if (!v) closeBookingConfirm()
+          if (!v) closeBookingForm()
         }
       "
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{
-            record?.is_booked ? 'Unbook this asset?' : 'Book this asset?'
-          }}</DialogTitle>
+          <DialogTitle>{{ bookingEditTarget ? 'Edit booking' : 'Book this asset' }}</DialogTitle>
           <DialogDescription>
-            <template v-if="record?.is_booked">
-              This releases the reservation on <strong>{{ record?.name }}</strong
-              >, making it freely available again.
+            <template v-if="bookingEditTarget">
+              Update dates or details for this booking on <strong>{{ record?.name }}</strong>.
             </template>
             <template v-else>
-              This reserves <strong>{{ record?.name }}</strong> for a Job/Project. It stays
-              available for maintenance, and the booking auto-releases if the asset is moved or
-              deactivated.
+              Reserve <strong>{{ record?.name }}</strong> for a job or project.
             </template>
           </DialogDescription>
         </DialogHeader>
+        <div class="form-grid">
+          <div class="form-field">
+            <Label>From</Label>
+            <DatePicker v-model="bookingForm.booked_from" disable-portal placeholder="Select start date" :max="bookingForm.booked_until || null" />
+          </div>
+          <div class="form-field">
+            <Label>Until</Label>
+            <DatePicker v-model="bookingForm.booked_until" disable-portal placeholder="Select end date" :min="bookingForm.booked_from || null" />
+          </div>
+          <p v-if="bookingError" class="form-error form-field-full">{{ bookingError }}</p>
+          <div class="form-field-full">
+            <Label>Job / Project reference (optional)</Label>
+            <Input v-model="bookingForm.booking_reference" placeholder="e.g. JOB-2026-014" />
+          </div>
+          <div class="form-field-full">
+            <Label>Notes (optional)</Label>
+            <Textarea v-model="bookingForm.notes" rows="2" placeholder="Additional context…" />
+          </div>
+        </div>
+        <div v-if="bookingConflicts" class="form-field-full booking-conflict-warning">
+          <p class="form-error">
+            This asset already has an active booking overlapping these dates:
+          </p>
+          <ul class="booking-conflict-list">
+            <li v-for="c in bookingConflicts" :key="c.id">
+              {{ c.booking_reference || 'No reference' }} — {{ fmtDate(c.booked_from) }} to {{ fmtDate(c.booked_until) }}
+              ({{ c.booked_by?.name ?? 'unknown' }})
+            </li>
+          </ul>
+        </div>
         <DialogFooter>
-          <Button variant="outline" :disabled="bookingLoading" @click="closeBookingConfirm"
+          <Button variant="outline" :disabled="bookingLoading" @click="closeBookingForm"
+            >Cancel</Button
+          >
+          <Button
+            v-if="bookingConflicts"
+            variant="destructive"
+            :disabled="bookingLoading"
+            @click="doCreateBooking(true)"
+          >
+            {{ bookingLoading ? 'Saving…' : 'Book Anyway' }}
+          </Button>
+          <Button
+            v-else
+            :disabled="bookingLoading || !bookingForm.booked_from || !bookingForm.booked_until"
+            @click="bookingEditTarget ? doUpdateBooking() : doCreateBooking()"
+          >
+            {{ bookingLoading ? 'Saving…' : bookingEditTarget ? 'Save Changes' : 'Create Booking' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- ── Cancel booking confirm ────────────────────────────────────────────── -->
+    <Dialog
+      :open="!!cancelBookingTarget"
+      @update:open="
+        (v) => {
+          if (!v) closeCancelBooking()
+        }
+      "
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cancel this booking?</DialogTitle>
+          <DialogDescription>
+            This cancels the booking on <strong>{{ record?.name }}</strong>
+            <template v-if="cancelBookingTarget?.booking_reference">
+              ({{ cancelBookingTarget.booking_reference }})
+            </template>
+            for {{ cancelBookingTarget?.booked_from }} – {{ cancelBookingTarget?.booked_until }}.
+            The booking record is preserved in history.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" :disabled="cancelBookingLoading" @click="closeCancelBooking"
             >Back</Button
           >
-          <Button :disabled="bookingLoading" @click="doToggleBooking">
-            {{ bookingLoading ? 'Saving…' : record?.is_booked ? 'Unbook Asset' : 'Book Asset' }}
+          <Button variant="destructive" :disabled="cancelBookingLoading" @click="doCancelBooking">
+            {{ cancelBookingLoading ? 'Cancelling…' : 'Cancel Booking' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- ── Booking detail dialog ────────────────────────────────────────────── -->
+    <Dialog
+      :open="!!bookingDetailTarget"
+      @update:open="
+        (v) => {
+          if (!v) closeBookingDetail()
+        }
+      "
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Booking details</DialogTitle>
+          <DialogDescription>
+            {{ bookingDetailTarget?.booking_reference || 'No reference' }} —
+            {{ record?.name }}
+          </DialogDescription>
+        </DialogHeader>
+        <div v-if="bookingDetailTarget" class="detail-grid">
+          <div class="detail-field">
+            <span class="detail-field-label">From</span>
+            <p class="detail-field-value">{{ fmtDate(bookingDetailTarget.booked_from) }}</p>
+          </div>
+          <div class="detail-field">
+            <span class="detail-field-label">Until</span>
+            <p class="detail-field-value">{{ fmtDate(bookingDetailTarget.booked_until) }}</p>
+          </div>
+          <div class="detail-field">
+            <span class="detail-field-label">Reference</span>
+            <p class="detail-field-value">{{ bookingDetailTarget.booking_reference || '—' }}</p>
+          </div>
+          <div class="detail-field">
+            <span class="detail-field-label">Status</span>
+            <p class="detail-field-value">
+              <span :class="`status-badge status-${bookingDetailTarget.status}`">{{
+                bookingDetailTarget.status
+              }}</span>
+            </p>
+          </div>
+          <div class="detail-field">
+            <span class="detail-field-label">Booked by</span>
+            <p class="detail-field-value">{{ bookingDetailTarget.booked_by?.name ?? '—' }}</p>
+          </div>
+          <div class="detail-field">
+            <span class="detail-field-label">Created</span>
+            <p class="detail-field-value">{{ fmtDate(bookingDetailTarget.created_at) }}</p>
+          </div>
+          <div v-if="bookingDetailTarget.notes" class="detail-field detail-field-block">
+            <span class="detail-field-label">Notes</span>
+            <p class="detail-field-value">{{ bookingDetailTarget.notes }}</p>
+          </div>
+          <div v-if="bookingDetailTarget.cancelled_at" class="detail-field">
+            <span class="detail-field-label">Cancelled at</span>
+            <p class="detail-field-value">{{ fmtDate(bookingDetailTarget.cancelled_at) }}</p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="closeBookingDetail">Close</Button>
+          <Button
+            v-if="bookingDetailTarget?.status === 'active' && canManageBooking"
+            variant="outline"
+            @click="
+              () => {
+                openEditBooking(bookingDetailTarget!)
+                closeBookingDetail()
+              }
+            "
+          >
+            Edit
+          </Button>
+          <Button
+            v-if="bookingDetailTarget?.status === 'active' && canManageBooking"
+            variant="destructive"
+            @click="
+              () => {
+                openCancelBooking(bookingDetailTarget!)
+                closeBookingDetail()
+              }
+            "
+          >
+            Cancel Booking
           </Button>
         </DialogFooter>
       </DialogContent>
