@@ -1,0 +1,6751 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn-vue/tailwind.css';
+@import 'vue-sonner/style.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* NOTE: `@custom-variant dark` and the `.dark { … }` block are intentionally
+   absent — ATMS is light-theme only. Do not re-add them. */
+
+:root {
+  --background: oklch(0.994 0 0);
+  --foreground: oklch(0.4148 0.1297 262.3056);
+  --card: oklch(0.994 0 0);
+  --card-foreground: oklch(0.4148 0.1297 262.3056);
+  --popover: oklch(0.9911 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0.4148 0.1297 262.3056);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.954 0.0063 255.4755);
+  --secondary-foreground: oklch(0.4148 0.1297 262.3056);
+  --muted: oklch(0.9702 0 0);
+  --muted-foreground: oklch(0.4386 0 0);
+  --accent: oklch(0.9393 0.0288 266.368);
+  --accent-foreground: oklch(0.4148 0.1297 262.3056);
+  --destructive: oklch(0.629 0.1902 23.0704);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.93 0.0094 286.2156);
+  --input: oklch(0.9401 0 0);
+  --ring: oklch(0.8181 0.0042 286.3076);
+  --chart-1: oklch(0.7459 0.1483 156.4499);
+  --chart-2: oklch(0.5393 0.2713 286.7462);
+  --chart-3: oklch(0.7336 0.1758 50.5517);
+  --chart-4: oklch(0.5828 0.1809 259.7276);
+  --chart-5: oklch(0.559 0 0);
+
+  /* Status tokens — reused from previous palette, harmonised with status classes */
+  --success: oklch(0.53 0.145 142);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.7 0.155 75);
+  --warning-foreground: oklch(0.145 0 0);
+  --info: oklch(0.58 0.138 232);
+  --info-foreground: oklch(0.985 0 0);
+
+  /* Sidebar — light by design */
+  --sidebar: oklch(0.994 0 0);
+  --sidebar-foreground: oklch(0.4148 0.1297 262.3056);
+  --sidebar-primary: oklch(0.4148 0.1297 262.3056);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.9693 0.0144 264.4994);
+  --sidebar-accent-foreground: oklch(0.4148 0.1297 262.3056);
+  --sidebar-border: oklch(0.93 0.0094 286.2156);
+  --sidebar-ring: oklch(0.8181 0.0042 286.3076);
+
+  /* Typography */
+  --font-sans: Geist, Lato, ui-sans-serif, sans-serif, system-ui;
+  --font-serif: Merriweather, ui-serif, serif;
+  --font-mono: Roboto Mono, ui-monospace, monospace;
+
+  /* Radius / spacing / shadows (from user palette) */
+  --radius: 0.4rem;
+  --spacing: 0.23rem;
+  --shadow-premium-sm: 0 2px 8px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-premium-md: 0 4px 16px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-premium-lg: 0 12px 32px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
+  /* Modal elevation — layered and tinted with the brand navy so dialogs read as
+     lifted off the page. The --shadow-premium-* set is deliberately flat (cards
+     sit *in* the page); overlays need real depth, hence a separate token. */
+  --shadow-modal:
+    0 2px 4px -1px oklch(0.3 0.09 262 / 0.1), 0 12px 24px -6px oklch(0.3 0.09 262 / 0.18),
+    0 32px 56px -16px oklch(0.3 0.09 262 / 0.3);
+  --shadow-2xs: 0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.08);
+  --shadow-xs: 0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.08);
+  --shadow-sm:
+    0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.16),
+    0px 1px 2px -1px hsl(211.6316 106.8326% 78.562% / 0.16);
+  --shadow:
+    0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.16),
+    0px 1px 2px -1px hsl(211.6316 106.8326% 78.562% / 0.16);
+  --shadow-md:
+    0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.16),
+    0px 2px 4px -1px hsl(211.6316 106.8326% 78.562% / 0.16);
+  --shadow-lg:
+    0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.16),
+    0px 4px 6px -1px hsl(211.6316 106.8326% 78.562% / 0.16);
+  --shadow-xl:
+    0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.16),
+    0px 8px 10px -1px hsl(211.6316 106.8326% 78.562% / 0.16);
+  --shadow-2xl: 0px 2px 3px 0px hsl(211.6316 106.8326% 78.562% / 0.4);
+
+  /* App chrome layout tokens (still consumed by pre-Task-4 selectors) */
+  --nav-height: 3.5rem;
+  --sidebar-width: 15rem;
+  --sidebar-width-collapsed: 3.75rem;
+  --atms-rose: oklch(0.37 0.088 12);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+  --shadow-modal: var(--shadow-modal);
+  --font-heading: var(--font-sans);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   App shell — composes shadcn Sidebar primitives (light by default)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.app-shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  height: var(--nav-height);
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--background);
+}
+
+.app-shell-header-left,
+.app-shell-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.app-topbar-link {
+  color: var(--muted-foreground);
+}
+
+.app-topbar-link.router-link-active {
+  color: var(--primary);
+  background-color: var(--accent);
+}
+
+.app-user-menu-trigger {
+  height: auto;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.app-user-menu-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.app-user-menu-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.app-user-menu-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.app-user-menu-role {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.app-user-menu-chevron {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+
+/* The dropdown primitive pins width to the trigger width; the trigger (avatar
+   button) is narrow, so longer items like "Change password" wrap. min-width
+   clamps the width upward, giving every item room on one line. */
+.app-user-menu-content {
+  min-width: 14rem;
+}
+
+@media (max-width: 40rem) {
+  .app-user-menu-info {
+    display: none;
+  }
+}
+
+.app-shell-main {
+  padding: 1.5rem;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0.75rem 1rem;
+  border-bottom: 1px solid var(--sidebar-border);
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-brand-logo {
+  height: 1.5rem;
+  width: auto;
+}
+
+.sidebar-brand-mark {
+  display: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: hsl(var(--primary));
+}
+
+[data-sidebar='menu'] {
+  gap: 0.5rem;
+}
+
+[data-slot='sidebar-menu-button'][data-sidebar='menu-button'] {
+  font-size: 1rem;
+}
+
+[data-slot='sidebar-menu-button'][data-active='true'] {
+  position: relative;
+  background-color: var(--sidebar-accent) !important;
+  color: var(--sidebar-accent-foreground) !important;
+  font-weight: 600;
+}
+
+[data-slot='sidebar-menu-button'][data-active='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  background-color: var(--primary);
+  border-radius: 99px;
+}
+
+[data-state='collapsed'] .sidebar-brand {
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+[data-state='collapsed'] .sidebar-brand-logo {
+  display: none;
+}
+
+[data-state='collapsed'] .sidebar-brand-mark {
+  display: block;
+}
+
+/* ── Detail page layout ── */
+
+/* Back button (detail pages) — sits flush left at the top of the page. */
+.detail-back {
+  align-self: flex-start;
+  gap: 0.375rem;
+  margin-left: -0.5rem;
+}
+.detail-back-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Terminal / read-only notice. */
+.detail-banner {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--muted-foreground);
+  border-radius: var(--radius);
+  background: var(--muted);
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+/* Detail card — a touch more breathing room than the shared data-card,
+   and content laid out as stacked sections. */
+.detail-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Inline explanatory note inside a detail card — e.g. clarifying that a locked
+   record still accepts attachments. Quieter than an alert, louder than muted
+   body text. */
+.detail-note {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid var(--border);
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.detail-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+/* Field grid — short labelled values flow into as many columns as fit;
+   block fields (long text, editors) span the full row. */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1.5rem 2rem;
+  margin: 0;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.detail-field-block {
+  grid-column: 1 / -1;
+}
+
+.detail-field-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.detail-field-value {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.detail-field-muted {
+  color: var(--muted-foreground);
+}
+
+/* Long-form values (description, reasons) preserve authored line breaks. */
+.detail-field-prose {
+  white-space: pre-wrap;
+}
+
+/* Sub-sections inside the details card (preventive trigger, reasons, WO link). */
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.detail-section-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   My Profile
+   ═══════════════════════════════════════════════════════════════════ */
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-capability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 1.125rem;
+}
+
+.profile-capability-item {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+/* Quick-link buttons fill their grid cell; the trailing chevron's auto
+   margin snaps it to the right edge regardless of the button's justify. */
+.profile-quick-action {
+  width: 100%;
+}
+
+.profile-quick-action-chevron {
+  margin-left: auto;
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+
+/* Highlighted reason callouts. */
+.detail-callout {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  background: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.detail-callout-destructive {
+  background: oklch(0.577 0.245 27 / 0.06);
+  border-color: oklch(0.577 0.245 27 / 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Detail pages — shared command bar + two-column layout (Approach A)
+   Used by Work Order and Asset detail. Page-specific content inside the
+   shell (WO lifecycle stepper / assignee / checklist) keeps its own wo-* names.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Sticky command bar: identity + status + primary actions, always reachable
+   while scrolling. WO adds a lifecycle stepper + assignee row inside it. */
+.detail-command-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Row 1: identity + primary/secondary actions. Row 2: lifecycle + assignee. */
+.detail-command-top,
+.detail-command-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.detail-command-bottom {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.detail-command-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.detail-command-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.detail-command-number {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.detail-command-subtitle {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+/* Lifecycle stepper */
+.wo-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.wo-step {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.wo-step:not(:first-child)::before {
+  content: '';
+  width: 1.25rem;
+  height: 1px;
+  background: var(--border);
+}
+
+.wo-step-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--background);
+  flex-shrink: 0;
+}
+
+.wo-step-label {
+  white-space: nowrap;
+}
+
+.wo-step[data-state='done'] .wo-step-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.wo-step[data-state='done'] .wo-step-label {
+  color: var(--foreground);
+}
+
+.wo-step[data-state='current'] .wo-step-dot {
+  border-color: var(--primary);
+  border-width: 2px;
+}
+
+.wo-step[data-state='current'] .wo-step-label {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.wo-stepper-cancelled {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--destructive);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wo-command-assignee {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wo-command-assignee-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.wo-command-assignee-name {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.detail-command-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Two-column execution layout: wide main surface + narrow context rail. */
+.detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.detail-main,
+.detail-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.detail-rail-grid {
+  grid-template-columns: 1fr;
+}
+
+/* Completion-checklist progress count (shown in the WO form card header) */
+.wo-checklist-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.wo-checklist-count[data-complete='true'] {
+  color: var(--primary);
+}
+
+/* Collapse to one column; the context rail drops below the execution surface. */
+@media (max-width: 1024px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .wo-stepper {
+    display: none;
+  }
+}
+
+.attachment-delete {
+  color: var(--destructive);
+}
+
+/* Secondary metadata inside a select option (e.g. the role beside a name). */
+.select-item-meta {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   View Tab Navigation
+   ═══════════════════════════════════════════════════════════════════ */
+
+.view-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.view-tab {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  white-space: nowrap;
+  position: relative;
+  transition: color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.view-tab::before {
+  content: '';
+  position: absolute;
+  inset: 4px 6px;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  z-index: -1;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.view-tab-normal {
+  color: var(--muted-foreground);
+}
+
+.view-tab-normal:hover {
+  color: var(--foreground);
+}
+
+.view-tab-normal:hover::before {
+  background-color: var(--accent);
+}
+
+.view-tab-active {
+  color: var(--primary);
+}
+
+.view-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 1.25rem;
+  right: 1.25rem;
+  height: 2px;
+  background-color: var(--primary);
+  border-radius: 2px 2px 0 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Searchable Combobox Component (Popover Trigger + Options List)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Container wrapper for the searchable input and actions icon row. */
+.combobox-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Inner input field — add extra right padding to fit action buttons. */
+.combobox-input {
+  width: 100%;
+  padding-right: 3.5rem !important;
+}
+
+/* Action button container aligned flush right inside the input field. */
+.combobox-actions {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 2;
+}
+
+/* Dropdown arrow caret inside the actions row. */
+.combobox-caret {
+  color: var(--muted-foreground);
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* Dropdown panel — match the trigger width. */
+.asset-combobox-panel {
+  width: var(--reka-popover-trigger-width, 20rem);
+  min-width: 16rem;
+  padding: 0;
+}
+
+/* Option list container inside the panel. */
+.asset-combobox-list {
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+/* Option row (shadcn Button variant=ghost) — full-width, left-aligned.
+   One line: name on the left, serial-number and ERP-code badges pinned right. */
+.asset-combobox-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-weight: 400;
+  justify-content: flex-start;
+  text-align: left;
+}
+.asset-combobox-check {
+  color: var(--primary);
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+.asset-combobox-option-name {
+  color: var(--foreground);
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Right-aligned identifier badges: serial number first, then ERP code. */
+.asset-combobox-option-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+}
+/* Share the "new badge look" shape (soft fill, no border, squarish) with the
+   status badges; the value stays mono because it's a code, not a label. */
+.asset-combobox-badge-sn,
+.asset-combobox-badge-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 0.1875rem;
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* Blue — serial number (the asset's physical identity). */
+.asset-combobox-badge-sn {
+  background: oklch(0.6 0.15 232 / 0.14);
+  color: oklch(0.5 0.16 232);
+}
+/* Grey — ERP code (the system identifier), deliberately the quieter of the two. */
+.asset-combobox-badge-code {
+  background: oklch(0.6 0.008 260 / 0.14);
+  color: oklch(0.48 0.008 260);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Asset / Part Identity
+   The single presentation for every asset and part reference: the name as
+   normal text, followed by value-only badges. Never concatenate the values,
+   never prefix a badge with "SN:" / "Size:" / "Category:", and omit a badge
+   entirely when its value is missing.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.identity {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+/* Stacked variant — name on its own line, badges beneath. Used in narrow
+   contexts (cards, dropdown rows) where the inline run would wrap awkwardly. */
+.identity-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.identity-name {
+  font-weight: 500;
+  color: var(--foreground);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.identity-badges {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.identity-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 0.1875rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* Serial number and supplier part number are codes — mono. */
+.identity-badge-serial,
+.identity-badge-part-number {
+  font-family: var(--font-mono);
+  background: color-mix(in oklab, var(--info) 14%, transparent);
+  color: color-mix(in oklab, var(--info) 88%, black);
+}
+
+/* Size is a measurement — mono so fractions align. */
+.identity-badge-size {
+  font-family: var(--font-mono);
+  background: color-mix(in oklab, var(--chart-1) 18%, transparent);
+  color: color-mix(in oklab, var(--chart-1) 78%, black);
+}
+
+/* Category is a label, not a code — sans. */
+.identity-badge-category {
+  background: color-mix(in oklab, var(--chart-4) 14%, transparent);
+  color: color-mix(in oklab, var(--chart-4) 85%, black);
+}
+
+.identity-badge-out-of-stock {
+  background: color-mix(in oklab, var(--destructive) 12%, transparent);
+  color: color-mix(in oklab, var(--destructive) 85%, black);
+}
+
+/* Asset Tag is secondary text, never a badge. */
+.identity-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* Empty / loading row. */
+.asset-combobox-empty {
+  padding: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Page Structure
+   ═══════════════════════════════════════════════════════════════════ */
+
+.page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.25;
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Cards and Metrics
+   ═══════════════════════════════════════════════════════════════════ */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 900px) {
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.data-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.data-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in oklab, var(--border) 80%, black);
+}
+
+.data-card-header {
+  padding: 1rem 1.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.data-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.data-card-description {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.data-card-content {
+  padding: 0.5rem 1.25rem 1rem;
+}
+
+.data-card-actions {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* KPI grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.kpi-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.kpi-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.kpi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.kpi-card-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.kpi-card-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1;
+  margin: 0;
+}
+
+.kpi-card-change {
+  font-size: 0.75rem;
+  margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.kpi-card-change-positive {
+  color: var(--success);
+}
+.kpi-card-change-negative {
+  color: var(--destructive);
+}
+
+@media (max-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Dashboard (role-adaptive overview)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* KPI metric groups — labelled 3-up rows (Operational / Reliability / Process).
+   Each group carries one subtle accent (a tinted icon chip + a label dot) so
+   colour encodes the grouping rather than decorating. */
+.kpi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.kpi-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kpi-group-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.kpi-group-label::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+}
+.kpi-group-label-operational::before {
+  background: var(--primary);
+}
+.kpi-group-label-reliability::before {
+  background: var(--chart-3);
+}
+.kpi-group-label-process::before {
+  background: var(--chart-1);
+}
+
+.kpi-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 1000px) {
+  .kpi-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .kpi-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Compact stat tile — icon chip + title/value/subtitle stack. */
+.kpi-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.kpi-tile:hover {
+  border-color: color-mix(in oklab, var(--border) 80%, black);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-tile-icon {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+}
+
+.kpi-tile-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* No hover scale on KPI tile icon */
+
+.kpi-accent-operational .kpi-tile-icon {
+  background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+  color: var(--primary);
+}
+
+.kpi-accent-reliability .kpi-tile-icon {
+  background-color: color-mix(in oklab, var(--chart-3) 10%, transparent);
+  color: var(--chart-3);
+}
+
+.kpi-accent-process .kpi-tile-icon {
+  background-color: color-mix(in oklab, var(--chart-1) 10%, transparent);
+  color: var(--chart-1);
+}
+
+.kpi-accent-operational .kpi-tile:hover {
+  border-color: var(--primary);
+}
+
+.kpi-accent-reliability .kpi-tile:hover {
+  border-color: var(--chart-3);
+}
+
+.kpi-accent-process .kpi-tile:hover {
+  border-color: var(--chart-1);
+}
+
+.kpi-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.kpi-tile-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-tile-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.kpi-tile-sub {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+/* "Last 90 days" scope caption in the page-actions row. */
+.dashboard-window-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+}
+
+.dashboard-window-range {
+  font-size: 0.6875rem;
+  opacity: 0.8;
+}
+
+/* Relocation from → to path in the relocated-assets widget. */
+.relocation-path-arrow {
+  color: var(--muted-foreground);
+  padding: 0 0.25rem;
+}
+
+/* Two explicit columns. The left "Action Required" stack spans both rows;
+   Quick Actions (row 1) and Recently Closed (row 2, sized 1fr) sit back to
+   back in the right column — no auto-placement, so neither column can leave
+   holes when a role lacks a section. */
+/* Redesigned Quick Actions Grid (4-column layout of card-based tiles) */
+/* Redesigned Dashboard Split Layout (Command Panel Left + Main Workspace Right) */
+/* Redesigned Dashboard Split Layout (Workspace Left + Command Panel Right) */
+.dashboard-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1.75rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-sidebar-command {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-sidebar-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  margin-bottom: 0.25rem;
+}
+
+/* Call to Action (CTA) Button Styling for Quick Actions - Soft Tint & Saturated Outline */
+.dashboard-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1.125rem;
+  background-color: color-mix(in oklab, var(--primary) 6%, transparent);
+  color: var(--primary) !important;
+  border: 1px solid color-mix(in oklab, var(--primary) 15%, transparent);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-2xs);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.dashboard-cta-btn:hover {
+  background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+  border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+.dashboard-cta-btn:active {
+  transform: translateY(0);
+}
+
+.dashboard-cta-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.dashboard-cta-left svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  opacity: 0.9;
+}
+
+.dashboard-cta-chevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.dashboard-cta-btn:hover .dashboard-cta-chevron {
+  transform: translateX(3px);
+}
+
+/* Compact style for KPIs when rendered in the command sidebar */
+.dashboard-sidebar-command .kpi-tile {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background-color: var(--card);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.dashboard-sidebar-command .kpi-tile-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 6px;
+}
+
+.dashboard-sidebar-command .kpi-tile-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.dashboard-sidebar-command .kpi-tile-value {
+  font-size: 1.25rem;
+}
+
+.dashboard-sidebar-command .kpi-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-premium-sm);
+}
+
+/* Right Panel Main Workspace Layout */
+.dashboard-workspace-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  min-width: 0;
+}
+
+.dashboard-grid-redesigned {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.dashboard-column-action {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.dashboard-column-tracking {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.dashboard-grid-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid-redesigned {
+    grid-template-columns: 1fr;
+  }
+}
+
+.data-card-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background-color: var(--muted);
+  border-radius: 999px;
+  padding: 0.0625rem 0.5rem;
+}
+
+/* Compact widget list — rows are RouterLinks so they stay keyboard-operable. */
+.widget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.25rem 0;
+}
+
+.widget-list-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.125rem 1.125rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.widget-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1.125rem;
+  margin: 0;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+  border-radius: 10px;
+  border-left: 4px solid transparent;
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.widget-list-item:hover {
+  background-color: var(--muted);
+  border-color: color-mix(in oklab, var(--border) 80%, black);
+}
+
+/* Left borders representing list categories/statuses */
+.widget-item-pending-mr {
+  border-left-color: var(--primary);
+}
+.widget-item-pending-mr:hover {
+  border-left-color: color-mix(in oklab, var(--primary) 80%, black);
+}
+
+.widget-item-open-wo {
+  border-left-color: var(--info);
+}
+.widget-item-open-wo:hover {
+  border-left-color: color-mix(in oklab, var(--info) 80%, black);
+}
+
+.widget-item-overdue-pm {
+  border-left-color: var(--destructive);
+}
+.widget-item-overdue-pm:hover {
+  border-left-color: color-mix(in oklab, var(--destructive) 80%, black);
+}
+
+.widget-item-relocated {
+  border-left-color: var(--chart-3);
+}
+.widget-item-relocated:hover {
+  border-left-color: color-mix(in oklab, var(--chart-3) 80%, black);
+}
+
+.widget-item-closed-wo {
+  border-left-color: var(--success);
+}
+.widget-item-closed-wo:hover {
+  border-left-color: color-mix(in oklab, var(--success) 80%, black);
+}
+
+.widget-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.widget-item-primary {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-item-secondary {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.widget-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+/* Prominent two-up action grid — buttons stretch to fill the card. */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dashboard briefing board — dashboard-content scope only. */
+.dashboard-briefing {
+  gap: 1.25rem;
+}
+
+.dashboard-briefing-quick {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  background-color: color-mix(in oklab, var(--primary) 6%, var(--background));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-briefing-quick-label {
+  flex-shrink: 0;
+  padding: 0 1rem;
+  border-right: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-quick-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dashboard-briefing-quick-link {
+  min-width: 7rem;
+  justify-content: flex-start;
+  background-color: var(--card);
+  color: var(--primary);
+  box-shadow: none;
+}
+
+.dashboard-briefing-quick-link:hover {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.dashboard-briefing-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-briefing-status-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-briefing-status-item + .dashboard-briefing-status-item {
+  border-left: 1px solid var(--border);
+}
+
+.dashboard-briefing-status-item:hover {
+  background-color: var(--muted);
+}
+
+.dashboard-briefing-status-item svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--primary);
+}
+
+.dashboard-briefing-status-item strong {
+  font-size: 1.125rem;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-status-label {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.dashboard-briefing-metric-section,
+.dashboard-briefing-work-section,
+.dashboard-briefing-activity-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.dashboard-briefing-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.dashboard-briefing-section-heading h2,
+.dashboard-briefing-section-heading h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-section-heading span {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.dashboard-briefing-reliability .dashboard-briefing-section-heading {
+  border-bottom-color: var(--chart-3);
+}
+
+.dashboard-briefing-process .dashboard-briefing-section-heading {
+  border-bottom-color: var(--chart-1);
+}
+
+.dashboard-briefing-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-briefing-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0 0.875rem;
+}
+
+.dashboard-briefing-metric:first-child {
+  padding-left: 0;
+}
+
+.dashboard-briefing-metric + .dashboard-briefing-metric {
+  border-left: 1px solid var(--border);
+}
+
+.dashboard-briefing-metric > span,
+.dashboard-briefing-metric > small {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-metric > span {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dashboard-briefing-metric > strong {
+  overflow: hidden;
+  font-size: 1.375rem;
+  line-height: 1.2;
+  color: var(--foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-metric > small {
+  font-size: 0.6875rem;
+}
+
+.dashboard-briefing-workboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: 1.5rem;
+}
+
+.dashboard-briefing-queue {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-briefing-queue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--muted);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-briefing-queue-heading h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-queue-heading > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background-color: var(--card);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.dashboard-briefing-empty {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.dashboard-briefing-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-briefing-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-briefing-row:hover {
+  background-color: var(--muted);
+}
+
+.dashboard-briefing-row-request {
+  border-left-color: var(--primary);
+}
+
+.dashboard-briefing-row-work-order {
+  border-left-color: var(--info);
+}
+
+.dashboard-briefing-row-overdue {
+  border-left-color: var(--destructive);
+}
+
+.dashboard-briefing-row-activity {
+  border-left-width: 0;
+}
+
+.dashboard-briefing-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.dashboard-briefing-row-main strong,
+.dashboard-briefing-row-main small,
+.dashboard-briefing-row-date {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-briefing-row-main strong {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-briefing-row-main small,
+.dashboard-briefing-row-date {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 1100px) {
+  .dashboard-briefing-metrics,
+  .dashboard-briefing-workboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-briefing-quick {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-briefing-quick-label {
+    padding: 0 0.75rem;
+    border-right: 0;
+  }
+
+  .dashboard-briefing-quick-links {
+    width: 100%;
+    padding: 0 0.75rem;
+  }
+
+  .dashboard-briefing-quick-link {
+    flex: 1 1 8rem;
+  }
+
+  .dashboard-briefing-status {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-briefing-status-item + .dashboard-briefing-status-item {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .dashboard-briefing-metric-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .dashboard-briefing-metric,
+  .dashboard-briefing-metric:first-child {
+    padding: 0;
+  }
+
+  .dashboard-briefing-metric + .dashboard-briefing-metric {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Dashboard Mosaic (Card-based redesign)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashboard-mosaic {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dashboard-mosaic-window {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.dashboard-mosaic-window-range {
+  margin-left: 0.375rem;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+/* ── Status Cards ─────────────────────────────────────────────────── */
+
+.dashboard-mosaic-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-mosaic-status-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.dashboard-mosaic-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius);
+  background-color: color-mix(in oklab, var(--primary) 8%, var(--background));
+}
+
+.dashboard-mosaic-status-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--primary);
+}
+
+.dashboard-mosaic-status-icon--wo {
+  background-color: color-mix(in oklab, var(--info) 10%, var(--background));
+}
+
+.dashboard-mosaic-status-icon--wo svg {
+  color: var(--info);
+}
+
+.dashboard-mosaic-status-icon--pm {
+  background-color: color-mix(in oklab, var(--destructive) 8%, var(--background));
+}
+
+.dashboard-mosaic-status-icon--pm svg {
+  color: var(--destructive);
+}
+
+.dashboard-mosaic-status-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.dashboard-mosaic-status-count {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.dashboard-mosaic-status-label {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-mosaic-status-cta {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.dashboard-mosaic-status-cta svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ── KPI Panels ───────────────────────────────────────────────────── */
+
+.dashboard-mosaic-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-mosaic-kpi-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-mosaic-kpi-badge {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background-color: var(--muted);
+  white-space: nowrap;
+}
+
+.dashboard-mosaic-kpi-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+
+.dashboard-mosaic-kpi-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.dashboard-mosaic-kpi-stat:first-child {
+  padding-left: 0;
+}
+
+.dashboard-mosaic-kpi-stat + .dashboard-mosaic-kpi-stat {
+  border-left: 1px solid var(--border);
+}
+
+.dashboard-mosaic-kpi-stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-mosaic-kpi-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-mosaic-kpi-stat-caption {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Workboard + Activity Grid ────────────────────────────────────── */
+
+.dashboard-mosaic-workboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.dashboard-mosaic-work-card,
+.dashboard-mosaic-activity-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dashboard-mosaic-card-subtitle {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+/* ── Queues (inside cards) ────────────────────────────────────────── */
+
+.dashboard-mosaic-queues {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.dashboard-mosaic-queue {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-mosaic-queue + .dashboard-mosaic-queue {
+  border-top: 1px solid var(--border);
+}
+
+.dashboard-mosaic-queue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  background-color: var(--muted);
+}
+
+.dashboard-mosaic-queue-heading h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-mosaic-queue-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background-color: var(--card);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.dashboard-mosaic-empty {
+  padding: 0.875rem 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.dashboard-mosaic-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-mosaic-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-mosaic-row:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-mosaic-row:hover {
+  background-color: var(--muted);
+}
+
+.dashboard-mosaic-row--mr {
+  border-left-color: var(--primary);
+}
+
+.dashboard-mosaic-row--wo {
+  border-left-color: var(--info);
+}
+
+.dashboard-mosaic-row--pm {
+  border-left-color: var(--destructive);
+}
+
+.dashboard-mosaic-row--activity {
+  border-left-width: 0;
+}
+
+.dashboard-mosaic-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.dashboard-mosaic-row-main strong,
+.dashboard-mosaic-row-main small,
+.dashboard-mosaic-row-date {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-mosaic-row-main strong {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dashboard-mosaic-row-main small,
+.dashboard-mosaic-row-date {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+/* ── Dashboard Mosaic Responsive ──────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .dashboard-mosaic-kpis,
+  .dashboard-mosaic-workboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-mosaic-status {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-mosaic-kpi-stats {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .dashboard-mosaic-kpi-stat,
+  .dashboard-mosaic-kpi-stat:first-child {
+    padding: 0;
+  }
+
+  .dashboard-mosaic-kpi-stat + .dashboard-mosaic-kpi-stat {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Filters and Tables
+   ═══════════════════════════════════════════════════════════════════ */
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* Table cell helpers */
+.table-link {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-link:hover {
+  text-decoration: underline;
+}
+
+.table-cell-primary {
+  font-weight: 500;
+  color: var(--foreground);
+  line-height: 1.3;
+}
+
+.table-cell-secondary {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+}
+
+.table-cell-truncate {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.table-cell-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── DataTable shell (TanStack Table) ── */
+
+.app-data-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.data-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.data-table-search {
+  max-width: 20rem;
+}
+
+.table-filter-trigger {
+  height: 1.75rem;
+  font-size: 0.8125rem;
+}
+
+/* Bordered surface so the table reads as one card; horizontal scroll on
+   overflow instead of clipping columns. Header has NO gray band — it sits on
+   the card surface and is defined by its bottom border only. */
+.app-data-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.app-data-table-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.app-data-table-thead th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+  padding: 0.625rem 0.85rem;
+  background: transparent;
+  white-space: nowrap;
+}
+
+/* Title header row carries the table's top divider; the filter row (when
+   present) does not, so the two rows read as one band. */
+.app-data-table-head-row th {
+  border-bottom: 1px solid var(--border);
+}
+.app-data-table-filter-row th {
+  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0.5rem 0.5rem;
+  font-weight: 400;
+}
+
+.app-data-table-th-label {
+  display: inline-block;
+}
+
+.app-data-table-col {
+  width: var(--col-min-width, auto);
+}
+
+/* Sort header button: fills the cell so the click target is the whole header;
+   label left, direction icon right. Reset to a plain button (no Button primitive
+   chrome) since it lives inside the table grid. */
+.app-data-table-sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.app-data-table-th-sortable:hover .app-data-table-sort-btn {
+  color: var(--foreground);
+}
+.app-data-table-sort-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.app-data-table-sort-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.app-data-table-sort-icon-active {
+  opacity: 1;
+  color: var(--primary);
+}
+
+.app-data-table-tbody .app-data-table-row {
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.12s ease;
+}
+.app-data-table-tbody .app-data-table-row:last-child {
+  border-bottom: none;
+}
+.app-data-table-tbody .app-data-table-row:hover,
+.app-data-table-tbody .app-data-table-row:focus-visible {
+  background: var(--muted);
+  outline: none;
+}
+
+.app-data-table-cell {
+  padding: 0.625rem 0.85rem;
+  vertical-align: middle;
+}
+.app-data-table-th-center {
+  text-align: center;
+}
+.app-data-table-th-center .app-data-table-sort-btn {
+  justify-content: center;
+  text-align: center;
+}
+.app-data-table-cell-center {
+  text-align: center;
+}
+
+/* Compact icon-button row for table cell actions */
+.table-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.app-data-table-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+/* ── Pagination bar ── */
+/* Custom pagination offers a First/Prev/Next/Last cluster (chevron icon
+   buttons via the Button `size="icon-sm"` primitive) plus an "All" page-size
+   option. `space-between` spreads the info line and the controls to opposite
+   ends. */
+.data-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.data-table-pagination-info {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.data-table-pagination-subtle {
+  margin-left: 0.25rem;
+  opacity: 0.7;
+}
+.data-table-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.data-table-pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.data-table-pagination-page {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  padding: 0 0.25rem;
+  white-space: nowrap;
+}
+.data-table-pagination-size {
+  width: auto;
+  height: 2rem;
+  font-size: 0.8125rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Toast (vue-sonner) — icon-chip cards with a faint type-tinted surface.
+   The glyph sits in a tinted rounded chip (same language as the KPI
+   tiles) and the whole card carries a soft wash of the type colour, so
+   type is triple-encoded: chip + glyph shape + surface tint. Overrides
+   win over vue-sonner/style.css by matching its [data-styled]
+   specificity and loading later in source.
+   ═══════════════════════════════════════════════════════════════════ */
+
+[data-sonner-toaster] {
+  --width: 22rem;
+  --border-radius: 12px;
+  --toast-icon-margin-start: 0;
+  --toast-icon-margin-end: 0;
+  --toast-svg-margin-start: 0;
+  --toast-svg-margin-end: 0;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--foreground);
+  box-shadow:
+    0 4px 14px -4px color-mix(in oklab, var(--primary) 18%, transparent),
+    0 2px 6px -2px oklch(0 0 0 / 0.06);
+}
+
+/* Glyph → tinted rounded chip. Neutral base; the type rules tint it. */
+[data-sonner-toast][data-styled='true'] [data-icon] {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+[data-sonner-toast][data-styled='true'] [data-icon] svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Text column */
+[data-sonner-toast][data-styled='true'] [data-content] {
+  gap: 0.125rem;
+}
+[data-sonner-toast][data-styled='true'] [data-title] {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.006em;
+  color: var(--foreground);
+}
+[data-sonner-toast][data-styled='true'] [data-description] {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+/* Per-type: faint surface wash + tinted chip + glyph colour. Surface
+   selector matches the base rule's specificity and loads later, so
+   `background` wins over the base card. */
+[data-sonner-toaster] [data-sonner-toast][data-type='success'] {
+  background: color-mix(in oklab, var(--success) 11%, var(--card));
+}
+[data-sonner-toast][data-type='success'] [data-icon] {
+  background: color-mix(in oklab, var(--success) 15%, transparent);
+  color: var(--success);
+}
+[data-sonner-toaster] [data-sonner-toast][data-type='error'] {
+  background: color-mix(in oklab, var(--destructive) 10%, var(--card));
+}
+[data-sonner-toast][data-type='error'] [data-icon] {
+  background: color-mix(in oklab, var(--destructive) 15%, transparent);
+  color: var(--destructive);
+}
+[data-sonner-toaster] [data-sonner-toast][data-type='warning'] {
+  background: color-mix(in oklab, var(--warning) 13%, var(--card));
+}
+[data-sonner-toast][data-type='warning'] [data-icon] {
+  background: color-mix(in oklab, var(--warning) 20%, transparent);
+  color: oklch(0.5 0.13 75);
+}
+[data-sonner-toaster] [data-sonner-toast][data-type='info'] {
+  background: color-mix(in oklab, var(--info) 11%, var(--card));
+}
+[data-sonner-toast][data-type='info'] [data-icon] {
+  background: color-mix(in oklab, var(--info) 15%, transparent);
+  color: var(--info);
+}
+[data-sonner-toaster] [data-sonner-toast][data-type='loading'] {
+  background: color-mix(in oklab, var(--primary) 9%, var(--card));
+}
+[data-sonner-toast][data-type='loading'] [data-icon] {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+/* Action button → primary; close button → quiet neutral chrome */
+[data-sonner-toast][data-styled='true'] [data-button] {
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+[data-sonner-toast][data-styled='true'] [data-close-button] {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+[data-sonner-toast][data-styled='true']:hover [data-close-button]:hover {
+  background: var(--muted);
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--border) 65%, black);
+}
+
+/* Dialog and sheet form helpers */
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-top: 1.25rem;
+}
+
+.field-required {
+  color: var(--destructive);
+}
+
+/* Inline checkbox + label row (e.g. boolean flags in forms) */
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.sheet-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Forms
+   ═══════════════════════════════════════════════════════════════════ */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem 1.25rem;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.form-section-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.25rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-field-full {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-help {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.form-error {
+  font-size: 0.75rem;
+  color: var(--destructive);
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Sheets and Dialogs
+   ═══════════════════════════════════════════════════════════════════ */
+
+.sheet-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.sheet-footer {
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  background-color: var(--card);
+  flex-shrink: 0;
+}
+
+.confirmation-summary {
+  padding: 0.875rem 1rem;
+  background-color: var(--muted);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 0.875rem;
+  color: var(--foreground);
+  line-height: 1.6;
+}
+
+.confirmation-warning {
+  padding: 0.75rem 1rem;
+  background-color: oklch(0.577 0.245 27 / 0.08);
+  border: 1px solid oklch(0.577 0.245 27 / 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--destructive);
+  line-height: 1.5;
+}
+
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Status and Feedback
+   ═══════════════════════════════════════════════════════════════════ */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+/* ── New badge look (rollout in progress) ─────────────────────────────────────
+   Soft fill, no border, squarish, smaller caps. Saturated hue on the text; the
+   same hue at ~12–14% as the fill. This shared shape/size rule lists every class
+   migrated so far; the rest of the app keeps the old pill until it's migrated.
+   Shared-class notes (a class → every badge that reuses it):
+   .status-cancelled → WO Cancelled; .status-open → Asset Kind "Asset";
+   .status-active → Asset "In program" / User Active / Part Active;
+   .status-inactive → Asset Withdrawn / User Inactive / Part Inactive;
+   .priority-critical → Priority Critical. Those inherit the new look too. */
+.status-pending,
+.status-converted,
+.status-rejected,
+.status-cancelled,
+.status-open,
+.status-completed,
+.status-in-progress,
+.status-closed,
+.status-active,
+.status-inactive,
+.priority-critical,
+.pm-status-ok,
+.pm-status-soon,
+.pm-status-due,
+.status-running,
+.status-success,
+.status-partial,
+.status-failed,
+.status-failure,
+.status-no-failure,
+.status-unclassified,
+.status-activation-pending,
+.status-booked,
+.badge-kind-package,
+.badge-kind-component,
+.priority-high,
+.priority-medium,
+.priority-low,
+.pm-level-l1,
+.pm-level-l2,
+.pm-level-l3,
+.pm-level-l4,
+.pm-level-custom,
+.role-administrator,
+.role-maintenance-manager,
+.role-technician,
+.role-logistics,
+.role-requester {
+  padding: 0.125rem 0.4375rem;
+  border-radius: 0.1875rem;
+  border-color: transparent;
+  font-size: 0.625rem;
+}
+/* Orange — MR Pending · WO In Progress (+ Operational Under Maintenance) · PM Soon
+   · User Pending Activation · ERP Partial · Availability Booked · Priority Medium
+   · Role Logistics. */
+.status-pending,
+.status-in-progress,
+.pm-status-soon,
+.status-activation-pending,
+.status-partial,
+.status-booked,
+.priority-medium,
+.role-logistics {
+  background: oklch(0.75 0.16 60 / 0.14);
+  color: oklch(0.62 0.15 60);
+}
+/* Green — MR Converted · WO Closed · Active (Operational/Asset/User/Part) · PM OK
+   · ERP Success · Failure = No failure. */
+.status-converted,
+.status-closed,
+.status-active,
+.pm-status-ok,
+.status-success,
+.status-no-failure {
+  background: oklch(0.62 0.19 149 / 0.14);
+  color: oklch(0.5 0.16 149);
+}
+/* Red — MR Rejected · Priority Critical / Operational Down · PM Due · ERP Failed
+   · Failure = Failure. */
+.status-rejected,
+.priority-critical,
+.pm-status-due,
+.status-failed,
+.status-failure {
+  background: oklch(0.6 0.24 27 / 0.12);
+  color: oklch(0.52 0.22 27);
+}
+/* Grey — MR/WO Cancelled · Inactive (Operational/Asset/User/Part) · Withdrawn
+   · Failure = Not yet classified · PM Level Custom · Role Requester. */
+.status-cancelled,
+.status-inactive,
+.status-unclassified,
+.pm-level-custom,
+.role-requester {
+  background: oklch(0.6 0.008 260 / 0.14);
+  color: oklch(0.48 0.008 260);
+}
+
+/* Blue — WO Open (+ Asset Kind "Asset") · ERP Sync Running · Priority Low · PM L1
+   · Role Administrator. */
+.status-open,
+.status-running,
+.priority-low,
+.pm-level-l1,
+.role-administrator {
+  background: oklch(0.6 0.15 232 / 0.14);
+  color: oklch(0.5 0.16 232);
+}
+/* .status-in-progress and .status-closed now share Pending/Converted's rules
+   above (see "New badge look"), so only Completed is defined here. */
+.status-completed {
+  background: oklch(0.55 0.16 290 / 0.14);
+  color: oklch(0.5 0.17 290);
+}
+
+/* ERP Sync statuses: running → blue, success → green, partial → orange,
+   failed → red — all share the migrated semantic rules above. */
+
+/* Failure classification (corrective MRs): failure → red, no-failure → green,
+   unclassified → grey — all share the migrated semantic rules above. */
+
+/* Priority heat ramp — Critical (red) › High (deep red-orange) › Medium (shares
+   Pending's orange, above) › Low (blue, above). High is the one dedicated step. */
+.priority-high {
+  background: oklch(0.63 0.2 40 / 0.14);
+  color: oklch(0.62 0.19 32);
+}
+
+/* .status-active → migrated green rule; .status-inactive → migrated grey rule
+   (see "New badge look"). Shared by asset maintenance / user / part statuses. */
+/* Booked — availability marker; shares the migrated orange rule above. */
+/* Inline in the asset list Name cell — separate the pill from the name. */
+.table-cell-primary .status-booked {
+  margin-inline-start: 0.375rem;
+}
+
+/* PM rule status (traffic light): ok → green, soon → orange, due → red — all
+   share the migrated semantic rules above. */
+
+/* PM maintenance level ramp — L1 (blue, above) › L2 indigo › L3 purple › L4 deep
+   violet-magenta (deepening = higher level). Custom shares grey (above). Hue AND
+   darkness both step so the three purples stay distinguishable in small badges. */
+.pm-level-l2 {
+  background: oklch(0.55 0.16 278 / 0.14);
+  color: oklch(0.52 0.16 278);
+}
+.pm-level-l3 {
+  background: oklch(0.52 0.18 300 / 0.14);
+  color: oklch(0.48 0.18 300);
+}
+.pm-level-l4 {
+  background: oklch(0.5 0.19 322 / 0.14);
+  color: oklch(0.44 0.19 322);
+}
+
+/* PM progress meter (detail page) — bar itself is the ui/progress primitive */
+.pm-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.pm-progress-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* PM rule list filter bar */
+.pm-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.375rem;
+}
+
+/* Schedule cell — keep the composed sentence readable in a table cell */
+.pm-schedule-cell {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  line-height: 1.35;
+}
+
+/* PM multi-level setup rows in the create sheet */
+.pm-level-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pm-level-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.pm-level-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.pm-level-row-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+/* Mode toggle (Single vs Multi-Level) in the create sheet */
+.pm-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+.pm-mode-toggle-btn {
+  flex: 1;
+}
+
+/* Role badges reuse the shared palette (migrated): Administrator → blue,
+   Maintenance Manager → violet, Technician → teal, Logistics → orange,
+   Requester → grey. See the color groups under "New badge look". */
+
+/* "(you)" marker on the current admin's own row in the users table */
+.user-you-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.0625rem 0.3125rem;
+  margin-left: 0.375rem;
+  background: oklch(0.6 0.15 232 / 0.14);
+  color: oklch(0.5 0.16 232);
+  border-radius: 0.1875rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* User account status — pending activation shares the migrated orange rule above. */
+
+/* Violet — Asset Kind Package · Role Maintenance Manager. (Asset "Asset" = blue.) */
+.badge-kind-package,
+.role-maintenance-manager {
+  background: oklch(0.55 0.16 300 / 0.14);
+  color: oklch(0.5 0.17 300);
+}
+/* Teal — Asset Kind Component · Role Technician. */
+.badge-kind-component,
+.role-technician {
+  background: oklch(0.6 0.12 185 / 0.14);
+  color: oklch(0.48 0.13 185);
+}
+
+/* Phase 2 label inside a view tab link */
+.view-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.0625rem 0.3125rem;
+  background: oklch(0.55 0.16 300 / 0.14);
+  color: oklch(0.5 0.17 300);
+  border-radius: 0.1875rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin-left: 0.25rem;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* Location filter select — rendered inside the data-table toolbar slot,
+   sized to sit beside the search input. */
+.asset-location-filter {
+  width: 14rem;
+  height: 2rem;
+  font-size: 0.8125rem;
+}
+
+/* Identity filter controls in a table toolbar — Serial Number / Part Number
+   text inputs plus Size and Category selects. Sized to sit alongside the
+   existing location filter without crowding the search box. */
+.identity-filter-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.identity-filter-text {
+  width: 10rem;
+  height: 2rem;
+  font-size: 0.8125rem;
+}
+
+.identity-filter-select {
+  width: 9.5rem;
+  height: 2rem;
+  font-size: 0.8125rem;
+}
+
+/* ── Location type badges ─────────────────────────────────────────────────── */
+/* Own base (own class + not uppercase-by-default), updated to the new badge look
+   so locations match the rest. Colours below reuse the shared palette values
+   (workshop → orange, workshop_yard → teal, yard → blue, well_site → green,
+   rig → violet, building → grey) — kept in step if a palette hue is retuned. */
+.location-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 0.1875rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.location-type-workshop {
+  background: oklch(0.75 0.16 60 / 0.14);
+  color: oklch(0.62 0.15 60);
+}
+.location-type-workshop_yard {
+  background: oklch(0.6 0.12 185 / 0.14);
+  color: oklch(0.48 0.13 185);
+}
+.location-type-yard {
+  background: oklch(0.6 0.15 232 / 0.14);
+  color: oklch(0.5 0.16 232);
+}
+.location-type-well_site {
+  background: oklch(0.62 0.19 149 / 0.14);
+  color: oklch(0.5 0.16 149);
+}
+.location-type-rig {
+  background: oklch(0.55 0.16 300 / 0.14);
+  color: oklch(0.5 0.17 300);
+}
+.location-type-building {
+  background: oklch(0.6 0.008 260 / 0.14);
+  color: oklch(0.48 0.008 260);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Lists & Dropdowns — left rail + table panel
+   ═══════════════════════════════════════════════════════════════════ */
+
+.lists-layout {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.lists-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.lists-rail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.lists-rail-section-title {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  padding: 0.25rem 0.5rem;
+  margin: 0;
+}
+
+/* Rail item = shadcn Button variant=ghost with chrome overridden to a
+   full-width, left-aligned nav row (mirrors .asset-combobox-option). */
+.lists-rail-item {
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 0.4375rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.lists-rail-item-active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 600;
+}
+
+.lists-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.lists-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.lists-panel-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lists-panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.lists-panel-subtitle {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .lists-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Inline code hint inside a Select item (e.g. location code) */
+.select-code-hint {
+  font-size: 0.6875rem;
+  margin-left: 0.375rem;
+  color: var(--muted-foreground);
+}
+
+/* Spacer before the compact history timeline in UpdateLocationSheet */
+.location-history-section {
+  margin-top: 1.25rem;
+}
+
+/* ── Compact location history timeline (UpdateLocationSheet) ──────────────── */
+.compact-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.compact-timeline-title {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  margin-bottom: 0.125rem;
+}
+.compact-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border);
+  position: relative;
+}
+.compact-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -0.3125rem;
+  top: 0.375rem;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.compact-timeline-date {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  min-width: 4.5rem;
+}
+.compact-timeline-summary {
+  flex: 1;
+  line-height: 1.35;
+}
+.compact-timeline-empty {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* Asset tag assign row — Input + Suggest button side by side */
+.asset-tag-assign {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.asset-tag-assign input {
+  flex: 1;
+}
+
+/* Asset tag read-only row */
+.asset-tag-readonly {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0;
+}
+
+/* Loading state */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1.5rem;
+  gap: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.loading-spinner {
+  width: 1.75rem;
+  height: 1.75rem;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+  text-align: center;
+  gap: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.empty-state-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: oklch(0.7 0.008 247);
+}
+
+.empty-state-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.empty-state-description {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+  max-width: 28rem;
+  line-height: 1.6;
+}
+
+/* Pending-requirement placeholder (client-facing /dashboard & /reports) */
+.pending-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.pending-placeholder-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  max-width: 32rem;
+  padding: 3rem 2.5rem;
+  text-align: center;
+  background-color: color-mix(in oklab, var(--primary) 4%, var(--card));
+  border: 1px dashed var(--border);
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: var(--shadow-premium-sm);
+}
+
+.pending-placeholder-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background-color: color-mix(in oklab, var(--primary) 12%, var(--card));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.pending-placeholder-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--primary);
+  opacity: 0.85;
+}
+
+.pending-placeholder-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.pending-placeholder-text {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+/* Interim dashboard (client-facing /dashboard, pending LDC) — counter cards */
+.pending-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.pending-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1.25rem;
+  overflow: hidden;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  box-shadow: var(--shadow-premium-sm);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.pending-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background-color: var(--pending-accent);
+}
+
+.pending-card:hover {
+  border-color: var(--pending-accent);
+  box-shadow: var(--shadow-premium-md);
+  transform: translateY(-1px);
+}
+
+.pending-card--mr {
+  --pending-accent: var(--primary);
+}
+
+.pending-card--wo {
+  --pending-accent: var(--info);
+}
+
+.pending-card--pm {
+  --pending-accent: var(--warning);
+}
+
+.pending-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: calc(var(--radius) * 1.25);
+  background-color: color-mix(in oklab, var(--pending-accent) 12%, var(--card));
+  color: var(--pending-accent);
+}
+
+.pending-card-icon svg {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.pending-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.pending-card-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.pending-card-count {
+  font-size: 2rem;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.pending-card-link {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pending-accent);
+}
+
+.pending-card-link svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  transition: transform 0.15s ease;
+}
+
+.pending-card:hover .pending-card-link svg {
+  transform: translateX(3px);
+}
+
+@media (max-width: 860px) {
+  .pending-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Error state */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  gap: 0.625rem;
+  border: 1px solid oklch(0.577 0.245 27 / 0.2);
+  border-radius: var(--radius);
+  background-color: oklch(0.577 0.245 27 / 0.05);
+}
+
+.error-state-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--destructive);
+  margin: 0;
+}
+
+.error-state-message {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+  max-width: 28rem;
+}
+
+.atms-error-code {
+  font-family: var(--font-mono);
+  font-size: 4rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  line-height: 1;
+  margin: 0 0 0.5rem;
+  text-align: center;
+}
+
+/* Permission state */
+.permission-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+  text-align: center;
+  gap: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* Read-only state */
+.read-only-state {
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Detail "record not found" — off-the-radar empty state
+   Used by *DetailView notFound branches via <DetailNotFound>.
+   ═══════════════════════════════════════════════════════════════════ */
+.detail-notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 3rem 1.5rem 4rem;
+  min-height: 58vh;
+}
+
+.detail-notfound-radar {
+  position: relative;
+  width: 8.5rem;
+  height: 8.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+/* Concentric rings scanning outward */
+.detail-notfound-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, transparent);
+  opacity: 0;
+  animation: detail-notfound-pulse 3s ease-out infinite;
+}
+.detail-notfound-pulse:nth-child(2) {
+  animation-delay: 1s;
+}
+.detail-notfound-pulse:nth-child(3) {
+  animation-delay: 2s;
+}
+
+@keyframes detail-notfound-pulse {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0.12;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Rotating radar sweep wedge */
+.detail-notfound-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    color-mix(in oklab, var(--primary) 16%, transparent) 0deg,
+    transparent 65deg,
+    transparent 360deg
+  );
+  animation: detail-notfound-spin 4s linear infinite;
+}
+
+@keyframes detail-notfound-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Central disc holding the icon */
+.detail-notfound-core {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-premium-md);
+}
+
+.detail-notfound-icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--primary);
+}
+
+.detail-notfound-code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  background-color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  margin: 0;
+}
+
+.detail-notfound-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0.5rem 0 0;
+  letter-spacing: -0.01em;
+}
+
+.detail-notfound-description {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+  margin: 0;
+  max-width: 30rem;
+}
+
+.detail-notfound-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-notfound-pulse,
+  .detail-notfound-sweep {
+    animation: none;
+  }
+  .detail-notfound-pulse {
+    opacity: 0.14;
+  }
+}
+
+/* Skeleton grid */
+.skeleton-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Icons
+   ═══════════════════════════════════════════════════════════════════ */
+
+.icon-xs {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+.icon-sm {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+.icon-md {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+.icon-lg {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Auth Pages
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   Auth Pages Layouts & Styles
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 1. Global Centered Card Layout (Forgot Password, Activate, Reset Password) */
+.atms-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in oklab, var(--primary) 3%, var(--background)) 0%,
+    var(--background) 100%
+  );
+  padding: 1.5rem;
+}
+
+.atms-auth-card {
+  width: 100%;
+  max-width: 24rem;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-premium-md);
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.atms-auth-logo {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem 0;
+}
+
+.atms-auth-logo-img {
+  height: 2rem;
+  width: auto;
+}
+
+.atms-auth-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.atms-auth-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.atms-auth-subtitle {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.atms-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.atms-auth-submit {
+  width: 100%;
+}
+
+.atms-auth-label-row,
+.atms-auth-password-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.atms-auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.atms-auth-remember label {
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.atms-auth-link {
+  font-size: 0.8125rem;
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.atms-auth-link:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.atms-auth-forgot-link {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+.atms-auth-forgot-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.atms-auth-error {
+  padding: 0.625rem 0.875rem;
+  background-color: oklch(0.577 0.245 27 / 0.08);
+  border: 1px solid oklch(0.577 0.245 27 / 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--destructive);
+  line-height: 1.5;
+}
+
+.atms-auth-success {
+  padding: 0.625rem 0.875rem;
+  background-color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--success-foreground);
+  line-height: 1.5;
+}
+
+.atms-auth-info {
+  padding: 0.625rem 0.875rem;
+  background-color: oklch(0.58 0.138 232 / 0.08);
+  border: 1px solid oklch(0.58 0.138 232 / 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: oklch(0.4 0.11 232);
+  line-height: 1.5;
+}
+
+.atms-auth-back {
+  text-align: center;
+  font-size: 0.8125rem;
+  margin-top: 0.5rem;
+}
+.atms-auth-back a {
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+/* 2. Modern Split Panel Layout (Login Page) */
+.auth-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .auth-layout {
+    grid-template-columns: 1.4fr 1fr;
+  }
+}
+
+/* Left Brand Panel Styles */
+.auth-brand-panel {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem 3rem;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary) 80%, white) 0%,
+    color-mix(in oklab, var(--primary) 55%, black) 100%
+  );
+}
+
+@media (min-width: 1024px) {
+  .auth-brand-panel {
+    display: flex;
+  }
+  .auth-brand-content {
+    /* Cap to the viewport (minus the panel's 1.5rem top+bottom padding) so a tall
+       workflow diagram scrolls inside the panel instead of growing the page or
+       clipping on short screens. */
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+  }
+}
+
+.auth-brand-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 38rem;
+}
+
+.auth-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auth-brand-logo {
+  height: 2rem;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+.auth-brand-name {
+  font-weight: 800;
+  font-size: 1.625rem;
+  color: white;
+  letter-spacing: 0.08em;
+}
+
+.auth-brand-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-brand-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.auth-brand-subtitle {
+  font-size: 0.9375rem;
+  color: oklch(0.95 0 0 / 0.8);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Maintenance workflow diagram — factual, non-numeric guest content. */
+.auth-workflow-diagram {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.auth-workflow-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+}
+
+.auth-workflow-header h3 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: oklch(0.95 0 0 / 0.7);
+}
+
+.auth-workflow-header p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: oklch(0.95 0 0 / 0.58);
+}
+
+.auth-workflow-sources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.auth-workflow-source {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.auth-workflow-source-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.09);
+}
+
+.auth-workflow-source-icon svg,
+.auth-workflow-approval > svg,
+.auth-workflow-work-order-title > svg,
+.auth-workflow-history > svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: white;
+}
+
+.auth-workflow-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.auth-workflow-copy strong {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.auth-workflow-copy small {
+  color: oklch(0.95 0 0 / 0.65);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.auth-workflow-merge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+}
+
+.auth-workflow-merge::before,
+.auth-workflow-merge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 25%;
+  height: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.auth-workflow-merge::before {
+  left: 25%;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.auth-workflow-merge::after {
+  right: 25%;
+  border-right: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.auth-workflow-merge span {
+  position: relative;
+  z-index: 1;
+  padding: 0 0.5rem;
+  background-color: color-mix(in oklab, var(--primary) 74%, black);
+  color: oklch(0.95 0 0 / 0.65);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.auth-workflow-approval,
+.auth-workflow-history {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius);
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.auth-workflow-connector {
+  align-self: center;
+  width: 1px;
+  height: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+.auth-workflow-work-order {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.auth-workflow-work-order-title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-workflow-work-order-title span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+}
+
+.auth-workflow-work-order-title strong {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.auth-workflow-work-order-title small {
+  color: oklch(0.95 0 0 / 0.58);
+  font-size: 0.6875rem;
+}
+
+.auth-workflow-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-workflow-lifecycle li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+}
+
+.auth-workflow-lifecycle li + li {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-workflow-lifecycle li > span,
+.auth-workflow-lifecycle li > svg {
+  width: 1rem;
+  height: 1rem;
+  color: oklch(0.95 0 0 / 0.65);
+  font-size: 0.6875rem;
+}
+
+.auth-workflow-lifecycle li strong {
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.auth-workflow-lifecycle li small {
+  color: oklch(0.95 0 0 / 0.55);
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+.auth-workflow-history {
+  background-color: color-mix(in oklab, var(--success) 10%, transparent);
+}
+
+.auth-workflow-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding-top: 0.75rem;
+  color: oklch(0.95 0 0 / 0.68);
+  font-size: 0.6875rem;
+}
+
+.auth-workflow-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.auth-workflow-footer svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Translucent background glows */
+.auth-brand-glow-1 {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  opacity: 0.2;
+  top: -100px;
+  left: -100px;
+  pointer-events: none;
+  filter: blur(60px);
+}
+
+.auth-brand-glow-2 {
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+  opacity: 0.15;
+  bottom: -150px;
+  right: -150px;
+  pointer-events: none;
+  filter: blur(80px);
+}
+
+/* Right Panel Form Styles */
+.auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background);
+  padding: 2.5rem 1.5rem;
+}
+
+.auth-form-container {
+  width: 100%;
+  max-width: 24rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.auth-mobile-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .auth-mobile-header {
+    display: none;
+  }
+}
+
+.auth-mobile-logo {
+  height: 2rem;
+  width: auto;
+}
+
+.auth-mobile-title {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--foreground);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.auth-form-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-form-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.auth-form-desc {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.auth-form-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.auth-form-password-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.auth-form-forgot {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.auth-form-forgot:hover {
+  text-decoration: underline;
+}
+
+.auth-form-remember-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auth-form-remember-label {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-form-submit {
+  width: 100%;
+  font-weight: 600;
+}
+.atms-auth-back a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ATMS Entity Identifiers
+   ═══════════════════════════════════════════════════════════════════ */
+
+.atms-mr-number,
+.atms-wo-number {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.atms-erp-code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  background-color: var(--muted);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Hidden file input managed by FileInput primitive */
+.hidden-file-input {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Create MR sheet — wider, scrollable body, pinned footer
+   ═══════════════════════════════════════════════════════════════════ */
+
+.create-sheet {
+  /* Mobile-first: near full screen. Scales up at tablet/desktop breakpoints. */
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+}
+
+@media (min-width: 768px) {
+  .create-sheet {
+    width: 92vw !important;
+    max-width: 92vw !important;
+  }
+}
+
+/* Desktop: ~2x the original 34rem, capped to the viewport. */
+@media (min-width: 1024px) {
+  .create-sheet {
+    width: 68rem !important;
+    max-width: min(68rem, 96vw) !important;
+  }
+}
+
+.create-sheet-header {
+  padding: 1.5rem 1.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sheet-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Compact one-line asset identifier strip (Update Location sheet header):
+   tiny uppercase captions + emphasized values, separated by hairline dividers. */
+.asset-meta-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.875rem;
+  margin-top: 0.625rem;
+}
+
+.asset-meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  position: relative;
+}
+
+.asset-meta-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -0.5rem;
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 1px;
+  background: var(--border);
+}
+
+.asset-meta-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.asset-meta-value {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.create-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+}
+
+.create-sheet-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding: 1rem 1.75rem;
+  border-top: 1px solid var(--border);
+  background: var(--background);
+}
+
+/* ── Dialog width variants ──────────────────────────────────────────────────
+   Override the DialogContent default (Tailwind sm:max-w-sm). Use these on
+   <DialogContent class="dialog-md"> in feature files when a dialog holds
+   tables / file lists that need more room than the default narrow dialog.
+   !important mirrors the .create-sheet override pattern. */
+.dialog-md {
+  max-width: 36rem !important;
+}
+
+.dialog-lg {
+  max-width: 52rem !important;
+}
+
+/* Optional label marker */
+.field-optional {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+/* File attachment UI — applied to shadcn Button variant="outline" */
+.file-pick-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: auto !important;
+  padding: 0.625rem 0.875rem !important;
+  border: 1.5px dashed var(--border) !important;
+  border-radius: var(--radius);
+  background: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  justify-content: flex-start;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+
+.file-pick-btn:hover {
+  border-color: var(--primary) !important;
+  color: var(--foreground) !important;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.625rem;
+  background: var(--muted);
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.8125rem;
+}
+
+.file-list-name {
+  flex: 1;
+  min-width: 0;
+  /* Long, space-less filenames must break rather than dictate the row's
+     min-content width — otherwise they push the whole dialog wide. */
+  overflow-wrap: anywhere;
+  color: var(--foreground);
+}
+
+.file-list-size {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.file-list-remove {
+  flex-shrink: 0;
+  width: 1.375rem !important;
+  height: 1.375rem !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.file-list-remove:hover {
+  background: var(--destructive) !important;
+  color: var(--destructive-foreground) !important;
+}
+
+/* ── In-card detail table (compact, for parts-used etc.) ─────────────────── */
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.detail-table-head th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+
+.detail-table-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-table-row:last-child {
+  border-bottom: none;
+}
+
+.detail-table-cell {
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+  /* Long, space-less values (filenames, part notes) break inside the cell
+     rather than forcing the table wider than its card. */
+  overflow-wrap: anywhere;
+}
+
+.detail-table-remove {
+  opacity: 0.5;
+}
+
+/* Cluster of per-row icon actions in a table cell (e.g. view / delete).
+   Block-level + flex-end so every action column (parts / readings / attachments)
+   right-aligns its icons consistently. */
+.detail-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   User Manual
+   ═══════════════════════════════════════════════════════════════════ */
+
+.manual-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* No max-width — stretches to the full available shell width */
+}
+
+/* ── Hero Banner ────────────────────────────────────────────────────── */
+
+.manual-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 2rem 2.5rem;
+  margin-bottom: 2rem;
+  border-radius: var(--radius);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary) 90%, white) 0%,
+    color-mix(in oklab, var(--primary) 60%, black) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle radial glow on the hero */
+.manual-hero::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: -60px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.manual-hero-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.manual-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.manual-hero-badge svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.manual-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.manual-hero-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.manual-hero-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.manual-hero-print {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.manual-hero-print:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: white;
+}
+
+/* ── Layout grid ────────────────────────────────────────────────────── */
+
+.manual-grid {
+  display: grid;
+  grid-template-columns: 20rem minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (max-width: 64rem) {
+  .manual-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Table of contents ──────────────────────────────────────────────── */
+
+.manual-toc {
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem;
+  background-color: color-mix(in oklab, var(--muted) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 64rem) {
+  .manual-toc {
+    position: static;
+    max-height: none;
+    border-left: none;
+    padding-left: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    background-color: var(--muted);
+  }
+}
+
+.manual-toc-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  margin: 0 0 0.25rem;
+  padding: 0 0.25rem;
+}
+
+.manual-toc-search {
+  position: relative;
+}
+
+.manual-toc-search-icon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.manual-toc-search input {
+  padding-left: 2rem;
+  font-size: 0.8125rem;
+  height: 2rem;
+}
+
+.manual-toc-list,
+.manual-toc-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.manual-toc-sublist {
+  margin-top: 2px;
+  padding-left: 0.75rem;
+}
+
+/* Override ghost Button base for TOC links */
+.manual-toc .manual-toc-link,
+.manual-toc .manual-toc-sublink {
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+  padding: 0.3rem 0.5rem;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+
+.manual-toc .manual-toc-link:hover,
+.manual-toc .manual-toc-sublink:hover {
+  color: var(--foreground);
+  background-color: var(--accent);
+}
+
+.manual-toc .manual-toc-link {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.manual-toc .manual-toc-sublink {
+  font-size: 0.75rem;
+}
+
+/* Active state: left pill indicator instead of full chip background */
+.manual-toc .manual-toc-link-active,
+.manual-toc .manual-toc-sublink-active {
+  color: var(--primary);
+  background-color: color-mix(in oklab, var(--primary) 8%, transparent);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+.manual-toc-empty {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0.25rem;
+  margin: 0;
+}
+
+/* ── Rendered manual content ────────────────────────────────────────── */
+
+.manual-content {
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.manual-content .manual-h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.manual-content .manual-h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 2.5rem 0 1rem;
+  padding: 0.75rem 1rem;
+  background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  scroll-margin-top: 1.5rem;
+}
+
+.manual-content .manual-h2:first-child {
+  margin-top: 0;
+}
+
+.manual-content .manual-h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 2rem 0 0.625rem;
+  scroll-margin-top: 1.5rem;
+}
+
+.manual-content .manual-h4,
+.manual-content .manual-h5,
+.manual-content .manual-h6 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 1.5rem 0 0.5rem;
+}
+
+.manual-content .manual-p {
+  margin: 0 0 1.1rem;
+}
+
+.manual-content .manual-list,
+.manual-content .manual-steps {
+  margin: 0 0 1.1rem;
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.manual-content .manual-list {
+  list-style: disc;
+}
+
+.manual-content .manual-steps {
+  list-style: decimal;
+}
+
+.manual-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--primary) 40%, transparent);
+  transition: text-decoration-color 0.15s;
+}
+
+.manual-content a:hover {
+  text-decoration-color: var(--primary);
+}
+
+.manual-content strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.manual-content code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85em;
+  background-color: color-mix(in oklab, var(--primary) 8%, var(--muted));
+  color: var(--primary);
+  padding: 0.125rem 0.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in oklab, var(--primary) 15%, transparent);
+}
+
+.manual-content .manual-code {
+  background-color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 0 0 1.1rem;
+  overflow-x: auto;
+}
+
+.manual-content .manual-code code {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  color: var(--foreground);
+}
+
+.manual-content .manual-quote {
+  margin: 0 0 1.1rem;
+  padding: 0.75rem 1.25rem;
+  border-left: 3px solid var(--primary);
+  background-color: color-mix(in oklab, var(--primary) 5%, var(--muted));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.manual-content .manual-hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2.5rem 0;
+}
+
+.manual-content .manual-table-wrap {
+  overflow-x: auto;
+  margin: 0 0 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.manual-content .manual-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Header row — primary-tinted, uppercase labels */
+.manual-content .manual-table thead tr {
+  background: color-mix(in oklab, var(--primary) 8%, var(--muted));
+  border-bottom: 2px solid color-mix(in oklab, var(--primary) 20%, var(--border));
+}
+
+.manual-content .manual-table th {
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* Body rows — alternating stripe for the matrix look */
+.manual-content .manual-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.1s;
+}
+
+.manual-content .manual-table tbody tr:nth-child(even) {
+  background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+}
+
+.manual-content .manual-table tbody tr:hover {
+  background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+
+.manual-content .manual-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.manual-content .manual-table td {
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  vertical-align: top;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+/* First column as a row header / key column */
+.manual-content .manual-table td:first-child {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.manual-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin: 0.75rem 0 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Print ──────────────────────────────────────────────────────────── */
+
+@media print {
+  [data-slot='sidebar'],
+  .app-shell-header,
+  .manual-toc,
+  .manual-hero [data-slot='button'] {
+    display: none !important;
+  }
+
+  .manual-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .manual-content {
+    font-size: 11pt;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WO Forms — template fields manager + WO detail execution section
+   ═══════════════════════════════════════════════════════════════════ */
+
+.wo-form-fields-dialog {
+  max-width: 42rem;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.wo-form-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wo-form-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.wo-form-field-row-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.wo-form-field-row-flags {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.wo-form-field-row-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wo-form-field-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wo-form-add-field-btn {
+  align-self: flex-start;
+}
+
+/* Sync-to-latest banner — same amber "pending" treatment reused across
+   status-pending / priority-medium / status-activation-pending. */
+.wo-form-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border: 1px solid oklch(0.7 0.155 75 / 0.25);
+  border-radius: var(--radius);
+  background: oklch(0.7 0.155 75 / 0.12);
+  color: oklch(0.5 0.13 75);
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
+}
+
+.wo-form-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Collapsed checklist summary on the WO detail page — the table itself lives in
+   the Fill-checklist sheet (WoChecklistSheet). */
+.wo-checklist-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wo-checklist-progress {
+  max-width: 22rem;
+}
+
+.wo-checklist-meta {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.wo-checklist-missing {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.wo-checklist-missing-label {
+  font-weight: 600;
+  color: var(--destructive);
+  margin-right: 0.375rem;
+}
+
+.wo-checklist-missing-items {
+  color: var(--muted-foreground);
+}
+
+.wo-checklist-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+/* Required-progress readout pinned in the checklist sheet footer. */
+.wo-checklist-footer-status {
+  margin-right: auto;
+  align-self: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.wo-checklist-footer-status[data-complete='true'] {
+  color: var(--primary);
+}
+
+/* WO Form checklist table — one aligned row per field so heights stay uniform
+   (the earlier card grid produced ragged, uneven cells). Reuses the
+   .detail-table look for consistency with Parts / Readings / Attachments. */
+.wo-form-table-scroll {
+  overflow-x: auto;
+}
+
+.wo-form-table {
+  table-layout: fixed;
+}
+
+/* Field names are short; without a cap this column absorbs all the slack at
+   sheet width (~68rem) and strands the inputs on the right edge. */
+.wo-form-col-field {
+  width: 30%;
+}
+
+.wo-form-col-slot {
+  width: 10rem;
+}
+
+.wo-form-col-notes {
+  width: 32%;
+}
+
+.wo-form-field-cell {
+  font-weight: 500;
+}
+
+.wo-form-field-name {
+  color: var(--foreground);
+}
+
+/* Yes/No answer for a boolean checklist slot, styled as a segmented control:
+   a recessed track with the chosen answer raised as a pill. Nothing selected =
+   unanswered, which the server distinguishes from a recorded "No" — the track
+   goes dashed in that state so an unanswered slot reads at a glance. */
+.wo-form-boolean-choice {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.wo-form-boolean-choice:not(:has([data-state='on'])) {
+  border-style: dashed;
+  border-color: color-mix(in oklab, var(--destructive) 40%, var(--border));
+}
+
+.wo-form-boolean-choice [data-slot='toggle-group-item'] {
+  min-width: 3rem;
+  height: 1.5rem;
+  padding: 0 0.625rem;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.wo-form-boolean-choice [data-slot='toggle-group-item']:hover:not([data-state='on']) {
+  color: var(--foreground) !important;
+}
+
+/* Selected answers are colour-filled so a long checklist can be scanned at a
+   glance: green = done, red = not done, dashed empty track = not yet answered.
+   Positional selectors, not [value=…]: `value` is a declared reka-ui prop, so it
+   is consumed by the component and never reaches the DOM. Yes is always the
+   first item and No the second — see WoChecklistSheet.vue. */
+.wo-form-boolean-choice [data-slot='toggle-group-item']:first-child[data-state='on'] {
+  background: var(--success) !important;
+  color: var(--success-foreground) !important;
+  box-shadow: var(--shadow-premium-sm);
+}
+
+.wo-form-boolean-choice [data-slot='toggle-group-item']:last-child[data-state='on'] {
+  background: var(--destructive) !important;
+  color: var(--destructive-foreground) !important;
+  box-shadow: var(--shadow-premium-sm);
+}
+
+/* Missing required field — flag the whole row. */
+.wo-form-row-missing {
+  background: oklch(0.577 0.245 27 / 0.05);
+}
+
+.wo-form-row-missing .wo-form-field-name,
+.wo-form-row-missing .field-required {
+  color: var(--destructive);
+}
+
+/* Stacked layout on narrow screens — a 4-column form grid can't fit a phone.
+   Rows become bordered blocks and each control is prefixed with its column
+   name via the data-label attribute. */
+@media (max-width: 640px) {
+  .wo-form-table,
+  .wo-form-table tbody,
+  .wo-form-table tr,
+  .wo-form-table td {
+    display: block;
+    width: auto;
+  }
+
+  .wo-form-table thead {
+    display: none;
+  }
+
+  .wo-form-table .detail-table-row {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .wo-form-table .detail-table-cell {
+    padding: 0.375rem 0;
+  }
+
+  .wo-form-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* ── Audit Logs viewer ─────────────────────────────────────────────────────
+   Server-side cursor-paginated list — the one list not built on AppDataTable,
+   so it carries its own table + filter styling. */
+.audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.audit-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.audit-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.audit-filter-event {
+  min-width: 16rem;
+}
+
+.audit-filter-subject,
+.audit-filter-actor,
+.audit-filter-text {
+  min-width: 12rem;
+}
+
+.audit-filter-date {
+  min-width: 9rem;
+}
+
+.audit-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.audit-result-meta {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0;
+}
+
+.audit-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.audit-table thead th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.audit-table tbody td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.audit-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.audit-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.audit-row:hover {
+  background: var(--accent);
+}
+
+.audit-row:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.audit-cell-time {
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.audit-mono {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.audit-actor-system {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.audit-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+/* Row-detail sheet: JSON before/after panes */
+.audit-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.audit-json-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.audit-json-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.audit-json-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.audit-json-code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.625rem 0.75rem;
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  color: var(--foreground);
+}
+
+.audit-json-empty {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+  padding: 0.625rem 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 640px) {
+  .audit-json-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-filter-actions {
+    margin-left: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Logistics "Find & Move" — search-first location update
+   ═══════════════════════════════════════════════════════════════════ */
+
+.move-search {
+  position: relative;
+  max-width: 42rem;
+}
+
+.move-search-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+/* Enlarge the shared Input for a prominent, search-first field. */
+.move-search input {
+  height: 3rem;
+  padding-left: 2.5rem;
+  font-size: 0.9375rem;
+}
+
+.move-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.move-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 0.5rem;
+}
+
+.move-results-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.move-results-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.move-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.move-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 0.9375rem 1rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.move-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in oklab, var(--border) 80%, black);
+}
+
+.move-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.move-card-tag {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: 0.01em;
+}
+
+.move-card-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-top: 0.0625rem;
+}
+
+.move-card-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+.move-card-loc b {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.move-card-loc-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.move-card-kids {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin: 0.5rem 0 0;
+  padding: 0.3125rem 0.5rem;
+  border-radius: 0.3125rem;
+  background: oklch(0.75 0.16 60 / 0.14);
+  color: oklch(0.5 0.12 60);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.move-card-kids-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.move-card-action {
+  flex-shrink: 0;
+}
+
+/* Picked-asset attribute row (serial + kind) */
+.move-card-attrs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4375rem;
+}
+
+.move-card-attr {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.move-card-attr-key {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+/* Filter bar: location + asset locator */
+.move-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.move-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.move-filter-field > label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.move-loc-select {
+  min-width: 12rem;
+}
+
+.move-filter-asset {
+  flex: 1;
+  min-width: 18rem;
+  max-width: 30rem;
+}
+
+/* Rich locator option rows (name over tag · serial · kind, with location) */
+.asset-locator-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1875rem;
+  width: 100%;
+  height: auto;
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  white-space: normal;
+}
+
+.asset-locator-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.asset-locator-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.asset-locator-tag {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.asset-locator-kind {
+  text-transform: capitalize;
+}
+
+.asset-locator-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.asset-locator-loc-icon {
+  width: 0.8125rem;
+  height: 0.8125rem;
+}
+
+/* Recently moved */
+.move-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.move-recent-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background-color: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.move-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+.move-recent-row:last-child {
+  border-bottom: 0;
+}
+
+.move-recent-tag {
+  flex: none;
+  width: 9rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.move-recent-route {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.move-recent-route b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.move-recent-arrow {
+  color: var(--muted-foreground);
+  padding: 0 0.125rem;
+}
+
+.move-recent-date {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .move-recent-tag {
+    width: 7rem;
+  }
+  .move-filter-asset {
+    max-width: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Reports catalogue (landing page)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.report-theme {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.report-theme-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.report-theme-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.report-theme-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.report-theme-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.report-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.report-card .data-card-header {
+  align-items: flex-start;
+}
+
+.report-card-id {
+  color: var(--muted-foreground);
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.report-card-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+/* Section divider between available and planned themes. */
+.report-section-divider {
+  margin: 2rem 0 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.report-section-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+/* Report status badges (extend .status-badge). */
+.report-status-available {
+  background: oklch(0.62 0.19 149 / 0.14);
+  color: oklch(0.5 0.16 149);
+}
+.report-status-planned {
+  background: oklch(0.6 0.13 250 / 0.12);
+  color: oklch(0.5 0.14 250);
+}
+.report-status-conditional {
+  background: oklch(0.75 0.16 60 / 0.14);
+  color: oklch(0.62 0.15 60);
+}
+.report-status-deferred {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+/* Available catalogue card → clickable link */
+.report-card-available {
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.report-card-available:hover {
+  border-color: var(--primary);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.08);
+}
+.report-card-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.report-card-open-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Report detail pages (Pass 1) — shell, filters, summary, table
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Back-to-catalogue link */
+.report-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-start;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: color 0.12s ease;
+}
+.report-back:hover {
+  color: var(--foreground);
+}
+.report-back-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Filter bar (mirrors .audit-filters) */
+.report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+.report-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 11rem;
+}
+.report-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+/* Checkbox-style filter — label + checkbox on one line, bottom-aligned. */
+.report-filter-inline {
+  justify-content: flex-end;
+}
+.report-filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  cursor: pointer;
+  padding-bottom: 0.375rem;
+}
+
+/* Summary strip */
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin: 0.25rem 0 0.5rem;
+}
+.report-summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.report-summary-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+.report-summary-value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1.1;
+}
+.report-summary-hint {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* Results meta + table (mirrors .audit-table) */
+.report-result-meta {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0;
+}
+.report-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.report-table thead th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.report-table tbody td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.report-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.report-table-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.report-cell-muted {
+  color: var(--muted-foreground);
+}
+.report-cell-strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Row link (asset/MR/WO drill-down) */
+.report-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.report-link:hover {
+  text-decoration: underline;
+}
+
+/* Load-more footer */
+.report-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+/* Inline mini-bar (distribution / compliance %) — wraps the ui Progress bar. */
+.report-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 9rem;
+}
+.report-bar > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.report-bar-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  min-width: 3rem;
+  text-align: right;
+}
+
+/* Aging-bucket badge (0-7 → 91+ severity ramp). Extends .status-badge. */
+.report-bucket-0-7 {
+  background: oklch(0.62 0.19 149 / 0.14);
+  color: oklch(0.5 0.16 149);
+}
+.report-bucket-8-30 {
+  background: oklch(0.75 0.16 80 / 0.16);
+  color: oklch(0.55 0.14 80);
+}
+.report-bucket-31-90 {
+  background: oklch(0.72 0.17 50 / 0.16);
+  color: oklch(0.55 0.16 45);
+}
+.report-bucket-91 {
+  background: oklch(0.62 0.22 25 / 0.14);
+  color: oklch(0.53 0.2 27);
+}
+
+/* Breakdown chips (mini counts inside a table cell) */
+.report-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+.report-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.report-chip b {
+  color: var(--foreground);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Secondary breakdown chips beneath the summary strip (by-priority, by-week). */
+.report-subsummary {
+  margin: 0 0 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .report-filter {
+    min-width: 100%;
+  }
+  .report-filter-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Meter reading — last-reading hint + lower-value guard
+   ═══════════════════════════════════════════════════════════════════ */
+
+.reading-last-hint {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+.reading-last-hint b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.reading-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--radius);
+  background: oklch(0.75 0.16 60 / 0.12);
+  color: oklch(0.48 0.12 60);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+.reading-warning b {
+  font-weight: 700;
+}
+
+.reading-warning-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.0625rem;
+}
+
+.reading-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.reading-ack-label {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--foreground);
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Printable Part Request
+   The temporary paper process the warehouse works from until Phase 3
+   Store Management provides formal issuance tracking.
+
+   Physical units (mm/pt) are deliberate here and are the one legitimate
+   exception to the token rule: paper does not scale with a viewport, and
+   the form has to line up with LDC's existing Material Request sheet.
+   Colour still comes from tokens.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.print-page {
+  padding: 1.5rem;
+  background: var(--background);
+}
+
+.print-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* One table for the whole document so the browser paginates it natively:
+   <thead> repeats per page, and the approval boxes that follow the table can
+   only ever land on the final page. */
+.pr-doc {
+  width: 100%;
+  border-collapse: collapse;
+  /* The asset band directly above already draws this edge. */
+  border-top: none;
+  table-layout: fixed;
+  font-size: 9pt;
+  /* Near-black for data. The app's --foreground is dark blue, which made every
+     value on the printed form look like a heading. */
+  color: #111;
+}
+
+.pr-doc th,
+.pr-doc td {
+  border: 0.5pt solid var(--primary);
+  padding: 1.5mm 2mm;
+  vertical-align: middle;
+}
+
+/* --- Branding band --- */
+.pr-band {
+  display: grid;
+  grid-template-columns: 44mm 1fr 66mm;
+  align-items: stretch;
+  border: 1pt solid var(--primary);
+}
+
+.pr-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2mm;
+  border-right: 1pt solid var(--primary);
+}
+
+.pr-logo {
+  height: 14mm;
+  width: auto;
+}
+
+.pr-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+}
+
+.pr-ref {
+  width: 100%;
+  border-collapse: collapse;
+  border-left: 1pt solid var(--primary);
+}
+
+.pr-ref th,
+.pr-ref td {
+  border: 0.5pt solid var(--primary);
+  padding: 1mm 2mm;
+  font-size: 8.5pt;
+}
+
+/* Values near-black; only labels carry the brand blue. Set explicitly because
+   the app's --foreground is itself dark blue. */
+.pr-ref td,
+.pr-meta td,
+.pr-approval-value {
+  color: #111;
+}
+
+.pr-ref th {
+  width: 40%;
+  text-align: left;
+  font-weight: 600;
+  background: var(--muted);
+  color: var(--primary);
+}
+
+/* --- Asset identity band --- */
+.pr-meta {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1pt solid var(--primary);
+  border-top: none;
+}
+
+.pr-meta th,
+.pr-meta td {
+  border: 0.5pt solid var(--primary);
+  padding: 1.5mm 2mm;
+  font-size: 8.5pt;
+  text-align: left;
+}
+
+.pr-meta th {
+  width: 24mm;
+  font-weight: 600;
+  background: var(--muted);
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* --- Line-item columns --- */
+.pr-cols th {
+  background: var(--muted);
+  color: var(--primary);
+  font-size: 8pt;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
+  /* Let "SUPPLIER PART NO." wrap onto two lines instead of setting the floor
+     for the column width. */
+  overflow-wrap: anywhere;
+}
+
+/* Column widths, applied via <colgroup> because `table-layout: fixed` derives
+   them from the first row — and the first row is the colspan="5" branding band,
+   so widths set on the header cells are ignored entirely.
+
+   Sized against real data: item 2 digits, qty 2 digits, size `12 1/16"` (8 ch),
+   supplier part number 10 ch, part names up to 103 ch. Description takes the
+   remainder because it is the only column that needs the slack. */
+/* Column order on the form: # | PART DESCRIPTION | SIZE | QTY | SPN | CODE.
+   Widths are order-independent — <colgroup> maps them positionally.
+
+   The short headers (#, SIZE, QTY, SPN, CODE) mean the data now sets these
+   widths rather than the labels, so SPN and CODE tightened from 32/28mm.
+   Landscape A4 gives ~281mm usable: 10 + 18 + 12 + 26 + 26 = 92mm fixed,
+   leaving ~189mm for the description — needed, at part names up to 103 chars. */
+.pr-w-item { width: 10mm; }
+.pr-w-desc { width: auto; }
+.pr-w-size { width: 18mm; }
+.pr-w-qty { width: 12mm; }
+.pr-w-pn { width: 26mm; }
+.pr-w-erp { width: 26mm; }
+
+/* Narrow columns hold short centred values; the table's cell padding would
+   crowd them. */
+.pr-center {
+  padding-left: 1mm !important;
+  padding-right: 1mm !important;
+}
+
+/* A 103-character part name must break rather than force the table wider. */
+.pr-row td {
+  overflow-wrap: anywhere;
+}
+
+.pr-row td {
+  height: 6.5mm;
+}
+
+.pr-row-blank td {
+  color: var(--muted-foreground);
+}
+
+.pr-center {
+  text-align: center;
+}
+
+.pr-note {
+  color: var(--muted-foreground);
+  font-size: 8pt;
+}
+
+/* --- Five approval boxes --- */
+.pr-approvals {
+  display: grid;
+  /* One band of five, as on LDC's reference form. At landscape width that is
+     ~55mm each, comfortable for a handwritten name and signature. */
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2mm;
+  margin-top: 3mm;
+  /* Never split a signature block across a page break. */
+  break-inside: avoid;
+}
+
+.pr-approval {
+  border: 1pt solid var(--primary);
+  break-inside: avoid;
+}
+
+.pr-approval-title {
+  padding: 1.5mm;
+  font-size: 8pt;
+  font-weight: 700;
+  text-align: center;
+  background: var(--muted);
+  border-bottom: 0.5pt solid var(--primary);
+}
+
+.pr-approval-field {
+  display: flex;
+  gap: 1mm;
+  padding: 1.5mm;
+  font-size: 8pt;
+  border-bottom: 0.5pt solid var(--primary);
+}
+
+.pr-approval-label {
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.pr-approval-value {
+  flex: 1;
+  min-height: 3.5mm;
+}
+
+.pr-approval-sign {
+  padding: 1.5mm;
+  padding-bottom: 12mm;
+  font-size: 8pt;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  /* A phantom trailing page is almost always an unconstrained height or a
+     trailing margin spilling past the page box. Pin both. */
+  html,
+  body {
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-page > *:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  /* Nothing injected outside the app may reach the paper. Dev overlays and
+     toast portals mount straight onto <body> with `position: fixed` and a huge
+     z-index; the Vue DevTools widget did exactly this and produced a blank
+     trailing page on every printout. Belt and braces alongside disabling that
+     plugin in vite.config.ts, because the next such tool will do the same. */
+  body > *:not(#app) {
+    display: none !important;
+  }
+
+  #vue-devtools-anchor,
+  .vue-devtools-frame,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  /* The print route is a document, not an app screen — drop the chrome. */
+  .print-toolbar {
+    display: none !important;
+  }
+
+  .print-page {
+    padding: 0;
+    background: #fff;
+  }
+
+  /* Repeat the branding + asset header on every page. */
+  .pr-doc thead {
+    display: table-header-group;
+  }
+
+  .pr-doc tbody tr {
+    break-inside: avoid;
+  }
+
+  /* Backgrounds and rules must survive the browser's ink-saving default. */
+  .pr-doc,
+  .pr-doc th,
+  .pr-doc td,
+  .pr-approval,
+  .pr-approval-title {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

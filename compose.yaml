@@ -1,0 +1,194 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: app
+    container_name: atms-api
+    working_dir: /var/www/html
+    volumes:
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "${APP_URL:-http://localhost}"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-atms}"
+      DB_USERNAME: "${DB_USERNAME:-atms}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+      QUEUE_CONNECTION: database
+      SESSION_DOMAIN: "${SESSION_DOMAIN:-localhost}"
+      SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-localhost}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}"
+      CORS_SUPPORTS_CREDENTIALS: "${CORS_SUPPORTS_CREDENTIALS:-true}"
+      ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
+      EMPLOYEE_VISIBLE_EMP_IDS: "${EMPLOYEE_VISIBLE_EMP_IDS:-}"
+      # These are set from the ROOT .env, which Compose reads. A value present only
+      # in backend/.env will NOT be used: Compose injects the empty default here as
+      # a real environment variable, and Laravel's Env reads $_SERVER before the
+      # dotenv file, so the empty string wins.
+      FRONTEND_URL: "${FRONTEND_URL:-}"
+      ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
+      ACCOUNT_EMAIL_BCC: "${ACCOUNT_EMAIL_BCC:-}"
+      GRAPH_TENANT_ID: "${GRAPH_TENANT_ID:-}"
+      GRAPH_CLIENT_ID: "${GRAPH_CLIENT_ID:-}"
+      GRAPH_CLIENT_SECRET: "${GRAPH_CLIENT_SECRET:-}"
+      GRAPH_MAILBOX: "${GRAPH_MAILBOX:-notification@ldc.com.ly}"
+      LDC_ERP_TENANT_ID: "${LDC_ERP_TENANT_ID}"
+      LDC_ERP_CLIENT_ID: "${LDC_ERP_CLIENT_ID}"
+      LDC_ERP_CLIENT_SECRET: "${LDC_ERP_CLIENT_SECRET}"
+      LDC_ERP_ENVIRONMENT: "${LDC_ERP_ENVIRONMENT:-Production}"
+      LDC_ERP_COMPANY: "${LDC_ERP_COMPANY}"
+      LDC_ERP_PARTS_API: "${LDC_ERP_PARTS_API}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: web
+    container_name: atms-nginx
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - api
+    networks:
+      - internal
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: atms-postgres
+    # Tuned for 6 vCPU / 12 GB RAM / NVMe (see docs/03-backend).
+    # shared_buffers=2GB reserves a dedicated RAM share for Postgres; the
+    # remaining ~8GB is left to the OS page cache (effective_cache_size tells
+    # the planner how much cache is available, guiding index/seq-scan choices).
+    # random_page_cost=1.1 + effective_io_concurrency=200 reflect NVMe
+    # (random reads cost ~the same as sequential; planner stops avoiding them).
+    command: >
+      postgres
+      -c shared_buffers=2GB
+      -c effective_cache_size=8GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=512MB
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c max_connections=100
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-atms}"
+      POSTGRES_USER: "${DB_USERNAME:-atms}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-secret}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-atms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: app
+    container_name: atms-queue
+    working_dir: /var/www/html
+    command: php artisan queue:work --tries=3
+    volumes:
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "${APP_URL:-http://localhost}"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-atms}"
+      DB_USERNAME: "${DB_USERNAME:-atms}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+      QUEUE_CONNECTION: database
+      ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
+      # These are set from the ROOT .env, which Compose reads. A value present only
+      # in backend/.env will NOT be used: Compose injects the empty default here as
+      # a real environment variable, and Laravel's Env reads $_SERVER before the
+      # dotenv file, so the empty string wins.
+      FRONTEND_URL: "${FRONTEND_URL:-}"
+      ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
+      ACCOUNT_EMAIL_BCC: "${ACCOUNT_EMAIL_BCC:-}"
+      GRAPH_TENANT_ID: "${GRAPH_TENANT_ID:-}"
+      GRAPH_CLIENT_ID: "${GRAPH_CLIENT_ID:-}"
+      GRAPH_CLIENT_SECRET: "${GRAPH_CLIENT_SECRET:-}"
+      GRAPH_MAILBOX: "${GRAPH_MAILBOX:-notification@ldc.com.ly}"
+      LDC_ERP_TENANT_ID: "${LDC_ERP_TENANT_ID}"
+      LDC_ERP_CLIENT_ID: "${LDC_ERP_CLIENT_ID}"
+      LDC_ERP_CLIENT_SECRET: "${LDC_ERP_CLIENT_SECRET}"
+      LDC_ERP_ENVIRONMENT: "${LDC_ERP_ENVIRONMENT:-Production}"
+      LDC_ERP_COMPANY: "${LDC_ERP_COMPANY}"
+      LDC_ERP_PARTS_API: "${LDC_ERP_PARTS_API}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: app
+    container_name: atms-scheduler
+    working_dir: /var/www/html
+    command: php artisan schedule:work
+    volumes:
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "${APP_URL:-http://localhost}"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-atms}"
+      DB_USERNAME: "${DB_USERNAME:-atms}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+      QUEUE_CONNECTION: database
+      ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
+      ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
+      # Mirrors the api/queue blocks; see the note there. The scheduler needs the
+      # full set because a scheduled job may queue a notification.
+      FRONTEND_URL: "${FRONTEND_URL:-}"
+      ACCOUNT_EMAIL_TRANSPORT: "${ACCOUNT_EMAIL_TRANSPORT:-fake}"
+      ACCOUNT_EMAIL_BCC: "${ACCOUNT_EMAIL_BCC:-}"
+      GRAPH_TENANT_ID: "${GRAPH_TENANT_ID:-}"
+      GRAPH_CLIENT_ID: "${GRAPH_CLIENT_ID:-}"
+      GRAPH_CLIENT_SECRET: "${GRAPH_CLIENT_SECRET:-}"
+      GRAPH_MAILBOX: "${GRAPH_MAILBOX:-notification@ldc.com.ly}"
+      LDC_ERP_TENANT_ID: "${LDC_ERP_TENANT_ID}"
+      LDC_ERP_CLIENT_ID: "${LDC_ERP_CLIENT_ID}"
+      LDC_ERP_CLIENT_SECRET: "${LDC_ERP_CLIENT_SECRET}"
+      LDC_ERP_ENVIRONMENT: "${LDC_ERP_ENVIRONMENT:-Production}"
+      LDC_ERP_COMPANY: "${LDC_ERP_COMPANY}"
+      LDC_ERP_PARTS_API: "${LDC_ERP_PARTS_API}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+volumes:
+  pgdata:
+  attachments:
+
+networks:
+  internal:

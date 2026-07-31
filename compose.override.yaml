@@ -1,0 +1,33 @@
+services:
+  api:
+    volumes:
+      - ./backend:/var/www/html
+      - attachments:/var/www/html/storage/app/attachments
+      # Re-enable OPcache timestamp validation for backend hot-reload in dev.
+      # Loads after zz-atms.ini (zzz- > zz-) so these values win locally.
+      # DO NOT mount in production.
+      - ./docker/backend/php/zzz-dev.ini:/usr/local/etc/php/conf.d/zzz-dev.ini:ro
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+  nginx:
+    volumes:
+      - ./docker/backend/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+
+  queue:
+    volumes:
+      - ./backend:/var/www/html
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+  scheduler:
+    volumes:
+      - ./backend:/var/www/html
+      - attachments:/var/www/html/storage/app/attachments
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+

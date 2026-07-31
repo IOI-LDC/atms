@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <!-- Two mechanisms are needed to make these values stick, and both are
+             required. The containers this suite runs in inject APP_ENV, APP_URL,
+             QUEUE_CONNECTION, and DB_* as OS environment variables, which PHP puts
+             into BOTH $_ENV and $_SERVER (variables_order=EGPCS).
+
+             1. force="true" on <env>, because PHPUnit does not override an
+                environment variable that already exists.
+             2. A matching <server> entry, because Laravel's Env repository reads
+                $_SERVER before getenv()/$_ENV. Forcing <env> alone changes getenv()
+                and $_ENV while env() keeps returning the container's value.
+
+             Until 2026-07-25 neither was set, so the suite silently ran as
+             APP_ENV=local on the database queue driver, meaning queued jobs were
+             written to the jobs table and never executed during tests. Anything
+             added below needs both a forced <env> and a <server> twin. -->
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_KEY" value="base64:l4PfASmpGaGfYyfkclVTp3J+WzdjwDDgQCKUEWrR10Q=" force="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
+        <env name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <env name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <env name="CACHE_STORE" value="array" force="true"/>
+        <!-- Tests run on PostgreSQL to match production. The suite cannot use
+             SQLite: the baseline data migration issues PostgreSQL-only syntax
+             (TRUNCATE ... RESTART IDENTITY CASCADE, public.* schema). Running on
+             the same engine as production also prevents driver-specific bugs
+             (e.g. case-sensitive LIKE) from being masked by SQLite's behavior.
+             We switch to a dedicated "testing" connection (see config/database.php)
+             that targets a separate database (DB_TEST_DATABASE, default
+             atms_testing) so RefreshDatabase never touches the application
+             database. Using a connection name (not DB_DATABASE) is intentional:
+             the injected DB_DATABASE names the application database, so pointing
+             the default connection at a separate "testing" connection keeps the two
+             apart regardless of what the container sets. The test database must
+             exist and be empty. -->
+        <env name="DB_CONNECTION" value="testing" force="true"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
+        <env name="PULSE_ENABLED" value="false" force="true"/>
+        <env name="TELESCOPE_ENABLED" value="false" force="true"/>
+        <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
+
+        <!-- The suite must never send real mail. Compose injects the live values
+             into the container, so these must be pinned here or a test run will
+             call Microsoft Graph for real. `AccountEmailTransportIsFakeTest`
+             asserts the outcome rather than trusting this file. -->
+        <env name="ACCOUNT_EMAIL_TRANSPORT" value="fake" force="true"/>
+        <env name="ACCOUNT_EMAIL_BCC" value="" force="true"/>
+        <env name="GRAPH_TENANT_ID" value="" force="true"/>
+        <env name="GRAPH_CLIENT_ID" value="" force="true"/>
+        <env name="GRAPH_CLIENT_SECRET" value="" force="true"/>
+        <env name="GRAPH_MAILBOX" value="notification@test.invalid" force="true"/>
+        <env name="FRONTEND_URL" value="http://localhost" force="true"/>
+
+        <!-- $_SERVER twins of the above; see the note at the top of this block. -->
+        <server name="APP_ENV" value="testing" force="true"/>
+        <server name="APP_KEY" value="base64:l4PfASmpGaGfYyfkclVTp3J+WzdjwDDgQCKUEWrR10Q=" force="true"/>
+        <server name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
+        <server name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <server name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <server name="CACHE_STORE" value="array" force="true"/>
+        <server name="DB_CONNECTION" value="testing" force="true"/>
+        <server name="MAIL_MAILER" value="array" force="true"/>
+        <server name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <server name="SESSION_DRIVER" value="array" force="true"/>
+        <server name="PULSE_ENABLED" value="false" force="true"/>
+        <server name="TELESCOPE_ENABLED" value="false" force="true"/>
+        <server name="NIGHTWATCH_ENABLED" value="false" force="true"/>
+        <server name="ACCOUNT_EMAIL_TRANSPORT" value="fake" force="true"/>
+        <server name="ACCOUNT_EMAIL_BCC" value="" force="true"/>
+        <server name="GRAPH_TENANT_ID" value="" force="true"/>
+        <server name="GRAPH_CLIENT_ID" value="" force="true"/>
+        <server name="GRAPH_CLIENT_SECRET" value="" force="true"/>
+        <server name="GRAPH_MAILBOX" value="notification@test.invalid" force="true"/>
+        <server name="FRONTEND_URL" value="http://localhost" force="true"/>
+    </php>
+</phpunit>
