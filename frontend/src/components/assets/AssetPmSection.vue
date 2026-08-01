@@ -205,6 +205,9 @@ async function confirmToggle() {
               <span v-if="a.rule.maintenance_level" :class="pmLevelClass(a.rule.maintenance_level)">
                 {{ a.rule.maintenance_level }}
               </span>
+              <!-- Explains why a schedule the user never assigned is here, and
+                   warns that it follows the asset's category rather than staying put. -->
+              <span v-if="a.origin === 'category'" class="pm-origin-badge">By category</span>
             </td>
             <td class="detail-table-cell pm-schedule-cell">{{ pmScheduleText(a) }}</td>
             <td class="detail-table-cell">

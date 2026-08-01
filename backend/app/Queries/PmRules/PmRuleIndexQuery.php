@@ -16,7 +16,10 @@ class PmRuleIndexQuery
 
     public function build(Request $request): CursorPaginator
     {
-        $query = PmRule::with(['usageReadingType', 'createdBy'])
+        // `maintenanceCategories` is not optional here. The edit sheet is opened
+        // from this list and submits the coverage it was given, so a row without
+        // its categories loaded would silently clear them on save.
+        $query = PmRule::with(['usageReadingType', 'createdBy', 'maintenanceCategories'])
             ->withCount(['assignments' => fn ($q) => $q->where('is_active', true)]);
 
         $this->applyFilters($query, $request);

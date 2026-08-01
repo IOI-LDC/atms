@@ -76,10 +76,13 @@ following are explicitly excluded and remain in other systems:
   hours, kilometers, readings), not AI or condition-based monitoring.
 - **Multi-level approval workflow** — a single Maintenance Manager review step
   gates MR-to-WO conversion.
-- **External workflow notifications** — only account activation and
-  password-reset emails are sent (via Microsoft Graph `sendMail`).
-- **Advanced reporting and BI** — basic dashboard KPIs are provided; no custom
-  report builders or BI integration.
+- **External workflow notifications** — emails via Microsoft Graph
+  `sendMail` cover account activation, password reset, and the MR/WO workflow
+  (submitted, approved, rejected; assigned, started, completed, closed,
+  cancelled). No other outbound notification channel exists.
+- **Advanced BI** — read-only operational dashboard KPIs and reports (Section
+  16) are provided, but there is no custom report builder, data warehouse, or
+  BI integration.
 - **ERP write-back** — the system does not update the ERP with maintenance or
   financial records.
 - **Offline mode** — a continuous network connection is required.
@@ -407,8 +410,11 @@ only the logo is visible.
 | 4   | Asset Management     | Tabbed Group | Admin, Manager, Technician, Logistics |
 | 5   | Parts Management     | Tabbed Group | Admin, Manager, Technician            |
 | 6   | Locations            | Tabbed Group | Admin, Manager, Logistics             |
-| 7   | Admin                | Tabbed Group | Admin only                            |
-| 8   | Settings             | Tabbed Group | Admin only                            |
+| 7   | Reports              | Direct Link  | Everyone                              |
+| 8   | Admin                | Tabbed Group | Admin only                            |
+
+**Settings** is no longer a sidebar item — it moved to the user menu (your
+avatar in the header) and is visible to Administrators only. See Section 14.
 
 The sidebar can be collapsed to icon-only mode on desktop using the sidebar
 toggle in the header bar. On mobile, the sidebar becomes a slide-in sheet. The
@@ -457,8 +463,11 @@ Screens without sidebar entries:
 | Asset Management     | —         | Yes        | Yes       | Yes     | Yes   |
 | Parts Management     | —         | Yes        | —         | Yes     | Yes   |
 | Locations            | —         | —          | Yes       | Yes     | Yes   |
+| Reports              | Yes       | Yes        | Yes       | Yes     | Yes   |
 | Admin                | —         | —          | —         | —       | Yes   |
-| Settings             | —         | —          | —         | —       | Yes   |
+
+Settings is not a section here because it is no longer a sidebar item — it is
+reached from the user menu and is Administrator-only (Section 14).
 
 ---
 
@@ -488,21 +497,23 @@ Every asset carries the following fields, stored in the `assets` table:
 | `serial_number` | string (nullable) | Manufacturer serial number. Critical for asset tag generation. |
 | `model` | string (nullable) | Manufacturer model designation. |
 | `manufacturer` | string (nullable) | Manufacturer name or ERP vendor code. |
-| `fa_subclass_code` | string (nullable, max 20) | ERP Fixed Asset subclass code — maps to the asset's accounting classification in the ERP (e.g. "MTR" for Mud Motor). This code drives asset tag type codes and WO Form template matching. Populated during ERP import; may be manually set. |
+| `fa_subclass_code` | string (nullable, max 20) | ERP Fixed Asset subclass code — maps to the asset's accounting classification in the ERP (e.g. "MTR" for Mud Motor). Written by the ERP sync, so it describes an asset but never routes ATMS behaviour; it drives asset tag type codes only — reports filter and group on Maintenance Category instead. Populated during ERP import; may be manually set. |
+| `maintenance_category_id` | integer (required) | The ATMS-owned Maintenance Category. Required on every asset — an unclassified asset carries the **Unclassified** category rather than no category. Routes WO Form templates and is what PM rules may cover. |
 
 **Status Fields — Four Orthogonal Dimensions:**
 
 An asset has **four independent status dimensions** that answer different
-questions. They are stored as separate columns and operate independently — a
-change to one does not automatically affect another (with the exception of
-auto-clear rules for booking).
+questions. Three are stored as columns; `is_booked` is **derived** from the
+bookings table. They operate independently — a change to one does not
+automatically affect another (with the exception of auto-release rules for
+booking).
 
 | Field | Enum | Question It Answers | Values |
 |---|---|---|---|
 | `operational_status` | `OperationalStatus` | **Is the asset working right now?** | `active`, `under_maintenance`, `down`, `inactive` |
 | `maintenance_status` | `MaintenanceStatus` | **Is the asset in the maintenance program?** | `enrolled`, `withdrawn` |
 | `maintenance_sub_status` | `MaintenanceSubStatus` | **Where is it in the program lifecycle?** | `installed`, `ready`, `lih`, `dbr`, `disposed`, `scrapped`, `other` |
-| `is_booked` | boolean | **Is it reserved for a future job?** | `true` (reserved), `false` (available) |
+| `is_booked` | boolean (derived) | **Is it reserved for a future job?** | `true` (an active booking covers today), `false` (no active booking) |
 
 And a fifth dimension for the asset record itself:
 
@@ -574,9 +585,9 @@ Deactivation is reversible — an Administrator or Maintenance Manager can
 reactivate an asset (`is_active = true`) at any time, restoring it to the active
 registry.
 
-**Auto-clear rule:** If a deactivated asset was booked (`is_booked = true`), the
-booking is automatically cleared during deactivation. You cannot reserve an asset
-that has been removed from the active registry.
+**Auto-release rule:** If a deactivated asset was booked (`is_booked = true`),
+its active bookings are automatically **released** during deactivation. You
+cannot reserve an asset that has been removed from the active registry.
 
 #### ERP Asset Code — The Bridge to Financial Records
 
@@ -609,16 +620,18 @@ the asset according to the ERP's Fixed Asset subclass taxonomy. Examples:
 | `JRS` | Jars |
 | `MEQ` | Machinery / Equipment |
 
-The FA subclass code drives two system features:
-1. **Asset Tag generation** — the 3-letter type code segment of the asset tag
-   (e.g. `L-MTR-634-1234`) is derived from the FA subclass code via an Admin
-   mapping table. See Section 5.3.
-2. **WO Form template matching** — when a Work Order is created, the system
-   checks whether the asset's FA subclass has an active `FormTemplate`. If so,
-   that template is snapshotted into the WO as a WO Form. See Section 8.6a.
+The FA subclass code drives exactly one system feature:
 
-The mapping from FA subclass code to the 3-letter type code abbreviation is
-managed in the Admin settings and is separate from the ERP import.
+1. **Asset Tag generation** — the 3-letter type code segment of the asset tag
+   (e.g. `L-MTR-634-1234`) is derived from the FA subclass code via a seeded
+   type-code mapping. See Section 5.3.
+
+WO Form template selection is **not** driven by FA subclass — it is routed by
+the asset's Maintenance Category (Section 8.7). The mapping from FA subclass
+code to the 3-letter type code abbreviation is seeded system data
+(`fa_subclass_type_codes`); the ERP import records any code it has not seen
+before with the type code `UNK`, and there is no admin interface for editing
+this mapping.
 ### 5.2 Asset Kinds
 
 Every asset in ATMS carries an `asset_kind` that declares what role it can play in
@@ -782,9 +795,11 @@ L - BBB - CCC - XXXX
 - **Ownership (1 char):** `L` for LDC-owned assets (LDC is responsible for
   maintenance). `X` for external assets (rented, third-party, or client-owned —
   LDC is not responsible).
-- **Type code (3 chars):** Derived from the ERP FA subclass code via an Admin
-  mapping table. Example mappings: `MTR` for Mud Motor, `MWD` for MWD/LWD tools,
-  `DHT` for Downhole Tools, `JRS` for Jars, `MEQ` for machinery/equipment.
+- **Type code (3 chars):** Derived from the ERP FA subclass code via a seeded
+  type-code mapping (`fa_subclass_type_codes`); any code the ERP import has not
+  seen before is recorded as `UNK`. Example mappings: `MTR` for Mud Motor,
+  `MWD` for MWD/LWD tools, `DHT` for Downhole Tools, `JRS` for Jars, `MEQ` for
+  machinery/equipment.
 - **Size code (3 chars):** Encoded from the first inch measurement found in the
   ERP description. `958` for 9 5/8", `634` for 6 3/4", `800` for 8", `000` if
   no physical size is discernible or the subclass is flagged as having no
@@ -867,36 +882,66 @@ component` or `package`.
 ### 5.5 Asset Booking
 
 Booking is an **availability marker** used by Operations to guarantee that a
-specific asset is reserved for a future Job or Project. It prevents
-double-allocation — ensuring an asset promised to a client is not inadvertently
-reassigned or relocated.
+specific asset is reserved for a future Job or Project over a date range. It
+prevents double-allocation — ensuring an asset promised to a client is not
+inadvertently reassigned or relocated.
+
+Bookings live in a dedicated `bookings` table, so full history is preserved —
+a booking is never overwritten, only superseded by a new one or ended.
+
+**What a booking records:**
+
+| Field | Purpose |
+|---|---|
+| `booked_from` / `booked_until` | The reservation date range (required). |
+| `booking_reference` | Optional job/project reference (e.g. "JOB-2026-014"). |
+| `notes` | Optional free-text context. |
+| `booked_by` | The user who created the booking. |
+| `status` | `active`, `cancelled`, or `released`. |
+| `cancelled_at` | When the booking was cancelled or released. |
 
 **How booking works:**
 
-- `is_booked` is a boolean field (`true` = reserved, `false` = freely
-  available).
+- An asset **is booked** when an active booking covers today. The `is_booked`
+  flag shown on lists and detail screens is **derived** from the bookings table
+  — it is not a stored column.
 - Booking does **not** gate any maintenance workflow. A booked asset can still
   have MRs created, WOs opened, and PM triggered against it.
 - Booking is completely independent of both operational status and maintenance
   status. A booked asset can be active, under maintenance, or down.
-- No Job/Project/client reference is stored in ATMS — "what" the asset is booked
-  for lives in the external Job/Project system.
-- Booking auto-clears (`is_booked = false`) when:
-  - The asset's location changes (via any path).
-  - The asset is deactivated (`is_active = false`).
-  - The asset's maintenance status becomes Withdrawn (`withdrawn`).
-- Booking survives maintenance events (WO creation, completion, closure) — only
-  location change or inactivation releases it.
 
-**Who can toggle booking:**
+**Overlap detection:** the system rejects a new or edited booking that overlaps
+an existing **active** booking on the same asset. When that happens, the form
+lists the conflicting bookings and offers **Book Anyway** — a deliberate force
+override for cases where Operations accepts the double commitment. Overlap is a
+warning the user can override, not a hard block.
 
-| Role                | Book | Unbook |
-| ------------------- | ---- | ------ |
-| Administrator       | Yes  | Yes    |
-| Maintenance Manager | Yes  | Yes    |
-| Logistics           | Yes  | Yes    |
-| Technician          | No   | No     |
-| Requester           | No   | No     |
+**Release and cancellation:**
+
+- A booking is **released automatically** (`status = released`) when the asset
+  is deactivated (`is_active = false`) or withdrawn from the maintenance program
+  (`maintenance_status = withdrawn`). You cannot keep an asset reserved after it
+  has left the active registry.
+- A booking can be **cancelled manually** (`status = cancelled`) by an
+  authorised user at any time.
+- Booking survives maintenance events (WO creation, completion, closure) and
+  **location changes** — only deactivation, withdrawal, or a manual cancel ends
+  it.
+
+**Who can manage bookings:**
+
+| Role                | Book / Edit / Cancel |
+| ------------------- | -------------------- |
+| Administrator       | Yes                  |
+| Maintenance Manager | Yes                  |
+| Logistics           | Yes                  |
+| Technician          | No                   |
+| Requester           | No                   |
+
+**In the UI:** Asset Detail shows a **Bookings** card in the right rail listing
+each booking with its reference and status badge. **Book** opens the booking
+form (from/to dates, reference, notes); clicking a booking opens its details
+with **Edit** and **Cancel** actions.
 
 ### 5.6 Asset Assembly (Packages, Components, and Parent-Child Relationships)
 
@@ -1162,120 +1207,113 @@ An asset can be:
 
 ## 6. Dashboard
 
-The Dashboard — titled **Maintenance Control Center** — is the landing page for
-all authenticated users. It provides a comprehensive operational overview with
-reliability analytics, process metrics, action-required alerts, and quick-access
-controls.
+The Dashboard — titled simply **Dashboard** — is the landing page for all
+authenticated users. It gives a current-state view of the asset register and the
+maintenance programme: what needs attention, how the fleet is being used,
+reliability and process performance over the trailing 90 days, and where the
+programme has gaps.
 
 **Visible to:** Everyone.
 
 **Route:** `/dashboard`
 
-### 6.1 Page Layout
+### 6.1 Needs Attention
 
-The Dashboard uses a two-column split layout:
+Three status tiles sit at the top of the page:
 
-- **Left panel (main workspace):** Contains the analytics KPIs section and
-  detailed data cards (action-required lists and activity tracking).
-- **Right panel (command center sidebar):** Contains role-driven quick actions
-  and live operational status tiles.
+| Tile | Shows | Links To |
+| --- | --- | --- |
+| **Assets down** | Count of assets with `operational_status = down`. | `/assets` |
+| **PM overdue** | Count of overdue PM assignments. | `/reports/overdue-pm` |
+| **Requests pending review** | Count of MRs in `pending_review`. | `/maintenance` |
 
-A "Refresh" button in the page header lets you reload all dashboard data
-manually. A window indicator shows the analysis time frame (e.g., "Last 90
-days") with the actual date range.
+The PM-overdue and pending-review tiles are role-adaptive — they appear only
+when the backend determines your role has relevant items. Non-zero counts are
+highlighted so urgent work stands out.
 
-### 6.2 Analytics & Reliability KPIs
+### 6.2 Utilisation
 
-The top of the dashboard displays six Key Performance Indicators organized into
-two groups. These KPIs are calculated over a rolling **90-day window** and are
-visible to all roles. Metrics that cannot be computed due to insufficient data
-display a dash (—), never zero.
+The Utilisation band shows what share of the eligible fleet is deployed:
 
-#### Reliability Performance
+- **Deployed** means the asset's location class is `rig` or `well_site`; assets
+  `down` or `under_maintenance` are excluded from the deployed count.
+- The headline figure states its basis explicitly — for example "34 of 40
+  eligible assets deployed".
+- The segmented bar and legend break the whole register into **Deployed**,
+  **Idle**, **Maintenance**, **No location**, and **Unclassified location** —
+  the data gaps stay visible in the bar even though they are excluded from the
+  percentage.
+- A separate line shows how many assets are **committed for upcoming jobs**
+  (currently booked).
 
-| KPI              | Description                                                                                                                                | Unit  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
-| **MTBF**         | Mean Time Between Failures — the average interval between **classified failures** during the window. A failure is a corrective Maintenance Request a manager has marked as a real failure (`is_failure = yes`) at approval, optionally revised at Work Order closure. No-fault-found and unclassified corrective requests are excluded. Calculated on a calendar basis. | days  |
-| **MTTR**         | Mean Time To Repair — the average clock time from WO creation through closure for corrective Work Orders completed in the window.          | hours |
-| **Failure Rate** | Total number of classified failures (corrective MRs with `is_failure = yes`) created in the window, expressed as a count and a per-day average. | count |
+### 6.3 Reliability & Process Performance
 
-#### Process Efficiency
+Two cards present the six KPIs over a rolling **90-day window** (the window
+caption shows the actual date range). Metrics that cannot be computed display an
+explanatory empty state ("No failures yet", "None closed"), never zero.
 
-| KPI                 | Description                                                                                                                    | Unit  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----- |
-| **PM Compliance**   | Percentage of Preventive Maintenance assignments completed on time (WO closed by or before the PM due date) during the window. | %     |
-| **Avg MR Duration** | Average elapsed time from Maintenance Request creation to its final resolution (conversion, rejection, or cancellation).       | hours |
-| **Avg WO Duration** | Average elapsed time from Work Order creation to closure for WOs closed during the window.                                     | hours |
+#### Equipment Reliability
 
-### 6.3 Action Required
+| KPI | Description | Unit |
+| --- | --- | --- |
+| **MTBF** | Mean Time Between Failures — the average interval between **classified failures** during the window, on a calendar basis (window days ÷ classified failures). A failure is a corrective Maintenance Request a manager has marked as a real failure (`is_failure = yes`) at approval, optionally revised at Work Order closure. No-fault-found and unclassified corrective requests are excluded. | days |
+| **MTTR** | Mean Time To Repair — the average clock time from WO creation through closure for corrective Work Orders completed in the window. | hours |
+| **Failures** | Total number of classified failures (corrective MRs with `is_failure = yes`) created in the window. | count |
 
-Role-adaptive data cards appear in the left workspace when you have items
-requiring attention. Each card shows a count badge and a scrollable list of
-items. Cards only appear when the backend determines your role has relevant
-items — absence of a card means none apply.
+#### Process Performance
 
-| Card                             | Content                                                                                           | Link Target                                  |
-| -------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| **Pending Maintenance Requests** | MRs in `pending_review` status awaiting Manager review.                                           | MR detail page (`/maintenance/requests/:id`) |
-| **Open Work Orders**             | WOs in `open` or `in_progress` status. Assigned WOs for Technicians; all WOs for Managers/Admins. | WO detail page (`/work-orders/:id`)          |
-| **Overdue PM Assignments**       | PM assignments that have passed their due date or reading threshold.                              | Asset detail page (`/assets/:id`)            |
+| KPI | Description | Unit |
+| --- | --- | --- |
+| **PM compliance** | Percentage of Preventive Maintenance assignments completed on time (WO closed by or before the PM due date) during the window. | % |
+| **Avg request** | Average elapsed time from Maintenance Request creation to its final resolution (conversion, rejection, or cancellation). | hours |
+| **Avg work order** | Average elapsed time from Work Order creation to closure for WOs closed during the window. | hours |
 
-### 6.4 Activity & Tracking
+### 6.4 Asset Status & By Location
 
-Two additional data cards provide visibility into recent operational events:
+- **Asset status** lists all four operational states — Active, Under Maintenance,
+  Down, Inactive — with counts. **Booked** appears below a separator: it is a
+  different axis, not a fifth state, and deliberately does not sum with the rows
+  above it (an asset can be Booked and Under Maintenance at once).
+- **By location** shows the six locations holding the most assets, with
+  proportional bars and counts.
 
-| Card                            | Description                                                                                                 | Data Source        |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
-| **Recently Relocated Assets**   | Assets whose physical location changed in the last 90 days, showing the from → to route and effective date. | KPI endpoint       |
-| **Recently Closed Work Orders** | Work Orders closed within the last 30 days, showing WO number, asset, assignee, and closure date.           | Dashboard endpoint |
+### 6.5 Programme Readiness
 
-### 6.5 Command Center (Right Sidebar)
+Three readiness metrics show how many of the assets in ATMS are covered, each as
+a figure and progress bar:
 
-The right sidebar provides two panels:
+| Metric | Meaning |
+| --- | --- |
+| **PM coverage** | Assets with at least one active PM assignment. |
+| **Location recorded** | Assets with a current location recorded. |
+| **Baseline reading** | Assets with a confirmed baseline meter reading. |
 
-#### Actions Hub
+### 6.6 Active Workboard & Recent Moves
 
-A set of role-driven shortcut buttons that link directly to frequently used
-screens. Each action routes to the same default tab as the sidebar navigation
-item for that section.
+- **Active workboard** — the five most recent pending MRs and open WOs (newest
+  first), each linking to its detail page.
+- **Recent asset moves** — the five most recent physical relocations (asset,
+  destination location, effective date).
 
-| Action          | Visible To                            | Target                                     |
-| --------------- | ------------------------------------- | ------------------------------------------ |
-| **Assets**      | Admin, Manager, Technician, Logistics | `/assets?tab=all-assets`                   |
-| **New MR**      | Everyone                              | `/maintenance` (new request form)          |
-| **Locations**   | Admin, Manager, Logistics             | `/locations?tab=asset-location-update`     |
-| **Work Orders** | Admin, Manager, Technician            | `/work-orders` (role-adaptive default tab) |
+### 6.7 Quick Actions
 
-#### Operational Status
+The page header shows shortcut buttons when your role permits them: **New MR**
+(everyone) and **Update Location** (Admin, Manager, Logistics). For the full
+catalogue of operational views, see **Section 16 (Reports)**.
 
-Live KPI tiles displayed as compact stat cards. Each tile shows an icon, label,
-and count, and acts as a direct link to the corresponding filtered view — for
-example, clicking "Pending MR" navigates to `/maintenance?tab=pending-approval`.
+### 6.8 Role Filtering
 
-| Tile                 | Visible When                   | Links To                            |
-| -------------------- | ------------------------------ | ----------------------------------- |
-| **Pending MR**       | Pending MR summary key present | `/maintenance?tab=pending-approval` |
-| **Open Work Orders** | Open WO summary key present    | `/work-orders?tab=open`             |
-| **Overdue PM Rules** | Overdue PM summary key present | `/admin/pm-rules`                   |
+Dashboard data is role-filtered. For example:
 
-Tiles only appear when the corresponding summary data is available for your role
-— the backend omits keys entirely for roles that should not see them.
-
-### 6.6 Role Filtering
-
-Dashboard data is role-filtered. Each role sees counts and lists relevant to
-their responsibilities. For example:
-
-- **Technician** sees Work Orders assigned to them; Pending MRs are filtered to
-  their role-appropriate view.
+- **Technician** sees their own assigned WOs in the workboard.
 - **Maintenance Manager** sees all pending MRs requiring review and all active
   WOs across the team.
-- **Requester** sees their own submitted MRs and a limited set of dashboard
-  widgets relevant to their permissions.
-- **Logistics** sees location-related activity but no Work Order data.
+- **Requester** sees their own submitted MRs.
+- **Logistics** sees location-related activity; the workboard shows their
+  role-appropriate items.
 
-The analytics KPIs (Section 6.2) and relocated-assets feed are the same for
-every role — they represent system-wide operational health over the 90-day
+The reliability/process KPIs, utilisation, and readiness metrics are the same
+for every role — they represent system-wide operational health over the 90-day
 window.
 
 ---
@@ -1388,9 +1426,17 @@ types, evaluation, suppression, and cumulative maintenance — see **Section 12*
 
 1. A **PM Rule template** is configured by an Administrator (schedule
    definition, asset-agnostic).
-2. An Administrator or Maintenance Manager **assigns** the template to a
-   specific ATMS-managed asset. This seeds the asset's own baseline — the
-   starting point from which intervals are measured.
+2. The template is **assigned** to specific ATMS-managed assets, seeding each
+   asset's own baseline — the starting point from which intervals are measured.
+   There are two ways to do this, and they behave differently:
+   - **Per asset** — an Administrator or Maintenance Manager assigns the template
+     to one asset from Asset Detail. This is a deliberate decision about that
+     asset and nothing else ever undoes it.
+   - **By maintenance category** — an Administrator sets which categories the
+     template covers, and every asset in those categories is assigned
+     automatically. Coverage keeps itself up to date: an asset moving into a
+     covered category is assigned, and one moving out has its assignment
+     withdrawn.
 3. The system runs **daily evaluation** (scheduled job at 06:00 Africa/Tripoli)
    of all active PM assignments. An assignment is evaluated only if **both** the
    assignment and its parent template are active.
@@ -1408,9 +1454,7 @@ follows the same Manager review and WO lifecycle as a corrective MR.
 
 **PM rejection and cancellation — suppression rules:**
 
-- Both rejecting and cancelling a preventive MR create an **occurrence
-  suppression record**. This prevents the system from immediately regenerating
-  the same PM request on the next daily evaluation.
+- Both rejecting and cancelling a preventive MR create an **occurrence suppression record** — this prevents the system from immediately regenerating the same PM request on the next daily evaluation.
 - `suppressed_until_date` and `suppressed_until_reading` are set according to
   the PM trigger type and the decision.
 - For `date_or_reading` rules:
@@ -1755,8 +1799,9 @@ a WO is closed (all in one database transaction):
   this new baseline.
 
 **4. Cumulative Maintenance Cascade (if applicable):**
-- If the closed WO's PM rule has a standard level (`L1`-`L4`), all **lower-
-  level** active assignments on the **same asset** also have their baselines
+- If the closed WO's PM rule has a standard level (`L1`-`L4`), all
+  **lower-level** active assignments on the **same asset** also have their
+  baselines
   reset.
 - Example: closing an L3 WO resets L1 and L2 baselines (prevents redundant L1
   MR the day after an L3 overhaul).
@@ -1812,10 +1857,15 @@ Technicians cannot cancel Work Orders.
 
 ### 8.7 Work Order Execution Form (WO Form)
 
-When a Work Order is created for an asset, the system checks whether the asset's
-FA subclass (`fa_subclass_code`) has an active **FormTemplate**. If so, the
+When a Work Order is created for an asset, the system checks whether an active
+**FormTemplate** serves the asset's **Maintenance Category**. If so, the
 template is snapshotted (copied) into the WO as a **WO Form**. If no active
-template exists, the WO has no form and execution proceeds normally.
+template covers that category, the WO has no form and execution proceeds
+normally.
+
+A form template may serve several maintenance categories, but a category can be
+served by only one *active* template at a time — that is what makes an asset's
+form unambiguous, since each asset carries exactly one category.
 
 **What the form captures:**
 
@@ -2018,6 +2068,8 @@ Clicking an asset row opens the full-page Asset Detail screen.
 - **PM Assignments** — PM rules assigned to this asset with per-asset PM status
   (🟢🟡🔴), schedule, last triggered, next due, and per-row actions (evaluate,
   deactivate/reactivate). "Assign Rule" opens a picker of active templates.
+- **Bookings** — reservation card in the right rail with create, edit, and
+  cancel actions. See Section 5.5.
 - **Attachments** (`/assets/:assetId/attachments`) — upload, view, download
   asset attachments.
 - **Assembly** (`/assets/:assetId/assembly`) — for packages: child component
@@ -2376,7 +2428,8 @@ history, and update its physical location.
    - **Notes** — textarea (optional).
 5. Submit → confirmation dialog → the system executes the location update.
 6. On success, the location history is updated and the list refreshes.
-7. If the asset was booked, booking auto-clears on location change.
+7. A location change does **not** release an active booking — bookings
+   survive moves (see Section 5.5).
 8. A "View Location History" link per row navigates to the asset's location
    history drill-down.
 
@@ -2427,8 +2480,9 @@ A PM rule goes through these stages from configuration to completion:
 ```
 1. CREATE TEMPLATE       Admin defines a reusable schedule (e.g. "every 500 hrs")
          │
-2. ASSIGN TO ASSET       Admin/Manager links the template to a specific asset,
-         │               setting the baseline (starting point for the interval)
+2. ASSIGN TO ASSETS      Either per asset (Admin/Manager, from Asset Detail) or
+         │               by maintenance category (Admin, on the rule itself).
+         │               Each assignment gets its own baseline.
          │
 3. DAILY EVALUATION      06:00 Africa/Tripoli each day, the system checks all
          │               active assignments. Is the asset past its due threshold?
@@ -2573,6 +2627,43 @@ When you assign a template to an asset:
 
 This baseline is the starting point from which all future "is it due?"
 calculations are measured.
+
+#### Covering a Maintenance Category
+
+Instead of assigning a template asset by asset, an Administrator can set which
+**maintenance categories** the rule covers, on the rule itself ("Applies To").
+The picker searches by name and pins categories you have already ticked to the
+top of the list. Unlike WO form templates, **several PM rules may cover the same
+category** — that is how an L1–L4 set works, each level on its own interval.
+Every eligible asset in those categories is assigned automatically, each with its
+own fresh baseline — so a newly covered asset gets a full interval of grace
+rather than appearing instantly overdue.
+
+Expansion happens **in the background**, so the assignments appear a moment after
+you save. On a large category this can mean hundreds of assignments; reload the
+asset or rule to see them.
+
+Coverage keeps itself in step. An assignment is created when an asset joins a
+covered category, and withdrawn when it leaves, is deactivated, or is withdrawn
+from the maintenance program. The same happens when you add or remove a category
+on the rule, or deactivate the rule itself.
+
+**Two limits are deliberate, and worth knowing:**
+
+- **Coverage never overrules you.** An assignment you made per asset is never
+  withdrawn by a category change, and an assignment you deactivated by hand is
+  never switched back on. If you want one asset excluded from a category-wide
+  schedule, deactivate its assignment and it stays off.
+- **Work in progress is never interrupted.** An assignment with an open request
+  or work order is left active even if the asset has left the category. It is
+  withdrawn after that work finishes.
+
+On Asset Detail, an assignment created by coverage is marked **"By category"**.
+That badge is why a schedule you never assigned is there — and a warning that it
+follows the asset's category rather than staying put.
+
+Assets are eligible for coverage only while they are **active** and **enrolled**
+in the maintenance program.
 
 #### The Baseline Explained
 
@@ -3012,19 +3103,30 @@ deleted — they are deactivated when no longer needed.
 
 **Visible to:** Admin only.
 
-Manage Work Order execution form templates per FA subclass. Templates define
-the form fields that Technicians fill during WO execution.
+Manage Work Order execution form templates per **maintenance category**.
+Templates define the form fields that Technicians fill during WO execution.
 
-**Template list:** Shows all form templates with name, FA subclass, field count,
-and active/inactive status. Create, edit, and deactivate/reactivate actions are
-available.
+**Template list:** Shows all form templates with name, the maintenance categories
+they cover, field count, and active/inactive status. Create, edit, and
+deactivate/reactivate actions are available.
+
+**How a form reaches a work order:** when a WO is created, the system looks for
+an active template covering the asset's maintenance category and snapshots it. A
+template may cover **several** categories, but a category may be covered by only
+**one active** template at a time — that is what makes an asset's form
+unambiguous, since every asset has exactly one category.
 
 **Creating a template:**
 
 1. Select "Create Template".
 2. Enter a template name (e.g., "Mud Motor Inspection").
-3. Select the FA subclass (e.g., MTR for Mud Motor) — only subclasses without an
-   existing active template are shown.
+3. Tick the maintenance categories this form covers. The picker searches by
+   name, and **categories already ticked are pinned to the top of the list** so
+   you can see what a form covers without scrolling.
+
+   A category already covered by *another* active template is shown greyed out
+   with the name of the template holding it — deactivate that template first, or
+   remove the category from it, if you want to take the category over.
 4. Add fields to the template:
    - **Label** — what the Technician sees (e.g., "Hours reading").
    - **Type** — boolean, numeric, or text.
@@ -3037,13 +3139,20 @@ available.
 **Editing a template:**
 
 - Add, edit, remove, or reorder fields at any time.
+- Change which maintenance categories the form covers at any time. If you pick a
+  category another active template already holds, the save is refused and names
+  the template holding it.
 - Existing Work Orders keep their snapshotted version. The "Sync to latest"
   prompt allows Technicians to update individual WO forms on demand.
 
 **Deactivating a template:**
 
 - Deactivate to prevent new WOs from snapshotting the template.
-- Inactive templates remain visible and can be reactivated.
+- Deactivation **releases its categories**, so another template can then cover
+  them.
+- Inactive templates remain visible and can be reactivated — but reactivation is
+  refused if another active template has taken one of its categories in the
+  meantime, or if the template has no categories assigned at all.
 - Deactivation does not affect existing WO forms already snapshotted.
 
 ### 13.4 PM Rules Tab
@@ -3080,9 +3189,10 @@ Deactivation preserves history while preventing access.
 
 The Settings section provides system-wide configuration.
 
-**Sidebar:** Tabbed Group — visible to Administrator only.
+**Access:** From the user menu (your avatar in the header) → **Settings** —
+visible to Administrator only. It is not a sidebar item.
 
-**Route:** `/settings`
+**Routes:** `/settings/system`, `/settings/audit-logs`
 
 ### 14.1 System & Integration Tab
 
@@ -3175,6 +3285,114 @@ Attachments can be uploaded against four parent types:
 - Metadata is retained with `deleted_by_user_id` and `deleted_at`.
 - No restore UI in MVP.
 - Authorization for deletion follows the parent record's policy.
+
+## 16. Reports
+
+The Reports section is the read-only operational reporting layer of ATMS. Every
+report is live, filters on screen, and reads from the same data, terminology,
+and authorization as the rest of the application — there is no separate
+reporting data source.
+
+**Sidebar:** Direct Link — visible to everyone.
+
+**Route:** `/reports`
+
+### 16.1 The Reports Catalogue
+
+The Reports landing page lists every live report, grouped by theme. Each card
+shows the report's spec identifier (R-n), its title, and the operational
+question it answers; click a card to open the report.
+
+| Theme | Reports |
+| --- | --- |
+| **Reliability & Availability** | MTBF / Failure Rate by dimension, MTTR by dimension, Bad-Actor / Breakdown Analysis |
+| **PM Management** | Upcoming PM Schedule, PM Compliance, Overdue PM, PM Coverage / Gaps |
+| **Asset Status & Fleet** | Asset Distribution, Assets Status Report, Operational Status Distribution, Most-Used Assets, Asset Booking / Availability |
+| **Workload & Backlog** | WO Backlog / Aging, Workload by Technician, MR / WO Throughput |
+| **Parts & Movement** | Parts Consumption, Asset Movement Log |
+| **Inspection, Readings & PM Audit** | Work Order Form Results, Meter Reading Progression, PM Suppression Register |
+
+### 16.2 What Each Report Answers
+
+| ID | Report | What it shows |
+| --- | --- | --- |
+| R-1 | Upcoming PM Schedule | Assets with a PM due in the next 30 days. |
+| R-1B | Assets Status Report | The asset register — tag, name, type, status, location, assignee, and dates. The only listing report in the catalogue; filterable and exportable. Filters: location, operational status, asset kind, booked, and a date range (`updated_at` by default, `created_at` optional). "Assigned To" is the Technician on the asset's open work order. |
+| R-2 | Asset Distribution | How assets spread across location, maintenance category, or size, with status, kind, and booked breakdowns. Groupable by `location`, `maintenance_category`, or `size`. |
+| R-3 | MTBF / Failure Rate by dimension | Where classified failures concentrate — by asset, maintenance category, size, or location. |
+| R-4 | MTTR by dimension | Repair turnaround by asset, maintenance category, size, or technician. |
+| R-6 | Bad-Actor / Breakdown Analysis | Which assets, maintenance categories, sizes, or locations have the most confirmed failures. |
+| R-7 | PM Compliance | On-time PM completion percentage by rule, asset, location, and period. |
+| R-8 | Overdue PM | PMs past due and not closed, by aging bucket. |
+| R-9 | PM Coverage / Gaps | Active assets with no active PM assignment. |
+| R-10A | Operational Status Distribution | Fleet split across operational states — Active, Under Maintenance, Down, Inactive. |
+| R-13 | Asset Booking / Availability | Booked vs freely available assets, by location. |
+| R-14 | WO Backlog / Aging | Open and in-progress work orders by age bucket and priority. |
+| R-15 | Workload by Technician | Assigned vs completed work orders and average duration per technician (operational workload only — never performance appraisal or labour costing). |
+| R-16 | MR / WO Throughput | Counts by status over the period, plus average conversion time. |
+| R-17 | Parts Consumption | Quantities used by asset, category, location, and period. |
+| R-18 | Asset Movement Log | Relocations in the period, by from → to route. |
+| R-19 | Work Order Form Results | Pre/post inspection results recorded, by asset, field, and period. |
+| R-20 | Meter Reading Progression | How confirmed readings changed over time, by asset and reading type. |
+| R-21 | PM Suppression Register | Which PM occurrences were suppressed or overridden — by whom, when, and why. |
+| R-22 | Most-Used Assets | Assets ranked by accumulated usage against one reading type (operating hours, kilometres driven, or depth). Usage is a difference, not a sum — meters are cumulative, so only confirmed readings count and the baseline is the last confirmed reading before the window. |
+
+### 16.3 Report Pages
+
+Every report page shares one shell: a back-to-catalogue link, the report header,
+a filter bar, a summary strip, and the results.
+
+- Filters are applied on screen and reflected in the URL, so a filtered view can
+  be bookmarked and shared.
+- Large result sets use cursor pagination ("Load more"); `per_page` inputs are
+  capped at 500.
+- Summary stats state their basis — counts and percentages are computed over the
+  whole result set, not just the rows shown.
+- Null and zero are different: a metric with no basis to calculate shows an em
+  dash or an explanatory empty state; zero appears only when zero is a real
+  result.
+
+### 16.4 Grouping and Filtering Rules
+
+Reports group and filter **only on fields ATMS owns**:
+
+- Asset-side filtering is by **Maintenance Category** (`maintenance_category_id`),
+  not by FA subclass. The `fa_subclass_code` filter was removed from reports.
+- MTBF, MTTR, and Bad-Actor take an explicit `group_by` dimension: `asset`,
+  `maintenance_category`, or `size` — plus `location` (MTBF, Bad-Actor) or
+  `technician` (MTTR). The former `asset_class` dimension is gone and is
+  rejected.
+- Because every asset carries a Maintenance Category (defaulting to
+  **Unclassified**), there is no "uncategorised" null bucket on the
+  maintenance-category dimension for assets — unclassified assets appear under
+  the real **Unclassified** group. Parts keep a nullable category, so their null
+  bucket still occurs.
+
+### 16.5 CSV Export
+
+Some reports offer an **Export CSV** button. The export uses the **same
+endpoint** with `?format=csv` — never a separate route — so the file is produced
+by the same query, filters, sorting, and authorization as the table on screen.
+Exports are streamed (the whole result set, not one page), include a UTF-8 BOM
+so Excel opens Arabic correctly, and timestamp in the Africa/Tripoli timezone.
+
+Only reports whose endpoint honours `format=csv` show the button. Currently:
+**Assets Status Report**, **Asset Distribution**, and **Most-Used Assets**. The
+remaining reports are JSON-only until their endpoints implement CSV.
+
+### 16.6 What Is Not Reported
+
+- **Withdrawal is ERP-owned.** Assets with `maintenance_status = withdrawn` and
+  their sub-statuses (Lost in Hole, DBR, Disposed, Scrapped) are not surfaced,
+  counted, or reported anywhere in ATMS.
+- Deferred ideas (downtime/availability history, spare/rotor pool) are hidden
+  from the catalogue until their source data or phase dependency exists.
+
+### 16.7 Reports and the Dashboard
+
+The Dashboard links into reports — the **PM overdue** tile opens the Overdue PM
+report, and the readiness metrics mirror PM Coverage. Reports are the
+drill-down layer for the dashboard's headline numbers.
 
 ---
 
@@ -3294,6 +3512,7 @@ assembly hierarchy and which maintenance sub-statuses are available.
 | Permission                        | Admin | Manager | Technician        | Logistics | Requester       |
 | --------------------------------- | ----- | ------- | ----------------- | --------- | --------------- |
 | View dashboard                    | Yes   | Yes     | Yes               | Yes       | Yes             |
+| View reports (Section 16)         | Yes   | Yes     | Yes               | Yes       | Yes             |
 | Create corrective MR              | Yes   | Yes     | Yes               | Yes       | Yes             |
 | Update own pending MR             | Yes   | Yes     | Yes               | Yes       | Yes             |
 | Update any pending MR             | Yes   | Yes     | No                | No        | No              |
@@ -3377,9 +3596,11 @@ rolling 90-day window.
 Work Orders closed during the rolling 90-day window. One of the six Process
 Efficiency KPIs displayed on the Dashboard, measured in hours.
 
-**Booking:** An availability marker (`is_booked`) used by Operations to reserve
-an asset for a Job/Project. Independent of maintenance and operational status.
-Auto-clears on location change or inactivation.
+**Booking:** A reservation of an asset for a Job/Project over a date range,
+recorded in the `bookings` table (Section 5.5). An asset is booked when an
+active booking covers today; `is_booked` is derived, not stored. Independent of
+maintenance and operational status. Auto-released on deactivation or withdrawal
+from the maintenance program; can also be cancelled manually.
 
 **CM (Corrective Maintenance):** User-initiated maintenance for faulty, damaged,
 or underperforming assets. A CM Request is created manually by a user.
@@ -3399,9 +3620,9 @@ L1-L4 levels.
 financial asset management, procurement, and parts master data. ATMS reads parts
 from ERP (via SM) but does not write back.
 
-**Failure Rate:** Total number of corrective maintenance events (closed
-corrective Work Orders) during the rolling 90-day window, displayed as a count
-and a per-day average. One of the six reliability KPIs on the Dashboard.
+**Failure Rate:** The number of classified failures (corrective MRs with
+`is_failure = yes`) created during the rolling 90-day window, displayed as a
+count and a per-day average. One of the reliability metrics on the Dashboard.
 
 **Withdrawn (asset maintenance status, `withdrawn`):** The asset is not in active
 maintenance service. PM evaluation, CM creation, and WO creation are blocked.
@@ -3415,9 +3636,11 @@ operational performance. The Dashboard displays six KPIs in two groups:
 Reliability Performance (MTBF, MTTR, Failure Rate) and Process Efficiency
 (PM Compliance, Avg MR Duration, Avg WO Duration).
 
-**Maintenance Control Center:** The title of the Dashboard page. A two-column
-layout providing reliability analytics, action-required alerts, activity
-tracking, quick-action shortcuts, and live operational status tiles.
+**Dashboard:** The landing page for all authenticated users, titled
+**Dashboard**. It shows needs-attention tiles, fleet utilisation, reliability
+and process KPIs, asset status by operational state and booking, location
+spread, programme readiness, an active workboard, and recent asset moves. See
+Section 6.
 
 **Maintenance history:** A read-model view assembled from an asset's MRs, WOs,
 parts used, readings, and location changes. Not stored in a duplicate table —
@@ -3427,10 +3650,12 @@ derived from authoritative source records.
 (user-initiated) or Preventive (system-generated). All MRs must be reviewed by a
 Maintenance Manager before becoming a Work Order.
 
-**MTBF (Mean Time Between Failures):** The average interval between corrective
-maintenance events during the rolling 90-day window. Calculated on a calendar
-basis: window days divided by the number of corrective failures. Displayed in
-days on the Dashboard. A higher MTBF indicates better asset reliability.
+**MTBF (Mean Time Between Failures):** The average interval between
+**classified failures** during the rolling 90-day window, on a calendar basis
+(window days ÷ classified failures). A classified failure is a corrective
+Maintenance Request a manager marked as a real failure (`is_failure = yes`);
+no-fault-found and unclassified requests are excluded. Displayed in days on the
+Dashboard. A higher MTBF indicates better asset reliability.
 
 **MTTR (Mean Time To Repair):** The average clock time from Work Order creation
 through closure for corrective Work Orders completed during the rolling 90-day
@@ -3464,6 +3689,10 @@ activation and password-reset emails.
 
 **Ready (`ready`):** A sub-status indicating a component is fully maintained and
 available for installation (`parent_asset_id` is null). A spare.
+
+**Reports:** The read-only operational reporting section (Section 16): a
+catalogue of live reports grouped by theme, each with on-screen filters and some
+with CSV export. Visible to every role.
 
 **Root:** A package with no parent — sits at the top of an assembly tree.
 

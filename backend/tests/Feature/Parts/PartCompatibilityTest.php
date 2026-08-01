@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\WorkOrder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -49,15 +50,26 @@ class PartCompatibilityTest extends TestCase
         ]);
     }
 
+    /**
+     * A null $categoryId means "this asset has no meaningful category". The
+     * column no longer stores null, so the asset falls to the Unclassified
+     * default — which no part is assigned to, so the compatibility outcome is
+     * the same one these tests were written for: only universal parts match.
+     */
     private function asset(?int $categoryId, ?string $size): Asset
     {
-        return Asset::create([
+        $attributes = [
             'erp_asset_code' => 'AST-CMP-'.uniqid(),
             'name' => 'Test Asset',
-            'maintenance_category_id' => $categoryId,
             'size_inches' => $size,
             'is_active' => true,
-        ]);
+        ];
+
+        if ($categoryId !== null) {
+            $attributes['maintenance_category_id'] = $categoryId;
+        }
+
+        return Asset::create($attributes);
     }
 
     private function part(string $name, ?int $categoryId, ?string $size, float $qty = 5, bool $active = true): Part
@@ -312,7 +324,7 @@ class PartCompatibilityTest extends TestCase
         ]);
     }
 
-    private function addPart(WorkOrder $workOrder, Part $part): \Illuminate\Testing\TestResponse
+    private function addPart(WorkOrder $workOrder, Part $part): TestResponse
     {
         return $this->actingAs($this->admin())
             ->postJson("/api/work-orders/{$workOrder->id}/parts", [

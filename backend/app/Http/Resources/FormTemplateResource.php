@@ -12,7 +12,16 @@ class FormTemplateResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'fa_subclass_code' => $this->fa_subclass_code,
+            'maintenance_categories' => $this->whenLoaded(
+                'maintenanceCategories',
+                fn () => $this->maintenanceCategories
+                    ->map(fn ($category) => [
+                        'id' => $category->id,
+                        'code' => $category->code,
+                        'name' => $category->name,
+                    ])
+                    ->values(),
+            ),
             'is_active' => $this->is_active,
             'fields' => $this->whenLoaded('fields', fn () => FormTemplateFieldResource::collection($this->fields)),
             'fields_count' => $this->when(isset($this->fields_count), fn () => (int) $this->fields_count),

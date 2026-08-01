@@ -63,11 +63,13 @@ class NormalizeMaintenanceCategoryCodesTest extends TestCase
         $this->assertSame($canonicalAps->id, $legacyPart->refresh()->maintenance_category_id);
         $this->assertSame($legacyVertex->id, $vertexAsset->refresh()->maintenance_category_id);
         $this->assertSame($legacySubFlow->id, $subFlowAsset->refresh()->maintenance_category_id);
-        $this->assertDatabaseCount('maintenance_categories', 3);
+        // Three merged categories plus the Unclassified sentinel, which this
+        // migration neither creates nor touches.
+        $this->assertDatabaseCount('maintenance_categories', 4);
 
         $migration->up();
 
-        $this->assertDatabaseCount('maintenance_categories', 3);
+        $this->assertDatabaseCount('maintenance_categories', 4);
         $this->assertSame($canonicalAps->id, $apsAsset->refresh()->maintenance_category_id);
         $this->assertSame($legacyVertex->id, $vertexAsset->refresh()->maintenance_category_id);
         $this->assertSame($legacySubFlow->id, $subFlowAsset->refresh()->maintenance_category_id);

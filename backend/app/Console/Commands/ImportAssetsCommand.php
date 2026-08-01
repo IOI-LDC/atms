@@ -3,13 +3,16 @@
 namespace App\Console\Commands;
 
 use App\Exceptions\InvalidSizeFormatException;
+use App\Jobs\ReconcilePmCategoryAssignmentsJob;
 use App\Models\Asset;
 use App\Models\FaSubclassTypeCode;
 use App\Models\MaintenanceCategory;
+use App\Models\PmRule;
 use App\Support\Size;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -36,6 +39,14 @@ class ImportAssetsCommand extends Command
 
     /** @var array<int, string> */
     private array $errors = [];
+
+    /**
+     * FA subclass codes the workbook carries that the lookup table has not seen
+     * yet, mapped to the line that introduced them.
+     *
+     * @var array<string, int>
+     */
+    private array $newSubclasses = [];
 
     public function handle(): int
     {
@@ -184,9 +195,14 @@ class ImportAssetsCommand extends Command
                 $this->errors[] = "line {$line}: {$code} size [{$e->rawValue}] — {$e->reason()}";
             }
 
+            // An unknown subclass used to fail the row. The lookup table mirrors
+            // ERP's vocabulary rather than governing it — ATMS has no standing
+            // to reject a code the ERP already uses, and the admin screen that
+            // was the only way to add one is gone. Unseen codes are recorded.
             $subclass = trim($row['fa_subclass_code']);
             if ($subclass !== '' && ! in_array($subclass, $knownSubclasses, true)) {
-                $this->errors[] = "line {$line}: {$code} unknown fa_subclass_code [{$subclass}].";
+                $knownSubclasses[] = $subclass;
+                $this->newSubclasses[$subclass] = $line;
             }
 
             foreach ([
@@ -250,6 +266,14 @@ class ImportAssetsCommand extends Command
 
         $this->line('Categories: '.$categories->implode(', '));
 
+        if ($this->newSubclasses !== []) {
+            $this->newLine();
+            $this->warn('New FA subclass codes will be recorded with type code UNK:');
+            foreach ($this->newSubclasses as $subclass => $line) {
+                $this->line("  · {$subclass} (first seen on line {$line})");
+            }
+        }
+
         if ($this->option('prune') && $untouched > 0) {
             $this->newLine();
             $this->warn("--prune will DELETE {$untouched} asset(s) and cascade to their maintenance records:");
@@ -277,6 +301,7 @@ class ImportAssetsCommand extends Command
         $pruned = 0;
 
         DB::transaction(function () use ($prepared, &$updated, &$pruned) {
+            $this->syncSubclasses();
             $categoryIds = $this->syncCategories($prepared);
 
             foreach ($prepared as $row) {
@@ -285,10 +310,15 @@ class ImportAssetsCommand extends Command
                 $attributes = [
                     'name' => $row['name'],
                     'size_inches' => $row['size'],
-                    'maintenance_category_id' => $row['category'] === ''
-                        ? null
-                        : $categoryIds[$row['category']],
                 ];
+
+                // A blank category used to clear the asset's category. It now
+                // leaves the existing one alone, matching every other field
+                // below: the workbook is not authoritative on values it does
+                // not carry, and the column no longer accepts null anyway.
+                if ($row['category'] !== '') {
+                    $attributes['maintenance_category_id'] = $categoryIds[$row['category']];
+                }
 
                 // A blank cell means "leave what is there" for these — the
                 // workbook is not authoritative on values it does not carry.
@@ -320,6 +350,10 @@ class ImportAssetsCommand extends Command
             }
         });
 
+        // Once for the whole workbook, never per row: a 400-row import would
+        // otherwise queue 400 reconciliations that each re-walk the same rules.
+        $this->reconcilePmCategories();
+
         $this->newLine();
         $this->info("Imported. {$updated} assets updated, ".MaintenanceCategory::count().' maintenance categories present.');
 
@@ -332,9 +366,9 @@ class ImportAssetsCommand extends Command
      * Assets present in the database but absent from the workbook.
      *
      * @param  array<int, string>  $workbookCodes
-     * @return \Illuminate\Support\Collection<int, Asset>
+     * @return Collection<int, Asset>
      */
-    private function pruneTargets(array $workbookCodes): \Illuminate\Support\Collection
+    private function pruneTargets(array $workbookCodes): Collection
     {
         return Asset::whereNotIn('erp_asset_code', $workbookCodes)
             ->orderBy('erp_asset_code')
@@ -369,6 +403,44 @@ class ImportAssetsCommand extends Command
      * @param  array<int, array<string, mixed>>  $prepared
      * @return array<string, int>
      */
+    /**
+     * Re-expand every category-linked PM rule after the workbook has landed.
+     *
+     * The import moves assets between maintenance categories in bulk, which is
+     * exactly what category-linked PM coverage follows — but one job per rule
+     * at the end is the whole cost, regardless of how many rows moved.
+     */
+    private function reconcilePmCategories(): void
+    {
+        $ruleIds = PmRule::query()->whereHas('maintenanceCategories')->pluck('id');
+
+        foreach ($ruleIds as $ruleId) {
+            dispatch(ReconcilePmCategoryAssignmentsJob::forRule($ruleId));
+        }
+
+        if ($ruleIds->isNotEmpty()) {
+            $this->line("Queued PM category reconciliation for {$ruleIds->count()} rule(s).");
+        }
+    }
+
+    /**
+     * Record FA subclass codes the workbook introduced.
+     *
+     * `type_code` is required by the schema and drives the middle segment of a
+     * generated asset tag. ATMS has no way to know it for a code it has never
+     * seen, so the row is created with the same `UNK` the tag service already
+     * falls back to — visible as unknown rather than guessed.
+     */
+    private function syncSubclasses(): void
+    {
+        foreach (array_keys($this->newSubclasses) as $subclass) {
+            FaSubclassTypeCode::firstOrCreate(
+                ['fa_subclass_code' => $subclass],
+                ['type_code' => 'UNK'],
+            );
+        }
+    }
+
     private function syncCategories(array $prepared): array
     {
         $names = collect($prepared)->pluck('category')->filter()->unique();

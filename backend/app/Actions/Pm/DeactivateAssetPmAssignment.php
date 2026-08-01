@@ -10,7 +10,12 @@ use Illuminate\Support\Facades\DB;
 
 class DeactivateAssetPmAssignment
 {
-    public function execute(AssetPmAssignment $assignment, int $deactivatedByUserId): AssetPmAssignment
+    /**
+     * @param  int|null  $deactivatedByUserId  Null marks a withdrawal by PM
+     *                                         category reconciliation. The distinction matters: reconciliation may
+     *                                         restore a row it withdrew itself, but never one a person turned off.
+     */
+    public function execute(AssetPmAssignment $assignment, ?int $deactivatedByUserId): AssetPmAssignment
     {
         return DB::transaction(function () use ($assignment, $deactivatedByUserId) {
             $logger = app(AuditLogger::class);

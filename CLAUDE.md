@@ -22,11 +22,14 @@ docker exec atms-api php artisan test --compact                                 
 docker exec atms-api php artisan test --compact tests/Feature/WorkOrders            # one directory
 docker exec atms-api php artisan test --compact tests/Feature/Health/HealthTest.php # one file
 docker exec atms-api php artisan test --compact --filter=test_name                  # one test
-docker exec atms-api vendor/bin/pint --dirty                                        # required after PHP edits
+docker exec atms-api vendor/bin/pint app/... tests/...                              # required after PHP edits — pass explicit paths
 docker exec atms-api php artisan migrate
 docker exec atms-api php artisan migrate:fresh --seed
 docker exec atms-api php artisan schedule:run                                       # fire due jobs once
+docker compose restart queue scheduler                                             # after ANY job/Action change
 ```
+
+**`pint --dirty` does nothing here.** `.git` lives at the repo root, outside the `backend/` mount, so Pint finds no git repository and reports "0 files" without failing. Pass the paths you touched. Passing whole directories reformats unrelated files — check `git status` afterwards.
 
 Project commands: `atms:make-admin`, `atms:import-parts`, `atms:import-assets`, `atms:import-erp-assets` (all support `--dry-run` where relevant; check `--help`).
 
@@ -68,6 +71,15 @@ Request flow: **route → controller (`Gate::authorize` + `$request->validate`) 
 - **Roles:** `administrator`, `maintenance_manager`, `technician`, `logistics`, `requester`, `service`. Technicians are row-scoped to their own assignments inside the query classes.
 - Closing a WO also reverts the asset's operational status, stamps the PM assignment's `last_triggered_*`, and cascades a reset to lower PM levels (L1–L4).
 
+### Maintenance Category is the routing key
+
+`assets.maintenance_category_id` is **NOT NULL** and is the only asset classification ATMS owns. It is what selects a WO form template and what a PM rule may cover. `fa_subclass_code` is written by the ERP sync, so ATMS may *describe* an asset with it (reports, asset tags) but must never *route* behaviour by it. Do not reintroduce subclass-based routing.
+
+- The column defaults to a seeded `UNCLASSIFIED` category (`MaintenanceCategory::UNCLASSIFIED_CODE`), captured by id in the migration that added the constraint. That is what lets the ERP sync keep creating assets it knows no category for. It cannot be deactivated, and the API refuses to clear an asset's category — "not classified" is a category, not a null.
+- **WO forms:** `form_template_maintenance_category` pivot, with `is_active` mirrored from the template so a partial unique index can enforce *at most one active template per category*. `FormTemplateCategoryPivot` owns that mirror and the conflict guard; never write the pivot directly.
+- **PM rules:** `pm_rule_maintenance_category` pivot records intent and is **expanded** into ordinary per-asset assignments by `ReconcilePmCategoryAssignments`, never resolved at read time — each assignment owns its own baseline, and a newly covered asset needs one interval of grace. `asset_pm_assignments.origin` separates `category` rows from `manual` ones.
+- **Precedence:** reconciliation may create and withdraw its own rows only. A null `assigned_by`/`deactivated_by` marks its own work; a filled one marks a person's. It must never reactivate what a person deactivated, or a per-asset opt-out reverts on the next sync.
+
 ### Notifications and email
 
 All mail goes through Microsoft Graph `sendMail` in production. Notifications live in `app/Notifications/`, use the `AccountEmailNotification` concern (shared channel, retries, mailbox overlap lock), implement `ShouldQueueAfterCommit` so a rolled-back transition cannot emit mail, and return a payload from `toAccountEmail()` — they never render HTML or pick recipient addresses themselves. That is the transport's job (`app/Services/Notifications/`). Dispatch from the Action that owns the transition, never from a controller or model event. Use `App\Support\FrontendUrl` for links a person opens in a browser; `url()` only for API URLs.
@@ -76,13 +88,17 @@ All mail goes through Microsoft Graph `sendMail` in production. Notifications li
 
 SPA uses Sanctum cookie/session auth (`statefulApi()`, proxies trusted at `*`). Machine clients use `POST /api/auth/token` and pass through `EnsureTokenAbilities`.
 
-### Scheduled jobs
+### Jobs
 
 `routes/console.php`: `SyncErpPartsJob` weekly Mondays 03:00, `EvaluatePmRulesJob` daily 06:00, both `Africa/Tripoli`, `withoutOverlapping()` keyed by `App\Support\Jobs\OverlapKeys`.
 
+`EvaluatePmRulesJob` only chunks assignment ids and fans out `EvaluatePmAssignmentsJob`; the work happens there, through `PmEvaluationRunner` with a `PmEvaluationBatch` of pre-loaded readings and suppressions. Two properties must survive any change: readings/suppressions are loaded **per chunk, not per assignment**, and due-ness is checked **before** the transaction so the `lockForUpdate` is paid only for assignments that look due. `ReconcilePmCategoryAssignmentsJob` is dispatched `afterCommit` from the Actions that change PM coverage.
+
+⚠️ **The `queue` and `scheduler` containers hold PHP classes in memory from boot.** After changing job or Action code against a running stack, `docker compose restart queue scheduler` — otherwise jobs fail against the old code with errors that make no sense against the source on disk, and the failure is invisible from the UI. Check `queue:failed` when queued work silently does not happen.
+
 ### Test suite
 
-95 test files, mostly feature tests, running on **PostgreSQL** against a separate `atms_testing` database via the dedicated `testing` connection — SQLite cannot be used (baseline migration uses PostgreSQL-only syntax, and matching production avoids masking driver bugs). Read the comments in `backend/phpunit.xml` before touching it: any env var pinned there needs **both** a forced `<env>` and a `<server>` twin, because the container injects real environment variables and Laravel reads `$_SERVER` first. This is what keeps the suite off the live Graph mailbox and on the sync queue driver.
+~100 test files, mostly feature tests, running on **PostgreSQL** against a separate `atms_testing` database via the dedicated `testing` connection — SQLite cannot be used (baseline migration uses PostgreSQL-only syntax, and matching production avoids masking driver bugs). Read the comments in `backend/phpunit.xml` before touching it: any env var pinned there needs **both** a forced `<env>` and a `<server>` twin, because the container injects real environment variables and Laravel reads `$_SERVER` first. This is what keeps the suite off the live Graph mailbox and on the sync queue driver.
 
 ## Frontend architecture
 

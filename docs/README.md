@@ -15,9 +15,10 @@ This directory is the current operating manual for ATMS. Start here; do not use
 
 ## Current snapshot
 
-**Last documentation verification:** 2026-07-30 (explicit report dimensions and the
-current dashboard Asset Identity enhancement implemented and verified; notification
-behaviour last verified 2026-07-25; other areas last verified 2026-07-13)
+**Last documentation verification:** 2026-08-01 (Maintenance Category routing key
+implemented and verified across product, API, engineering, frontend, and operations
+summaries; report dimensions last verified 2026-07-30; notification behaviour last
+verified 2026-07-25; other areas last verified 2026-07-13)
 
 - **What the project is:** ATMS is LDC's operational asset-maintenance system. It
   manages assets, maintenance requests, work orders, preventive maintenance,
@@ -35,6 +36,10 @@ behaviour last verified 2026-07-25; other areas last verified 2026-07-13)
 - **Email:** Account and MR/WO workflow notifications are implemented, hardened, and
   **live** on the Graph transport as of 2026-07-26. Workflow actions now mail real
   recipients. Remaining email items are in [ROADMAP.md](ROADMAP.md).
+- **Routing key:** Maintenance Category is the only asset classification ATMS
+  governs, and therefore the only one that routes behaviour — WO form selection and
+  PM rule coverage. `fa_subclass_code` is ERP-written and descriptive only. See
+  [PRODUCT.md](PRODUCT.md) and [ENGINEERING.md](ENGINEERING.md).
 - **Recommended next action:** Confirm the actual UAT/deployment state with the
   project owner and record it here. R-005 and R-006 are approved and ready to
   schedule; R-001 and R-004 await approval; R-002 is lower priority; R-003 requires
@@ -69,6 +74,11 @@ behaviour last verified 2026-07-25; other areas last verified 2026-07-13)
   behavior documents.
 - Historical material is preserved under `_archive/2026-07-13/legacy/`. It is
   reference-only and intentionally excluded from this reading path.
+- These summaries hold durable behaviour. **Session-level narrative — what was
+  decided, what broke, and why — lives in `.kilo/STATE.md` (newest first), and the
+  live cross-team tracker is `.kilo/TLD.md`.** Read both at the start of a session;
+  when a decision there becomes durable, promote it into the summary above that
+  owns it rather than leaving the tracker as its only home.
 
 ## Product boundary
 

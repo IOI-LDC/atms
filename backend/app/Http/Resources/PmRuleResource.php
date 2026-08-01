@@ -24,6 +24,16 @@ class PmRuleResource extends JsonResource
             'interval_days' => $this->interval_days,
             'interval_reading' => $this->interval_reading ? (float) $this->interval_reading : null,
             'assignments_count' => $this->when(isset($this->assignments_count), fn () => (int) $this->assignments_count),
+            'maintenance_categories' => $this->whenLoaded(
+                'maintenanceCategories',
+                fn () => $this->maintenanceCategories
+                    ->map(fn ($category) => [
+                        'id' => $category->id,
+                        'code' => $category->code,
+                        'name' => $category->name,
+                    ])
+                    ->values(),
+            ),
             'usage_reading_type' => $this->whenLoaded('usageReadingType', fn () => [
                 'id' => $this->usageReadingType?->id,
                 'name' => $this->usageReadingType?->name,

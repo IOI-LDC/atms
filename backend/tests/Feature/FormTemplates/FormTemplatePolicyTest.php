@@ -3,8 +3,8 @@
 namespace Tests\Feature\FormTemplates;
 
 use App\Enums\RoleCode;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
@@ -35,9 +35,9 @@ class FormTemplatePolicyTest extends TestCase
         ]);
     }
 
-    private function createSubclass(string $code): void
+    private function category(string $code): MaintenanceCategory
     {
-        FaSubclassTypeCode::create(['fa_subclass_code' => $code, 'type_code' => 'ABC']);
+        return MaintenanceCategory::firstOrCreate(['code' => $code], ['name' => $code, 'is_active' => true]);
     }
 
     public function test_admin_can_list_templates(): void
@@ -49,11 +49,11 @@ class FormTemplatePolicyTest extends TestCase
 
     public function test_admin_can_create_template(): void
     {
-        $this->createSubclass('POL');
+        $category = $this->category('POL');
 
         $this->actingAs($this->admin)->postJson('/api/admin/wo-forms/templates', [
             'name' => 'Policy template',
-            'fa_subclass_code' => 'POL',
+            'maintenance_category_ids' => [$category->id],
         ])->assertCreated();
     }
 
@@ -65,7 +65,7 @@ class FormTemplatePolicyTest extends TestCase
 
         $this->actingAs($manager)->postJson('/api/admin/wo-forms/templates', [
             'name' => 'x',
-            'fa_subclass_code' => 'x',
+            'maintenance_category_ids' => [$this->category('X')->id],
         ])->assertForbidden();
     }
 
@@ -93,8 +93,8 @@ class FormTemplatePolicyTest extends TestCase
     public function test_field_management_is_admin_only(): void
     {
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
-        $this->createSubclass('FLD');
-        $template = FormTemplate::create(['name' => 'T', 'fa_subclass_code' => 'FLD', 'is_active' => true]);
+        $template = FormTemplate::create(['name' => 'T', 'is_active' => true]);
+        $template->maintenanceCategories()->attach($this->category('FLD')->id, ['is_active' => true]);
 
         $this->actingAs($manager)->postJson("/api/admin/wo-forms/templates/{$template->id}/fields", [
             'label' => 'Field',

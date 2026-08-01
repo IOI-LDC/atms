@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { Download } from '@lucide/vue'
 import ReportPage from '@/components/app/ReportPage.vue'
 import ReportSummaryStats from '@/components/app/ReportSummaryStats.vue'
 import ReportLoadMore from '@/components/app/ReportLoadMore.vue'
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { useAssetStatusReport, type AssetStatusFilters } from '@/composables/useAssetStatusReport'
 import { useLocations } from '@/composables/useLocations'
+import { useReportCsvExport } from '@/composables/useReportCsvExport'
 import {
   fmtDate,
   operationalStatusClass,
@@ -29,6 +31,7 @@ const ALL = '__all__'
 const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } =
   useAssetStatusReport()
 const { activeLocations, loadLocations } = useLocations()
+const { exporting, exportError, exportCsv } = useReportCsvExport()
 
 const locationId = ref<string>(ALL)
 const operationalStatus = ref<string>(ALL)
@@ -50,8 +53,22 @@ function currentFilters(): AssetStatusFilters {
   return filters
 }
 
+// Export mirrors what is on screen, so it tracks the filters actually loaded
+// rather than whatever the bar currently reads — otherwise editing a filter
+// without pressing Apply would download a file that disagrees with the table.
+const appliedFilters = ref<AssetStatusFilters>({})
+
+function runLoad(filters: AssetStatusFilters = {}) {
+  appliedFilters.value = filters
+  load(filters)
+}
+
 function applyFilters() {
-  load(currentFilters())
+  runLoad(currentFilters())
+}
+
+function exportReport() {
+  exportCsv('/reports/asset-status', appliedFilters.value)
 }
 
 function clearFilters() {
@@ -62,7 +79,7 @@ function clearFilters() {
   dateField.value = 'updated_at'
   from.value = ''
   to.value = ''
-  load()
+  runLoad()
 }
 
 const summaryStats = computed(() => {
@@ -85,7 +102,7 @@ const dateFieldLabel = computed(() =>
 
 onMounted(() => {
   loadLocations()
-  load()
+  runLoad()
 })
 </script>
 
@@ -94,6 +111,13 @@ onMounted(() => {
     title="Assets Status Report"
     subtitle="The asset register — tag, type, status, location, and assignee."
   >
+    <template #actions>
+      <Button variant="outline" :disabled="loading || exporting" @click="exportReport">
+        <Download />
+        {{ exporting ? 'Exporting…' : 'Export CSV' }}
+      </Button>
+    </template>
+
     <template #filters>
       <div class="report-filters">
         <div class="form-field">
@@ -183,6 +207,7 @@ onMounted(() => {
         <strong>current</strong> status. ATMS does not keep asset status history, so status as it
         stood on a past date cannot be reported.
       </p>
+      <p v-if="exportError" class="report-filter-note" role="alert">{{ exportError }}</p>
     </template>
 
     <template #summary>

@@ -5,8 +5,8 @@ namespace Tests\Feature\WorkOrders;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -21,6 +21,7 @@ class ShowWorkOrderFormTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $manager;
 
     protected function setUp(): void
@@ -46,11 +47,15 @@ class ShowWorkOrderFormTest extends TestCase
         ]);
     }
 
-    private function buildFormWorkOrder(string $subclass): WorkOrder
+    private function category(string $code): MaintenanceCategory
     {
-        FaSubclassTypeCode::create(['fa_subclass_code' => $subclass, 'type_code' => 'ABC']);
+        return MaintenanceCategory::firstOrCreate(['code' => $code], ['name' => $code, 'is_active' => true]);
+    }
 
-        $template = FormTemplate::create(['name' => 'Show', 'fa_subclass_code' => $subclass, 'is_active' => true]);
+    private function buildFormWorkOrder(string $categoryCode): WorkOrder
+    {
+        $template = FormTemplate::create(['name' => 'Show', 'is_active' => true]);
+        $template->maintenanceCategories()->attach($this->category($categoryCode)->id, ['is_active' => true]);
         $template->fields()->create([
             'uuid' => Str::uuid()->toString(),
             'label' => 'Reading',
@@ -64,7 +69,7 @@ class ShowWorkOrderFormTest extends TestCase
             'erp_asset_code' => 'AST-SHOW-'.uniqid(),
             'name' => 'Show Asset',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $this->category($categoryCode)->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);
@@ -113,14 +118,11 @@ class ShowWorkOrderFormTest extends TestCase
 
     public function test_show_form_returns_404_when_no_form_attached(): void
     {
-        $subclass = 'SHOW3';
-        FaSubclassTypeCode::create(['fa_subclass_code' => $subclass, 'type_code' => 'ABC']);
-
         $asset = Asset::create([
             'erp_asset_code' => 'AST-NOF-'.uniqid(),
             'name' => 'No Form',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $this->category('SHOW3')->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);

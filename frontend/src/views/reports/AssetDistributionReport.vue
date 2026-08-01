@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { Download } from '@lucide/vue'
 import ReportPage from '@/components/app/ReportPage.vue'
 import ReportSummaryStats from '@/components/app/ReportSummaryStats.vue'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import {
   type AssetDistributionFilters,
 } from '@/composables/useAssetDistributionReport'
 import { useListOptions } from '@/composables/useListOptions'
+import { useReportCsvExport } from '@/composables/useReportCsvExport'
 import { toMaintenanceCategoryIdFilterOptions } from '@/lib/assetColumns'
 import {
   ASSET_DISTRIBUTION_GROUP_BY_OPTIONS,
@@ -30,6 +32,7 @@ const ALL = '__all__'
 const { loading, error, summary, rows, groupHeaders, groupsLabel, load } =
   useAssetDistributionReport()
 const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
+const { exporting, exportError, exportCsv } = useReportCsvExport()
 
 const categoryOptions = computed(() =>
   toMaintenanceCategoryIdFilterOptions(maintenanceCategories.value),
@@ -65,7 +68,7 @@ const categoryId = ref<string>(ALL)
 const assetKind = ref<string>(ALL)
 const operationalStatus = ref<string>(ALL)
 
-function applyFilters() {
+function currentFilters(): AssetDistributionFilters {
   const filters: AssetDistributionFilters = { group_by: groupBy.value }
   if (categoryId.value !== ALL) {
     filters.maintenance_category_id = categoryId.value
@@ -76,7 +79,24 @@ function applyFilters() {
   if (operationalStatus.value !== ALL) {
     filters.operational_status = operationalStatus.value
   }
+  return filters
+}
+
+// Export mirrors what is on screen, so it tracks the filters actually loaded
+// rather than whatever the bar currently reads.
+const appliedFilters = ref<AssetDistributionFilters>({ group_by: ['location'] })
+
+function runLoad(filters: AssetDistributionFilters) {
+  appliedFilters.value = filters
   load(filters)
+}
+
+function applyFilters() {
+  runLoad(currentFilters())
+}
+
+function exportReport() {
+  exportCsv('/reports/asset-distribution', appliedFilters.value)
 }
 
 function clearFilters() {
@@ -84,12 +104,12 @@ function clearFilters() {
   categoryId.value = ALL
   assetKind.value = ALL
   operationalStatus.value = ALL
-  load({ group_by: ['location'] })
+  runLoad({ group_by: ['location'] })
 }
 
 onMounted(() => {
   loadMaintenanceCategories()
-  load()
+  runLoad({ group_by: ['location'] })
 })
 </script>
 
@@ -98,6 +118,13 @@ onMounted(() => {
     title="Asset Distribution"
     subtitle="How assets are spread across location, maintenance category and size — tick any combination (R-2)."
   >
+    <template #actions>
+      <Button variant="outline" :disabled="loading || exporting" @click="exportReport">
+        <Download />
+        {{ exporting ? 'Exporting…' : 'Export CSV' }}
+      </Button>
+    </template>
+
     <template #filters>
       <div class="report-filters">
         <div class="report-filter report-filter-wide">
@@ -180,6 +207,7 @@ onMounted(() => {
           </div>
         </div>
       </div>
+      <p v-if="exportError" class="report-filter-note" role="alert">{{ exportError }}</p>
     </template>
 
     <template #summary>

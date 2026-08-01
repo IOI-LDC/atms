@@ -62,7 +62,7 @@ class EvaluatePmRulesJobTest extends TestCase
             $mock->shouldReceive('execute')->once()->andReturn(null);
         });
 
-        (new EvaluatePmRulesJob)->handle(app(EvaluatePmRule::class));
+        (new EvaluatePmRulesJob)->handle();
     }
 
     public function test_job_skips_inactive_assignments(): void
@@ -81,7 +81,7 @@ class EvaluatePmRulesJobTest extends TestCase
             $mock->shouldNotReceive('execute');
         });
 
-        (new EvaluatePmRulesJob)->handle(app(EvaluatePmRule::class));
+        (new EvaluatePmRulesJob)->handle();
     }
 
     public function test_job_skips_assignments_whose_template_is_inactive(): void
@@ -100,7 +100,7 @@ class EvaluatePmRulesJobTest extends TestCase
             $mock->shouldNotReceive('execute');
         });
 
-        (new EvaluatePmRulesJob)->handle(app(EvaluatePmRule::class));
+        (new EvaluatePmRulesJob)->handle();
     }
 
     public function test_job_throws_when_system_user_missing(): void
@@ -109,6 +109,6 @@ class EvaluatePmRulesJobTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
 
-        (new EvaluatePmRulesJob)->handle(app(EvaluatePmRule::class));
+        (new EvaluatePmRulesJob)->handle();
     }
 }

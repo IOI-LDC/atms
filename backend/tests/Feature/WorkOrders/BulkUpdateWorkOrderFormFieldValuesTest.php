@@ -4,14 +4,16 @@ namespace Tests\Feature\WorkOrders;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
+use App\Models\AuditLog;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkOrder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -49,19 +51,16 @@ class BulkUpdateWorkOrderFormFieldValuesTest extends TestCase
     /**
      * A started work order whose form carries three fields.
      *
-     * @return array{0: WorkOrder, 1: \Illuminate\Support\Collection}
+     * @return array{0: WorkOrder, 1: Collection}
      */
     private function buildAssignedFormWorkOrder(): array
     {
-        // Idempotent: a test may build two work orders, and both the subclass
-        // code and its active template are unique per subclass.
-        $subclass = 'BULK';
-        FaSubclassTypeCode::firstOrCreate(['fa_subclass_code' => $subclass], ['type_code' => 'BLK']);
+        // Idempotent: a test may build two work orders, and only one active
+        // template may serve a category at a time.
+        $category = MaintenanceCategory::firstOrCreate(['code' => 'BULK'], ['name' => 'BULK', 'is_active' => true]);
 
-        $template = FormTemplate::firstOrCreate(
-            ['name' => 'Bulk', 'fa_subclass_code' => $subclass],
-            ['is_active' => true],
-        );
+        $template = FormTemplate::firstOrCreate(['name' => 'Bulk'], ['is_active' => true]);
+        $template->maintenanceCategories()->syncWithoutDetaching([$category->id => ['is_active' => true]]);
 
         if ($template->fields()->count() === 0) {
             foreach (['Inlet Pressure', 'Outlet Pressure', 'Seal Intact'] as $index => $label) {
@@ -80,7 +79,7 @@ class BulkUpdateWorkOrderFormFieldValuesTest extends TestCase
             'erp_asset_code' => 'AST-BULK-'.uniqid(),
             'name' => 'Bulk Asset',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $category->id,
         ]);
 
         $mr = MaintenanceRequest::create([
@@ -260,7 +259,7 @@ class BulkUpdateWorkOrderFormFieldValuesTest extends TestCase
             ],
         ])->assertOk();
 
-        $this->assertSame(1, \App\Models\AuditLog::where('event', 'work_order_form.field_values_updated')->count());
+        $this->assertSame(1, AuditLog::where('event', 'work_order_form.field_values_updated')->count());
     }
 
     /** A save that changes nothing should not pollute the audit log. */
@@ -276,7 +275,7 @@ class BulkUpdateWorkOrderFormFieldValuesTest extends TestCase
             'fields' => [['id' => $fields[0]->id, 'post_value' => '20']],
         ])->assertOk();
 
-        $this->assertSame(1, \App\Models\AuditLog::where('event', 'work_order_form.field_values_updated')->count());
+        $this->assertSame(1, AuditLog::where('event', 'work_order_form.field_values_updated')->count());
     }
 
     public function test_admin_and_manager_can_save(): void

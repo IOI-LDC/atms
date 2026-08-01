@@ -83,3 +83,28 @@ reference-only route.
   `/dashboard-real`, and `DashboardView.vue` are unchanged.
 - Verified: focused report and dashboard feature tests pass; frontend type-check and
   production build pass.
+
+## 2026-08-01 — Maintenance Category becomes the ATMS routing key
+
+ATMS routes behaviour only on the classification it owns. `assets
+.maintenance_category_id` is now NOT NULL, defaulting to a seeded `UNCLASSIFIED`
+category so ERP-created assets remain governable and visible rather than null. WO
+form templates are selected by that category through a pivot that enforces at most
+one active template per category; PM rules may cover categories, which expand into
+ordinary per-asset assignments. `fa_subclass_code` remains an ERP-owned descriptive
+field — it still drives asset tags and report filters, and no longer routes
+anything. PM evaluation cost is now flat in the number of assignments.
+
+- Requirement: tracker items D-011, D-012, D-013 (not R-### requirements)
+- Changed: `assets.maintenance_category_id` constraint and default;
+  `form_template_maintenance_category` and `pm_rule_maintenance_category` pivots;
+  WO form snapshot/sync resolution; `ReconcilePmCategoryAssignments` plus its
+  queued job and the hooks that trigger it; PM evaluation batching and fan-out;
+  removal of the four `/admin/fa-subclass-type-codes` CRUD routes; admin UI for
+  both pickers.
+- Verified: 1020 backend tests (3011 assertions) pass; Pint clean on touched paths;
+  frontend `vue-tsc --build` clean; category expansion exercised against the live
+  development register (515 assignments across two rules).
+- Follow-up: the two pre-existing WO form templates migrated deactivated with no
+  categories and required manual reassignment; PM rule "L3 Maintenance Motors" lost
+  its coverage to a defect fixed the same day and needs re-assigning.

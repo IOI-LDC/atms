@@ -14,12 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import MaintenanceCategoryPicker from '@/components/app/MaintenanceCategoryPicker.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { pmTriggerLabel } from '@/lib/displayHelpers'
-import type { PmRule, UsageReadingType } from '@/types'
+import type { PmRule, UsageReadingType, MaintenanceCategoryOption } from '@/types'
 import type { PmRulePayload } from '@/composables/usePmRules'
 
 interface BatchResult {
@@ -33,6 +34,7 @@ const props = defineProps<{
   open: boolean
   editing: PmRule | null
   readingTypes: UsageReadingType[]
+  maintenanceCategories: MaintenanceCategoryOption[]
   saving: boolean
   validationErrors: Record<string, string[]> | null
   batchResults: BatchResult[] | null
@@ -65,6 +67,7 @@ const triggerType = ref('date')
 const intervalDays = ref('')
 const intervalReading = ref('')
 const readingTypeId = ref('')
+const categoryIds = ref<number[]>([])
 const localError = ref('')
 
 const showDays = computed(
@@ -106,41 +109,73 @@ function resultFor(index: number): BatchResult | undefined {
 }
 
 // ── Reset on open ─────────────────────────────────────────────────────────────
+/** Which rule's values the form fields currently hold. */
+const initialisedFor = ref<number | null>(null)
+
+function initialiseFromEditing() {
+  localError.value = ''
+  mode.value = 'single'
+  const e = props.editing
+  initialisedFor.value = e?.id ?? null
+  if (e) {
+    name.value = e.name
+    description.value = e.description ?? ''
+    triggerType.value = e.trigger_type
+    intervalDays.value = e.interval_days != null ? String(e.interval_days) : ''
+    intervalReading.value = e.interval_reading != null ? String(e.interval_reading) : ''
+    readingTypeId.value = e.usage_reading_type?.id != null ? String(e.usage_reading_type.id) : ''
+    categoryIds.value = (e.maintenance_categories ?? []).map((c) => c.id)
+    if (!e.maintenance_level) {
+      levelChoice.value = '__none__'
+      levelCustom.value = ''
+    } else if (LEVEL_OPTIONS.includes(e.maintenance_level)) {
+      levelChoice.value = e.maintenance_level
+      levelCustom.value = ''
+    } else {
+      levelChoice.value = '__custom__'
+      levelCustom.value = e.maintenance_level
+    }
+  } else {
+    name.value = ''
+    description.value = ''
+    levelChoice.value = '__none__'
+    levelCustom.value = ''
+    triggerType.value = 'date'
+    intervalDays.value = ''
+    intervalReading.value = ''
+    readingTypeId.value = ''
+    categoryIds.value = []
+    rows.value = freshRows()
+  }
+}
+
 watch(
   () => props.open,
   (nowOpen) => {
-    if (!nowOpen) return
-    localError.value = ''
-    mode.value = 'single'
-    const e = props.editing
-    if (e) {
-      name.value = e.name
-      description.value = e.description ?? ''
-      triggerType.value = e.trigger_type
-      intervalDays.value = e.interval_days != null ? String(e.interval_days) : ''
-      intervalReading.value = e.interval_reading != null ? String(e.interval_reading) : ''
-      readingTypeId.value = e.usage_reading_type?.id != null ? String(e.usage_reading_type.id) : ''
-      if (!e.maintenance_level) {
-        levelChoice.value = '__none__'
-        levelCustom.value = ''
-      } else if (LEVEL_OPTIONS.includes(e.maintenance_level)) {
-        levelChoice.value = e.maintenance_level
-        levelCustom.value = ''
-      } else {
-        levelChoice.value = '__custom__'
-        levelCustom.value = e.maintenance_level
-      }
-    } else {
-      name.value = ''
-      description.value = ''
-      levelChoice.value = '__none__'
-      levelCustom.value = ''
-      triggerType.value = 'date'
-      intervalDays.value = ''
-      intervalReading.value = ''
-      readingTypeId.value = ''
-      rows.value = freshRows()
+    if (nowOpen) initialiseFromEditing()
+  },
+)
+
+/**
+ * The sheet is non-modal, so the rules table behind it stays clickable and
+ * "Edit" on another row swaps the rule underneath an open sheet. Re-initialise
+ * for the new rule, or the form would post the previous rule's schedule and
+ * category coverage over it.
+ *
+ * The create→edit flip is excluded: there the id goes null → the rule just
+ * created, and what is on screen is already the saved state.
+ */
+watch(
+  () => props.editing?.id ?? null,
+  (id) => {
+    if (!props.open || id === initialisedFor.value) return
+
+    if (initialisedFor.value === null) {
+      initialisedFor.value = id
+      return
     }
+
+    initialiseFromEditing()
   },
 )
 
@@ -170,6 +205,7 @@ function handleSave() {
       name: name.value.trim(),
       description: description.value.trim() || null,
       maintenance_level: resolvedLevel(levelChoice.value, levelCustom.value),
+      maintenance_category_ids: [...categoryIds.value],
       ...buildTriggerFields(
         props.editing.trigger_type,
         intervalDays.value,
@@ -209,6 +245,7 @@ function handleSave() {
       name: name.value.trim(),
       description: description.value.trim() || null,
       maintenance_level: resolvedLevel(levelChoice.value, levelCustom.value),
+      maintenance_category_ids: [...categoryIds.value],
       trigger_type: triggerType.value,
       ...tf,
     })
@@ -241,6 +278,9 @@ function handleSave() {
     payloads.push({
       name: row.name.trim(),
       maintenance_level: row.level,
+      // The L1–L4 set covers the same equipment at different intervals, so the
+      // category selection is shared across every level in the batch.
+      maintenance_category_ids: [...categoryIds.value],
       trigger_type: row.triggerType,
       ...tf,
     })
@@ -380,6 +420,22 @@ const title = computed(() => (isEdit.value ? 'Edit PM Template' : 'Create PM Tem
             </div>
 
             <div class="form-field form-field-full">
+              <Label for="pm-category-search"
+                >Applies To <span class="field-optional">— optional</span></Label
+              >
+              <MaintenanceCategoryPicker
+                v-model="categoryIds"
+                :categories="maintenanceCategories"
+                id-prefix="pm-category"
+              />
+              <p class="form-help">
+                Every asset in a selected category is scheduled on this template, and stays in step
+                as assets move between categories. Leave empty to assign assets one at a time from
+                the Asset Detail screen.
+              </p>
+            </div>
+
+            <div class="form-field form-field-full">
               <Label for="pm-desc"
                 >Description <span class="field-optional">— optional</span></Label
               >
@@ -396,8 +452,21 @@ const title = computed(() => (isEdit.value ? 'Edit PM Template' : 'Create PM Tem
           <template v-else>
             <p class="form-help">
               Creates one template per level. Each is independent — if one fails, the others still
-              apply. Assign them to assets from the Asset Detail screen.
+              apply.
             </p>
+            <div class="form-field form-field-full">
+              <Label for="pm-multi-category-search"
+                >Applies To <span class="field-optional">— optional</span></Label
+              >
+              <MaintenanceCategoryPicker
+                v-model="categoryIds"
+                :categories="maintenanceCategories"
+                id-prefix="pm-multi-category"
+              />
+              <p class="form-help">
+                Applied to every level created here. Leave empty to assign assets one at a time.
+              </p>
+            </div>
             <div class="pm-level-rows">
               <div v-for="(row, i) in rows" :key="row.level" class="pm-level-row">
                 <div class="pm-level-row-header">

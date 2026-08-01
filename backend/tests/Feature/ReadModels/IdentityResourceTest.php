@@ -186,7 +186,9 @@ class IdentityResourceTest extends TestCase
 
         $this->assertNull($bare['serial_number']);
         $this->assertNull($bare['size']);
-        $this->assertNull($bare['maintenance_category']);
+        // The category is never absent: an unclassified asset carries the
+        // Unclassified default rather than a null.
+        $this->assertSame('Unclassified', $bare['maintenance_category']['name']);
     }
 
     public function test_erp_codes_remain_visible_to_administrators_on_detail_payloads(): void

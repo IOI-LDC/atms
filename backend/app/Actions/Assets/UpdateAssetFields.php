@@ -2,6 +2,7 @@
 
 namespace App\Actions\Assets;
 
+use App\Jobs\ReconcilePmCategoryAssignmentsJob;
 use App\Models\Asset;
 use App\Services\Audit\AuditLogger;
 use DomainException;
@@ -39,6 +40,18 @@ class UpdateAssetFields
 
             $after = $asset->fresh()->toArray();
             $logger->log('asset.updated', $asset, $before, $after);
+
+            // Category-driven PM follows the asset. Deactivation and withdrawal
+            // matter as much as a category change: both take the asset out of
+            // the population a category link may expand onto.
+            $affectsPmCoverage = ['maintenance_category_id', 'is_active', 'maintenance_status'];
+
+            foreach ($affectsPmCoverage as $field) {
+                if (array_key_exists($field, $fieldUpdates) && ($before[$field] ?? null) !== ($after[$field] ?? null)) {
+                    DB::afterCommit(fn () => dispatch(ReconcilePmCategoryAssignmentsJob::forAsset($asset->id)));
+                    break;
+                }
+            }
 
             return $asset;
         });

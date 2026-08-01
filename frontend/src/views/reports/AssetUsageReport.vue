@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { Download } from '@lucide/vue'
 import ReportPage from '@/components/app/ReportPage.vue'
 import ReportSummaryStats from '@/components/app/ReportSummaryStats.vue'
 import AssetIdentity from '@/components/app/AssetIdentity.vue'
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { useAssetUsageReport, type AssetUsageFilters } from '@/composables/useAssetUsageReport'
 import { useLocations } from '@/composables/useLocations'
+import { useReportCsvExport } from '@/composables/useReportCsvExport'
 import { useListOptions } from '@/composables/useListOptions'
 import { fmtDateTime } from '@/lib/displayHelpers'
 import { toMaintenanceCategoryIdFilterOptions } from '@/lib/assetColumns'
@@ -27,6 +29,7 @@ const DEFAULT = reportDateWindow(90)
 const { loading, error, summary, rows, readingType, unit, groupHeader, isPerAsset, load } =
   useAssetUsageReport()
 const { activeLocations, loadLocations } = useLocations()
+const { exporting, exportError, exportCsv } = useReportCsvExport()
 const { readingTypes, loadReadingTypes, maintenanceCategories, loadMaintenanceCategories } =
   useListOptions()
 
@@ -68,11 +71,24 @@ function currentFilters(): AssetUsageFilters {
   return filters
 }
 
+// Export mirrors what is on screen, so it tracks the filters actually loaded
+// rather than whatever the bar currently reads.
+const appliedFilters = ref<AssetUsageFilters>({})
+
+function runLoad(filters: AssetUsageFilters) {
+  appliedFilters.value = filters
+  load(filters)
+}
+
 function applyFilters() {
   if (dateRangeError.value) {
     return
   }
-  load(currentFilters())
+  runLoad(currentFilters())
+}
+
+function exportReport() {
+  exportCsv('/reports/asset-usage', appliedFilters.value)
 }
 
 function clearFilters() {
@@ -82,14 +98,14 @@ function clearFilters() {
   groupBy.value = 'asset'
   locationId.value = ALL
   categoryId.value = ALL
-  load({ group_by: 'asset', from: DEFAULT.from, to: DEFAULT.to })
+  runLoad({ group_by: 'asset', from: DEFAULT.from, to: DEFAULT.to })
 }
 
 onMounted(() => {
   loadReadingTypes()
   loadLocations()
   loadMaintenanceCategories()
-  load({ group_by: 'asset', from: DEFAULT.from, to: DEFAULT.to })
+  runLoad({ group_by: 'asset', from: DEFAULT.from, to: DEFAULT.to })
 })
 </script>
 
@@ -98,6 +114,13 @@ onMounted(() => {
     title="Most-Used Assets"
     subtitle="Which assets did the most work in the period, by operating hours, distance, or depth (R-22)."
   >
+    <template #actions>
+      <Button variant="outline" :disabled="loading || exporting" @click="exportReport">
+        <Download />
+        {{ exporting ? 'Exporting…' : 'Export CSV' }}
+      </Button>
+    </template>
+
     <template #filters>
       <div class="report-filters">
         <div class="report-filter">
@@ -172,6 +195,7 @@ onMounted(() => {
 
         <p v-if="dateRangeError" class="report-filter-note" role="alert">{{ dateRangeError }}</p>
       </div>
+      <p v-if="exportError" class="report-filter-note" role="alert">{{ exportError }}</p>
     </template>
 
     <template #summary>

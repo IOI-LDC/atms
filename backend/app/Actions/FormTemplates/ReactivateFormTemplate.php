@@ -18,28 +18,28 @@ class ReactivateFormTemplate
                 throw new DomainException('Form template is already active.');
             }
 
-            // Enforce the 1:1 active-per-subclass invariant explicitly so the
-            // caller gets a clean 409 instead of a raw 500 from the partial
-            // unique index.
-            $conflict = FormTemplate::where('fa_subclass_code', $locked->fa_subclass_code)
-                ->where('is_active', true)
-                ->where('id', '!=', $locked->id)
-                ->exists();
+            $categoryIds = $locked->maintenanceCategories()->pluck('maintenance_categories.id')->all();
 
-            if ($conflict) {
-                throw new DomainException('Another active form template already exists for this subclass.');
+            if ($categoryIds === []) {
+                throw new DomainException('Assign at least one maintenance category before activating this form.');
             }
+
+            // Enforce the one-active-template-per-category invariant explicitly
+            // so the caller gets a clean 409 naming the clash, instead of a raw
+            // 500 from the partial unique index behind it.
+            FormTemplateCategoryPivot::guardNoActiveConflict($categoryIds, $locked->id);
 
             $before = $locked->toArray();
 
             $locked->update([
                 'is_active' => true,
             ]);
+            FormTemplateCategoryPivot::mirrorActiveFlag($locked, true);
 
             $after = $locked->fresh()->toArray();
             app(AuditLogger::class)->log('form_template.reactivated', $locked, $before, $after, ['user_id' => $userId]);
 
-            return $locked->fresh()->load('fields');
+            return $locked->fresh()->load(['fields', 'maintenanceCategories']);
         });
     }
 }

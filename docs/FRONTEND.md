@@ -63,6 +63,33 @@ hides an action.
 - Closed/cancelled records are visibly read-only. Avoid disabled controls that look
   actionable when the user cannot perform the operation.
 
+## Traps this codebase has already hit
+
+These are not style preferences — each one shipped a defect.
+
+- **A list that feeds an edit form must load every relation that form submits
+  back.** The edit sheet opens from the list row and posts what it was handed, so
+  a relation missing from the index query arrives empty and is written back as
+  empty. `PmRuleIndexQuery` omitted `maintenanceCategories` and silently wiped a
+  rule's category coverage on an unrelated rename.
+- **A non-modal sheet leaves the page behind it clickable.** Resetting form state
+  only on the open transition is therefore not enough: clicking "Edit" on a second
+  row swaps the record while the sheet stays open, and the form keeps the first
+  record's values until it writes them over the second one. Re-initialise when the
+  edited record's *identity* changes, and exclude the create→edit flip where the
+  id goes null → newly-created and what is on screen is already saved.
+- **A column holding a list needs array handling in the table's search
+  normaliser.** `AppDataTable.toSearchable()` read `.name` off the value; given an
+  array it found nothing and the column matched no search at all.
+- **A long option list hides the current selection.** `MaintenanceCategoryPicker`
+  (shared by WO Forms and PM Rules) pins selected entries to the top and shades
+  them, because a purely alphabetical list in a fixed-height box pushes a record's
+  own selections below the fold, where they read as "not selected".
+- **A `<Label for>` pointing at an id that does not exist fails silently.** It
+  neither warns nor throws; the label simply stops working and the field loses its
+  accessible name. Check the id against the control it names, especially when the
+  control lives inside a child component.
+
 ## Feature structure
 
 Views compose domain components and composables; they should not become large API

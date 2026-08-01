@@ -97,7 +97,7 @@ route's controller in `backend/`; tests are the contract for edge cases.
 ## Admin endpoints
 
 Administrators manage company settings, users, employees, ERP parts sync, audit
-logs, locations, master data, FA subclass type codes, API clients, usage-reading
+logs, locations, master data, maintenance categories, API clients, usage-reading
 types, and WO-form templates beneath `/admin/…`. The full endpoints are:
 
 - `GET/PATCH /admin/company-settings`
@@ -107,11 +107,23 @@ types, and WO-form templates beneath `/admin/…`. The full endpoints are:
 - `GET /admin/erp/sync-jobs` and `POST /admin/erp/sync-parts`
 - `GET /admin/audit-logs`
 - location and master-data CRUD under `/admin/locations` and `/admin/master-data`
-- FA subclass type-code CRUD under `/admin/fa-subclass-type-codes`
+- maintenance-category list/create/update under `/admin/maintenance-categories`.
+  The `UNCLASSIFIED` category cannot be deactivated: it is the column default for
+  `assets.maintenance_category_id`, so new ERP assets keep arriving in it.
 - API-client list/create/read/revoke under `/admin/api-clients`
 - usage-reading-type CRUD under `/admin/usage-reading-types`
 - WO-form template, field, reorder, deactivate, and reactivate endpoints under
-  `/admin/wo-forms/templates`
+  `/admin/wo-forms/templates`. Templates are routed by **Maintenance Category**:
+  create and update take `maintenance_category_ids[]`, the list filters on
+  `?maintenance_category_id=`, and the payload returns `maintenance_categories`.
+  At most one *active* template may serve a category — create returns **422** and
+  reactivate/update return **409** naming the colliding category and the template
+  already holding it.
+
+There is **no** FA subclass type-code CRUD. Those four `/admin/fa-subclass-type-codes`
+routes were removed with D-011: the vocabulary is ERP-owned, so ATMS records unseen
+codes during asset import rather than curating them. The read-only
+`GET /list-options/fa_subclass_type_codes` remains, because report filters use it.
 
 Some read access is intentionally shared with a Maintenance Manager; the policy
 remains authoritative.
@@ -120,7 +132,8 @@ remains authoritative.
 
 All report endpoints are `GET /reports/{name}` and are read-only:
 
-`upcoming-pm`, `assets-by-location`, `pm-compliance`, `overdue-pm`,
+`asset-status`, `asset-usage`, `asset-distribution` (alias:
+`assets-by-location`), `upcoming-pm`, `pm-compliance`, `overdue-pm`,
 `asset-status-distribution`, `wo-backlog`, `mtbf`, `mttr`, `bad-actors`,
 `pm-coverage`, `booking`, `technician-workload`, `throughput`,
 `parts-consumption`, `asset-movement`, `form-results`, `meter-progression`, and
@@ -130,12 +143,26 @@ They are backed by `backend/app/Queries/Reports/` and corresponding feature test
 Use those sources for filters, pagination, summary fields, and calculation
 definitions. Representative contracts: `upcoming-pm` defaults to a 30-day window;
 `overdue-pm` and `wo-backlog` are cursor-paginated; MTBF/MTTR default to the prior
-90 days; and all `per_page` inputs are capped at 500. MTBF, MTTR, and `bad-actors`
-group by an explicit `group_by` dimension — `asset`, `maintenance_category`,
-`asset_class`, `size`, plus `location` (MTBF/bad-actors) or `technician` (MTTR) — and
-reject the legacy `category` value. `parts-consumption` returns a nested Part
-Identity with `asset_class` and `asset_size` per group. Deferred report ideas are not
-API contracts.
+90 days; and all `per_page` inputs are capped at 500.
+
+**Reports group and filter only on fields ATMS owns.** MTBF, MTTR, and
+`bad-actors` take an explicit `group_by` dimension — `asset`,
+`maintenance_category`, `size`, plus `location` (MTBF/bad-actors) or `technician`
+(MTTR). `asset_class` was **removed** as a dimension and now returns 422, and the
+legacy `category` value is likewise rejected. Asset-side filtering is by
+`maintenance_category_id` (int), not `fa_subclass_code`. `parts-consumption`
+returns a nested Part Identity with `asset_maintenance_category` and `asset_size`
+per group.
+
+Because every asset now carries a Maintenance Category (defaulting to
+`UNCLASSIFIED`), the "Uncategorised" null bucket is unreachable on the
+maintenance-category dimension for assets — unclassified assets appear under the
+real `UNCLASSIFIED` group and are counted in `summary.total_groups`. Parts keep a
+nullable category, so their null bucket still occurs.
+
+Reports also accept `?format=csv` on the same endpoint (not a separate route), so
+an export uses identical authorization, filters, and sorting to the table on
+screen. Deferred report ideas are not API contracts.
 
 ## API-change checklist
 

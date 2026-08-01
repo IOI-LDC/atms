@@ -4,13 +4,14 @@ namespace App\Actions\WorkOrders;
 
 use App\Models\FormTemplate;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderForm;
 use App\Services\Audit\AuditLogger;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
 class SyncWorkOrderFormToLatest
 {
-    public function execute(WorkOrder $workOrder, int $userId): \App\Models\WorkOrderForm
+    public function execute(WorkOrder $workOrder, int $userId): WorkOrderForm
     {
         return DB::transaction(function () use ($workOrder, $userId) {
             // Lock the parent work_order_forms row. This serializes EVERY form
@@ -28,14 +29,14 @@ class SyncWorkOrderFormToLatest
 
             $asset = $workOrder->asset;
 
-            if (! $asset || empty($asset->fa_subclass_code)) {
-                throw new DomainException('The work order asset has no subclass code.');
+            if (! $asset) {
+                throw new DomainException('The work order has no asset.');
             }
 
-            $template = FormTemplate::activeForSubclass($asset->fa_subclass_code)?->load('fields');
+            $template = FormTemplate::activeForCategory($asset->maintenance_category_id)?->load('fields');
 
             if (! $template) {
-                throw new DomainException('No active form template exists for this asset subclass.');
+                throw new DomainException("No active form template serves this asset's maintenance category.");
             }
 
             $before = $form->load('fields')->toArray();

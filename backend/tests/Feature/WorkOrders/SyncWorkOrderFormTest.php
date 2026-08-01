@@ -4,8 +4,8 @@ namespace Tests\Feature\WorkOrders;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -40,22 +40,26 @@ class SyncWorkOrderFormTest extends TestCase
         ]);
     }
 
-    private function buildSyncScenario(string $subclass): array
+    private function category(string $code): MaintenanceCategory
     {
-        FaSubclassTypeCode::create(['fa_subclass_code' => $subclass, 'type_code' => 'ABC']);
-
-        $template = FormTemplate::create(['name' => 'Sync', 'fa_subclass_code' => $subclass, 'is_active' => true]);
-
-        return [$subclass, $template];
+        return MaintenanceCategory::firstOrCreate(['code' => $code], ['name' => $code, 'is_active' => true]);
     }
 
-    private function createWorkOrderWithSubclass(string $subclass, User $manager): WorkOrder
+    private function buildSyncScenario(string $categoryCode): array
+    {
+        $template = FormTemplate::create(['name' => 'Sync', 'is_active' => true]);
+        $template->maintenanceCategories()->attach($this->category($categoryCode)->id, ['is_active' => true]);
+
+        return [$categoryCode, $template];
+    }
+
+    private function createWorkOrderWithCategory(string $categoryCode, User $manager): WorkOrder
     {
         $asset = Asset::create([
             'erp_asset_code' => 'AST-SYNC-'.uniqid(),
             'name' => 'Sync Asset',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $this->category($categoryCode)->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);
@@ -77,7 +81,7 @@ class SyncWorkOrderFormTest extends TestCase
 
     public function test_sync_preserves_matched_values_appends_new_and_drops_removed(): void
     {
-        [$subclass, $template] = $this->buildSyncScenario('SYNC1');
+        [$categoryCode, $template] = $this->buildSyncScenario('SYNC1');
 
         $uuidA = Str::uuid()->toString();
         $uuidB = Str::uuid()->toString();
@@ -89,7 +93,7 @@ class SyncWorkOrderFormTest extends TestCase
             ['form_template_id' => $template->id, 'uuid' => $uuidB, 'label' => 'B', 'field_type' => 'text', 'has_pre_post' => false, 'is_required' => false, 'sort_order' => 1],
         ]);
 
-        $wo = $this->createWorkOrderWithSubclass($subclass, $this->manager);
+        $wo = $this->createWorkOrderWithCategory($categoryCode, $this->manager);
         $form = $wo->workOrderForm;
 
         // Capture a value on field A (matched-by-uuid must survive sync).
@@ -137,7 +141,7 @@ class SyncWorkOrderFormTest extends TestCase
 
     public function test_defer_sync_records_dismissal_timestamp(): void
     {
-        [$subclass, $template] = $this->buildSyncScenario('SYNC2');
+        [$categoryCode, $template] = $this->buildSyncScenario('SYNC2');
         $template->fields()->create([
             'form_template_id' => $template->id,
             'uuid' => Str::uuid()->toString(),
@@ -148,7 +152,7 @@ class SyncWorkOrderFormTest extends TestCase
             'sort_order' => 0,
         ]);
 
-        $wo = $this->createWorkOrderWithSubclass($subclass, $this->manager);
+        $wo = $this->createWorkOrderWithCategory($categoryCode, $this->manager);
 
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/form/defer-sync")
             ->assertOk();
@@ -158,7 +162,7 @@ class SyncWorkOrderFormTest extends TestCase
 
     public function test_sync_clears_prior_dismissal(): void
     {
-        [$subclass, $template] = $this->buildSyncScenario('SYNC3');
+        [$categoryCode, $template] = $this->buildSyncScenario('SYNC3');
         $template->fields()->create([
             'form_template_id' => $template->id,
             'uuid' => Str::uuid()->toString(),
@@ -169,7 +173,7 @@ class SyncWorkOrderFormTest extends TestCase
             'sort_order' => 0,
         ]);
 
-        $wo = $this->createWorkOrderWithSubclass($subclass, $this->manager);
+        $wo = $this->createWorkOrderWithCategory($categoryCode, $this->manager);
 
         // Defer first, then sync.
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/form/defer-sync")->assertOk();
@@ -179,9 +183,9 @@ class SyncWorkOrderFormTest extends TestCase
         $this->assertNull($wo->workOrderForm->fresh()->sync_dismissed_at);
     }
 
-    public function test_sync_returns_409_when_no_active_template_exists_for_subclass(): void
+    public function test_sync_returns_409_when_no_active_template_serves_the_category(): void
     {
-        [$subclass, $template] = $this->buildSyncScenario('SYNC4');
+        [$categoryCode, $template] = $this->buildSyncScenario('SYNC4');
         $template->fields()->create([
             'form_template_id' => $template->id,
             'uuid' => Str::uuid()->toString(),
@@ -192,10 +196,10 @@ class SyncWorkOrderFormTest extends TestCase
             'sort_order' => 0,
         ]);
 
-        $wo = $this->createWorkOrderWithSubclass($subclass, $this->manager);
+        $wo = $this->createWorkOrderWithCategory($categoryCode, $this->manager);
         $this->assertNotNull($wo->workOrderForm);
 
-        // Deactivate the only active template for this subclass.
+        // Deactivate the only active template for this category.
         $template->update(['is_active' => false]);
 
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/form/sync")

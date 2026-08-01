@@ -38,6 +38,10 @@ class PmRuleController extends Controller
             'interval_days' => ['nullable', 'integer', 'min:1', 'required_if:trigger_type,date,date_or_reading'],
             'interval_reading' => ['nullable', 'numeric', 'min:0.01', 'required_if:trigger_type,reading,date_or_reading'],
             'usage_reading_type_id' => ['nullable', 'exists:usage_reading_types,id', 'required_if:trigger_type,reading,date_or_reading'],
+            // Covering a category expands to one assignment per member asset,
+            // in a queued job — the response returns before that finishes.
+            'maintenance_category_ids' => ['sometimes', 'array'],
+            'maintenance_category_ids.*' => ['integer', 'exists:maintenance_categories,id'],
         ]);
 
         $rule = $action->execute($validated, $request->user()->id);
@@ -52,6 +56,7 @@ class PmRuleController extends Controller
         $pmRule->load([
             'usageReadingType',
             'createdBy',
+            'maintenanceCategories',
             'assignments.asset',
             'assignments.pmRule.usageReadingType',
             'assignments.assignedBy',
@@ -71,6 +76,8 @@ class PmRuleController extends Controller
             'description' => ['nullable', 'string'],
             'interval_days' => ['nullable', 'integer', 'min:1'],
             'interval_reading' => ['nullable', 'numeric', 'min:0.01'],
+            'maintenance_category_ids' => ['sometimes', 'array'],
+            'maintenance_category_ids.*' => ['integer', 'exists:maintenance_categories,id'],
         ]);
 
         $triggerType = $pmRule->trigger_type;

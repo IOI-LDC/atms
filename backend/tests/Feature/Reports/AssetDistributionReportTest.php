@@ -217,20 +217,22 @@ class AssetDistributionReportTest extends TestCase
         $this->createAsset(['maintenance_category_id' => $hvac->id]);
         $this->createAsset(['maintenance_category_id' => $hvac->id]);
         $this->createAsset(['maintenance_category_id' => $pumps->id]);
-        $this->createAsset(['maintenance_category_id' => null]);
+        $this->createAsset();
 
         $json = $this->actingAs($admin)
             ->getJson('/api/reports/asset-distribution?group_by=maintenance_category')->json();
 
         $this->assertSame(['maintenance_category'], $json['group_by']);
         $this->assertSame(4, $json['summary']['total_assets']);
-        $this->assertSame(2, $json['summary']['total_groups']);
+        // Three real categories: an unclassified asset lands in Unclassified,
+        // which counts as a group because it is one.
+        $this->assertSame(3, $json['summary']['total_groups']);
         $this->assertSame(2, $this->findRow($json['items'], $hvac->id)['asset_count']);
         $this->assertSame('HVAC', $this->findRow($json['items'], $hvac->id)['groups'][0]['label']);
 
-        $uncategorised = collect($json['items'])->first(fn (array $i) => $i['groups'][0]['is_unassigned']);
-        $this->assertSame('Uncategorised', $uncategorised['groups'][0]['label']);
-        $this->assertSame(1, $uncategorised['asset_count']);
+        $this->assertNull(collect($json['items'])->first(fn (array $i) => $i['groups'][0]['is_unassigned']));
+        $unclassified = collect($json['items'])->first(fn (array $i) => $i['groups'][0]['label'] === 'Unclassified');
+        $this->assertSame(1, $unclassified['asset_count']);
     }
 
     public function test_groups_by_size_with_og_notation_labels(): void
@@ -357,14 +359,14 @@ class AssetDistributionReportTest extends TestCase
     public function test_null_buckets_appear_per_dimension(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $this->createAsset(['maintenance_category_id' => null, 'size_inches' => null, 'current_location_id' => null]);
+        $this->createAsset(['size_inches' => null, 'current_location_id' => null]);
 
         $json = $this->actingAs($admin)->getJson(
             '/api/reports/asset-distribution'
             .'?group_by[]=maintenance_category&group_by[]=size&group_by[]=location'
         )->json();
 
-        $this->assertSame(['Uncategorised', 'Unspecified', 'Unassigned'], $this->labels($json['items'][0]));
+        $this->assertSame(['Unclassified', 'Unspecified', 'Unassigned'], $this->labels($json['items'][0]));
         $this->assertSame(1, $json['summary']['total_assets']);
         // Not an actionable group, so it is a visible row but not counted.
         $this->assertSame(0, $json['summary']['total_groups']);

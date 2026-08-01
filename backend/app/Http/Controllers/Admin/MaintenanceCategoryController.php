@@ -58,6 +58,15 @@ class MaintenanceCategoryController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
+        // Unclassified is the column default for `assets.maintenance_category_id`.
+        // Deactivating it would hide the one bucket that new ERP assets keep
+        // arriving in, which is the opposite of what it exists for.
+        if ($category->isUnclassified() && ($validated['is_active'] ?? true) === false) {
+            throw ValidationException::withMessages([
+                'is_active' => 'The Unclassified category cannot be deactivated — new assets are assigned to it by default.',
+            ]);
+        }
+
         // The code is the stable identifier (route key) and is never changed.
         $category->update($validated);
 

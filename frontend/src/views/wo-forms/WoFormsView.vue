@@ -2,8 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
 import AppDataTable from '@/components/app/AppDataTable.vue'
-import WoFormForm from '@/components/wo-forms/WoFormForm.vue'
-import WoFormFieldsSheet from '@/components/wo-forms/WoFormFieldsSheet.vue'
+import WoFormTemplateSheet from '@/components/wo-forms/WoFormTemplateSheet.vue'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -21,7 +20,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useWoForms } from '@/composables/useWoForms'
-import { faSubclassLabel } from '@/lib/displayHelpers'
+import { useListOptions } from '@/composables/useListOptions'
 import { Pencil, ToggleLeft, ToggleRight } from '@lucide/vue'
 import type { AppColumnDef } from '@/lib/appTable'
 import type { WoFormTemplate } from '@/types'
@@ -34,11 +33,11 @@ const {
   loadTemplates,
   template,
   templateLoading,
+  templateLoadFailed,
   loadTemplate,
-  faSubclasses,
-  loadFaSubclasses,
   saving,
   validationErrors,
+  saveError,
   createTemplate,
   updateTemplate,
   acting,
@@ -52,6 +51,13 @@ const {
   reorderFields,
 } = useWoForms()
 
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
+
+/** Comma-joined category names for a template row. */
+function categoryNames(t: WoFormTemplate): string {
+  return (t.maintenance_categories ?? []).map((c) => c.name).join(', ')
+}
+
 // ── Status filter ─────────────────────────────────────────────────────────────
 const statusFilter = ref<'active' | 'inactive' | 'all'>('active')
 
@@ -64,7 +70,12 @@ const filteredTemplates = computed<WoFormTemplate[]>(() => {
 // ── Columns ───────────────────────────────────────────────────────────────────
 const columns: AppColumnDef<WoFormTemplate>[] = [
   { field: 'name', header: 'Template', sortable: true, minWidth: 200 },
-  { field: 'fa_subclass_code', header: 'Asset Class', sortable: true },
+  {
+    field: 'maintenance_categories',
+    header: 'Maintenance Categories',
+    sortable: false,
+    minWidth: 220,
+  },
   { field: 'fields_count', header: 'Fields', sortable: false, align: 'center' },
   { field: 'is_active', header: 'Active', sortable: true, align: 'center' },
   { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 180 },
@@ -72,40 +83,62 @@ const columns: AppColumnDef<WoFormTemplate>[] = [
 
 onMounted(() => {
   loadTemplates()
-  loadFaSubclasses()
+  loadMaintenanceCategories()
 })
 
-// ── Create / Edit metadata sheet ──────────────────────────────────────────────
+// ── Create / Edit template sheet (metadata + fields in one panel) ──────────────────────────────────────────────
+// `editing` and `template` are deliberately separate and may briefly desync:
+// a metadata save refreshes `editing` but not `template`, and a field op does
+// the reverse. This is harmless — the metadata form reads `editing` and the
+// fields section reads `template`, so each always sees its own source of truth.
 const formOpen = ref(false)
 const editing = ref<WoFormTemplate | null>(null)
+const fieldAddedTick = ref(0)
 
 function openCreate() {
+  if (formOpen.value) return
   editing.value = null
+  template.value = null
   validationErrors.value = null
   formOpen.value = true
 }
 
-function openEdit(t: WoFormTemplate) {
+async function openEdit(t: WoFormTemplate) {
+  if (formOpen.value) return
   editing.value = t
   validationErrors.value = null
+  await loadTemplate(t.id)
   formOpen.value = true
 }
 
-function closeForm() {
+function closeSheet() {
+  // Keep `editing`/`template` intact while the panel slides out so its content
+  // doesn't swap to create-mode mid-animation; the open handlers re-seed both.
   formOpen.value = false
-  editing.value = null
-  validationErrors.value = null
 }
 
-async function onSave(payload: WoFormTemplatePayload) {
-  const result = editing.value
-    ? await updateTemplate(editing.value.id, payload)
-    : await createTemplate(payload)
-  if (result) {
-    toast.success(editing.value ? 'Template updated.' : 'Template created.')
+async function onSaveMetadata(payload: WoFormTemplatePayload) {
+  if (!editing.value) {
+    // Create: on success flip the still-open sheet into edit mode and hydrate
+    // its (empty) fields so the user can add them immediately.
+    const created = await createTemplate(payload)
+    if (created) {
+      toast.success('Template created.')
+      await loadTemplates(true)
+      editing.value = created
+      await loadTemplate(created.id)
+    } else if (!validationErrors.value && !saveError.value) {
+      toast.error('Failed to save template.')
+    }
+    return
+  }
+
+  const updated = await updateTemplate(editing.value.id, payload)
+  if (updated) {
+    toast.success('Template updated.')
+    editing.value = updated
     await loadTemplates(true)
-    closeForm()
-  } else if (!validationErrors.value) {
+  } else if (!validationErrors.value && !saveError.value) {
     toast.error('Failed to save template.')
   }
 }
@@ -133,19 +166,7 @@ async function confirmToggle() {
   }
 }
 
-// ── Manage fields ──────────────────────────────────────────────────────────────
-const fieldsOpen = ref(false)
-const fieldAddedTick = ref(0)
-
-async function openManageFields(t: WoFormTemplate) {
-  await loadTemplate(t.id)
-  fieldsOpen.value = true
-}
-
-function closeFieldsSheet() {
-  fieldsOpen.value = false
-}
-
+// ── Field management (immediate per-field operations) ──────────────────────────────────────────────────────────────
 async function onAddField(payload: WoFormFieldPayload) {
   if (!template.value) return
   const result = await addField(template.value.id, payload)
@@ -222,8 +243,8 @@ async function onReorderFields(fieldIds: number[]) {
       <template #cell="{ column, row }">
         <span v-if="column.field === 'name'" class="table-cell-primary">{{ row.name }}</span>
 
-        <span v-else-if="column.field === 'fa_subclass_code'" class="table-cell-secondary">
-          {{ faSubclassLabel(row.fa_subclass_code) }}
+        <span v-else-if="column.field === 'maintenance_categories'" class="table-cell-secondary">
+          {{ categoryNames(row) || 'None assigned' }}
         </span>
 
         <span v-else-if="column.field === 'fields_count'" class="table-cell-secondary">
@@ -237,7 +258,6 @@ async function onReorderFields(fieldIds: number[]) {
         >
 
         <div v-else-if="column.field === 'actions'" class="table-row-actions">
-          <Button variant="outline" size="sm" @click="openManageFields(row)">Manage Fields</Button>
           <Button
             variant="outline"
             size="icon-sm"
@@ -259,31 +279,27 @@ async function onReorderFields(fieldIds: number[]) {
       </template>
     </AppDataTable>
 
-    <!-- Create / Edit metadata sheet -->
-    <WoFormForm
+    <!-- Create / Edit template sheet (metadata + fields) -->
+    <WoFormTemplateSheet
       :open="formOpen"
       :editing="editing"
-      :fa-subclasses="faSubclasses"
+      :template="template"
+      :template-loading="templateLoading"
+      :template-load-failed="templateLoadFailed"
+      :maintenance-categories="maintenanceCategories"
       :templates="templates"
       :saving="saving"
       :validation-errors="validationErrors"
-      @close="closeForm"
-      @save="onSave"
-    />
-
-    <!-- Manage fields -->
-    <WoFormFieldsSheet
-      :open="fieldsOpen"
-      :template="template"
-      :loading="templateLoading"
-      :saving="fieldSaving"
-      :errors="fieldErrors"
+      :save-error="saveError"
+      :field-saving="fieldSaving"
+      :field-errors="fieldErrors"
       :added-tick="fieldAddedTick"
-      @close="closeFieldsSheet"
-      @add="onAddField"
-      @update="onUpdateField"
-      @delete="onDeleteField"
-      @reorder="onReorderFields"
+      @close="closeSheet"
+      @save-metadata="onSaveMetadata"
+      @add-field="onAddField"
+      @update-field="onUpdateField"
+      @delete-field="onDeleteField"
+      @reorder-fields="onReorderFields"
     />
 
     <!-- Activate / Deactivate confirm -->
@@ -296,8 +312,8 @@ async function onReorderFields(fieldIds: number[]) {
           <DialogDescription v-if="toggleTarget">
             {{
               toggleTarget.is_active
-                ? `Deactivate "${toggleTarget.name}"? New work orders for ${faSubclassLabel(toggleTarget.fa_subclass_code)} assets will no longer snapshot this form. Existing work order forms are unaffected.`
-                : `Reactivate "${toggleTarget.name}"? It becomes available for new work order snapshots again. Blocked if another active template already covers ${faSubclassLabel(toggleTarget.fa_subclass_code)}.`
+                ? `Deactivate "${toggleTarget.name}"? New work orders for ${categoryNames(toggleTarget) || 'its'} assets will no longer snapshot this form, and those categories become free for another form. Existing work order forms are unaffected.`
+                : `Reactivate "${toggleTarget.name}"? It becomes available for new work order snapshots again. Blocked if another active template already covers ${categoryNames(toggleTarget) || 'its categories'}.`
             }}
           </DialogDescription>
         </DialogHeader>

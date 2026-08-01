@@ -4,12 +4,13 @@ namespace Tests\Feature\FormTemplates;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
 use App\Models\FormTemplateField;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\WorkOrder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -20,6 +21,7 @@ class DeleteFormFieldSnapshotIntegrityTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $manager;
 
     protected function setUp(): void
@@ -47,10 +49,10 @@ class DeleteFormFieldSnapshotIntegrityTest extends TestCase
 
     public function test_deleting_a_template_field_keeps_captured_values_intact(): void
     {
-        $subclass = 'INT';
-        FaSubclassTypeCode::create(['fa_subclass_code' => $subclass, 'type_code' => 'ABC']);
+        $category = MaintenanceCategory::firstOrCreate(['code' => 'INT'], ['name' => 'INT', 'is_active' => true]);
 
-        $template = FormTemplate::create(['name' => 'Integrity', 'fa_subclass_code' => $subclass, 'is_active' => true]);
+        $template = FormTemplate::create(['name' => 'Integrity', 'is_active' => true]);
+        $template->maintenanceCategories()->attach($category->id, ['is_active' => true]);
 
         $field = FormTemplateField::create([
             'form_template_id' => $template->id,
@@ -66,7 +68,7 @@ class DeleteFormFieldSnapshotIntegrityTest extends TestCase
             'erp_asset_code' => 'AST-INT-'.uniqid(),
             'name' => 'Integrity Asset',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $category->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);
@@ -83,7 +85,7 @@ class DeleteFormFieldSnapshotIntegrityTest extends TestCase
 
         $this->actingAs($this->manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
-        $wo = \App\Models\WorkOrder::where('maintenance_request_id', $mr->id)->first();
+        $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
         $snapshotField = $wo->workOrderForm->fields->first();
 
         // Capture a value before the template field is removed.

@@ -23,11 +23,14 @@ class DeactivateFormTemplate
             $locked->update([
                 'is_active' => false,
             ]);
+            // Releases this template's hold on its categories, so another form
+            // can take them over.
+            FormTemplateCategoryPivot::mirrorActiveFlag($locked, false);
 
             $after = $locked->fresh()->toArray();
             app(AuditLogger::class)->log('form_template.deactivated', $locked, $before, $after, ['user_id' => $userId]);
 
-            return $locked->fresh()->load('fields');
+            return $locked->fresh()->load(['fields', 'maintenanceCategories']);
         });
     }
 }

@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use App\Enums\MaintenanceRequestStatus;
+use App\Enums\MaintenanceStatus;
+use App\Enums\PmAssignmentOrigin;
 use App\Enums\WorkOrderStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,6 +16,8 @@ class AssetPmAssignment extends Model
     protected $fillable = [
         'asset_id',
         'pm_rule_id',
+        'origin',
+        'source_maintenance_category_id',
         'last_triggered_date',
         'last_triggered_reading',
         'is_active',
@@ -24,6 +29,7 @@ class AssetPmAssignment extends Model
     ];
 
     protected $casts = [
+        'origin' => PmAssignmentOrigin::class,
         'last_triggered_date' => 'date',
         'last_triggered_reading' => 'decimal:2',
         'is_active' => 'boolean',
@@ -41,6 +47,12 @@ class AssetPmAssignment extends Model
         return $this->belongsTo(PmRule::class);
     }
 
+    /** The category link that created this row, for CATEGORY-origin rows only. */
+    public function sourceMaintenanceCategory(): BelongsTo
+    {
+        return $this->belongsTo(MaintenanceCategory::class, 'source_maintenance_category_id');
+    }
+
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');
@@ -54,6 +66,22 @@ class AssetPmAssignment extends Model
     public function reactivatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reactivated_by');
+    }
+
+    /**
+     * The population a PM evaluation considers: an active assignment, on an
+     * active rule, for an asset still enrolled in maintenance.
+     *
+     * `UpcomingPmReportQuery` mirrors this set — keep the two in step.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeEvaluable(Builder $query): void
+    {
+        $query
+            ->where('asset_pm_assignments.is_active', true)
+            ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
+            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', MaintenanceStatus::ENROLLED));
     }
 
     /**

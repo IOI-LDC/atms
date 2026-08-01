@@ -2,6 +2,7 @@
 
 namespace App\Actions\Pm;
 
+use App\Enums\PmAssignmentOrigin;
 use App\Models\Asset;
 use App\Models\AssetMeterReading;
 use App\Models\AssetPmAssignment;
@@ -11,9 +12,18 @@ use Illuminate\Support\Facades\DB;
 
 class CreateAssetPmAssignment
 {
-    public function execute(Asset $asset, PmRule $rule, int $assignedByUserId): AssetPmAssignment
-    {
-        return DB::transaction(function () use ($asset, $rule, $assignedByUserId) {
+    /**
+     * @param  int|null  $assignedByUserId  Null when PM category reconciliation
+     *                                      created the row rather than a person.
+     */
+    public function execute(
+        Asset $asset,
+        PmRule $rule,
+        ?int $assignedByUserId,
+        PmAssignmentOrigin $origin = PmAssignmentOrigin::MANUAL,
+        ?int $sourceMaintenanceCategoryId = null,
+    ): AssetPmAssignment {
+        return DB::transaction(function () use ($asset, $rule, $assignedByUserId, $origin, $sourceMaintenanceCategoryId) {
             // Initial baseline: one full grace interval before the first PM is due.
             $lastTriggeredDate = now()->toDateString();
             $lastTriggeredReading = null;
@@ -29,6 +39,8 @@ class CreateAssetPmAssignment
             $created = AssetPmAssignment::create([
                 'asset_id' => $asset->id,
                 'pm_rule_id' => $rule->id,
+                'origin' => $origin,
+                'source_maintenance_category_id' => $sourceMaintenanceCategoryId,
                 'last_triggered_date' => $lastTriggeredDate,
                 'last_triggered_reading' => $lastTriggeredReading,
                 'is_active' => true,

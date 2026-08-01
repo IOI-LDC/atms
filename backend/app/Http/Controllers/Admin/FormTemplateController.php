@@ -39,13 +39,16 @@ class FormTemplateController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            // The unique check returns a clean 422 before the partial unique
-            // index can raise a 500.
-            'fa_subclass_code' => [
-                'required',
-                'string',
-                'exists:fa_subclass_type_codes,fa_subclass_code',
-                Rule::unique('form_templates', 'fa_subclass_code')->where(fn ($q) => $q->where('is_active', true)),
+            // A form serves one or more categories. The uniqueness check below
+            // returns a clean 422 before the pivot's partial unique index can
+            // raise a 500 — a template is created active, so it claims its
+            // categories immediately.
+            'maintenance_category_ids' => ['required', 'array', 'min:1'],
+            'maintenance_category_ids.*' => [
+                'integer',
+                'exists:maintenance_categories,id',
+                Rule::unique('form_template_maintenance_category', 'maintenance_category_id')
+                    ->where(fn ($q) => $q->where('is_active', true)),
             ],
         ]);
 
@@ -58,7 +61,7 @@ class FormTemplateController extends Controller
     {
         Gate::authorize('view', $template);
 
-        $template->load('fields');
+        $template->load(['fields', 'maintenanceCategories']);
 
         return (new FormTemplateResource($template))->toResponse($request);
     }
@@ -69,9 +72,16 @@ class FormTemplateController extends Controller
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
+            'maintenance_category_ids' => ['sometimes', 'array', 'min:1'],
+            'maintenance_category_ids.*' => ['integer', 'exists:maintenance_categories,id'],
         ]);
 
-        $template = $action->execute($template, $validated, $request->user()->id);
+        try {
+            $template = $action->execute($template, $validated, $request->user()->id);
+        } catch (\DomainException $e) {
+            // A category already claimed by another active form.
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
 
         return (new FormTemplateResource($template))->toResponse($request);
     }

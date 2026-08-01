@@ -13,11 +13,14 @@ class CreateFormTemplate
         return DB::transaction(function () use ($data, $userId) {
             $template = FormTemplate::create([
                 'name' => $data['name'],
-                'fa_subclass_code' => $data['fa_subclass_code'],
                 'is_active' => true,
             ]);
 
-            $template->load('fields');
+            $template->maintenanceCategories()->sync(
+                FormTemplateCategoryPivot::payload($data['maintenance_category_ids'], true),
+            );
+
+            $template->load(['fields', 'maintenanceCategories']);
 
             app(AuditLogger::class)->log('form_template.created', $template, [], $template->toArray(), ['user_id' => $userId]);
 

@@ -4,11 +4,12 @@ namespace Tests\Feature\WorkOrders;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\WorkOrder;
 use App\Models\WorkOrderForm;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,18 +34,18 @@ class FormSnapshotTest extends TestCase
         ]);
     }
 
-    private function createAssetWithSubclass(string $code): Asset
+    private function category(string $code): MaintenanceCategory
     {
-        FaSubclassTypeCode::create([
-            'fa_subclass_code' => $code,
-            'type_code' => 'ABC',
-        ]);
+        return MaintenanceCategory::firstOrCreate(['code' => $code], ['name' => $code, 'is_active' => true]);
+    }
 
+    private function createAssetWithCategory(string $code): Asset
+    {
         return Asset::create([
             'erp_asset_code' => 'AST-SNAP-'.uniqid(),
             'name' => 'Snap Asset',
             'is_active' => true,
-            'fa_subclass_code' => $code,
+            'maintenance_category_id' => $this->category($code)->id,
         ]);
     }
 
@@ -52,9 +53,10 @@ class FormSnapshotTest extends TestCase
     {
         $template = FormTemplate::create([
             'name' => 'Inspection',
-            'fa_subclass_code' => $code,
             'is_active' => true,
         ]);
+
+        $template->maintenanceCategories()->attach($this->category($code)->id, ['is_active' => true]);
 
         $template->fields()->createMany([
             [
@@ -84,7 +86,7 @@ class FormSnapshotTest extends TestCase
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $requester = $this->createUser(RoleCode::REQUESTER);
 
-        $asset = $this->createAssetWithSubclass('MM');
+        $asset = $this->createAssetWithCategory('MM');
         $template = $this->createActiveTemplate('MM');
 
         $mr = MaintenanceRequest::create([
@@ -99,7 +101,7 @@ class FormSnapshotTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
-        $wo = \App\Models\WorkOrder::where('maintenance_request_id', $mr->id)->first();
+        $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
         // The form instance was created with a soft FK to the template.
         $this->assertDatabaseHas('work_order_forms', [
@@ -133,7 +135,7 @@ class FormSnapshotTest extends TestCase
         $requester = $this->createUser(RoleCode::REQUESTER);
 
         // Subclass exists but has no active template.
-        $asset = $this->createAssetWithSubclass('NOTPL');
+        $asset = $this->createAssetWithCategory('NOTPL');
 
         $mr = MaintenanceRequest::create([
             'number' => 'MR-'.str_pad((string) (MaintenanceRequest::count() + 1), 6, '0', STR_PAD_LEFT),
@@ -147,7 +149,7 @@ class FormSnapshotTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
-        $wo = \App\Models\WorkOrder::where('maintenance_request_id', $mr->id)->first();
+        $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
         $this->assertDatabaseMissing('work_order_forms', ['work_order_id' => $wo->id]);
     }
@@ -157,7 +159,7 @@ class FormSnapshotTest extends TestCase
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $requester = $this->createUser(RoleCode::REQUESTER);
 
-        $asset = $this->createAssetWithSubclass('EMB');
+        $asset = $this->createAssetWithCategory('EMB');
         $this->createActiveTemplate('EMB');
 
         $mr = MaintenanceRequest::create([
@@ -172,7 +174,7 @@ class FormSnapshotTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])->assertOk();
 
-        $wo = \App\Models\WorkOrder::where('maintenance_request_id', $mr->id)->first();
+        $wo = WorkOrder::where('maintenance_request_id', $mr->id)->first();
 
         $this->actingAs($manager)->getJson("/api/work-orders/{$wo->id}")
             ->assertOk()

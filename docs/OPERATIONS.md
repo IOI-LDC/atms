@@ -92,6 +92,35 @@ and first-boot seeding. It pins the approved CSV by SHA-256 and aborts before th
 data update if validation or the hash check fails. The importer is idempotent, so
 later deploys validate the same source and leave matching rows unchanged.
 
+### The queue worker holds code in memory — restart it after every code change
+
+`queue` and `scheduler` are long-running PHP processes. They load application
+classes **once, at boot**, and keep serving from that copy. A container that was
+already running when new code landed will keep executing the old code, and a job
+referencing anything new fails with errors that look impossible against the source
+on disk — `Undefined constant …`, `Class … not found`, a method that is plainly
+there.
+
+A full `docker compose up -d` after a build restarts them, so a normal deploy is
+safe. It is the **partial** update that bites: editing files against a running
+stack, or restarting only `api`.
+
+```sh
+docker compose restart queue scheduler
+```
+
+Failures of this kind are silent from the UI — the request succeeds and the queued
+work never happens. After fixing one, check what was lost and re-drive it:
+
+```sh
+docker compose exec api php artisan queue:failed     # inspect before flushing
+docker compose exec api php artisan queue:retry all  # or queue:flush, then re-dispatch
+```
+
+This is not hypothetical: on 2026-08-01 every `ReconcilePmCategoryAssignmentsJob`
+failed this way against a worker booted before the job existed, so PM rules showed
+their category coverage while producing no assignments at all.
+
 Initial setup additionally requires an application key, production environment
 values, and an initial Administrator. Required service credentials include
 `LDC_ERP_*` for parts integration and separate `GRAPH_*` credentials for the

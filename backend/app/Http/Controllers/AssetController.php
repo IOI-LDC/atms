@@ -101,9 +101,9 @@ class AssetController extends Controller
             'description' => ['nullable', 'string'],
             'fa_subclass_code' => ['nullable', 'string', 'max:255'],
             // Assigning an existing Maintenance Category or Size to one asset.
-            // The category *vocabulary* remains import-only — there is no CRUD
-            // endpoint for `maintenance_categories`, only this assignment.
-            'maintenance_category_id' => ['nullable', 'integer', 'exists:maintenance_categories,id'],
+            // The category cannot be cleared: every asset must carry one, and
+            // "not classified yet" is the Unclassified category, not a null.
+            'maintenance_category_id' => ['sometimes', 'integer', 'exists:maintenance_categories,id'],
             'size_inches' => ['nullable', 'string', 'max:32', new SizeRule],
             'serial_number' => ['nullable', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],

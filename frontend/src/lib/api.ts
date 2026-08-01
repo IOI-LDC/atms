@@ -149,9 +149,45 @@ function buildUrl(path: string, params?: Record<string, unknown>): string {
   return qs ? `${path}?${qs}` : path
 }
 
+/**
+ * Fetch a file and hand it to the browser as a download.
+ *
+ * Deliberately not a plain `<a href>` navigation: that would bypass this
+ * client's origin handling (VITE_API_ORIGIN) and turn any auth or server error
+ * into a page of raw text replacing the app. Fetching first means a failure
+ * throws an ApiError the caller can surface in place.
+ *
+ * Uses the filename the server sent in Content-Disposition — the streamer
+ * exposes that header to the browser precisely so this can read it.
+ */
+async function download(path: string, params?: Record<string, unknown>): Promise<void> {
+  const response = await fetch(`${BASE_URL}${buildUrl(path, params)}`, {
+    method: 'GET',
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new ApiError(response.status, {})
+  }
+
+  const match = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') ?? '')
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = match?.[1] ?? 'download.csv'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  // Revoking immediately can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 const api = {
   get: <T>(path: string, params?: Record<string, unknown>, options?: RequestOptions) =>
     request<T>('GET', buildUrl(path, params), undefined, false, false, options),
+  download,
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),

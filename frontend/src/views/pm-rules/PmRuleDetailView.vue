@@ -16,6 +16,7 @@ import {
 import PmRuleForm from '@/components/pm-rules/PmRuleForm.vue'
 import { toast } from 'vue-sonner'
 import { usePmRules } from '@/composables/usePmRules'
+import { useListOptions } from '@/composables/useListOptions'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   pmLevelClass,
@@ -58,13 +59,18 @@ const {
   reactivateRule,
 } = usePmRules()
 
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
+
 watch(
   id,
   async (newId) => {
     if (!newId) return
     await loadRule(newId)
     void loadMrHistory(newId)
-    if (canConfigure.value) void loadReadingTypes()
+    if (canConfigure.value) {
+      void loadReadingTypes()
+      void loadMaintenanceCategories()
+    }
   },
   { immediate: true },
 )
@@ -331,6 +337,7 @@ async function confirmToggle() {
       :open="formOpen"
       :editing="rule"
       :reading-types="readingTypes"
+      :maintenance-categories="maintenanceCategories"
       :saving="saving"
       :validation-errors="validationErrors"
       :batch-results="null"

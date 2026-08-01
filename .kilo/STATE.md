@@ -3,6 +3,151 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
+## Session — 2026-08-01 (later)
+
+### Maintenance Category as the ATMS routing key — all four phases BUILT
+
+The 2026-07-31 design landed in the agreed order: **P0 D-013 → P1 category NOT
+NULL → P2 D-011 → P3 D-012**. Backend **1019 tests pass (3007 assertions)**,
+Pint clean, `vue-tsc --build` clean. Not committed — the working tree also held
+another session's CSV-export/reports work, so committing was left to the user.
+
+**Two tracker facts were wrong and are now corrected.** `maintenance_category_id`
+had **0 nulls of 400**, not 2 — the backfill had already happened. And the
+"blocked on 16 uncommitted files" note was stale; `cc53090` had landed.
+
+**P0 — D-013 PM evaluation now costs a fixed number of queries.**
+`PmDueCalculator`'s batch branches existed for months with no caller. Now:
+`PmEvaluationBatch` builds the readings/suppressions maps in a fixed number of
+queries (latest-by-`reading_at` in two grouped aggregates, matching the
+per-assignment path); `PmEvaluationRunner` checks due-ness **before** opening a
+transaction, so the `lockForUpdate` is paid only for assignments that actually
+look due — the old loop locked all 1,600 to discover nothing was due;
+`EvaluatePmRulesJob` chunks ids and fans out `EvaluatePmAssignmentsJob` per
+chunk; `isTriggeredByDate`/`isTriggeredByReading` accept the collections they
+used to hardcode `null` for. `AssetPmAssignment::scopeEvaluable` is now the one
+definition of the evaluated population (`UpcomingPmReportQuery` mirrors it).
+`evaluateAll` on the controller was chunked through the same runner.
+
+> **Suppression payloads are flattened to arrays on purpose.** The calculator
+> compares `suppressed_until_date` against `now()->toDateString()`; the model
+> casts that column to Carbon, and a Carbon-vs-string comparison in PHP does not
+> mean what it looks like — every date suppression would have read as active.
+
+`PmEvaluationScaleTest` pins it: query count is **identical** at 5 and 25
+assignments, and under 15 in total.
+
+**P1 — `assets.maintenance_category_id` is NOT NULL, defaulting to a seeded
+`UNCLASSIFIED` category.** ⚠️ **The sentinel was the decision, and the reason is
+the ERP sync:** `ImportErpAssetsCommand::mapRow()` creates assets with no
+category and there is no subclass→category mapping to infer one from, so a bare
+NOT NULL would have broken every new ERP asset. The migration captures the
+sentinel's real id and sets it as the column DEFAULT, so a fresh test database
+and production agree by construction. Also: blank category cells in
+`atms:import-assets` now mean "leave what is there" instead of clearing;
+`PATCH /assets/{id}` rejects an explicit null category (422); unknown
+`fa_subclass_code` values are **recorded with type code `UNK`** instead of
+failing the row (the admin screen that was the only remedy is gone).
+`MaintenanceCategoryController` refuses to deactivate Unclassified.
+
+> **Consequence worth knowing: the "Uncategorised" report bucket is now
+> unreachable for assets.** An unclassified asset appears as the real
+> `UNCLASSIFIED` category — so it is counted in `total_groups`, filterable, and
+> visible, which is exactly why the sentinel was chosen over a bare NOT NULL.
+> Parts keep a nullable category, so the null branches in report and
+> compatibility code stay live for them.
+
+**P2 — D-011 WO Forms route by Maintenance Category.** `form_templates
+.fa_subclass_code` dropped; new `form_template_maintenance_category` pivot with
+**mirrored `is_active`** + partial unique index
+`form_template_active_category_unique ON (maintenance_category_id) WHERE
+is_active`. `FormTemplateCategoryPivot` owns the mirror and the conflict guard,
+which throws a message naming the colliding category *and* the template holding
+it. Existing templates migrated **deactivated with no categories**, and
+reactivation now refuses a template with no categories at all. Coverage is
+**editable** after creation (unlike the immutable `fa_subclass_code` it
+replaced). `SnapshotFormTemplateIntoWorkOrder` + `SyncWorkOrderFormToLatest`
+re-pointed. The 4 `/admin/fa-subclass-type-codes` routes and their controller are
+**deleted**; `/list-options/fa_subclass_type_codes` stays (report filters).
+
+**P3 — D-012 PM rules assignable to categories.** `pm_rule_maintenance_category`
+pivot, plus `origin` (`manual`|`category`) and `source_maintenance_category_id`
+on `asset_pm_assignments`. `ReconcilePmCategoryAssignments` expands the link into
+rows; `ReconcilePmCategoryAssignmentsJob` runs it off the request, overlap-keyed
+**per scope** (`pm-category-reconcile:rule-7`) so two edits to one rule cannot
+interleave while unrelated ones still run in parallel. Both directions chunk.
+Hooks: rule created/updated/deactivated/reactivated, asset category /
+`is_active` / `maintenance_status` changed, and the workbook import (**once at
+the end, one job per rule** — never per row).
+
+> **`asset_pm_assignments.assigned_by` is now nullable, and that is load-bearing.**
+> A null actor on `assigned_by`/`deactivated_by` means *reconciliation did this*,
+> a filled one means *a person did*. That distinction is the entire precedence
+> rule: reconciliation may restore a row it withdrew itself, but must never
+> reactivate one a human deactivated — otherwise a per-asset opt-out silently
+> reverts on the next sync. An assignment with an open MR/WO is skipped, not
+> forced.
+
+**Frontend.** New shared `components/app/MaintenanceCategoryPicker.vue`
+(searchable multi-select; categories claimed by another active form show
+disabled *with the holder's name* rather than vanishing) used by both the WO
+Form sheet and the PM rule sheet. `WoFormsView` column is now "Maintenance
+Categories"; PM rule form gained an "Applies To" picker shared across an L1–L4
+batch; asset PM rows show a **"By category"** badge so a schedule nobody
+assigned is explicable. `useWoForms` dropped its FA-subclass fetch and gained
+`saveError` for the 409. In-app user manual §8.7 and the asset field table
+updated.
+
+**Contract changes for the frontend/API consumers:** `FormTemplateResource
+.fa_subclass_code` → `maintenance_categories[]`; `POST/PATCH /admin/wo-forms
+/templates` take `maintenance_category_ids[]`; template list filter
+`?fa_subclass_code=` → `?maintenance_category_id=`; `PmRuleResource` gained
+`maintenance_categories`; `AssetPmAssignmentResource` gained `origin` +
+`source_maintenance_category` (additive).
+
+### Same session — defects found in use, after the four phases landed
+
+**🐛 Every `ReconcilePmCategoryAssignmentsJob` had been failing silently.** The
+`queue` container had been up 46 hours, so it was serving `OverlapKeys` from
+before the new constant existed — `Undefined constant …PM_CATEGORY_RECONCILE`
+against code that was plainly on disk. PM rules showed their coverage while
+producing **no assignments at all**, and nothing surfaced in the UI. Restarting
+`queue` and re-dispatching produced 515 assignments. **A long-running worker
+holds classes from boot; restart `queue` and `scheduler` after any job or Action
+change.** Written up in `docs/OPERATIONS.md`.
+
+**🐛 Editing a PM rule from the list wiped its category coverage.**
+`PmRuleIndexQuery` did not eager-load `maintenanceCategories`, so the edit sheet
+opened with an empty selection and posted `[]` on save. This is what emptied
+"L3 Maintenance Motors" — **its coverage is genuinely lost and needs
+re-assigning.** Fixed, with a regression test that opens the list and re-saves.
+Any list feeding an edit form must load every relation that form submits back.
+
+**🐛 A non-modal sheet keeps the table behind it clickable.** Both the WO Form and
+PM Rule sheets reset their state only on the open transition, so clicking "Edit"
+on a second row swapped `editing` while `open` stayed true and the form kept the
+previous record's values — writing them over the newly selected one on save.
+`WoFormsView` already guarded this with `if (formOpen.value) return`;
+`PmRulesView` did not. Both sheets now re-initialise when the edited record's
+identity changes, excluding the create→edit flip.
+
+**Picker usability (user-directed).** Selected categories now **pin to the top**
+of `MaintenanceCategoryPicker` and are shaded — with ~25 categories in a fixed
+height box, a purely alphabetical list hid a record's own categories below the
+fold, which read as "not selected". Also fixed: `AppDataTable.toSearchable()`
+ignored arrays, so the new Maintenance Categories column matched no search; and
+two `<Label for>` attributes in `PmRuleForm` pointed at ids that never existed.
+
+> **Trade-off left open:** the pin-to-top sort is live, so unticking a row makes
+> it drop out from under the cursor. Freeze the order while the picker is open if
+> that proves annoying.
+
+> ⚠️ **Process note: `pint --dirty` does nothing in this container.** `.git`
+> lives at the repo root, outside the `backend/` mount, so Pint finds no git
+> repo and reports "0 files". Pass explicit paths instead —
+> `docker exec atms-api vendor/bin/pint app/... tests/...`. CLAUDE.md's
+> `--dirty` instruction is silently a no-op.
+
 ## Session — 2026-08-01
 
 ### Reports: FA Subclass swept out, two new reports, CSV export started
@@ -88,12 +233,70 @@ Technician Workload, Throughput, Form Results, WO Backlog) each needing the
 Actor, PM Compliance, Upcoming PM, Operational Status, Booking) needing only a
 column map. **No frontend Export button exists yet on any report.**
 
-**Verified:** 979 backend tests (2897 assertions), Pint clean, `vue-tsc` clean.
-
 > ⚠️ **Process note:** running bare `pint` (not `pint --dirty`) reformatted ~40
 > unrelated files, and `npm run format` runs oxfmt over all of `src/`. Both were
 > reverted to keep the diff reviewable. Use `pint --dirty`, and check
 > `git status` after `npm run format`.
+
+**5. R-2 reworked again — multi-dimensional grouping.** The first build gave a
+single-dimension dropdown; the actual requirement was **all three at once**.
+`group_by` is now an **array** (`?group_by[]=maintenance_category&group_by[]=size&group_by[]=location`),
+producing one row per distinct combination — 82 rows across the live 400 assets.
+A bare `group_by=location` string still works, so the dashboard and old links are
+unaffected.
+
+- Row shape changed again: `group_key`/`group_label` → **`groups: [{dimension,
+  key, label, is_unassigned}]`**, one entry per requested dimension in the
+  requested order. `DashboardView` reads `groups[0]`.
+- **Order is meaningful and preserved.** Column order follows the order the user
+  selects, not a canonical order. `ToggleGroup` reports its value as an unordered
+  set, so `onDimensionsChange` reconciles: existing selections keep position,
+  new ones append. Without that the columns would silently follow DOM order.
+- `summary.total_groups` counts only rows where **no** dimension is a null
+  bucket, which keeps "N locations" reading the same as before multi-grouping.
+- `api.ts buildUrl()` gained array support (`key[]=a&key[]=b`) — it previously
+  stringified arrays to `"a,b"`. Shared client change, additive.
+
+**6. `/reports` now lists all 20 live reports.** It rendered `mustTierThemes`
+(7 Pass-1 reports) while 13 built, routable reports were reachable only by URL —
+including the new R-22. Switched to `availableThemes`; `mustTierThemes` removed
+as dead. **`/reports-verification` is now redundant and can be deleted** — it
+existed only to show the full catalogue.
+
+**7. UI fixes across reports.**
+
+- **Table header/data misalignment — a specificity bug affecting all 14 reports
+  with numeric columns.** `.report-table thead th` is **(0,1,2)** and beat
+  `.report-table-num` at **(0,1,0)**, so numeric *headers* stayed left-aligned
+  over right-aligned figures. Fixed with `.report-table th.report-table-num,
+  .report-table td.report-table-num` **(0,2,1)**. Audited the other two failure
+  modes as well — `<th>`/`<td>` counts and numeric-class positions — both clean
+  across all 21 tables.
+- **Asset picker moved last and made to grow** in all 5 reports that have one
+  (`.report-filter-asset`, `flex: 1 1 22rem`). At the 11rem default both the
+  input *and its dropdown* truncated, because `.asset-combobox-panel` inherits
+  `--reka-popover-trigger-width`.
+- R-2's dimension picker rebuilt from checkboxes to `toggle-group` chips with a
+  position badge; selected state uses a **tinted wash**, not the primary fill —
+  the shared Toggle's `bg-muted` on-state was too quiet, but a solid fill was too
+  heavy. Overridden from the feature side so no other Toggle changed.
+- R-2's "include deactivated assets" checkbox **removed** (UI only — the
+  `include_inactive` param still exists on the endpoint). Other reports keep
+  theirs.
+
+**8. Export button — live on the 3 CSV-capable reports only.** No backend
+change. `api.download()` added to the shared client (fetch → blob → anchor, not
+`<a href>`: a plain navigation bypasses `VITE_API_ORIGIN` and turns an auth error
+into raw text replacing the app). `useReportCsvExport` composable; filename comes
+from the server's `Content-Disposition`.
+
+> **Export sends the *applied* filters, not the current form state.** Each view
+> keeps `appliedFilters` and updates it inside `runLoad()`. Otherwise editing a
+> filter without pressing Apply would download a file that disagrees with the
+> table on screen — unacceptable for a file forwarded to LDC.
+
+**Verified:** 983 backend tests (2912 assertions), Pint clean, `vue-tsc` clean.
+Commit `cc53090` carries 72 files of the above.
 
 ## Session — 2026-07-31
 

@@ -20,8 +20,25 @@ implemented subsystem; SM and AM are future, bounded work.
   than role checks embedded in controllers.
 - `app/Queries` owns read-model filtering and reporting queries.
 - `app/Http/Resources` defines response serialization.
-- `app/Jobs/EvaluatePmRulesJob.php` evaluates PM assignments; `SyncErpPartsJob.php`
-  is the current ERP sync job.
+- `app/Jobs/EvaluatePmRulesJob.php` selects the PM assignments worth evaluating and
+  fans them out to `EvaluatePmAssignmentsJob.php`, one child per chunk; it performs
+  no evaluation itself. `app/Services/Pm/PmEvaluationBatch.php` loads the readings
+  and suppressions for a chunk in a fixed number of queries, and
+  `PmEvaluationRunner.php` checks due-ness **before** opening a transaction, so the
+  row lock is paid only for assignments that look due. Keep both properties: a few
+  hundred assets is already thousands of assignments, and the previous
+  one-transaction-per-assignment loop could not finish inside the job timeout.
+- `app/Jobs/ReconcilePmCategoryAssignmentsJob.php` expands a PM rule's Maintenance
+  Category coverage into per-asset assignments (`app/Actions/Pm/
+  ReconcilePmCategoryAssignments.php`). It is overlap-locked **per scope** —
+  `pm-category-reconcile:rule-7` — so two edits to one rule cannot interleave while
+  unrelated rules still reconcile in parallel. `SyncErpPartsJob.php` is the current
+  ERP sync job.
+- **`asset_pm_assignments.assigned_by` and `deactivated_by` are nullable, and that
+  is load-bearing.** A null actor means reconciliation did it; a filled one means a
+  person did. Reconciliation may restore an assignment it withdrew itself but must
+  never reactivate one a person deactivated, or a per-asset opt-out would silently
+  revert on the next sync.
 - `app/Notifications` holds both email families: account notifications at the root,
   workflow notifications under `MaintenanceRequests/` and `WorkOrders/`. Every one is
   queued, returns `account_email` from `via()`, and builds its payload in
@@ -67,6 +84,12 @@ feature tests for externally visible behavior.
 
 ## Data ownership and conventions
 
+- **ATMS routes behaviour only on fields it owns.** `assets.maintenance_category_id`
+  is the routing key: it selects a WO form template and is what a PM rule may
+  cover. `fa_subclass_code` is written by the ERP sync, so it may describe an asset
+  (reports, asset tags) but must never control one. The column is NOT NULL and
+  defaults to a seeded `UNCLASSIFIED` category, so an asset the ERP created with no
+  category is a visible, countable state rather than a null that no screen shows.
 - ATMS owns operational maintenance data and current direct location updates.
 - ERP integration is parts-focused. Do not reintroduce asset ERP sync or mock ERP
   services without an explicit product decision.
@@ -74,7 +97,13 @@ feature tests for externally visible behavior.
 - Use Laravel/PHP conventions already present in sibling code: strict types where
   used, explicit parameter and return types, descriptive action names, and no
   controller-hidden workflow logic.
-- PHP changes require focused PHPUnit coverage and `vendor/bin/pint --dirty --format agent`.
+- PHP changes require focused PHPUnit coverage and a Pint run.
+
+  ⚠️ **`pint --dirty` is a silent no-op in the container.** `.git` lives at the
+  repository root, outside the `backend/` mount, so Pint finds no git repository,
+  reports "0 files", and exits successfully. Pass the paths you touched
+  (`docker exec atms-api vendor/bin/pint app/… tests/…`). Passing whole directories
+  reformats unrelated files — check `git status` afterwards and revert the noise.
 
 ## Where to inspect a disputed detail
 
@@ -86,3 +115,5 @@ feature tests for externally visible behavior.
 | Access control | `backend/app/Policies/` |
 | State transition | `backend/app/Actions/` and tests |
 | SPA route/UI behavior | `frontend/src/router/index.ts` and the target view/composable |
+| Why a queued job "did nothing" | `queue:failed`, then restart `queue`/`scheduler` — see [OPERATIONS.md](OPERATIONS.md) |
+| Session decisions and their reasoning | `.kilo/STATE.md` (newest first) and `.kilo/TLD.md` |

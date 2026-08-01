@@ -5,7 +5,6 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CompanySettingController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\ErpSyncController;
-use App\Http\Controllers\Admin\FaSubclassTypeCodeController;
 use App\Http\Controllers\Admin\FormTemplateController;
 use App\Http\Controllers\Admin\MaintenanceCategoryController;
 use App\Http\Controllers\Admin\MasterDataController;
@@ -112,10 +111,11 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
         Route::post('/master-data/{groupKey}', [MasterDataController::class, 'storeMasterDataItem']);
         Route::patch('/master-data/items/{item}', [MasterDataController::class, 'updateMasterDataItem']);
 
-        Route::get('/fa-subclass-type-codes', [FaSubclassTypeCodeController::class, 'index']);
-        Route::post('/fa-subclass-type-codes', [FaSubclassTypeCodeController::class, 'store']);
-        Route::patch('/fa-subclass-type-codes/{code}', [FaSubclassTypeCodeController::class, 'update']);
-        Route::delete('/fa-subclass-type-codes/{code}', [FaSubclassTypeCodeController::class, 'destroy']);
+        // FA subclass CRUD was removed with D-011: the vocabulary is ERP-owned,
+        // its only consumer was the WO Forms dropdown that now picks Maintenance
+        // Categories, and the asset import records unseen codes itself. The
+        // read-only `/list-options/fa_subclass_type_codes` is a different
+        // controller and stays — report filters use it.
 
         Route::get('/api-clients', [ApiClientController::class, 'index']);
         Route::post('/api-clients', [ApiClientController::class, 'store']);

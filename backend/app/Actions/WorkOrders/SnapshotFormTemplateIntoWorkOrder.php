@@ -9,8 +9,8 @@ use App\Models\WorkOrder;
  * Snapshots the asset's active FormTemplate (if any) into the Work Order at
  * creation time. The copy is self-contained: field metadata is duplicated into
  * work_order_form_fields so later template edits never affect in-flight WOs.
- * Must run inside the WO-creation transaction. No-ops silently when the asset
- * has no active template for its fa_subclass_code.
+ * Must run inside the WO-creation transaction. No-ops silently when no active
+ * template serves the asset's Maintenance Category.
  */
 class SnapshotFormTemplateIntoWorkOrder
 {
@@ -18,11 +18,11 @@ class SnapshotFormTemplateIntoWorkOrder
     {
         $asset = $workOrder->asset;
 
-        if (! $asset || empty($asset->fa_subclass_code)) {
+        if (! $asset) {
             return;
         }
 
-        $template = FormTemplate::activeForSubclass($asset->fa_subclass_code)?->load('fields');
+        $template = FormTemplate::activeForCategory($asset->maintenance_category_id)?->load('fields');
 
         if (! $template) {
             return;

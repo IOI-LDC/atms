@@ -76,9 +76,17 @@ an authorization rule.
   inactivation releases a booking.
 - Attachments use persistent application storage. Access and deletion are policy
   controlled and every operational change is auditable.
-- WO forms are implemented: an Administrator manages templates by FA subclass;
-  a WO snapshots its form, supports an explicit sync/defer decision, and cannot
-  complete until all required fields are filled.
+- WO forms are implemented: an Administrator manages templates by **Maintenance
+  Category**; a WO snapshots its form, supports an explicit sync/defer decision,
+  and cannot complete until all required fields are filled.
+- **Maintenance Category is the routing key.** It is the only asset
+  classification ATMS owns, so it is what selects a WO form and what a PM rule
+  may cover. `fa_subclass_code` is written by the ERP sync: ATMS may describe an
+  asset with it (reports, asset tags) but never route behaviour by it.
+- Every asset carries a Maintenance Category. An asset nobody has classified sits
+  in the **Unclassified** category — a real, countable, filterable value rather
+  than a blank — so unclassified assets can be found and cleared rather than
+  quietly falling outside every rule.
 
 ## Workflow detail
 
@@ -103,6 +111,19 @@ A PM rule is a reusable template. It has no operational effect until assigned to
 specific asset. Each assignment owns its own baseline. Scheduled or manual
 evaluation creates at most one active maintenance chain for that assignment.
 
+A rule may also cover one or more **Maintenance Categories**. Coverage is a
+statement of intent that is expanded into one ordinary assignment per member
+asset, not a rule evaluated on the fly — each asset needs its own baseline, and a
+newly covered asset is given a full interval of grace before its first PM. The
+expansion keeps itself in step as assets are created, change category, or leave
+the maintenance program.
+
+Coverage may create and withdraw its own assignments; it may never overrule a
+person. An assignment made deliberately for one asset survives every category
+change, and an assignment a person switched off is never switched back on by
+coverage. An assignment with an open request or work order is left alone until
+that chain finishes.
+
 For a due PM occurrence, rejection or cancellation records suppression boundaries
 so the scheduler does not recreate the same occurrence. Date-triggered, reading-
 triggered, and `date_or_reading` rules require the matching suppression dimensions.
@@ -125,7 +146,10 @@ template globally.
   on the same asset are rejected. Booking is released automatically by asset
   inactivation or withdrawal from the maintenance program. It does not replace
   maintenance status.
-- An active WO-form template is selected by FA subclass. A WO snapshots it at
+- An active WO-form template is selected by the asset's Maintenance Category. A
+  template may serve several categories, but at most one *active* template may
+  serve any one category — that is what makes an asset's form unambiguous, since
+  an asset carries exactly one category. A WO snapshots it at
   creation; syncing newer template changes is explicit and may be deferred. Fields
   with `has_pre_post` require both values; other required fields require their post
   value before the WO can complete.

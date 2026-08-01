@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { usePmRules } from '@/composables/usePmRules'
+import { useListOptions } from '@/composables/useListOptions'
 import { useAuthStore } from '@/stores/auth.store'
 import { pmLevelClass } from '@/lib/displayHelpers'
 import { pmScheduleText } from '@/lib/pmSchedule'
@@ -50,6 +51,8 @@ const {
   evaluateAll,
 } = usePmRules()
 
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
+
 // ── Status filter ─────────────────────────────────────────────────────────────
 const statusFilter = ref<'active' | 'inactive' | 'all'>('active')
 
@@ -71,7 +74,10 @@ const columns: AppColumnDef<PmRule>[] = [
 
 onMounted(() => {
   loadRules()
-  if (canConfigure.value) loadReadingTypes()
+  if (canConfigure.value) {
+    loadReadingTypes()
+    loadMaintenanceCategories()
+  }
 })
 
 // ── Create / Edit form ────────────────────────────────────────────────────────
@@ -262,6 +268,7 @@ async function confirmToggle() {
       :open="formOpen"
       :editing="editing"
       :reading-types="readingTypes"
+      :maintenance-categories="maintenanceCategories"
       :saving="saving"
       :validation-errors="validationErrors"
       :batch-results="batchResults"

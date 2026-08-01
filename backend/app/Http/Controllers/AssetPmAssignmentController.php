@@ -10,6 +10,7 @@ use App\Http\Resources\AssetPmAssignmentResource;
 use App\Models\Asset;
 use App\Models\AssetPmAssignment;
 use App\Models\PmRule;
+use App\Services\Pm\PmEvaluationRunner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +22,14 @@ class AssetPmAssignmentController extends Controller
         Gate::authorize('viewAny', AssetPmAssignment::class);
 
         $query = $asset->pmAssignments()
-            ->with(['asset', 'asset.maintenanceCategory', 'pmRule.usageReadingType', 'assignedBy']);
+            ->with([
+                'asset',
+                'asset.maintenanceCategory',
+                'pmRule.usageReadingType',
+                'assignedBy',
+                // Answers "why is this schedule here?" for a row nobody assigned.
+                'sourceMaintenanceCategory',
+            ]);
 
         // Default: active only. ?is_active=0 lists deactivated assignments
         // (reachable for reactivation). ?is_active=all lists every assignment.
@@ -119,30 +127,33 @@ class AssetPmAssignmentController extends Controller
         }
     }
 
-    public function evaluateAll(Request $request, EvaluatePmRule $action): JsonResponse
+    /**
+     * Evaluate every active assignment on demand.
+     *
+     * Chunked and batched through the same runner the scheduled job uses, so
+     * an operator pressing this on a full register does not hold a request
+     * open for thousands of individually locked transactions.
+     */
+    public function evaluateAll(Request $request, PmEvaluationRunner $runner): JsonResponse
     {
         Gate::authorize('evaluateAll', AssetPmAssignment::class);
 
-        $assignments = AssetPmAssignment::where('is_active', true)
+        $evaluated = 0;
+        $generated = 0;
+        $userId = $request->user()->id;
+
+        AssetPmAssignment::query()
+            ->where('asset_pm_assignments.is_active', true)
             ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
             ->with('pmRule')
-            ->get();
-
-        $generated = 0;
-
-        foreach ($assignments as $assignment) {
-            try {
-                $mr = $action->execute($assignment, $request->user()->id);
-                if ($mr !== null) {
-                    $generated++;
-                }
-            } catch (\DomainException $e) {
-                continue;
-            }
-        }
+            ->chunkById(200, function ($assignments) use ($runner, $userId, &$evaluated, &$generated) {
+                $result = $runner->run($assignments, $userId);
+                $evaluated += $result['evaluated'];
+                $generated += $result['generated'];
+            }, 'asset_pm_assignments.id', 'id');
 
         return response()->json([
-            'evaluated' => $assignments->count(),
+            'evaluated' => $evaluated,
             'generated' => $generated,
         ]);
     }

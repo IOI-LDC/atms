@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FormTemplate extends Model
 {
     protected $fillable = [
         'name',
-        'fa_subclass_code',
         'is_active',
     ];
 
@@ -24,13 +24,38 @@ class FormTemplate extends Model
     }
 
     /**
-     * Resolve the single active template for a given FA subclass code, if any.
-     * Returns null when no active template exists (the WO then has no form).
+     * The Maintenance Categories this template serves.
+     *
+     * The pivot mirrors the template's `is_active` so a partial unique index can
+     * enforce "at most one active template per category" — the invariant that
+     * keeps form resolution deterministic, since an asset has exactly one
+     * category. The actions that flip `is_active` are responsible for keeping
+     * the mirror true.
      */
-    public static function activeForSubclass(string $faSubclassCode): ?self
+    public function maintenanceCategories(): BelongsToMany
     {
-        return static::where('fa_subclass_code', $faSubclassCode)
+        return $this->belongsToMany(
+            MaintenanceCategory::class,
+            'form_template_maintenance_category',
+        )->withPivot('is_active')->withTimestamps();
+    }
+
+    /**
+     * Resolve the single active template serving a Maintenance Category, if any.
+     * Returns null when none exists (the work order then has no form).
+     */
+    public static function activeForCategory(?int $maintenanceCategoryId): ?self
+    {
+        if ($maintenanceCategoryId === null) {
+            return null;
+        }
+
+        return static::query()
             ->where('is_active', true)
+            ->whereHas(
+                'maintenanceCategories',
+                fn (Builder $q) => $q->where('maintenance_categories.id', $maintenanceCategoryId),
+            )
             ->first();
     }
 

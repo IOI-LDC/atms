@@ -18,6 +18,15 @@ class AssetPmAssignmentResource extends JsonResource
             'asset_id' => $this->asset_id,
             'pm_rule_id' => $this->pm_rule_id,
             'is_active' => $this->is_active,
+            // Where this assignment came from. A `category` row is maintained by
+            // reconciliation and will be withdrawn if the asset leaves the
+            // category; a `manual` row is only ever changed by a person.
+            'origin' => $this->origin?->value,
+            'source_maintenance_category' => $this->whenLoaded('sourceMaintenanceCategory', fn () => $this->sourceMaintenanceCategory ? [
+                'id' => $this->sourceMaintenanceCategory->id,
+                'code' => $this->sourceMaintenanceCategory->code,
+                'name' => $this->sourceMaintenanceCategory->name,
+            ] : null),
             'asset' => $this->whenLoaded('asset', fn () => new AssetIdentityResource($this->asset)),
             'last_triggered_date' => $this->last_triggered_date?->toDateString(),
             'last_triggered_reading' => $this->last_triggered_reading ? (float) $this->last_triggered_reading : null,

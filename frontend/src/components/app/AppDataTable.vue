@@ -145,6 +145,10 @@ function toSearchable(value: unknown): string {
   if (typeof value === 'string') return value
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
   if (value instanceof Date) return value.toISOString()
+  // A column may hold a list (a form template's maintenance categories). Without
+  // this, the object branch below reads `.name` off the array itself, finds
+  // nothing, and the column silently matches no search at all.
+  if (Array.isArray(value)) return value.map(toSearchable).filter(Boolean).join(' ')
   if (typeof value === 'object') {
     const v = value as Record<string, unknown>
     // Prefer the human identifier when present (asset.name, location.name, …).

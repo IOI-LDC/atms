@@ -9,6 +9,7 @@ use App\Models\BusinessNumberSequence;
 use App\Models\MaintenanceRequest;
 use App\Services\Audit\AuditLogger;
 use App\Services\Pm\PmDueCalculator;
+use App\Services\Pm\PmEvaluationBatch;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -16,9 +17,17 @@ class EvaluatePmRule
 {
     public function __construct(private PmDueCalculator $calculator) {}
 
-    public function execute(AssetPmAssignment $assignment, int $triggeredByUserId): ?MaintenanceRequest
+    /**
+     * Evaluate one assignment and raise its PM request if it is due.
+     *
+     * `$batch` is optional: pass it when evaluating many assignments so the
+     * readings and suppressions are read once for the whole set instead of
+     * per assignment. Omitting it keeps the original per-assignment queries,
+     * which is what a single evaluation from the UI wants.
+     */
+    public function execute(AssetPmAssignment $assignment, int $triggeredByUserId, ?PmEvaluationBatch $batch = null): ?MaintenanceRequest
     {
-        return DB::transaction(function () use ($assignment, $triggeredByUserId) {
+        return DB::transaction(function () use ($assignment, $triggeredByUserId, $batch) {
             $logger = app(AuditLogger::class);
             $locked = AssetPmAssignment::where('id', $assignment->id)->lockForUpdate()->first();
             $locked->load('pmRule');
@@ -31,25 +40,27 @@ class EvaluatePmRule
                 throw new DomainException('PM assignment already has an active maintenance chain.');
             }
 
-            if (! $this->calculator->isDue($locked)) {
+            if (! $this->calculator->isDue($locked, $batch?->readings, $batch?->suppressions)) {
                 return null;
             }
 
-            $triggeredByDate = $this->calculator->isTriggeredByDate($locked);
-            $triggeredByReading = $this->calculator->isTriggeredByReading($locked);
+            $triggeredByDate = $this->calculator->isTriggeredByDate($locked, $batch?->suppressions);
+            $triggeredByReading = $this->calculator->isTriggeredByReading($locked, $batch?->readings, $batch?->suppressions);
 
             $triggerDate = $triggeredByDate ? now()->toDateString() : null;
             $triggerReadingValue = null;
             $triggerReadingTypeId = null;
 
             if ($triggeredByReading) {
-                $latestReading = AssetMeterReading::where('asset_id', $locked->asset_id)
-                    ->where('usage_reading_type_id', $locked->pmRule->usage_reading_type_id)
-                    ->whereNotNull('confirmed_at')
-                    ->orderByDesc('reading_at')
-                    ->first();
+                $readingTypeId = $locked->pmRule->usage_reading_type_id;
+                $latestReading = $batch?->readings->get("{$locked->asset_id}_{$readingTypeId}")
+                    ?? AssetMeterReading::where('asset_id', $locked->asset_id)
+                        ->where('usage_reading_type_id', $readingTypeId)
+                        ->whereNotNull('confirmed_at')
+                        ->orderByDesc('reading_at')
+                        ->first();
                 $triggerReadingValue = $latestReading?->reading_value;
-                $triggerReadingTypeId = $locked->pmRule->usage_reading_type_id;
+                $triggerReadingTypeId = $readingTypeId;
             }
 
             $number = BusinessNumberSequence::next('MR', 'MR-');

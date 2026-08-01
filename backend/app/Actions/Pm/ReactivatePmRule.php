@@ -2,6 +2,7 @@
 
 namespace App\Actions\Pm;
 
+use App\Jobs\ReconcilePmCategoryAssignmentsJob;
 use App\Models\PmRule;
 use App\Services\Audit\AuditLogger;
 use DomainException;
@@ -29,6 +30,10 @@ class ReactivatePmRule
 
             $after = $locked->fresh()->toArray();
             $logger->log('reactivate_pm_rule', $locked, $before, $after);
+
+            // Restores the rows this rule's category links had created, except
+            // any a person deactivated on purpose.
+            DB::afterCommit(fn () => dispatch(ReconcilePmCategoryAssignmentsJob::forRule($locked->id)));
 
             return $locked->fresh();
         });

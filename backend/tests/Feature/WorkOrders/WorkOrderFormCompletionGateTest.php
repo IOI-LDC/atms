@@ -5,8 +5,8 @@ namespace Tests\Feature\WorkOrders;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -21,7 +21,9 @@ class WorkOrderFormCompletionGateTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $manager;
+
     private User $tech;
 
     protected function setUp(): void
@@ -42,15 +44,18 @@ class WorkOrderFormCompletionGateTest extends TestCase
         ]);
     }
 
-    private function buildFormWorkOrder(string $subclass = 'GATE'): WorkOrder
+    private function category(string $code): MaintenanceCategory
     {
-        FaSubclassTypeCode::create(['fa_subclass_code' => $subclass, 'type_code' => 'ABC']);
+        return MaintenanceCategory::firstOrCreate(['code' => $code], ['name' => $code, 'is_active' => true]);
+    }
 
+    private function buildFormWorkOrder(string $categoryCode = 'GATE'): WorkOrder
+    {
         $template = FormTemplate::create([
             'name' => 'Gated form',
-            'fa_subclass_code' => $subclass,
             'is_active' => true,
         ]);
+        $template->maintenanceCategories()->attach($this->category($categoryCode)->id, ['is_active' => true]);
 
         // A required pre/post numeric field plus a required single boolean field.
         $template->fields()->createMany([
@@ -76,7 +81,7 @@ class WorkOrderFormCompletionGateTest extends TestCase
             'erp_asset_code' => 'AST-GATE-'.uniqid(),
             'name' => 'Gated Asset',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $this->category($categoryCode)->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);
@@ -190,15 +195,12 @@ class WorkOrderFormCompletionGateTest extends TestCase
 
     public function test_work_order_without_form_completes_normally(): void
     {
-        // Subclass with no active template -> no form -> gate does not apply.
-        $subclass = 'NOFORM';
-        FaSubclassTypeCode::create(['fa_subclass_code' => $subclass, 'type_code' => 'ABC']);
-
+        // Category with no active template -> no form -> gate does not apply.
         $asset = Asset::create([
             'erp_asset_code' => 'AST-NF-'.uniqid(),
             'name' => 'Formless',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $this->category('NOFORM')->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);

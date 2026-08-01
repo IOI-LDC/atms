@@ -41,9 +41,11 @@ class MaintenanceCategoryTest extends TestCase
             ->assertOk();
 
         // All rows are returned (admin manages active + inactive), sorted by name.
-        $this->assertSame(['Jar', 'Legacy', 'Motor'], collect($response->json('data'))->pluck('name')->all());
+        // Unclassified is a real row: it is the default every unclassified asset
+        // carries, so it lists and sorts like any other category.
+        $this->assertSame(['Jar', 'Legacy', 'Motor', 'Unclassified'], collect($response->json('data'))->pluck('name')->all());
         $this->assertSame(
-            [true, false, true],
+            [true, false, true, true],
             collect($response->json('data'))->pluck('is_active')->all(),
         );
     }
@@ -84,7 +86,7 @@ class MaintenanceCategoryTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors('name');
 
-        $this->assertSame(1, MaintenanceCategory::count());
+        $this->assertSame(1, MaintenanceCategory::where('code', 'MUD_MOTOR')->count());
     }
 
     public function test_create_requires_name(): void
@@ -106,7 +108,8 @@ class MaintenanceCategoryTest extends TestCase
                 ->assertJsonValidationErrors('name');
         }
 
-        $this->assertDatabaseCount('maintenance_categories', 0);
+        // Only the seeded Unclassified sentinel survives — nothing was created.
+        $this->assertDatabaseCount('maintenance_categories', 1);
     }
 
     // ── update ──────────────────────────────────────────────────────────────

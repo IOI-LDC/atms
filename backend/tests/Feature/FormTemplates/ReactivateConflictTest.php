@@ -3,8 +3,8 @@
 namespace Tests\Feature\FormTemplates;
 
 use App\Enums\RoleCode;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
@@ -27,12 +27,27 @@ class ReactivateConflictTest extends TestCase
         ]);
     }
 
-    public function test_reactivation_blocked_when_another_active_template_shares_subclass(): void
+    /**
+     * Templates route by Maintenance Category now. Codes double as names here —
+     * the tests only need a distinct, ATMS-owned category to point a form at.
+     */
+    private function category(string $code): MaintenanceCategory
     {
-        FaSubclassTypeCode::create(['fa_subclass_code' => 'RC', 'type_code' => 'ABC']);
+        return MaintenanceCategory::firstOrCreate(['code' => $code], ['name' => $code, 'is_active' => true]);
+    }
 
-        $inactive = FormTemplate::create(['name' => 'Old', 'fa_subclass_code' => 'RC', 'is_active' => false]);
-        FormTemplate::create(['name' => 'Current', 'fa_subclass_code' => 'RC', 'is_active' => true]);
+    private function template(string $name, string $categoryCode, bool $isActive): FormTemplate
+    {
+        $template = FormTemplate::create(['name' => $name, 'is_active' => $isActive]);
+        $template->maintenanceCategories()->attach($this->category($categoryCode)->id, ['is_active' => $isActive]);
+
+        return $template;
+    }
+
+    public function test_reactivation_blocked_when_another_active_template_shares_a_category(): void
+    {
+        $inactive = $this->template('Old', 'RC', false);
+        $this->template('Current', 'RC', true);
 
         // Explicit conflict check in the action -> 409, not a raw DB 500.
         $this->actingAs($this->admin)->postJson("/api/admin/wo-forms/templates/{$inactive->id}/reactivate")
@@ -41,11 +56,9 @@ class ReactivateConflictTest extends TestCase
         $this->assertFalse($inactive->fresh()->is_active);
     }
 
-    public function test_reactivation_succeeds_when_subclass_is_free(): void
+    public function test_reactivation_succeeds_when_the_category_is_free(): void
     {
-        FaSubclassTypeCode::create(['fa_subclass_code' => 'RF', 'type_code' => 'ABC']);
-
-        $template = FormTemplate::create(['name' => 'Solo', 'fa_subclass_code' => 'RF', 'is_active' => false]);
+        $template = $this->template('Solo', 'RF', false);
 
         $this->actingAs($this->admin)->postJson("/api/admin/wo-forms/templates/{$template->id}/reactivate")
             ->assertOk();

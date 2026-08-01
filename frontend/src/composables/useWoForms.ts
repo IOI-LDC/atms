@@ -1,16 +1,11 @@
 import { ref } from 'vue'
 import api, { ApiError } from '@/lib/api'
 import { fetchList } from '@/lib/dataTableSource'
-import type {
-  WoFormTemplate,
-  WoFormTemplateField,
-  WoFormFieldType,
-  FaSubclassTypeCode,
-} from '@/types'
+import type { WoFormTemplate, WoFormTemplateField, WoFormFieldType } from '@/types'
 
 export interface WoFormTemplatePayload {
   name?: string
-  fa_subclass_code?: string
+  maintenance_category_ids?: number[]
 }
 
 export interface WoFormFieldPayload {
@@ -52,46 +47,40 @@ export function useWoForms() {
   // ── Single template (fields manager) ────────────────────────────────────────
   const template = ref<WoFormTemplate | null>(null)
   const templateLoading = ref(false)
+  /** Distinguishes "still loading" from "the load failed" once `templateLoading`
+   * is false again — the fields section renders its error state off this, since
+   * a failed load leaves `template` null with nothing else to explain the blank. */
+  const templateLoadFailed = ref(false)
 
   async function loadTemplate(id: number) {
     templateLoading.value = true
+    templateLoadFailed.value = false
     try {
       const res = await api.get<{ data: WoFormTemplate }>(`/admin/wo-forms/templates/${id}`)
       template.value = res.data
     } catch {
       template.value = null
+      templateLoadFailed.value = true
     } finally {
       templateLoading.value = false
-    }
-  }
-
-  // ── FA subclasses (create/edit picker) ──────────────────────────────────────
-  const faSubclasses = ref<FaSubclassTypeCode[]>([])
-
-  // This endpoint returns a plain { data: [...] } array (not cursor-paginated),
-  // matching the useLists.ts convention — fetchList() would break here.
-  async function loadFaSubclasses(force = false) {
-    if (faSubclasses.value.length > 0 && !force) return
-    try {
-      const res = await api.get<{ data: FaSubclassTypeCode[] }>('/admin/fa-subclass-type-codes')
-      faSubclasses.value = res.data ?? []
-    } catch {
-      faSubclasses.value = []
     }
   }
 
   // ── Create / Update template metadata ───────────────────────────────────────
   const saving = ref(false)
   const validationErrors = ref<Record<string, string[]> | null>(null)
+  const saveError = ref<string | null>(null)
 
   async function createTemplate(payload: WoFormTemplatePayload): Promise<WoFormTemplate | null> {
     saving.value = true
     validationErrors.value = null
+    saveError.value = null
     try {
       const res = await api.post<{ data: WoFormTemplate }>('/admin/wo-forms/templates', payload)
       return res.data
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) validationErrors.value = e.validationErrors
+      else if (e instanceof ApiError) saveError.value = e.message
       return null
     } finally {
       saving.value = false
@@ -104,6 +93,7 @@ export function useWoForms() {
   ): Promise<WoFormTemplate | null> {
     saving.value = true
     validationErrors.value = null
+    saveError.value = null
     try {
       const res = await api.patch<{ data: WoFormTemplate }>(
         `/admin/wo-forms/templates/${id}`,
@@ -112,6 +102,9 @@ export function useWoForms() {
       return res.data
     } catch (e) {
       if (e instanceof ApiError && e.validationErrors) validationErrors.value = e.validationErrors
+      // A 409 carries the colliding category and the form already holding it,
+      // which is the only useful thing to show — there is no field to attach it to.
+      else if (e instanceof ApiError) saveError.value = e.message
       return null
     } finally {
       saving.value = false
@@ -234,11 +227,11 @@ export function useWoForms() {
     loadTemplates,
     template,
     templateLoading,
+    templateLoadFailed,
     loadTemplate,
-    faSubclasses,
-    loadFaSubclasses,
     saving,
     validationErrors,
+    saveError,
     createTemplate,
     updateTemplate,
     acting,

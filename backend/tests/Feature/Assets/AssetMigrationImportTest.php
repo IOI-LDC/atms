@@ -79,8 +79,12 @@ class AssetMigrationImportTest extends TestCase
             ->expectsOutputToContain('Maintenance Category cannot produce a valid code')
             ->assertFailed();
 
-        $this->assertNull($asset->refresh()->maintenance_category_id);
-        $this->assertDatabaseCount('maintenance_categories', 0);
+        $this->assertSame(
+            MaintenanceCategory::where('code', MaintenanceCategory::UNCLASSIFIED_CODE)->value('id'),
+            $asset->refresh()->maintenance_category_id,
+        );
+        // Only the sentinel — the rejected import created no vocabulary.
+        $this->assertDatabaseCount('maintenance_categories', 1);
     }
 
     /**

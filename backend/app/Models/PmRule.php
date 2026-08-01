@@ -42,6 +42,18 @@ class PmRule extends Model
         return $this->belongsTo(UsageReadingType::class);
     }
 
+    /**
+     * Categories this rule covers.
+     *
+     * The link is intent, not state: it is expanded into one assignment per
+     * member asset by PM reconciliation. See the migration for why.
+     */
+    public function maintenanceCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(MaintenanceCategory::class, 'pm_rule_maintenance_category')
+            ->withTimestamps();
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

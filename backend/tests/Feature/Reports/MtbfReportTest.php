@@ -179,17 +179,22 @@ class MtbfReportTest extends TestCase
         $this->assertCount(2, $json['items']);
     }
 
-    public function test_null_maintenance_category_uses_uncategorised_bucket(): void
+    /**
+     * An asset with no explicit category is not category-less: it carries the
+     * Unclassified default, which groups like any other category rather than
+     * falling into the report's null bucket.
+     */
+    public function test_unclassified_assets_group_under_the_unclassified_category(): void
     {
-        $asset = $this->createAsset(['maintenance_category_id' => null]);
+        $asset = $this->createAsset();
         $this->createFailure($asset, 'MR-1');
 
         $json = $this->actingAs($this->admin)
             ->getJson('/api/reports/mtbf?group_by=maintenance_category')->json();
 
         $this->assertCount(1, $json['items']);
-        $this->assertSame('uncategorised', $json['items'][0]['group_key']);
-        $this->assertSame('Uncategorised', $json['items'][0]['group_label']);
+        $this->assertSame('UNCLASSIFIED', $json['items'][0]['group_key']);
+        $this->assertSame('Unclassified', $json['items'][0]['group_label']);
     }
 
     public function test_groups_by_size_with_canonical_key_and_og_label(): void
@@ -248,7 +253,7 @@ class MtbfReportTest extends TestCase
     {
         $category = MaintenanceCategory::factory()->create(['code' => 'MWD', 'name' => 'MWD']);
         $inCategory = $this->createAsset(['maintenance_category_id' => $category->id]);
-        $outOfCategory = $this->createAsset(['maintenance_category_id' => null]);
+        $outOfCategory = $this->createAsset();
         $this->createFailure($inCategory, 'MR-1');
         $this->createFailure($outOfCategory, 'MR-2');
 

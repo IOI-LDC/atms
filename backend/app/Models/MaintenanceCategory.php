@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\MaintenanceCategoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,8 +16,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class MaintenanceCategory extends Model
 {
-    /** @use HasFactory<\Database\Factories\MaintenanceCategoryFactory> */
+    /** @use HasFactory<MaintenanceCategoryFactory> */
     use HasFactory;
+
+    /**
+     * The category an asset lands in when nothing better is known.
+     *
+     * `assets.maintenance_category_id` defaults to this row, which is what lets
+     * the ERP sync keep creating assets against a NOT NULL column. It is a real
+     * category on purpose — unclassified assets stay visible in every filter,
+     * report and dashboard count instead of vanishing into a null.
+     */
+    public const UNCLASSIFIED_CODE = 'UNCLASSIFIED';
+
+    public const UNCLASSIFIED_NAME = 'Unclassified';
 
     protected $fillable = ['code', 'name', 'is_active'];
 
@@ -41,6 +54,11 @@ class MaintenanceCategory extends Model
         $code = preg_replace('/[^A-Z0-9]+/', '_', mb_strtoupper($name)) ?? '';
 
         return trim($code, '_');
+    }
+
+    public function isUnclassified(): bool
+    {
+        return $this->code === self::UNCLASSIFIED_CODE;
     }
 
     /**

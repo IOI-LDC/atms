@@ -163,7 +163,7 @@ class ListOptionControllerTest extends TestCase
             ->getJson('/api/list-options/maintenance_categories')
             ->assertOk();
 
-        $this->assertSame(['Jar', 'Motor'], collect($response->json('data'))->pluck('name')->all());
+        $this->assertSame(['Jar', 'Motor', 'Unclassified'], collect($response->json('data'))->pluck('name')->all());
     }
 
     /**
@@ -182,7 +182,7 @@ class ListOptionControllerTest extends TestCase
                 'value' => 'SMUGGLED', 'label' => 'Smuggled',
             ]);
 
-        $this->assertSame(0, MaintenanceCategory::count());
+        $this->assertFalse(MaintenanceCategory::where('code', 'SMUGGLED')->exists());
 
         $this->actingAs($this->createUser(RoleCode::ADMINISTRATOR))
             ->postJson('/api/list-options/maintenance_categories', ['code' => 'X', 'name' => 'X'])

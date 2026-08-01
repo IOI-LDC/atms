@@ -84,22 +84,30 @@ class AssetMaintenanceCategoryTest extends TestCase
         $this->assertSame('6.75000', $asset->size_inches->canonical());
     }
 
-    public function test_asset_update_can_clear_maintenance_category_and_size(): void
+    /**
+     * Size and category are not symmetrical. A size ATMS does not know is
+     * genuinely unknown, so it can be cleared; a category is the one handle
+     * ATMS has on the asset, so it can only be reassigned — including to
+     * Unclassified, which is what "not classified" now means.
+     */
+    public function test_asset_update_can_clear_size_but_not_maintenance_category(): void
     {
         $category = MaintenanceCategory::factory()->create();
         $asset = $this->asset(['maintenance_category_id' => $category->id, 'size_inches' => '8']);
 
         $this->actingAs($this->admin())
-            ->patchJson("/api/assets/{$asset->id}", [
-                'maintenance_category_id' => null,
-                'size_inches' => null,
-            ])
+            ->patchJson("/api/assets/{$asset->id}", ['size_inches' => null])
             ->assertOk();
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/assets/{$asset->id}", ['maintenance_category_id' => null])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('maintenance_category_id');
 
         $asset->refresh();
 
-        $this->assertNull($asset->maintenance_category_id);
         $this->assertNull($asset->size_inches);
+        $this->assertSame($category->id, $asset->maintenance_category_id);
     }
 
     public function test_asset_update_rejects_an_unknown_maintenance_category(): void
@@ -154,7 +162,7 @@ class AssetMaintenanceCategoryTest extends TestCase
             ->assertJsonPath('data.maintenance_category.name', 'Mud Motor');
     }
 
-    public function test_missing_size_and_category_are_null_in_the_resource(): void
+    public function test_missing_size_is_null_and_category_falls_back_to_unclassified(): void
     {
         $asset = $this->asset();
 
@@ -163,7 +171,7 @@ class AssetMaintenanceCategoryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.size', null)
             ->assertJsonPath('data.size_inches', null)
-            ->assertJsonPath('data.maintenance_category', null);
+            ->assertJsonPath('data.maintenance_category.code', MaintenanceCategory::UNCLASSIFIED_CODE);
     }
 
     public function test_asset_index_embeds_the_maintenance_category(): void

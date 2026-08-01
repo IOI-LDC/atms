@@ -155,11 +155,17 @@ hint), removal of `fa_subclass_code` from the frontend update payload, removal
 from the backend updatable-attribute list and its update validation, and tests
 asserting the field is rejected or ignored on `PATCH /api/assets/{asset}`.
 
-**Out of scope:** The Admin master-data list at `/admin/fa-subclass-type-codes`,
-which manages the code list itself and remains editable. Reports that *filter by*
-`fa_subclass_code` are unaffected — this requirement concerns writing the value on
-an asset, not reading or filtering it. Building ERP asset sync is a separate
-Phase 3 decision (see `ROADMAP.md`).
+**Out of scope:** Reports that *filter by* `fa_subclass_code` are unaffected —
+this requirement concerns writing the value on an asset, not reading or filtering
+it. Building ERP asset sync is a separate Phase 3 decision (see `ROADMAP.md`).
+
+**Update 2026-08-01:** the Admin code list this requirement previously excluded no
+longer exists. The four `/admin/fa-subclass-type-codes` CRUD routes were removed
+with D-011, and `atms:import-assets` now records unseen codes automatically (with
+type code `UNK`) instead of rejecting the row. That settles the *vocabulary* half
+of the ERP-ownership question in the same direction this requirement asks for. The
+requirement itself is **still open**: `PATCH /api/assets/{asset}` continues to
+accept `fa_subclass_code`, so acceptance criteria 1–3 and 5 are unmet.
 
 **Acceptance criteria:**
 1. The asset edit form shows `fa_subclass_code` as read-only, labelled as

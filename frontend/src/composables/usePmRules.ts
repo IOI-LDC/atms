@@ -11,6 +11,8 @@ export interface PmRulePayload {
   interval_reading?: number | null
   usage_reading_type_id?: number | null
   maintenance_level?: string | null
+  /** Categories this rule covers; the backend expands them into assignments. */
+  maintenance_category_ids?: number[]
 }
 
 export interface ActionResult {

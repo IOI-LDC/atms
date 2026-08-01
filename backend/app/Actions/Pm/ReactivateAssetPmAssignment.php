@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class ReactivateAssetPmAssignment
 {
-    public function execute(AssetPmAssignment $assignment, int $reactivatedByUserId): AssetPmAssignment
+    /** @param  int|null  $reactivatedByUserId  Null when reconciliation restored the row. */
+    public function execute(AssetPmAssignment $assignment, ?int $reactivatedByUserId): AssetPmAssignment
     {
         return DB::transaction(function () use ($assignment, $reactivatedByUserId) {
             $logger = app(AuditLogger::class);
@@ -25,6 +26,9 @@ class ReactivateAssetPmAssignment
                 'is_active' => true,
                 'reactivated_by' => $reactivatedByUserId,
                 'reactivated_at' => now(),
+                // The row is live again, so it no longer carries a withdrawal.
+                'deactivated_by' => null,
+                'deactivated_at' => null,
             ]);
 
             $after = $locked->fresh()->toArray();

@@ -14,8 +14,8 @@ const { availableThemes } = useReportCatalog()
         <div class="page-heading">
           <h1 class="page-title">Reports</h1>
           <p class="page-subtitle">
-            Read-only operational reports over ATMS data. Every report here is live; each one
-            filters on screen and exports the same rows to CSV.
+            Read-only operational reports over ATMS data. Every report here is live and filters on
+            screen; some also export to CSV.
           </p>
         </div>
       </div>

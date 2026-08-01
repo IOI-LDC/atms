@@ -320,7 +320,12 @@ export interface WoFormTemplateField {
 export interface WoFormTemplate {
   id: number
   name: string
-  fa_subclass_code: string
+  /**
+   * The Maintenance Categories this form serves. A form may cover several, but
+   * at most one *active* form may cover any one category — that is what keeps
+   * an asset's form unambiguous, since an asset carries exactly one category.
+   */
+  maintenance_categories?: MaintenanceCategoryOption[]
   is_active: boolean
   fields?: WoFormTemplateField[]
   fields_count?: number
@@ -380,6 +385,12 @@ export interface PmRule {
   interval_days: number | null
   interval_reading: number | null
   assignments_count?: number
+  /**
+   * Categories this rule covers. The link is intent: the backend expands it
+   * into one assignment per member asset in a queued job, so a rule saved with
+   * a new category may show its assignments a moment later.
+   */
+  maintenance_categories?: MaintenanceCategoryOption[]
   created_at: string
   updated_at?: string
   usage_reading_type?: { id: number; name: string; unit: string } | null
@@ -411,10 +422,18 @@ export interface AssetPmAssignment {
   progress_percentage: number | null
   pm_status: PmStatus
   rule: PmAssignmentRule
+  /**
+   * `category` rows are maintained by reconciliation and withdrawn if the asset
+   * leaves the category; `manual` rows are only ever changed by a person.
+   */
+  origin?: PmAssignmentOrigin
+  source_maintenance_category?: MaintenanceCategoryOption | null
   assigned_by?: UserRef | null
   assigned_at?: string
   suppressions?: PmSuppression[]
 }
+
+export type PmAssignmentOrigin = 'manual' | 'category'
 
 // ── Attachments ───────────────────────────────────────────────────────────────
 

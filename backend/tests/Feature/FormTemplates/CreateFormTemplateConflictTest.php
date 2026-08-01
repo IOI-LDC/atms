@@ -3,8 +3,8 @@
 namespace Tests\Feature\FormTemplates;
 
 use App\Enums\RoleCode;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
@@ -27,16 +27,33 @@ class CreateFormTemplateConflictTest extends TestCase
         ]);
     }
 
-    public function test_creating_a_second_active_template_for_a_subclass_returns_422(): void
+    /**
+     * Templates route by Maintenance Category now. Codes double as names here —
+     * the tests only need a distinct, ATMS-owned category to point a form at.
+     */
+    private function category(string $code): MaintenanceCategory
     {
-        FaSubclassTypeCode::create(['fa_subclass_code' => 'CON', 'type_code' => 'ABC']);
-        FormTemplate::create(['name' => 'First', 'fa_subclass_code' => 'CON', 'is_active' => true]);
+        return MaintenanceCategory::firstOrCreate(['code' => $code], ['name' => $code, 'is_active' => true]);
+    }
 
-        // The controller validation returns a clean 422 before the partial
-        // unique index can raise a 500.
+    private function template(string $name, string $categoryCode, bool $isActive): FormTemplate
+    {
+        $template = FormTemplate::create(['name' => $name, 'is_active' => $isActive]);
+        $template->maintenanceCategories()->attach($this->category($categoryCode)->id, ['is_active' => $isActive]);
+
+        return $template;
+    }
+
+    public function test_creating_a_second_active_template_for_a_category_returns_422(): void
+    {
+        $category = $this->category('CON');
+        $this->template('First', 'CON', true);
+
+        // The controller validation returns a clean 422 before the pivot's
+        // partial unique index can raise a 500.
         $this->actingAs($this->admin)->postJson('/api/admin/wo-forms/templates', [
             'name' => 'Second',
-            'fa_subclass_code' => 'CON',
+            'maintenance_category_ids' => [$category->id],
         ])->assertStatus(422);
 
         $this->assertDatabaseMissing('form_templates', ['name' => 'Second']);

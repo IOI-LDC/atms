@@ -2,6 +2,7 @@
 
 namespace App\Actions\Pm;
 
+use App\Jobs\ReconcilePmCategoryAssignmentsJob;
 use App\Models\PmRule;
 use App\Services\Audit\AuditLogger;
 use DomainException;
@@ -33,6 +34,9 @@ class DeactivatePmRule
 
             $after = $locked->fresh()->toArray();
             $logger->log('deactivate_pm_rule', $locked, $before, $after);
+
+            // Withdraws the assignment rows this rule's category links created.
+            DB::afterCommit(fn () => dispatch(ReconcilePmCategoryAssignmentsJob::forRule($locked->id)));
 
             return $locked->fresh();
         });

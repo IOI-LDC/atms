@@ -112,21 +112,26 @@ class PmDueCalculator
             ->exists();
     }
 
-    public function isTriggeredByDate(AssetPmAssignment $assignment): bool
+    /**
+     * Both trigger checks take the same pre-loaded collections as isDue().
+     * They used to hardcode null, so a caller that had already batched its
+     * readings and suppressions still paid for the same queries a second time.
+     */
+    public function isTriggeredByDate(AssetPmAssignment $assignment, ?Collection $suppressions = null): bool
     {
         return match ($assignment->pmRule->trigger_type) {
             PmTriggerType::DATE => true,
             PmTriggerType::READING => false,
-            PmTriggerType::DATE_OR_READING => $this->isDueByDate($assignment) && ! $this->isSuppressedByDate($assignment, null),
+            PmTriggerType::DATE_OR_READING => $this->isDueByDate($assignment) && ! $this->isSuppressedByDate($assignment, $suppressions),
         };
     }
 
-    public function isTriggeredByReading(AssetPmAssignment $assignment): bool
+    public function isTriggeredByReading(AssetPmAssignment $assignment, ?Collection $readings = null, ?Collection $suppressions = null): bool
     {
         return match ($assignment->pmRule->trigger_type) {
             PmTriggerType::DATE => false,
             PmTriggerType::READING => true,
-            PmTriggerType::DATE_OR_READING => $this->isDueByReading($assignment, null) && ! $this->isSuppressedByReading($assignment, null, null),
+            PmTriggerType::DATE_OR_READING => $this->isDueByReading($assignment, $readings) && ! $this->isSuppressedByReading($assignment, $readings, $suppressions),
         };
     }
 }

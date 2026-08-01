@@ -36,7 +36,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       `disable-portal` (see SelectContent), which renders them within this
       element's DOM — any overflow/max-height on this root clips the open
       dropdown at the panel edge. Dialogs that need to scroll opt in with their
-      own class (e.g. .wo-form-fields-dialog).
+      own class that adds overflow/max-height on the content.
     -->
     <DialogContent
       data-slot="dialog-content"

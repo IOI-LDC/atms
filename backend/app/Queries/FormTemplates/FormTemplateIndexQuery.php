@@ -17,7 +17,7 @@ class FormTemplateIndexQuery
 
     public function build(Request $request): CursorPaginator
     {
-        $query = FormTemplate::with(['fields']);
+        $query = FormTemplate::with(['fields', 'maintenanceCategories']);
 
         $this->applyFilters($query, $request);
         $this->applySort($query, $request);
@@ -33,8 +33,11 @@ class FormTemplateIndexQuery
             $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN));
         }
 
-        if ($request->filled('fa_subclass_code')) {
-            $query->where('fa_subclass_code', $request->input('fa_subclass_code'));
+        if ($request->filled('maintenance_category_id')) {
+            $query->whereHas(
+                'maintenanceCategories',
+                fn ($q) => $q->where('maintenance_categories.id', $request->input('maintenance_category_id')),
+            );
         }
     }
 

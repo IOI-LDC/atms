@@ -4,10 +4,10 @@ namespace Tests\Feature\Reports;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
 use App\Models\FormTemplateField;
 use App\Models\Location;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -51,7 +51,7 @@ class FormResultsReportTest extends TestCase
         ], $overrides));
     }
 
-    private function createWorkOrderWithForm(array $fieldValues = [], string $subclassCode = 'TEST'): WorkOrder
+    private function createWorkOrderWithForm(array $fieldValues = [], string $categoryCode = 'TEST'): WorkOrder
     {
         $asset = $this->createAsset();
         $mr = MaintenanceRequest::forceCreate([
@@ -72,21 +72,19 @@ class FormResultsReportTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $faSubclassCode = FaSubclassTypeCode::firstOrCreate(
-            ['fa_subclass_code' => $subclassCode],
-            ['type_code' => 'TST', 'description' => 'Test subclass']
+        $category = MaintenanceCategory::firstOrCreate(
+            ['code' => $categoryCode],
+            ['name' => $categoryCode, 'is_active' => true],
         );
 
-        $template = FormTemplate::where('fa_subclass_code', $faSubclassCode->fa_subclass_code)
-            ->where('is_active', true)
-            ->first();
+        $template = FormTemplate::activeForCategory($category->id);
 
         if (! $template) {
             $template = FormTemplate::create([
                 'name' => 'Template-'.uniqid(),
-                'fa_subclass_code' => $faSubclassCode->fa_subclass_code,
                 'is_active' => true,
             ]);
+            $template->maintenanceCategories()->attach($category->id, ['is_active' => true]);
         }
 
         $woForm = WorkOrderForm::create([

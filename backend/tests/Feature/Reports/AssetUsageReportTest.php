@@ -184,9 +184,9 @@ class AssetUsageReportTest extends TestCase
         $rigs = MaintenanceCategory::factory()->create(['code' => 'RIGS', 'name' => 'Rigs']);
         $a = $this->createAsset(['maintenance_category_id' => $rigs->id]);
         $b = $this->createAsset(['maintenance_category_id' => $rigs->id]);
-        $uncategorised = $this->createAsset(['maintenance_category_id' => null]);
+        $unclassified = $this->createAsset();
 
-        foreach ([[$a, 100, 300], [$b, 0, 50], [$uncategorised, 10, 20]] as [$asset, $start, $end]) {
+        foreach ([[$a, 100, 300], [$b, 0, 50], [$unclassified, 10, 20]] as [$asset, $start, $end]) {
             $this->reading($asset, $this->hours, $start, '2026-01-01 08:00:00');
             $this->reading($asset, $this->hours, $end, '2026-02-01 08:00:00');
         }
@@ -202,8 +202,11 @@ class AssetUsageReportTest extends TestCase
         $this->assertSame(2, $rigsRow['asset_count']);
         $this->assertSame('Rigs', $rigsRow['group_label']);
 
-        $noneRow = collect($json['items'])->firstWhere('is_unassigned', true);
-        $this->assertSame('Uncategorised', $noneRow['group_label']);
+        // No null bucket: an asset with no explicit category carries the
+        // Unclassified default, which is a category like any other.
+        $this->assertNull(collect($json['items'])->firstWhere('is_unassigned', true));
+        $unclassifiedRow = collect($json['items'])->firstWhere('group_label', 'Unclassified');
+        $this->assertSame(1, $unclassifiedRow['asset_count']);
     }
 
     public function test_groups_by_size_with_og_notation(): void

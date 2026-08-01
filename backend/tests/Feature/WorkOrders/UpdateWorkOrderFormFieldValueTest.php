@@ -5,8 +5,8 @@ namespace Tests\Feature\WorkOrders;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
-use App\Models\FaSubclassTypeCode;
 use App\Models\FormTemplate;
+use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -21,6 +21,7 @@ class UpdateWorkOrderFormFieldValueTest extends TestCase
     use RefreshDatabase;
 
     private User $manager;
+
     private User $tech;
 
     protected function setUp(): void
@@ -48,10 +49,10 @@ class UpdateWorkOrderFormFieldValueTest extends TestCase
 
     private function buildAssignedFormWorkOrder(): array
     {
-        $subclass = 'VAL';
-        FaSubclassTypeCode::create(['fa_subclass_code' => $subclass, 'type_code' => 'ABC']);
+        $category = MaintenanceCategory::firstOrCreate(['code' => 'VAL'], ['name' => 'VAL', 'is_active' => true]);
 
-        $template = FormTemplate::create(['name' => 'Value', 'fa_subclass_code' => $subclass, 'is_active' => true]);
+        $template = FormTemplate::create(['name' => 'Value', 'is_active' => true]);
+        $template->maintenanceCategories()->attach($category->id, ['is_active' => true]);
         $template->fields()->create([
             'uuid' => Str::uuid()->toString(),
             'label' => 'Reading',
@@ -65,7 +66,7 @@ class UpdateWorkOrderFormFieldValueTest extends TestCase
             'erp_asset_code' => 'AST-VAL-'.uniqid(),
             'name' => 'Value Asset',
             'is_active' => true,
-            'fa_subclass_code' => $subclass,
+            'maintenance_category_id' => $category->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);
