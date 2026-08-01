@@ -5,6 +5,60 @@
 
 ## Session — 2026-08-01 (latest)
 
+### Close now asks for the asset's next operational status — and what the audit trail revealed
+
+User-reported defect: closing a WO left the asset "down", which read as wrong.
+Investigation first: close has **always** auto-reverted to `active`
+(`ApplyWorkOrderAssetStatusTransition` on close), and the audit trail proves it
+ran — asset 410 went `under_maintenance → active` the moment WO-000001 closed
+(2026-07-30 11:56:48). The asset read `down` afterwards for a legitimate
+reason: **a second corrective WO (WO-000002, created 5 minutes later) was still
+open**, and its approval had re-set the asset `down`. There was **zero test
+coverage** of the close→status behaviour, and nothing in the UI told the closer
+what would happen to the asset. Both now fixed.
+
+⚠️ **Data-integrity find, unresolved:** asset 410's status was written to `down`
+at 2026-08-01 16:00:42 with **no audit entry** — the WO lifecycle, the WO
+"Update Asset Status" button, and the asset edit form all audit their writes.
+That write came from an import or a direct DB edit. Hand-editing statuses
+bypasses the workflow every report is built on.
+
+**Design (user-directed):** the close dialog now asks **"Asset status after
+close"** — pre-seeded **Active** ("back in service"), the only other option
+**Down** ("still faulty"); **no Inactive option** (retiring is an
+asset-management decision, not a close decision). Decisions, so they are not
+reopened: (a) **pre-seeded Active**, not blank — the closer actively switches
+to Down only when the repair did not restore the asset; (b) backend
+`asset_status` is **optional** (`in:down,active`), absent = `active`, so
+existing callers behave exactly as before; (c) the never-un-retire-`inactive`
+guard is unchanged; (d) **trust the closer** — no concurrency guard yet
+(see P2-010).
+
+**Implementation:** `CloseWorkOrder::execute()` gained
+`?OperationalStatus $assetStatus` (defaults `ACTIVE`; the skip list narrowed to
+`[INACTIVE]` — the `current === target` equality check already covers the
+ACTIVE no-op). `WorkOrderController@close` validates and passes it through.
+Frontend: `closeAssetStatus` ref in `useWorkOrderDetail` (pre-seeded, reset on
+open, always sent), shadcn `Select` in the close dialog mirroring cancel's copy.
+
+**Verified:** 5 new tests in `WorkOrderLifecycleTest` (2 RED-driven — `down`
+keeps it down, invalid values 422; 3 pin existing behaviour — `active`/absent
+revert, `inactive` untouched). Full suite **1042 passed (3119 assertions)**;
+Pint, `vue-tsc`, and `oxfmt` clean. Committed as `1d94767` together with the
+meter-readings/start-location work that was already in the tree, per user
+request.
+
+**Deferred to Phase 2 (Asset Assembly)** — see `.kilo/TLD.md` P2-009 / P2-010:
+(1) `waiting_for_parts` flag + close guard + **time-waiting KPI** (the KPI
+forces timestamped transitions — `waiting_for_parts_at` / cleared-at — not a
+bare boolean); (2) **single open WO per asset**, enforced at MR approval
+(409 naming the conflicting WO, asset-row lock against races). Live data shows
+no violations today, but nothing enforces it.
+
+---
+
+## Session — 2026-08-01
+
 ### Work Order page: asset location shown, workshop transfer forced on start, readings attributed
 
 Three defects found in live testing, all on `WorkOrderDetailView`. **1037 tests

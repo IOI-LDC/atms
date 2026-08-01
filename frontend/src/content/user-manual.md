@@ -1092,12 +1092,12 @@ The `ApplyWorkOrderAssetStatusTransition` action runs at these lifecycle points:
 |---|---|---|
 | **Corrective MR approved** → WO created | `down` | A corrective request means someone reported a fault — the asset is now confirmed as faulty. **Skip if** the asset is already `under_maintenance` (e.g., a concurrent PM is in progress). **Preventive MRs do not trigger this** — a scheduled service does not mean the asset was broken. |
 | **WO started** (`open` → `in_progress`) | `under_maintenance` | Work has begun in the workshop. The asset is now being actively serviced. **Always applied** — this transition is not conditional. |
-| **WO closed** (`completed` → `closed`) | `active` | The work is done and reviewed — the asset should be fully operational again. **Skip if** the asset is already `active` (no change needed) or `inactive` (never auto-reactivate a retired asset). |
+| **WO closed** (`completed` → `closed`) | Caller-chosen — `active` (default) or `down` | The closer decides the asset's next status: **pre-seeded to `active`** (work done — back in service); switch to `down` only if the repair did not restore it. **Never touches** an `inactive` (retired) asset. |
 | **WO cancelled** | Caller-chosen | When cancelling a WO, the user must decide: is the asset still faulty? Choose `down` if the fault remains, or `active` if the WO was a false alarm. |
 
 ##### Manual Override
 
-At any time while a WO is `open` or `in_progress`, an authorized user can
+At any time while a WO is `open`, `in_progress`, or `completed` (before closure), an authorized user can
 manually set the asset's operational status via the "Update Asset Status" action
 on the WO detail screen. This calls `POST /api/work-orders/{wo}/asset-status`.
 
@@ -1120,18 +1120,17 @@ further changes are permitted).
 - The previous and new values are recorded.
 - No other asset fields are affected.
 
-##### No Direct Editing Outside a WO
+##### Direct Editing via the Asset Edit Form
 
-Operational status cannot be changed through the asset edit form. The
-`operational_status` field is not exposed in the asset create/update endpoints
-(`POST /api/assets`, `PATCH /api/assets/{asset}`). The only paths to change
-operational status are:
+Operational status can also be changed from the asset edit form —
+`operational_status` is accepted on the asset create/update endpoints
+(`POST /api/assets`, `PATCH /api/assets/{asset}`) by Administrators,
+Maintenance Managers, and Service users. In practice, status changes almost
+always happen through a WO, so there is usually a WO that explains *why* the
+status changed. The WO-driven paths are:
 1. Automated WO lifecycle transitions (approve → down, start → under_maintenance,
-   close → active, cancel → chosen).
+   close → caller-chosen, defaulting to `active`; cancel → caller-chosen).
 2. Manual override through the WO's "Update Asset Status" action.
-
-This design ensures operational status always reflects a maintenance event —
-there is always a WO that explains *why* the status changed.
 
 #### How Operational Status Differs from Other Status Fields
 
@@ -1152,8 +1151,8 @@ This is a common point of confusion. Here is the complete distinction:
 > is created and the asset is automatically set to `operational_status = down`
 > (a fault was reported). The Technician starts the WO → asset becomes
 > `under_maintenance`. During the WO, the Technician discovers a worn bearing and
-> replaces it. The WO is closed → asset transitions to `operational_status =
-> active`.
+> replaces it. The Manager closes the WO, confirming the pre-selected **Active**
+> (back in service) → `operational_status = active`.
 >
 > Throughout this entire process, `maintenance_status` remained `enrolled` (the
 > asset never left the maintenance program) and `is_booked` may have been `true`
@@ -1176,8 +1175,9 @@ the asset has been permanently removed from service:
   decommissioning WO.
 - The automated WO lifecycle transitions will **never** set an asset to
   `inactive` — this must be a deliberate human decision.
-- The automated `close → active` transition **skips** assets already at
-  `inactive` — the system will never accidentally reactivate a retired asset.
+- The close-time status choice (like every automated transition) **never
+  touches** an `inactive` asset — the system will never accidentally
+  reactivate a retired asset.
 
 **How to reactivate an inactive asset:**
 - Set the status to `active` via a WO's "Update Asset Status" action.
@@ -1714,7 +1714,7 @@ Work Orders follow a strict lifecycle with five states, defined by the
 | `open` → `cancelled` | Admin/Manager | `cancellation_reason` required |
 | `in_progress` → `completed` | Assigned Technician | All required WO Form fields must be filled. Technician fields locked after. |
 | `in_progress` → `cancelled` | Admin/Manager | `cancellation_reason` required |
-| `completed` → `closed` | Admin/Manager | **Side effects run** (see Section 8.5). Asset `operational_status` → `active` (unless already `active` or `inactive`). |
+| `completed` → `closed` | Admin/Manager | **Side effects run** (see Section 8.5). Asset `operational_status` set to the closer's choice — `active` (default) or `down`; never touches `inactive`. |
 | `completed` → `cancelled` | Admin/Manager | `cancellation_reason` required. Asset `operational_status` set to caller-chosen value. |
 
 ### 8.2 Work Order Assignment
@@ -1784,12 +1784,15 @@ a WO is closed (all in one database transaction):
 - All WO fields, parts, readings, and attachments permanently locked.
 
 **2. Asset Operational Status Updated:**
-- Asset's `operational_status` → `active` (the work is done, the asset should
-  be operational again).
-- **Skip if** the asset is already `active` (no change needed) or `inactive`
-  (never auto-reactivate a retired asset).
-- This means: close a WO on a `down` asset → it becomes `active`. Close a WO on
-  an `under_maintenance` asset → it becomes `active`.
+- Asset's `operational_status` → the closer's choice, **pre-seeded to `active`**
+  (the work is done — the asset should be operational again). The closer switches
+  to `down` only when the repair did not restore the asset; a new MR should then
+  follow.
+- **Never touches** an `inactive` (retired) asset — closing a WO cannot
+  reactivate or re-downgrade a retirement decision.
+- An API call without `asset_status` behaves as before: `active`.
+- This means: closing a WO on a `down`/`under_maintenance` asset with the
+  default choice → `active`; choosing `down` keeps it out of service.
 
 **3. PM Baseline Reset (if the WO originated from a Preventive MR):**
 - The `AssetPmAssignment` that generated the PM MR has its baseline reset:
@@ -1827,8 +1830,10 @@ and affected fields.
 2. A Maintenance Manager or Administrator opens the WO.
 3. They review: work notes, parts used, readings updated, final asset status.
 4. For corrective WOs, they confirm or revise whether this was a real failure.
-5. They select "Close Work Order" and confirm.
-6. The WO becomes `closed` — permanently immutable.
+5. They confirm the asset's status after close — pre-selected to **Active**;
+   they switch to **Down** only if the repair did not restore the asset.
+6. They select "Close Work Order" and confirm.
+7. The WO becomes `closed` — permanently immutable.
 
 Only Administrators and Maintenance Managers can close WOs. Technicians complete
 the work but cannot close — this separation ensures a second set of eyes reviews
