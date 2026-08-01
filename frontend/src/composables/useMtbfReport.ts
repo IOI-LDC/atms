@@ -8,7 +8,7 @@ export interface MtbfFilters {
   to?: string
   group_by?: MtbfGroupBy
   location_id?: string | number
-  fa_subclass_code?: string
+  maintenance_category_id?: string | number
 }
 
 /**
@@ -37,8 +37,8 @@ export function useMtbfReport() {
       if (filters.location_id) {
         query.location_id = filters.location_id
       }
-      if (filters.fa_subclass_code) {
-        query.fa_subclass_code = filters.fa_subclass_code
+      if (filters.maintenance_category_id) {
+        query.maintenance_category_id = filters.maintenance_category_id
       }
       data.value = await api.get<MtbfReport>('/reports/mtbf', query)
     } catch {

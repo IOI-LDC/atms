@@ -28,7 +28,7 @@ class FormResultReportItemResource extends JsonResource
             ] : null,
             'asset' => $asset ? array_merge(
                 (new AssetIdentityResource($asset))->toArray($request),
-                ['asset_class' => $asset->fa_subclass_code],
+                ['maintenance_category' => $asset->maintenanceCategory?->name],
             ) : null,
         ];
     }

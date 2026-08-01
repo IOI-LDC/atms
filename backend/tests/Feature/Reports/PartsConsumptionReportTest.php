@@ -36,12 +36,22 @@ class PartsConsumptionReportTest extends TestCase
         return User::factory()->create(['role_id' => $role->id, 'is_active' => true]);
     }
 
-    private function createAsset(string $faSubclassCode = 'GEN', ?string $size = null): Asset
+    /**
+     * Assets group by Maintenance Category (ATMS-owned), never FA Subclass.
+     * Categories are reused across calls so two assets named the same land in
+     * the same group, which is what the aggregation tests rely on.
+     */
+    private function createAsset(string $categoryName = 'GEN', ?string $size = null): Asset
     {
+        $category = MaintenanceCategory::firstOrCreate(
+            ['code' => MaintenanceCategory::codeFor($categoryName)],
+            ['name' => $categoryName, 'is_active' => true],
+        );
+
         return Asset::create([
             'erp_asset_code' => 'ASSET-'.uniqid(),
             'name' => 'Asset',
-            'fa_subclass_code' => $faSubclassCode,
+            'maintenance_category_id' => $category->id,
             'size_inches' => $size,
             'is_active' => true,
         ]);
@@ -94,11 +104,11 @@ class PartsConsumptionReportTest extends TestCase
         ]);
     }
 
-    private function findItem(array $items, int $partId, string $assetClass, ?string $assetSizeInches = null): ?array
+    private function findItem(array $items, int $partId, string $assetCategory, ?string $assetSizeInches = null): ?array
     {
         return collect($items)->first(
             fn (array $item): bool => $item['part_id'] === $partId
-                && $item['asset_class'] === $assetClass
+                && $item['asset_maintenance_category'] === $assetCategory
                 && $item['asset_size_inches'] === $assetSizeInches
         );
     }
@@ -117,7 +127,7 @@ class PartsConsumptionReportTest extends TestCase
         }
     }
 
-    public function test_aggregates_finalized_usage_by_part_and_asset_class(): void
+    public function test_aggregates_finalized_usage_by_part_and_asset_maintenance_category(): void
     {
         $filter = $this->createPart('Oil Filter');
         $bearing = $this->createPart('Bearing');
@@ -187,7 +197,7 @@ class PartsConsumptionReportTest extends TestCase
         $this->assertEquals(12.0, $row['part']['available_quantity']);
 
         // Asset dimensions.
-        $this->assertSame('MWD', $row['asset_class']);
+        $this->assertSame('MWD', $row['asset_maintenance_category']);
         $this->assertSame('9 5/8"', $row['asset_size']);
         $this->assertSame('9.62500', $row['asset_size_inches']);
 
@@ -195,7 +205,9 @@ class PartsConsumptionReportTest extends TestCase
         $this->assertArrayNotHasKey('part_code', $row);
         $this->assertArrayNotHasKey('erp_part_code', $row);
         $this->assertArrayNotHasKey('erp_part_code', $row['part']);
+        // FA Subclass is ERP-owned and must not appear in a report contract.
         $this->assertArrayNotHasKey('fa_subclass_code', $row);
+        $this->assertArrayNotHasKey('asset_class', $row);
     }
 
     public function test_same_part_class_rows_with_different_asset_sizes_remain_separate(): void
@@ -264,7 +276,7 @@ class PartsConsumptionReportTest extends TestCase
         do {
             $json = $this->actingAs($this->admin)->getJson($url)->json();
             foreach ($json['data'] as $item) {
-                $seen[] = $item['part_id'].'|'.$item['asset_class'].'|'.($item['asset_size_inches'] ?? 'null');
+                $seen[] = $item['part_id'].'|'.$item['asset_maintenance_category'].'|'.($item['asset_size_inches'] ?? 'null');
             }
             $url = $json['links']['next'] ?? null;
         } while ($url !== null);
@@ -279,7 +291,7 @@ class PartsConsumptionReportTest extends TestCase
         do {
             $json = $this->actingAs($this->admin)->getJson($url)->json();
             foreach ($json['data'] as $item) {
-                $again[] = $item['part_id'].'|'.$item['asset_class'].'|'.($item['asset_size_inches'] ?? 'null');
+                $again[] = $item['part_id'].'|'.$item['asset_maintenance_category'].'|'.($item['asset_size_inches'] ?? 'null');
             }
             $url = $json['links']['next'] ?? null;
         } while ($url !== null);
@@ -386,7 +398,7 @@ class PartsConsumptionReportTest extends TestCase
         $this->assertSame($filter->id, $filtered['data'][0]['part_id']);
     }
 
-    public function test_asset_and_fa_subclass_filters_apply_to_summary_and_rows(): void
+    public function test_asset_and_maintenance_category_filters_apply_to_summary_and_rows(): void
     {
         $part = $this->createPart('Filter');
         $generator = $this->createAsset('GEN');
@@ -406,20 +418,20 @@ class PartsConsumptionReportTest extends TestCase
             ->getJson('/api/reports/parts-consumption?asset_id='.$generator->id)
             ->json();
         $this->assertSame(1, $byAsset['summary']['total_line_items']);
-        $this->assertSame('GEN', $byAsset['data'][0]['asset_class']);
+        $this->assertSame('GEN', $byAsset['data'][0]['asset_maintenance_category']);
 
-        $bySubclass = $this->actingAs($this->admin)
-            ->getJson('/api/reports/parts-consumption?fa_subclass_code=PUMP')
+        $byCategory = $this->actingAs($this->admin)
+            ->getJson('/api/reports/parts-consumption?maintenance_category_id='.$pump->maintenance_category_id)
             ->json();
-        $this->assertSame(1, $bySubclass['summary']['total_line_items']);
-        $this->assertEquals(3.0, $bySubclass['data'][0]['total_quantity']);
+        $this->assertSame(1, $byCategory['summary']['total_line_items']);
+        $this->assertEquals(3.0, $byCategory['data'][0]['total_quantity']);
     }
 
     public function test_cursor_links_preserve_filters_and_traverse_grouped_rows(): void
     {
         $part = $this->createPart('Filter');
-        foreach (['A', 'B', 'C', 'D', 'E'] as $subclass) {
-            $asset = $this->createAsset($subclass);
+        foreach (['A', 'B', 'C', 'D', 'E'] as $categoryName) {
+            $asset = $this->createAsset($categoryName);
             $workOrder = $this->createWorkOrder(WorkOrderStatus::COMPLETED, $asset, now()->subDay());
             $this->addPart($workOrder, $part, 1);
         }
@@ -429,7 +441,7 @@ class PartsConsumptionReportTest extends TestCase
         do {
             $json = $this->actingAs($this->admin)->getJson($url)->json();
             foreach ($json['data'] as $item) {
-                $seen[] = $item['asset_class'];
+                $seen[] = $item['asset_maintenance_category'];
             }
             $url = $json['links']['next'] ?? null;
             if ($url !== null) {

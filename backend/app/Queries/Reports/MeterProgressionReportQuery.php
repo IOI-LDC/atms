@@ -23,8 +23,7 @@ class MeterProgressionReportQuery
             ->whereNotNull('confirmed_at')
             ->whereBetween('reading_at', [$from, $to])
             ->when($filters['asset_id'] ?? null, fn ($query, $assetId) => $query->where('asset_id', $assetId))
-            ->when($filters['usage_reading_type_id'] ?? null, fn ($query, $typeId) =>
-                $query->where('usage_reading_type_id', $typeId));
+            ->when($filters['usage_reading_type_id'] ?? null, fn ($query, $typeId) => $query->where('usage_reading_type_id', $typeId));
 
         $confirmedCount = (clone $base)->count();
 

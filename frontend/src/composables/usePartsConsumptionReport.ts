@@ -8,7 +8,7 @@ export interface PartsConsumptionFilters {
   to?: string
   part_id?: string | number
   asset_id?: string | number
-  fa_subclass_code?: string
+  maintenance_category_id?: string | number
 }
 
 const PER_PAGE = 25
@@ -43,8 +43,8 @@ export function usePartsConsumptionReport() {
     if (activeFilters.asset_id) {
       query.asset_id = activeFilters.asset_id
     }
-    if (activeFilters.fa_subclass_code) {
-      query.fa_subclass_code = activeFilters.fa_subclass_code
+    if (activeFilters.maintenance_category_id) {
+      query.maintenance_category_id = activeFilters.maintenance_category_id
     }
     if (cursor) {
       query.cursor = cursor
@@ -57,7 +57,10 @@ export function usePartsConsumptionReport() {
     loading.value = true
     error.value = null
     try {
-      const res = await api.get<PartsConsumptionReportPage>('/reports/parts-consumption', buildQuery(null))
+      const res = await api.get<PartsConsumptionReportPage>(
+        '/reports/parts-consumption',
+        buildQuery(null),
+      )
       rows.value = res.data ?? []
       summary.value = res.summary ?? null
       nextCursor.value = res.meta?.next_cursor ?? null

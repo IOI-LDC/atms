@@ -7,7 +7,7 @@ export interface FormResultsFilters {
   from?: string
   to?: string
   asset_id?: string | number
-  fa_subclass_code?: string
+  maintenance_category_id?: string | number
   field_uuid?: string
 }
 
@@ -41,8 +41,8 @@ export function useFormResultsReport() {
     if (activeFilters.asset_id) {
       query.asset_id = activeFilters.asset_id
     }
-    if (activeFilters.fa_subclass_code) {
-      query.fa_subclass_code = activeFilters.fa_subclass_code
+    if (activeFilters.maintenance_category_id) {
+      query.maintenance_category_id = activeFilters.maintenance_category_id
     }
     if (activeFilters.field_uuid) {
       query.field_uuid = activeFilters.field_uuid
@@ -79,7 +79,10 @@ export function useFormResultsReport() {
     loadingMore.value = true
     error.value = null
     try {
-      const res = await api.get<FormResultsReportPage>('/reports/form-results', buildQuery(nextCursor.value))
+      const res = await api.get<FormResultsReportPage>(
+        '/reports/form-results',
+        buildQuery(nextCursor.value),
+      )
       rows.value = [...rows.value, ...(res.data ?? [])]
       nextCursor.value = res.meta?.next_cursor ?? null
     } catch {

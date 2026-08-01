@@ -6,10 +6,10 @@ use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
 use App\Models\Location;
+use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkOrder;
-use Carbon\Carbon;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -49,7 +49,7 @@ class TechnicianWorkloadReportTest extends TestCase
     private function createWorkOrder(array $overrides = []): WorkOrder
     {
         $asset = $this->createAsset();
-        $mr = \App\Models\MaintenanceRequest::forceCreate([
+        $mr = MaintenanceRequest::forceCreate([
             'asset_id' => $asset->id,
             'number' => 'MR-'.uniqid(),
             'status' => 'converted',

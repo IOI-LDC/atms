@@ -91,10 +91,6 @@ onMounted(() => {
           <DatePicker id="mv-to" v-model="toDate" :min="fromDate" :max="todayStr" />
         </div>
         <div class="report-filter">
-          <Label for="mv-asset">Asset</Label>
-          <AssetCombobox v-model="selectedAsset" input-id="mv-asset" />
-        </div>
-        <div class="report-filter">
           <Label for="mv-fromloc">Source</Label>
           <Select v-model="fromLocationId">
             <SelectTrigger id="mv-fromloc"><SelectValue /></SelectTrigger>
@@ -117,6 +113,10 @@ onMounted(() => {
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div class="report-filter report-filter-asset">
+          <Label for="mv-asset">Asset</Label>
+          <AssetCombobox v-model="selectedAsset" input-id="mv-asset" />
         </div>
         <div class="report-filter-actions">
           <Button variant="outline" :disabled="loading" @click="clearFilters">Clear</Button>

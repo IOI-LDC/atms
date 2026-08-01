@@ -17,23 +17,26 @@ import {
 } from '@/components/ui/select'
 import { useFormResultsReport, type FormResultsFilters } from '@/composables/useFormResultsReport'
 import { useListOptions } from '@/composables/useListOptions'
-import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
+import { toMaintenanceCategoryIdFilterOptions } from '@/lib/assetColumns'
 import { woFormFieldTypeLabel, woFieldValueDisplay } from '@/lib/displayHelpers'
 import { reportDateWindow } from '@/lib/reportOptions'
 
 const ALL = '__all__'
 const DEFAULT = reportDateWindow(90)
 
-const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } = useFormResultsReport()
-const { faSubclasses, loadFaSubclasses } = useListOptions()
+const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } =
+  useFormResultsReport()
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
 
-const faSubclassOptions = computed(() => toFaSubclassFilterOptions(faSubclasses.value))
+const categoryOptions = computed(() =>
+  toMaintenanceCategoryIdFilterOptions(maintenanceCategories.value),
+)
 const numericComparisons = computed(() => summary.value?.numeric_comparisons ?? [])
 
 const fromDate = ref(DEFAULT.from)
 const toDate = ref(DEFAULT.to)
 const selectedAsset = ref<{ id: number; label: string } | null>(null)
-const faSubclassCode = ref<string>(ALL)
+const categoryId = ref<string>(ALL)
 
 const todayStr = new Date().toLocaleDateString('en-CA')
 const dateRangeError = computed(() =>
@@ -62,8 +65,8 @@ function applyFilters() {
   if (selectedAsset.value) {
     filters.asset_id = selectedAsset.value.id
   }
-  if (faSubclassCode.value !== ALL) {
-    filters.fa_subclass_code = faSubclassCode.value
+  if (categoryId.value !== ALL) {
+    filters.maintenance_category_id = categoryId.value
   }
   load(filters)
 }
@@ -72,12 +75,12 @@ function clearFilters() {
   fromDate.value = DEFAULT.from
   toDate.value = DEFAULT.to
   selectedAsset.value = null
-  faSubclassCode.value = ALL
+  categoryId.value = ALL
   load({ from: DEFAULT.from, to: DEFAULT.to })
 }
 
 onMounted(() => {
-  loadFaSubclasses()
+  loadMaintenanceCategories()
   load({ from: DEFAULT.from, to: DEFAULT.to })
 })
 </script>
@@ -98,20 +101,20 @@ onMounted(() => {
           <DatePicker id="fr-to" v-model="toDate" :min="fromDate" :max="todayStr" />
         </div>
         <div class="report-filter">
-          <Label for="fr-asset">Asset</Label>
-          <AssetCombobox v-model="selectedAsset" input-id="fr-asset" />
-        </div>
-        <div class="report-filter">
-          <Label for="fr-class">Asset class</Label>
-          <Select v-model="faSubclassCode">
-            <SelectTrigger id="fr-class"><SelectValue /></SelectTrigger>
+          <Label for="fr-category">Maintenance category</Label>
+          <Select v-model="categoryId">
+            <SelectTrigger id="fr-category"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem :value="ALL">All classes</SelectItem>
-              <SelectItem v-for="o in faSubclassOptions" :key="o.value" :value="o.value">
+              <SelectItem :value="ALL">All categories</SelectItem>
+              <SelectItem v-for="o in categoryOptions" :key="o.value" :value="o.value">
                 {{ o.label }}
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div class="report-filter report-filter-asset">
+          <Label for="fr-asset">Asset</Label>
+          <AssetCombobox v-model="selectedAsset" input-id="fr-asset" />
         </div>
         <div class="report-filter-actions">
           <Button variant="outline" :disabled="loading" @click="clearFilters">Clear</Button>
@@ -196,11 +199,14 @@ onMounted(() => {
                     <AssetIdentity :asset="row.asset" stacked />
                   </td>
                   <td>
-                    {{ row.label }}<span v-if="row.unit" class="report-cell-muted"> ({{ row.unit }})</span>
+                    {{ row.label
+                    }}<span v-if="row.unit" class="report-cell-muted"> ({{ row.unit }})</span>
                   </td>
                   <td class="report-cell-muted">{{ woFormFieldTypeLabel(row.field_type) }}</td>
                   <td>{{ woFieldValueDisplay(row.field_type, row.pre_value) }}</td>
-                  <td class="report-cell-strong">{{ woFieldValueDisplay(row.field_type, row.post_value) }}</td>
+                  <td class="report-cell-strong">
+                    {{ woFieldValueDisplay(row.field_type, row.post_value) }}
+                  </td>
                   <td class="report-cell-muted">{{ row.notes ?? '—' }}</td>
                 </tr>
               </tbody>

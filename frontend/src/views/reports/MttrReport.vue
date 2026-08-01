@@ -19,7 +19,7 @@ import { useListOptions } from '@/composables/useListOptions'
 import { useUsers } from '@/composables/useUsers'
 import { useAuthStore } from '@/stores/auth.store'
 import { fmtKpiHours } from '@/lib/displayHelpers'
-import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
+import { toMaintenanceCategoryIdFilterOptions } from '@/lib/assetColumns'
 import { MTTR_GROUP_BY_OPTIONS, reportDateWindow } from '@/lib/reportOptions'
 import type { MttrGroupBy } from '@/types'
 
@@ -29,18 +29,20 @@ const DEFAULT = reportDateWindow(90)
 const auth = useAuthStore()
 const { loading, error, summary, rows, load } = useMttrReport()
 const { activeLocations, loadLocations } = useLocations()
-const { faSubclasses, loadFaSubclasses } = useListOptions()
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
 const { users, loadUsers } = useUsers()
 
 const canFilterByTechnician = computed(() => auth.isAdminOrManager)
-const faSubclassOptions = computed(() => toFaSubclassFilterOptions(faSubclasses.value))
+const categoryOptions = computed(() =>
+  toMaintenanceCategoryIdFilterOptions(maintenanceCategories.value),
+)
 const technicianOptions = computed(() => users.value.filter((u) => u.role?.code === 'technician'))
 
 const fromDate = ref(DEFAULT.from)
 const toDate = ref(DEFAULT.to)
 const groupBy = ref<MttrGroupBy>('asset')
 const locationId = ref<string>(ALL)
-const faSubclassCode = ref<string>(ALL)
+const categoryId = ref<string>(ALL)
 const technicianId = ref<string>(ALL)
 const appliedGroupBy = ref<MttrGroupBy>('asset')
 
@@ -62,8 +64,8 @@ function applyFilters() {
   if (locationId.value !== ALL) {
     filters.location_id = locationId.value
   }
-  if (faSubclassCode.value !== ALL) {
-    filters.fa_subclass_code = faSubclassCode.value
+  if (categoryId.value !== ALL) {
+    filters.maintenance_category_id = categoryId.value
   }
   if (technicianId.value !== ALL) {
     filters.technician_id = technicianId.value
@@ -77,7 +79,7 @@ function clearFilters() {
   toDate.value = DEFAULT.to
   groupBy.value = 'asset'
   locationId.value = ALL
-  faSubclassCode.value = ALL
+  categoryId.value = ALL
   technicianId.value = ALL
   appliedGroupBy.value = 'asset'
   load({ group_by: 'asset', from: DEFAULT.from, to: DEFAULT.to })
@@ -85,7 +87,7 @@ function clearFilters() {
 
 onMounted(() => {
   loadLocations()
-  loadFaSubclasses()
+  loadMaintenanceCategories()
   if (canFilterByTechnician.value) {
     loadUsers()
   }
@@ -132,12 +134,12 @@ onMounted(() => {
           </Select>
         </div>
         <div class="report-filter">
-          <Label for="mttr-class">Asset class</Label>
-          <Select v-model="faSubclassCode">
-            <SelectTrigger id="mttr-class"><SelectValue /></SelectTrigger>
+          <Label for="mttr-category">Maintenance category</Label>
+          <Select v-model="categoryId">
+            <SelectTrigger id="mttr-category"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem :value="ALL">All classes</SelectItem>
-              <SelectItem v-for="o in faSubclassOptions" :key="o.value" :value="o.value">
+              <SelectItem :value="ALL">All categories</SelectItem>
+              <SelectItem v-for="o in categoryOptions" :key="o.value" :value="o.value">
                 {{ o.label }}
               </SelectItem>
             </SelectContent>

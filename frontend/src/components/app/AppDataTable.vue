@@ -375,7 +375,7 @@ watch(
             v-for="c in cols"
             :key="c.field"
             class="app-data-table-col"
-            :style="c.minWidth ? { '--col-min-width': c.minWidth } : undefined"
+            :style="c.minWidth ? { '--col-min-width': c.minWidth + 'px' } : undefined"
           />
         </colgroup>
 

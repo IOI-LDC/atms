@@ -1,4 +1,12 @@
-import type { AgingBucket, AssetKind, MtbfGroupBy, MttrGroupBy, PmComplianceGroupBy } from '@/types'
+import type {
+  AgingBucket,
+  AssetDistributionGroupBy,
+  AssetKind,
+  AssetUsageGroupBy,
+  MtbfGroupBy,
+  MttrGroupBy,
+  PmComplianceGroupBy,
+} from '@/types'
 
 /**
  * Static enum option lists for report filter bars. Priority options come from
@@ -56,16 +64,38 @@ export const PM_HORIZON_OPTIONS: { value: string; label: string }[] = [
 export const DIMENSION_GROUP_BY_OPTIONS: { value: MtbfGroupBy; label: string }[] = [
   { value: 'asset', label: 'Asset' },
   { value: 'maintenance_category', label: 'Maintenance Category' },
-  { value: 'asset_class', label: 'Asset Class' },
   { value: 'size', label: 'Size' },
   { value: 'location', label: 'Location' },
+]
+
+/**
+ * R-2 Asset Distribution dimension. Narrower than the MTBF/MTTR list because
+ * this report groups assets themselves, so `asset` would be one row per asset.
+ */
+export const ASSET_DISTRIBUTION_GROUP_BY_OPTIONS: {
+  value: AssetDistributionGroupBy
+  label: string
+}[] = [
+  { value: 'location', label: 'Location' },
+  { value: 'maintenance_category', label: 'Maintenance Category' },
+  { value: 'size', label: 'Size' },
+]
+
+/**
+ * R-22 Most-Used Assets dimension. `asset` is the ranking itself; the other two
+ * roll those per-asset numbers up. Location is absent — usage belongs to the
+ * asset, and assets move between locations mid-period.
+ */
+export const ASSET_USAGE_GROUP_BY_OPTIONS: { value: AssetUsageGroupBy; label: string }[] = [
+  { value: 'asset', label: 'Asset' },
+  { value: 'maintenance_category', label: 'Maintenance Category' },
+  { value: 'size', label: 'Size' },
 ]
 
 /** R-4 MTTR dimension (technician instead of location). */
 export const MTTR_GROUP_BY_OPTIONS: { value: MttrGroupBy; label: string }[] = [
   { value: 'asset', label: 'Asset' },
   { value: 'maintenance_category', label: 'Maintenance Category' },
-  { value: 'asset_class', label: 'Asset Class' },
   { value: 'size', label: 'Size' },
   { value: 'technician', label: 'Technician' },
 ]

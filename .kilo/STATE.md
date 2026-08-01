@@ -3,7 +3,191 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
+## Session — 2026-08-01
+
+### Reports: FA Subclass swept out, two new reports, CSV export started
+
+**1. FA Subclass removed from every report — Maintenance Category replaces it.**
+Extends the D-011 principle from *routing* to *reporting*: ATMS reports group and
+filter only on fields ATMS governs. `fa_subclass_code` is still populated on
+400/400 assets and still exposed on the **asset detail** API (`AssetResource`)
+and screens — this change is scoped to reports.
+
+- `AssetReportDimension`: `asset_class` case **deleted**; the docblock now says
+  not to reinstate it.
+- Filter param renamed across 7 reports: `fa_subclass_code` (string) →
+  `maintenance_category_id` (int, `exists:maintenance_categories,id`). IDs match
+  the `location_id` / `asset_id` convention; group **keys** still use the stable
+  category `code` per the existing rule.
+- `group_by=asset_class` now returns **422** on MTBF, MTTR, and Bad Actor, each
+  with a test that guards against reinstatement.
+- Response contracts changed: `AssetStatusReportItemResource` dropped
+  `fa_subclass_code`; `PartsConsumptionReportItemResource` renamed `asset_class`
+  → `asset_maintenance_category`; `FormResultReportItemResource` renamed
+  `asset.asset_class` → `asset.maintenance_category`.
+- `PartsConsumptionReportQuery` now joins `maintenance_categories` **twice** —
+  the part's category and, aliased as `asset_categories`, the asset's. They are
+  different things and both appear on every row.
+- Frontend: 7 composables, 7 views, `types/index.ts`, and
+  `DIMENSION_GROUP_BY_OPTIONS` / `MTTR_GROUP_BY_OPTIONS` updated. New
+  `toMaintenanceCategoryIdFilterOptions()` keys by **id** for server-side report
+  filters, beside the existing name-keyed helper used by client-side tables.
+
+**2. R-2 generalised: "Assets by Location" → Asset Distribution.** Same
+aggregate, now pivotable by **location | maintenance_category | size** via
+`?group_by=`. All three are plain columns on `assets`, so one grouped aggregate
+serves every dimension — deliberately unlike MTBF/MTTR/Bad Actor, which resolve
+per row in PHP because they group *activity* by its asset's attributes.
+`AssetsByLocationReportQuery` → `AssetDistributionReportQuery`; row shape
+`location_id`/`location_name` → generic `group_key`/`group_label`, and
+`summary.total_locations` → `total_groups`. Sizes sort **numerically** (the
+column is `numeric(9,5)`) and label through `Size::format()` into O&G notation.
+`GET /api/reports/assets-by-location` and `/reports/assets-by-location` both
+still resolve — the old paths are kept as aliases. **DashboardView consumes this
+report** and was migrated with it.
+
+**3. R-22 Most-Used Assets — new.** Answers "which asset has been used the
+most", against one usage reading type at a time. The three existing
+`usage_reading_types` rows map exactly onto the ask: Operating Hours, Kilometer
+Driven, Depth.
+
+> **The measurement decision, because it is easy to get wrong:** these meters are
+> cumulative, so usage is a *difference*, not a sum. `usage = end_value −
+> baseline_value`, where the baseline is the last confirmed reading **before**
+> the window, falling back to the window's floor for a newly-metered asset. A
+> naive max-minus-min inside the window reports **zero** for any asset with a
+> single reading in range — which is exactly the busy-asset case (one reading
+> out, one reading back). Only confirmed readings count, matching
+> `PmDueCalculator`. Meters are assumed monotonic; a meter replacement would
+> understate usage, and ATMS has no reset concept to detect that.
+
+Units never mix: the reading type is a required dimension, and `reading_type.unit`
+travels with the response so the UI and CSV can label every number. Groupable by
+maintenance category or size; ranked top-N, and the summary spans **all** assets,
+not just the rows shown.
+
+**4. CSV export (D-010) — mechanism built and proven on 3 of 21 reports.**
+`?format=csv` on the **existing** endpoint rather than new `/export` routes, so
+authorization, filter validation, and sorting are reused and the file provably
+matches the table above it. `App\Support\Reports\CsvReportStreamer` bakes in
+three decisions: a **UTF-8 BOM** (without it Excel renders Arabic asset and
+location names as mojibake), timestamps in `config('atms.company_timezone')`
+rather than UTC, and true streaming so unbounded listings stay flat in memory.
+Column maps live in `ReportCsvColumns` with human headers ("Asset Tag", not
+`asset_tag`) in a deliberate order.
+
+Cursor-paginated queries expose a `stream` closure beside `paginator`
+(`(clone $rows)->lazy(500)`) so the export is the **whole** result set, not one
+page — verified by a test that exports 12 rows with `per_page=5`.
+
+**Wired so far:** R-1 Assets Status (cursor/streaming), R-2 Asset Distribution,
+R-22 Most-Used Assets. **Remaining: 18 reports** — 10 cursor (Asset Movement,
+Meter Progression, Overdue PM, Parts Consumption, PM Coverage, PM Suppression,
+Technician Workload, Throughput, Form Results, WO Backlog) each needing the
+3-line `stream` closure plus a column map, and 8 aggregate (MTBF, MTTR, Bad
+Actor, PM Compliance, Upcoming PM, Operational Status, Booking) needing only a
+column map. **No frontend Export button exists yet on any report.**
+
+**Verified:** 979 backend tests (2897 assertions), Pint clean, `vue-tsc` clean.
+
+> ⚠️ **Process note:** running bare `pint` (not `pint --dirty`) reformatted ~40
+> unrelated files, and `npm run format` runs oxfmt over all of `src/`. Both were
+> reverted to keep the diff reviewable. Use `pint --dirty`, and check
+> `git status` after `npm run format`.
+
 ## Session — 2026-07-31
+
+### Maintenance Category as the ATMS routing key — D-011 / D-012 / D-013 designed, not yet built
+
+**The governing principle (this generalises — apply it to any future routing key).**
+`assets.fa_subclass_code` was never "dropped from the DB" — it is populated on
+400/400 assets and is a filter dimension in 7 reports. What changed is
+**operational control**: it is written by the ERP sync
+(`ImportErpAssetsCommand:153`, from ERP's `faSubclassCode`), so ATMS cannot
+govern it. `maintenance_categories` is ATMS-owned — Admin-editable, and its own
+model docblock says *"Local ATMS data, unrelated to any ERP classification."*
+
+> **A field ATMS does not control must not route behaviour ATMS is accountable
+> for.** Describing is fine (reports may filter on subclass forever); controlling
+> is not (forms and PM rules may not).
+
+Consequences already agreed:
+
+- The 4 `/admin/fa-subclass-type-codes` CRUD routes + controller are **deleted**
+  (`routes/api.php:111-114`). Verified: the only consumer is the WO Forms
+  dropdown at `useWoForms.ts:76`, which D-011 removes; no backend test hits them.
+  `/list-options/fa_subclass_type_codes` is a **different** controller and stays —
+  report filters need it.
+- `ImportAssetsCommand:136-189` hard-rejects an asset whose `fa_subclass_code`
+  isn't in the lookup table — ATMS gating on ERP-owned vocabulary, with the only
+  remedy being a route whose UI no longer exists. **Decided: auto-create the
+  lookup row on sight.** The list mirrors ERP's vocabulary; it should follow it,
+  not fence it.
+- **`assets.maintenance_category_id` must become NOT NULL** (2 of 400 are null
+  today). Under this principle it is the *only* ATMS-owned handle on an asset, so
+  an asset without one is an asset ATMS cannot govern at all — no form, no PM, no
+  remedy. Mirrors what `90bdead` did for location code.
+
+**D-011 — WO Forms route by category.** `form_templates.fa_subclass_code` →
+`form_template_maintenance_category` pivot (many-to-many: one form serves several
+categories). Assets carry exactly one category, so resolution stays deterministic
+**only if** at most one *active* template exists per category — the uniqueness
+guarantee moves from the templates table to the pivot. **Chosen enforcement:**
+mirror `is_active` onto the pivot + partial unique index
+`ON (maintenance_category_id) WHERE is_active`, matching the existing
+`form_templates_active_subclass_unique` backstop pattern (422 first, index as
+backstop). Rejected: validation-only (loses the guarantee the current design
+deliberately has) and a DB trigger (nothing else here uses triggers). Re-point
+`SnapshotFormTemplateIntoWorkOrder` **and** `SyncWorkOrderFormToLatest` (incl. its
+"…for this asset **subclass**" message) and the `FormTemplateIndexQuery` filter.
+Existing templates migrate **deactivated** for manual reassignment — there is no
+subclass→category mapping (25 categories vs 20 subclasses). **This cost grows
+with delay:** every template built before D-011 lands is another hand-remap.
+
+**D-012 — PM Rules assignable to a category.** `pm_rule_maintenance_category`
+pivot, plus `origin` (`manual`|`category`) and a source-category column on
+`asset_pm_assignments`.
+
+- **Materialize, don't resolve.** Per-asset PM state is inherent — each
+  assignment owns its `last_triggered_date` / `last_triggered_reading` — so a
+  category link can only *create and maintain* rows, never replace them. The
+  deciding argument is the baseline: `CreateAssetPmAssignment:18` stamps
+  `last_triggered_date = now()` so a newly-assigned asset gets one full interval
+  of grace. Dynamic resolution has **no moment** at which to do that; every asset
+  would land either immediately overdue or never due. Materializing also leaves
+  `EvaluatePmRulesJob`, the L1–L4 cascade in `CloseWorkOrder:131`, and all four PM
+  reports untouched.
+- **Precedence rule (decided):** reconciliation only ever *creates* and
+  *deactivates-on-leaving*. It never reactivates an assignment a human
+  deactivated (`deactivated_by IS NOT NULL` → leave alone), otherwise a per-asset
+  opt-out silently reverts on the next sync.
+- **Reconciliation is the real work,** not the pivot: asset created, asset
+  changes category, category added to / removed from a rule, and the bulk import
+  path (reconcile **once at the end**, never per row).
+- Expansion is a **queued, batched job with one audit entry for the operation** —
+  not N `pm_assignment.created` rows for an N-asset category.
+
+**D-013 — `EvaluatePmRulesJob` does not scale; fix first, standalone.**
+`PmDueCalculator::isDue()` already accepts pre-loaded `$readings` /
+`$suppressions` collections to avoid N+1 — **the batch path was built and is
+unused.** The job does `->get()` on every active assignment
+(`EvaluatePmRulesJob:31`) and `EvaluatePmRule:34` calls `isDue($locked)` with one
+argument, so each assignment costs ~6–12 queries inside its own transaction even
+when nothing is due — and `isTriggeredByDate` / `isTriggeredByReading` hardcode
+`null`, re-running the same queries a second time. `maintenance_level` is an
+**L1–L4** scheme, so ~4 rules/asset is the *designed* shape: 400 assets ≈ 1,600
+assignments ≈ 10–19k queries against `timeout = 300`. It will not finish. D-012 is
+precisely what turns a handful of assignments into thousands in one click, so
+this lands first: `chunkById`, pass the collections, extend the two
+`isTriggeredBy*` methods to accept them, fan out per-chunk child jobs.
+
+> **Note on sizing:** today's counts (2 form templates, 3 PM rules, 1 assignment)
+> are development-stage artefacts, **not** the target state — the app is still
+> being built out. Every decision above is sized for production volume, not for
+> what is in the dev database.
+
+**Agreed order:** P0 D-013 → P1 category NOT NULL → P2 D-011 → P3 D-012, then
+D-010 CSV export (unaffected by any of it).
 
 - **D-008 Proper Booking model — BUILT (full-stack).** Replaced the bare `is_booked`
   boolean toggle with a dedicated `bookings` table. Schema: `asset_id`, `booked_by`
@@ -134,6 +318,49 @@ migration. No decision taken.
 ⚠️ **Known gap:** the closing pair's right-hand column is **Recent asset moves**
 (from the existing relocated feed), not the full "Recent activity" in the design.
 A unified activity feed needs a new `audit_logs`-backed endpoint — not built.
+
+### Reports — R-1 BUILT 2026-07-31, export still open
+
+**`/reports` is THE reports index** — `ReportsView.vue`, final and client-facing.
+The earlier catalogue-driven index is now `/reports-verification` +
+`ReportsVerificationView.vue` (admin-only, disposable). Same rename treatment as
+the dashboard; do not add a third.
+
+**⛔ Two catalogue entries REMOVED, not deferred (2026-07-31):** R-10B Maintenance
+Lifecycle Status Distribution and R-11 Lost / Decommissioned Assets both reported
+on `withdrawn` + its sub-statuses (LIH, DBR, Disposed, Scrapped) — ERP territory.
+They were labelled "deferred to Phase 2", which told the next session to build them
+eventually. Gone, with a comment in `useReportCatalog.ts` explaining why.
+⚠️ **R-12 Spare / Rotor Pool correctly stays deferred** — it uses `installed`/`ready`,
+which are *enrolled* sub-statuses tied to the Phase 2 asset-assembly model, not
+withdrawal. Catalogue is now 20 entries: 19 available, 2 deferred (R-5, R-12).
+
+**R-1 Assets Status Report — BUILT (LDC's "Report 1").** `GET /api/reports/asset-status`,
+cursor-paginated, at `/reports/asset-status`. It is the only **listing** in the
+catalogue; every other report is an analysis. Columns are exactly LDC's ask: Asset
+Tag, Name, Type, Status, Location, Assigned To, Last Update, Created Date. Filters:
+location, status, type, booking, and a date range. New `AssetStatusReportQuery`,
+`AssetStatusReportItemResource`, `useAssetStatusReport`, `AssetStatusReport.vue`.
+**13 tests; suite 933 → 946 passing.** Pint + `vue-tsc` clean.
+
+Two interpretations are **pinned in the query docblock and stated in the UI** under
+the filter bar, because the schema cannot answer the alternatives:
+
+1. **The date range filters `updated_at` (or `created_at`), not status history.**
+   Operational status is overwritten in place, so "status as it stood on 1 June" is
+   unanswerable without a status-history table (D-009). The report returns *current*
+   status for assets created/updated in the range.
+2. **"Assigned To" = the technician on the asset's open work order.** Assets have no
+   custodian column; a WO assignee is the only person ATMS associates with an asset.
+   Null when nothing is open.
+
+Both still need LDC confirmation (🔵 #5). If they meant point-in-time status, R-1
+needs D-009 first — it is a schema change, not a report change.
+
+**NEXT: CSV export (D-010).** Nothing in the codebase exports anything. CSV streams
+from the existing cursor queries, so building it for R-1 gives all 19 reports the
+same capability. PDF can reuse the `PartRequestPrintView` print-route pattern; xlsx
+needs a new dependency.
 
 ### Dashboard + Reports redesign — design notes
 

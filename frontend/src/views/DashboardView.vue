@@ -6,7 +6,7 @@ import { SegmentedBar } from '@/components/ui/segmented-bar'
 import { Button } from '@/components/ui/button'
 import { useDashboard } from '@/composables/useDashboard'
 import { useDashboardKpis } from '@/composables/useDashboardKpis'
-import { useAssetsByLocationReport } from '@/composables/useAssetsByLocationReport'
+import { useAssetDistributionReport } from '@/composables/useAssetDistributionReport'
 import { useQuickActions } from '@/composables/useQuickActions'
 import { fmtDate, fmtKpiDays, fmtKpiHours, fmtKpiPercent } from '@/lib/displayHelpers'
 
@@ -35,13 +35,13 @@ const {
   bookedRow,
 } = useDashboardKpis()
 
-const { data: locationData, load: loadLocations } = useAssetsByLocationReport()
+const { data: locationData, load: loadLocations } = useAssetDistributionReport()
 
 // Role-gated: a Requester sees only New MR, since Update Location is
 // Admin/Manager/Logistics. The composable owns that gating.
 const { actions: quickActions } = useQuickActions(['New MR', 'Update Location'])
 
-onMounted(() => loadLocations())
+onMounted(() => loadLocations({ group_by: ['location'] }))
 
 const initialLoading = computed(() => dashLoading.value && kpiLoading.value)
 
@@ -278,7 +278,7 @@ const locationMax = computed(() =>
             <div class="dash-card-head">
               <p class="dash-label">By location</p>
               <span class="dash-note">
-                {{ locationData?.summary.total_locations ?? 0 }} locations
+                {{ locationData?.summary.total_groups ?? 0 }} locations
               </span>
             </div>
             <div v-if="topLocations.length === 0" class="dash-empty">
@@ -287,11 +287,11 @@ const locationMax = computed(() =>
             <div v-else class="dash-loc-group">
               <div
                 v-for="row in topLocations"
-                :key="row.location_id ?? 'unassigned'"
+                :key="row.groups[0]?.key ?? 'unassigned'"
                 class="dash-loc-row"
               >
                 <span class="dash-loc-label">
-                  <span class="dash-loc-name">{{ row.location_name ?? 'Unassigned' }}</span>
+                  <span class="dash-loc-name">{{ row.groups[0]?.label ?? 'Unassigned' }}</span>
                   <Progress :value="((row.asset_count ?? 0) / locationMax) * 100" />
                 </span>
                 <span class="dash-loc-count">{{ row.asset_count ?? 0 }}</span>

@@ -187,21 +187,29 @@ class BadActorReportTest extends TestCase
         $this->assertSame('Unspecified', $json['items'][0]['group_label']);
     }
 
-    public function test_groups_by_asset_class_with_unclassified_fallback(): void
+    /**
+     * FA Subclass is ERP-owned, so it may not drive an ATMS report dimension.
+     * Maintenance Category replaced it; this guards against reinstatement.
+     */
+    public function test_asset_class_group_by_is_rejected(): void
     {
-        $classified = $this->createAsset(['fa_subclass_code' => 'JAR']);
-        $unclassified = $this->createAsset(['fa_subclass_code' => null]);
-        $this->createFailure($classified, 'MR-1');
-        $this->createFailure($unclassified, 'MR-2');
+        $this->actingAs($this->admin)
+            ->getJson('/api/reports/bad-actors?group_by=asset_class')
+            ->assertStatus(422);
+    }
+
+    public function test_maintenance_category_filter_applies(): void
+    {
+        $category = MaintenanceCategory::factory()->create(['code' => 'JAR', 'name' => 'Jar']);
+        $inCategory = $this->createAsset(['maintenance_category_id' => $category->id]);
+        $outOfCategory = $this->createAsset(['maintenance_category_id' => null]);
+        $this->createFailure($inCategory, 'MR-1');
+        $this->createFailure($outOfCategory, 'MR-2');
 
         $json = $this->actingAs($this->admin)
-            ->getJson('/api/reports/bad-actors?group_by=asset_class')->json();
+            ->getJson('/api/reports/bad-actors?maintenance_category_id='.$category->id)->json();
 
-        $this->assertCount(2, $json['items']);
-        $byKey = collect($json['items'])->keyBy('group_key');
-        $this->assertSame('JAR', $byKey['JAR']['group_label']);
-        $this->assertSame('unclassified', $byKey['unclassified']['group_key']);
-        $this->assertSame('Unclassified', $byKey['unclassified']['group_label']);
+        $this->assertCount(1, $json['items']);
     }
 
     private function createFailure(Asset $asset, string $number): void

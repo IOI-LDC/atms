@@ -12,12 +12,17 @@ use Illuminate\Support\Facades\DB;
 /**
  * R-17: finalized work-order parts usage for manual ERP handoff.
  *
- * Rows are grouped by part, Asset Class, and canonical Asset Size. Part
- * identity fields (name, supplier Part Number, Part Size, Maintenance
- * Category, unit of measure, availability snapshot) are properties of the
- * part and travel with each row without creating additional aggregation
- * ambiguity. Asset FA subclass and size are current-state context because
- * work_order_parts has no completion-time snapshot. Inventory
+ * Rows are grouped by part, Asset Maintenance Category, and canonical Asset
+ * Size. Part identity fields (name, supplier Part Number, Part Size,
+ * Maintenance Category, unit of measure, availability snapshot) are properties
+ * of the part and travel with each row without creating additional aggregation
+ * ambiguity.
+ *
+ * Note there are **two** maintenance categories in play and they are not the
+ * same thing: the *part's* category (joined as `maintenance_categories`) and
+ * the *asset's* category (joined as `asset_categories`). The asset's category
+ * and size are current-state context because work_order_parts has no
+ * completion-time snapshot. Inventory
  * issue/warehouse state remains owned by SM/ERP.
  *
  * Cursor ordering covers every grouping dimension through non-null sort
@@ -27,7 +32,7 @@ use Illuminate\Support\Facades\DB;
 class PartsConsumptionReportQuery
 {
     /**
-     * @param  array{part_id?: ?int, asset_id?: ?int, fa_subclass_code?: ?string}  $filters
+     * @param  array{part_id?: ?int, asset_id?: ?int, maintenance_category_id?: ?int}  $filters
      * @return array{summary: array{total_line_items: int, distinct_parts: int, distinct_work_orders: int, total_quantity: ?float, unit_of_measure: ?string}, paginator: CursorPaginator}
      */
     public function handle(int $perPage, Carbon $from, Carbon $to, array $filters): array
@@ -49,7 +54,7 @@ class PartsConsumptionReportQuery
             'unit_of_measure' => $partId !== null ? Part::whereKey($partId)->value('unit_of_measure') : null,
         ];
 
-        $assetClassExpr = "coalesce(nullif(assets.fa_subclass_code, ''), 'Unclassified')";
+        $assetCategoryExpr = "coalesce(asset_categories.name, 'Uncategorised')";
         $assetSizeExpr = "coalesce(assets.size_inches::text, 'unspecified')";
 
         $grouped = (clone $base)
@@ -62,7 +67,7 @@ class PartsConsumptionReportQuery
             ->selectRaw('parts.maintenance_category_id as part_maintenance_category_id')
             ->selectRaw('maintenance_categories.code as part_category_code')
             ->selectRaw('maintenance_categories.name as part_category_name')
-            ->selectRaw("{$assetClassExpr} as asset_class")
+            ->selectRaw("{$assetCategoryExpr} as asset_maintenance_category")
             ->selectRaw("{$assetSizeExpr} as asset_size_key")
             ->selectRaw('sum(work_order_parts.quantity) as total_quantity')
             ->selectRaw('count(*) as line_item_count')
@@ -77,14 +82,14 @@ class PartsConsumptionReportQuery
                 'parts.maintenance_category_id',
                 'maintenance_categories.code',
                 'maintenance_categories.name',
-                DB::raw($assetClassExpr),
+                DB::raw($assetCategoryExpr),
                 DB::raw($assetSizeExpr),
             ]);
 
         $paginator = DB::query()
             ->fromSub($grouped, 'consumption')
             ->orderBy('part_id')
-            ->orderBy('asset_class')
+            ->orderBy('asset_maintenance_category')
             ->orderBy('asset_size_key')
             ->cursorPaginate($perPage);
 
@@ -92,7 +97,7 @@ class PartsConsumptionReportQuery
     }
 
     /**
-     * @param  array{part_id?: ?int, asset_id?: ?int, fa_subclass_code?: ?string}  $filters
+     * @param  array{part_id?: ?int, asset_id?: ?int, maintenance_category_id?: ?int}  $filters
      */
     private function baseQuery(Carbon $from, Carbon $to, array $filters): Builder
     {
@@ -101,14 +106,13 @@ class PartsConsumptionReportQuery
             ->join('parts', 'parts.id', '=', 'work_order_parts.part_id')
             ->join('assets', 'assets.id', '=', 'work_orders.asset_id')
             ->leftJoin('maintenance_categories', 'maintenance_categories.id', '=', 'parts.maintenance_category_id')
+            // Aliased: this is the *asset's* category, distinct from the part's above.
+            ->leftJoin('maintenance_categories as asset_categories', 'asset_categories.id', '=', 'assets.maintenance_category_id')
             ->whereIn('work_orders.status', [WorkOrderStatus::COMPLETED->value, WorkOrderStatus::CLOSED->value])
             ->whereNotNull('work_orders.completed_at')
             ->whereBetween('work_orders.completed_at', [$from, $to])
-            ->when($filters['part_id'] ?? null, fn (Builder $query, int $partId) =>
-                $query->where('work_order_parts.part_id', $partId))
-            ->when($filters['asset_id'] ?? null, fn (Builder $query, int $assetId) =>
-                $query->where('work_orders.asset_id', $assetId))
-            ->when($filters['fa_subclass_code'] ?? null, fn (Builder $query, string $faSubclassCode) =>
-                $query->where('assets.fa_subclass_code', $faSubclassCode));
+            ->when($filters['part_id'] ?? null, fn (Builder $query, int $partId) => $query->where('work_order_parts.part_id', $partId))
+            ->when($filters['asset_id'] ?? null, fn (Builder $query, int $assetId) => $query->where('work_orders.asset_id', $assetId))
+            ->when($filters['maintenance_category_id'] ?? null, fn (Builder $query, int $categoryId) => $query->where('assets.maintenance_category_id', $categoryId));
     }
 }

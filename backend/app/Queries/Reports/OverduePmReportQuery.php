@@ -34,8 +34,7 @@ class OverduePmReportQuery
                 $q->doesntHave('workOrder')
                     ->orWhereHas('workOrder', fn ($wq) => $wq->where('status', '!=', WorkOrderStatus::CLOSED));
             })
-            ->when($filters['location_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
+            ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
             ->when($filters['pm_rule_id'] ?? null, fn ($q, $v) => $q->where('pm_rule_id', $v))
             ->when($filters['priority'] ?? null, fn ($q, $v) => $q->where('priority', $v));
 

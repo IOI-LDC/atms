@@ -20,7 +20,12 @@ import {
   type PmSuppressionFilters,
 } from '@/composables/usePmSuppressionReport'
 import { usePmRules } from '@/composables/usePmRules'
-import { fmtDate, fmtDateTime, pmDecisionTypeLabel, pmDecisionTypeClass } from '@/lib/displayHelpers'
+import {
+  fmtDate,
+  fmtDateTime,
+  pmDecisionTypeLabel,
+  pmDecisionTypeClass,
+} from '@/lib/displayHelpers'
 import { PM_DECISION_TYPE_OPTIONS, reportDateWindow } from '@/lib/reportOptions'
 
 const ALL = '__all__'
@@ -43,7 +48,10 @@ const dateRangeError = computed(() =>
     : '',
 )
 
-function untilLabel(row: { suppressed_until_date: string | null; suppressed_until_reading: number | null }): string {
+function untilLabel(row: {
+  suppressed_until_date: string | null
+  suppressed_until_reading: number | null
+}): string {
   if (row.suppressed_until_date) {
     return fmtDate(row.suppressed_until_date)
   }
@@ -106,13 +114,11 @@ onMounted(() => {
             <SelectTrigger id="ps-rule"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem :value="ALL">All rules</SelectItem>
-              <SelectItem v-for="r in rules" :key="r.id" :value="String(r.id)">{{ r.name }}</SelectItem>
+              <SelectItem v-for="r in rules" :key="r.id" :value="String(r.id)">{{
+                r.name
+              }}</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <div class="report-filter">
-          <Label for="ps-asset">Asset</Label>
-          <AssetCombobox v-model="selectedAsset" input-id="ps-asset" />
         </div>
         <div class="report-filter">
           <Label for="ps-decision">Decision</Label>
@@ -125,6 +131,10 @@ onMounted(() => {
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div class="report-filter report-filter-asset">
+          <Label for="ps-asset">Asset</Label>
+          <AssetCombobox v-model="selectedAsset" input-id="ps-asset" />
         </div>
         <div class="report-filter-actions">
           <Button variant="outline" :disabled="loading" @click="clearFilters">Clear</Button>

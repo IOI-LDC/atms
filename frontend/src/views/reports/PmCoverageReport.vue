@@ -15,17 +15,14 @@ import {
 } from '@/components/ui/select'
 import { usePmCoverageReport, type PmCoverageFilters } from '@/composables/usePmCoverageReport'
 import { useLocations } from '@/composables/useLocations'
-import {
-  fmtKpiPercent,
-  operationalStatusClass,
-  operationalStatusLabel,
-} from '@/lib/displayHelpers'
+import { fmtKpiPercent, operationalStatusClass, operationalStatusLabel } from '@/lib/displayHelpers'
 import { ASSET_KIND_OPTIONS } from '@/lib/reportOptions'
 import type { AssetKind } from '@/types'
 
 const ALL = '__all__'
 
-const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } = usePmCoverageReport()
+const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } =
+  usePmCoverageReport()
 const { activeLocations, loadLocations } = useLocations()
 
 const locationId = ref<string>(ALL)
@@ -123,7 +120,7 @@ onMounted(() => {
                 <tr>
                   <th scope="col">Asset</th>
                   <th scope="col">Tag</th>
-                  <th scope="col">Class</th>
+                  <th scope="col">Category</th>
                   <th scope="col">Location</th>
                   <th scope="col">Status</th>
                 </tr>
@@ -131,11 +128,13 @@ onMounted(() => {
               <tbody>
                 <tr v-for="row in rows" :key="row.id">
                   <td>
-                    <RouterLink :to="`/assets/${row.id}`" class="report-link">{{ row.name }}</RouterLink>
+                    <RouterLink :to="`/assets/${row.id}`" class="report-link">{{
+                      row.name
+                    }}</RouterLink>
                     <AssetIdentityBadges :asset="row" />
                   </td>
                   <td class="report-cell-muted">{{ row.asset_tag ?? '—' }}</td>
-                  <td class="report-cell-muted">{{ row.fa_subclass_code ?? '—' }}</td>
+                  <td class="report-cell-muted">{{ row.maintenance_category?.name ?? '—' }}</td>
                   <td :class="row.current_location ? '' : 'report-cell-muted'">
                     {{ row.current_location?.name ?? 'Unassigned' }}
                   </td>

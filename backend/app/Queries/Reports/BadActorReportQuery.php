@@ -17,17 +17,15 @@ use Carbon\Carbon;
 class BadActorReportQuery
 {
     /**
-     * @param  array{location_id?: ?int, fa_subclass_code?: ?string, limit?: ?int}  $filters
+     * @param  array{location_id?: ?int, maintenance_category_id?: ?int, limit?: ?int}  $filters
      * @return array{summary: array{total_failures: int}, items: array<int, array{group_key: mixed, group_label: ?string, failure_count: int, asset?: array<string, mixed>}>}
      */
     public function handle(Carbon $from, Carbon $to, string $groupBy, array $filters): array
     {
         $failures = MaintenanceRequest::where('is_failure', true)
             ->whereBetween('created_at', [$from, $to])
-            ->when($filters['location_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
-            ->when($filters['fa_subclass_code'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('fa_subclass_code', $v)))
+            ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
+            ->when($filters['maintenance_category_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('maintenance_category_id', $v)))
             ->with(['asset.currentLocation', 'asset.maintenanceCategory'])
             ->get();
 
@@ -46,7 +44,6 @@ class BadActorReportQuery
                 : match ($groupBy) {
                     'asset' => $mr->asset_id,
                     'maintenance_category' => 'uncategorised',
-                    'asset_class' => 'unclassified',
                     'size' => 'unspecified',
                     default => $mr->asset_id,
                 };
@@ -64,7 +61,6 @@ class BadActorReportQuery
                     $first->asset !== null => $dimension->resolve($first->asset, $groupBy)['label'],
                     default => match ($groupBy) {
                         'maintenance_category' => 'Uncategorised',
-                        'asset_class' => 'Unclassified',
                         'size' => 'Unspecified',
                         default => null,
                     },

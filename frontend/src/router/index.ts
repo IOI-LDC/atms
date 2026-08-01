@@ -126,20 +126,21 @@ const router = createRouter({
       component: () => import('@/views/locations/LogisticsLocationView.vue'),
     },
     // ── Reports ───────────────────────────────────────────────────────────────
-    // The client-facing /reports shows a placeholder until LDC provides their own
-    // requirements — the real reports index is kept intact for internal
-    // verification at /reports-real: admin-only and not linked in the sidebar. It
-    // is not part of the shipped product. Individual /reports/:slug pages below
-    // remain unchanged and continue to work.
+    // /reports + ReportsView.vue is THE reports index — final, client-facing, and
+    // the only one that ships. It is not a placeholder; do not add another.
+    // /reports-verification is a disposable admin-only copy of the earlier
+    // catalogue-driven index, kept for internal comparison and unlinked from the
+    // sidebar. Delete it once reports are signed off. Individual /reports/:slug
+    // pages below are unaffected.
     {
       path: '/reports',
       name: 'reports',
-      component: () => import('@/views/reports/ReportsPlaceholderView.vue'),
+      component: () => import('@/views/reports/ReportsView.vue'),
     },
     {
-      path: '/reports-real',
-      name: 'reports-real',
-      component: () => import('@/views/reports/ReportsView.vue'),
+      path: '/reports-verification',
+      name: 'reports-verification',
+      component: () => import('@/views/reports/ReportsVerificationView.vue'),
       meta: { requiresAdmin: true },
     },
     // Per-report pages (Pass 1 Must tier). Any authenticated role may view —
@@ -150,9 +151,21 @@ const router = createRouter({
       component: () => import('@/views/reports/OperationalStatusReport.vue'),
     },
     {
-      path: '/reports/assets-by-location',
-      name: 'report-assets-by-location',
-      component: () => import('@/views/reports/AssetsByLocationReport.vue'),
+      path: '/reports/asset-usage',
+      name: 'report-asset-usage',
+      component: () => import('@/views/reports/AssetUsageReport.vue'),
+    },
+    {
+      path: '/reports/asset-distribution',
+      name: 'report-asset-distribution',
+      component: () => import('@/views/reports/AssetDistributionReport.vue'),
+    },
+    // Pre-dimension path, kept so existing links and bookmarks keep working.
+    { path: '/reports/assets-by-location', redirect: '/reports/asset-distribution' },
+    {
+      path: '/reports/asset-status',
+      name: 'report-asset-status',
+      component: () => import('@/views/reports/AssetStatusReport.vue'),
     },
     {
       path: '/reports/pm-compliance',

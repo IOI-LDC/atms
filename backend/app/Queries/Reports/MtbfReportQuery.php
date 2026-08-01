@@ -12,13 +12,13 @@ use Carbon\Carbon;
  * Reuses the ReliabilityKpiQuery definition: a "failure" is a corrective
  * maintenance request explicitly classified as is_failure = true. MTBF is
  * calculated as window_days / failure_count. Groups by asset, Maintenance
- * Category, Asset Class, Size, or location through the shared
+ * Category, Size, or location through the shared
  * {@see AssetReportDimension} resolver.
  */
 class MtbfReportQuery
 {
     /**
-     * @param  array{location_id?: ?int, fa_subclass_code?: ?string}  $filters
+     * @param  array{location_id?: ?int, maintenance_category_id?: ?int}  $filters
      * @return array{summary: array{mtbf_days: float|null, failure_count: int, failure_rate_per_day: float}, items: array<int, array{group_key: mixed, group_label: ?string, failure_count: int, mtbf_days: float|null, failure_rate_per_day: float, asset?: array<string, mixed>}>}
      */
     public function handle(Carbon $from, Carbon $to, string $groupBy, array $filters): array
@@ -27,10 +27,8 @@ class MtbfReportQuery
 
         $failures = MaintenanceRequest::where('is_failure', true)
             ->whereBetween('created_at', [$from, $to])
-            ->when($filters['location_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
-            ->when($filters['fa_subclass_code'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('fa_subclass_code', $v)))
+            ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
+            ->when($filters['maintenance_category_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('maintenance_category_id', $v)))
             ->with(['asset.currentLocation', 'asset.maintenanceCategory'])
             ->get();
 
@@ -51,7 +49,6 @@ class MtbfReportQuery
                 : match ($groupBy) {
                     'asset' => $mr->asset_id,
                     'maintenance_category' => 'uncategorised',
-                    'asset_class' => 'unclassified',
                     'size' => 'unspecified',
                     default => $mr->asset_id,
                 };
@@ -71,7 +68,6 @@ class MtbfReportQuery
                     $first->asset !== null => $dimension->resolve($first->asset, $groupBy)['label'],
                     default => match ($groupBy) {
                         'maintenance_category' => 'Uncategorised',
-                        'asset_class' => 'Unclassified',
                         'size' => 'Unspecified',
                         default => null,
                     },

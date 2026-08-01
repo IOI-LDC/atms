@@ -19,12 +19,9 @@ class PmSuppressionReportQuery
     {
         $base = PmOccurrenceSuppression::query()
             ->whereBetween('decided_at', [$from, $to])
-            ->when($filters['pm_rule_id'] ?? null, fn ($query, $pmRuleId) =>
-                $query->where('pm_rule_id', $pmRuleId))
-            ->when($filters['asset_id'] ?? null, fn ($query, $assetId) =>
-                $query->where('asset_id', $assetId))
-            ->when($filters['decision_type'] ?? null, fn ($query, $decisionType) =>
-                $query->where('decision_type', $decisionType));
+            ->when($filters['pm_rule_id'] ?? null, fn ($query, $pmRuleId) => $query->where('pm_rule_id', $pmRuleId))
+            ->when($filters['asset_id'] ?? null, fn ($query, $assetId) => $query->where('asset_id', $assetId))
+            ->when($filters['decision_type'] ?? null, fn ($query, $decisionType) => $query->where('decision_type', $decisionType));
 
         $summary = ['total_suppressions' => (clone $base)->count()];
 

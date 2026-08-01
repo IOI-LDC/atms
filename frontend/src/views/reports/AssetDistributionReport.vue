@@ -4,7 +4,7 @@ import ReportPage from '@/components/app/ReportPage.vue'
 import ReportSummaryStats from '@/components/app/ReportSummaryStats.vue'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   Select,
   SelectContent,
@@ -13,30 +13,62 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  useAssetsByLocationReport,
-  type AssetsByLocationFilters,
-} from '@/composables/useAssetsByLocationReport'
+  useAssetDistributionReport,
+  type AssetDistributionFilters,
+} from '@/composables/useAssetDistributionReport'
 import { useListOptions } from '@/composables/useListOptions'
-import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
-import { ASSET_KIND_OPTIONS, OPERATIONAL_STATUS_OPTIONS } from '@/lib/reportOptions'
-import type { AssetKind } from '@/types'
+import { toMaintenanceCategoryIdFilterOptions } from '@/lib/assetColumns'
+import {
+  ASSET_DISTRIBUTION_GROUP_BY_OPTIONS,
+  ASSET_KIND_OPTIONS,
+  OPERATIONAL_STATUS_OPTIONS,
+} from '@/lib/reportOptions'
+import type { AssetDistributionGroupBy, AssetKind } from '@/types'
 
 const ALL = '__all__'
 
-const { loading, error, summary, rows, load } = useAssetsByLocationReport()
-const { faSubclasses, loadFaSubclasses } = useListOptions()
+const { loading, error, summary, rows, groupHeaders, groupsLabel, load } =
+  useAssetDistributionReport()
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
 
-const faSubclassOptions = computed(() => toFaSubclassFilterOptions(faSubclasses.value))
+const categoryOptions = computed(() =>
+  toMaintenanceCategoryIdFilterOptions(maintenanceCategories.value),
+)
 
-const faSubclassCode = ref<string>(ALL)
+const groupBy = ref<AssetDistributionGroupBy[]>(['location'])
+
+/**
+ * Selection order is the column order, so the incoming array is reconciled
+ * rather than taken as-is: already-selected dimensions keep their position and
+ * newly-selected ones append. ToggleGroup reports its value as a plain set, so
+ * without this the order would follow the DOM instead of the user's intent.
+ */
+function onDimensionsChange(next: unknown) {
+  const selected = (Array.isArray(next) ? next : []) as AssetDistributionGroupBy[]
+  const kept = groupBy.value.filter((d) => selected.includes(d))
+  const added = selected.filter((d) => !groupBy.value.includes(d))
+  const reordered = [...kept, ...added]
+
+  // Silently refuse to drop the last dimension — there is nothing to group by
+  // without one. Ignoring the change beats disabling the chip or explaining a
+  // rule the user can simply never hit.
+  if (reordered.length > 0) {
+    groupBy.value = reordered
+  }
+}
+
+/** 1-based column position, or 0 when the dimension is not selected. */
+function dimensionPosition(dimension: AssetDistributionGroupBy): number {
+  return groupBy.value.indexOf(dimension) + 1
+}
+const categoryId = ref<string>(ALL)
 const assetKind = ref<string>(ALL)
 const operationalStatus = ref<string>(ALL)
-const includeInactive = ref(false)
 
 function applyFilters() {
-  const filters: AssetsByLocationFilters = {}
-  if (faSubclassCode.value !== ALL) {
-    filters.fa_subclass_code = faSubclassCode.value
+  const filters: AssetDistributionFilters = { group_by: groupBy.value }
+  if (categoryId.value !== ALL) {
+    filters.maintenance_category_id = categoryId.value
   }
   if (assetKind.value !== ALL) {
     filters.asset_kind = assetKind.value as AssetKind
@@ -44,40 +76,64 @@ function applyFilters() {
   if (operationalStatus.value !== ALL) {
     filters.operational_status = operationalStatus.value
   }
-  if (includeInactive.value) {
-    filters.include_inactive = true
-  }
   load(filters)
 }
 
 function clearFilters() {
-  faSubclassCode.value = ALL
+  groupBy.value = ['location']
+  categoryId.value = ALL
   assetKind.value = ALL
   operationalStatus.value = ALL
-  includeInactive.value = false
-  load()
+  load({ group_by: ['location'] })
 }
 
 onMounted(() => {
-  loadFaSubclasses()
+  loadMaintenanceCategories()
   load()
 })
 </script>
 
 <template>
   <ReportPage
-    title="Asset Distribution by Location"
-    subtitle="Where assets are and how many sit at each location (R-2)."
+    title="Asset Distribution"
+    subtitle="How assets are spread across location, maintenance category and size — tick any combination (R-2)."
   >
     <template #filters>
       <div class="report-filters">
+        <div class="report-filter report-filter-wide">
+          <Label>Group by</Label>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            :spacing="1"
+            :model-value="groupBy"
+            aria-label="Dimensions to group by"
+            @update:model-value="onDimensionsChange"
+          >
+            <ToggleGroupItem
+              v-for="opt in ASSET_DISTRIBUTION_GROUP_BY_OPTIONS"
+              :key="opt.value"
+              :value="opt.value"
+              class="report-dimension-chip"
+            >
+              {{ opt.label }}
+              <span
+                v-if="dimensionPosition(opt.value) > 0"
+                class="report-dimension-order"
+                :aria-label="`column ${dimensionPosition(opt.value)}`"
+                >{{ dimensionPosition(opt.value) }}</span
+              >
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
         <div class="report-filter">
-          <Label for="abl-class">Asset class</Label>
-          <Select v-model="faSubclassCode">
-            <SelectTrigger id="abl-class"><SelectValue /></SelectTrigger>
+          <Label for="abl-category">Maintenance category</Label>
+          <Select v-model="categoryId">
+            <SelectTrigger id="abl-category"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem :value="ALL">All classes</SelectItem>
-              <SelectItem v-for="opt in faSubclassOptions" :key="opt.value" :value="opt.value">
+              <SelectItem :value="ALL">All categories</SelectItem>
+              <SelectItem v-for="opt in categoryOptions" :key="opt.value" :value="opt.value">
                 {{ opt.label }}
               </SelectItem>
             </SelectContent>
@@ -114,16 +170,14 @@ onMounted(() => {
           </Select>
         </div>
 
-        <div class="report-filter report-filter-inline">
-          <Label for="abl-inactive" class="report-filter-check">
-            <Checkbox id="abl-inactive" v-model="includeInactive" />
-            Include deactivated assets
-          </Label>
-        </div>
-
-        <div class="report-filter-actions">
-          <Button variant="outline" :disabled="loading" @click="clearFilters">Clear</Button>
-          <Button :disabled="loading" @click="applyFilters">Apply</Button>
+        <div class="report-filter-tail">
+          <p v-if="groupBy.length > 1" class="report-filter-note">
+            Columns follow the order selected.
+          </p>
+          <div class="report-filter-actions">
+            <Button variant="outline" :disabled="loading" @click="clearFilters">Clear</Button>
+            <Button :disabled="loading" @click="applyFilters">Apply</Button>
+          </div>
         </div>
       </div>
     </template>
@@ -133,7 +187,7 @@ onMounted(() => {
         v-if="summary"
         :stats="[
           { label: 'Total assets', value: summary.total_assets },
-          { label: 'Locations', value: summary.total_locations },
+          { label: groupsLabel, value: summary.total_groups },
           { label: 'Booked', value: summary.total_booked },
         ]"
       />
@@ -154,7 +208,7 @@ onMounted(() => {
           <table class="report-table">
             <thead>
               <tr>
-                <th scope="col">Location</th>
+                <th v-for="header in groupHeaders" :key="header" scope="col">{{ header }}</th>
                 <th scope="col" class="report-table-num">Assets</th>
                 <th scope="col">Operational status</th>
                 <th scope="col">Asset kind</th>
@@ -162,9 +216,13 @@ onMounted(() => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in rows" :key="row.location_id ?? 'unassigned'">
-                <td :class="row.is_unassigned ? 'report-cell-muted' : 'report-cell-strong'">
-                  {{ row.location_name }}
+              <tr v-for="(row, index) in rows" :key="index">
+                <td
+                  v-for="group in row.groups"
+                  :key="group.dimension"
+                  :class="group.is_unassigned ? 'report-cell-muted' : 'report-cell-strong'"
+                >
+                  {{ group.label }}
                 </td>
                 <td class="report-table-num report-cell-strong">{{ row.asset_count }}</td>
                 <td>

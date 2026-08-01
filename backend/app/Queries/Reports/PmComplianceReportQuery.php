@@ -26,8 +26,7 @@ class PmComplianceReportQuery
             ->where('triggered_by_date', true)
             ->whereBetween('trigger_date', [$from->toDateString(), $to->toDateString()])
             ->when($filters['pm_rule_id'] ?? null, fn ($q, $v) => $q->where('pm_rule_id', $v))
-            ->when($filters['location_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
+            ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
             ->with(['workOrder', 'pmRule', 'asset.currentLocation', 'asset.maintenanceCategory'])
             ->get();
 

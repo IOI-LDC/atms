@@ -33,8 +33,7 @@ class TechnicianWorkloadReportQuery
         $base = WorkOrder::query()
             ->whereNotNull('work_orders.assigned_to_user_id')
             ->whereBetween('work_orders.created_at', [$from, $to])
-            ->when($filters['technician_id'] ?? null, fn ($query, $technicianId) =>
-                $query->where('work_orders.assigned_to_user_id', $technicianId));
+            ->when($filters['technician_id'] ?? null, fn ($query, $technicianId) => $query->where('work_orders.assigned_to_user_id', $technicianId));
 
         $summaryRow = (clone $base)
             ->selectRaw('COUNT(*) as total_work_orders')

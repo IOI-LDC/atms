@@ -22,12 +22,12 @@ use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardKpiController;
 use App\Http\Controllers\HealthController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ListOptionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\PmRuleController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Middleware\EnsureTokenAbilities;
 use Illuminate\Support\Facades\Route;
@@ -52,7 +52,12 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
 
     Route::prefix('reports')->group(function () {
         Route::get('/upcoming-pm', [ReportController::class, 'upcomingPm']);
-        Route::get('/assets-by-location', [ReportController::class, 'assetsByLocation']);
+        Route::get('/asset-status', [ReportController::class, 'assetStatus']);
+        Route::get('/asset-usage', [ReportController::class, 'assetUsage']);
+        Route::get('/asset-distribution', [ReportController::class, 'assetDistribution']);
+        // R-2's pre-dimension name, kept so existing links keep working; both
+        // paths hit the same dimension-aware handler.
+        Route::get('/assets-by-location', [ReportController::class, 'assetDistribution']);
         Route::get('/pm-compliance', [ReportController::class, 'pmCompliance']);
         Route::get('/overdue-pm', [ReportController::class, 'overduePm']);
         Route::get('/asset-status-distribution', [ReportController::class, 'assetStatusDistribution']);

@@ -13,7 +13,7 @@ export const partColumns: ColumnDef<Part>[] = [
     field: 'name',
     header: 'Name',
     sortable: true,
-    minWidth: 320,
+    minWidth: 700,
     // The cell renders the full identity package, so its badge values join the
     // toolbar search. `erp_part_code` is deliberately absent.
     searchFields: ['part_number', 'size', 'maintenance_category.name'],
@@ -22,17 +22,20 @@ export const partColumns: ColumnDef<Part>[] = [
     field: 'unit_of_measure',
     header: 'Unit',
     sortable: false,
+    minWidth: 100,
   },
   {
     field: 'available_quantity',
     header: 'Qty',
     sortable: true,
     type: 'number',
+    minWidth: 100,
   },
   {
     field: 'is_active',
     header: 'Status',
     sortable: false,
+    minWidth: 100,
   },
 ]
 

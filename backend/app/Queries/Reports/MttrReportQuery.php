@@ -14,13 +14,13 @@ use Carbon\Carbon;
  * duration of corrective work orders closed within the window. Only corrective
  * WOs (is_preventive = false on the linked MR) that are CLOSED with both
  * assigned_at and closed_at set are included. Groups by asset, Maintenance
- * Category, Asset Class, Size, or technician through the shared
+ * Category, Size, or technician through the shared
  * {@see AssetReportDimension} resolver.
  */
 class MttrReportQuery
 {
     /**
-     * @param  array{location_id?: ?int, fa_subclass_code?: ?string, technician_id?: ?int}  $filters
+     * @param  array{location_id?: ?int, maintenance_category_id?: ?int, technician_id?: ?int}  $filters
      * @return array{summary: array{mttr_hours: float|null, repair_count: int}, items: array<int, array{group_key: mixed, group_label: ?string, repair_count: int, mttr_hours: float|null, asset?: array<string, mixed>}>}
      */
     public function handle(Carbon $from, Carbon $to, string $groupBy, array $filters): array
@@ -30,12 +30,9 @@ class MttrReportQuery
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$from, $to])
             ->whereNotNull('assigned_at')
-            ->when($filters['location_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
-            ->when($filters['fa_subclass_code'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('fa_subclass_code', $v)))
-            ->when($filters['technician_id'] ?? null, fn ($q, $v) =>
-                $q->where('assigned_to_user_id', $v))
+            ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
+            ->when($filters['maintenance_category_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('maintenance_category_id', $v)))
+            ->when($filters['technician_id'] ?? null, fn ($q, $v) => $q->where('assigned_to_user_id', $v))
             ->with(['asset.currentLocation', 'asset.maintenanceCategory', 'assignedTo'])
             ->get(['id', 'asset_id', 'assigned_to_user_id', 'assigned_at', 'closed_at']);
 
@@ -55,7 +52,6 @@ class MttrReportQuery
                 : match ($groupBy) {
                     'asset' => $wo->asset_id,
                     'maintenance_category' => 'uncategorised',
-                    'asset_class' => 'unclassified',
                     'size' => 'unspecified',
                     default => $wo->asset_id,
                 };
@@ -74,7 +70,6 @@ class MttrReportQuery
                     $first->asset !== null => $dimension->resolve($first->asset, $groupBy)['label'],
                     default => match ($groupBy) {
                         'maintenance_category' => 'Uncategorised',
-                        'asset_class' => 'Unclassified',
                         'size' => 'Unspecified',
                         default => null,
                     },

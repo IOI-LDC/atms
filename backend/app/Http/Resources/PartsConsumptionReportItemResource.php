@@ -10,8 +10,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * One grouped Parts Consumption row.
  *
  * The part is serialized in the same shape as {@see PartIdentityResource}
- * (no ERP part code) and each row carries the Asset Class and Asset Size
- * dimensions it was aggregated under. `asset_size_key` is the non-null
+ * (no ERP part code) and each row carries the Asset Maintenance Category and
+ * Asset Size dimensions it was aggregated under. Do not confuse
+ * `asset_maintenance_category` (the asset's) with `part.maintenance_category`
+ * (the part's) — a row carries both. `asset_size_key` is the non-null
  * canonical sort key produced by the query; a missing size surfaces as
  * `Unspecified` / null.
  */
@@ -41,7 +43,7 @@ class PartsConsumptionReportItemResource extends JsonResource
                 ],
                 'available_quantity' => (float) $this->available_quantity,
             ],
-            'asset_class' => $this->asset_class,
+            'asset_maintenance_category' => $this->asset_maintenance_category,
             'asset_size' => $hasAssetSize ? Size::fromCanonical($this->asset_size_key)->format() : 'Unspecified',
             'asset_size_inches' => $hasAssetSize ? $this->asset_size_key : null,
             'total_quantity' => (float) $this->total_quantity,

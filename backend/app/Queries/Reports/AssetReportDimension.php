@@ -15,9 +15,12 @@ use InvalidArgumentException;
  *
  * Key rules:
  * - Maintenance Category: stable `code` (never the mutable display name);
- * - Asset Class: `fa_subclass_code` verbatim;
  * - Size: canonical `numeric(9,5)` string so equivalent notations collapse;
  * - Missing values land in explicit, stable null buckets.
+ *
+ * **FA Subclass is deliberately absent.** It is written by the ERP sync, so
+ * ATMS cannot govern it; reports group and filter on Maintenance Category,
+ * which is ATMS-owned. Do not reinstate an `asset_class` dimension.
  */
 final class AssetReportDimension
 {
@@ -42,10 +45,6 @@ final class AssetReportDimension
             'maintenance_category' => [
                 'key' => $asset->maintenanceCategory?->code ?? 'uncategorised',
                 'label' => $asset->maintenanceCategory?->name ?? 'Uncategorised',
-            ],
-            'asset_class' => [
-                'key' => $asset->fa_subclass_code ?: 'unclassified',
-                'label' => $asset->fa_subclass_code ?: 'Unclassified',
             ],
             'size' => [
                 'key' => $asset->size_inches?->canonical() ?? 'unspecified',

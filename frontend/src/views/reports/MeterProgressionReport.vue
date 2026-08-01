@@ -85,10 +85,6 @@ onMounted(() => {
           <DatePicker id="mp-to" v-model="toDate" :min="fromDate" :max="todayStr" />
         </div>
         <div class="report-filter">
-          <Label for="mp-asset">Asset</Label>
-          <AssetCombobox v-model="selectedAsset" input-id="mp-asset" />
-        </div>
-        <div class="report-filter">
           <Label for="mp-type">Reading type</Label>
           <Select v-model="readingTypeId">
             <SelectTrigger id="mp-type"><SelectValue /></SelectTrigger>
@@ -99,6 +95,10 @@ onMounted(() => {
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div class="report-filter report-filter-asset">
+          <Label for="mp-asset">Asset</Label>
+          <AssetCombobox v-model="selectedAsset" input-id="mp-asset" />
         </div>
         <div class="report-filter-actions">
           <Button variant="outline" :disabled="loading" @click="clearFilters">Clear</Button>
@@ -151,7 +151,8 @@ onMounted(() => {
                   </td>
                   <td>{{ row.reading_type.name }}</td>
                   <td class="report-table-num report-cell-strong">
-                    {{ row.reading_value }}<span class="report-cell-muted"> {{ row.reading_type.unit }}</span>
+                    {{ row.reading_value
+                    }}<span class="report-cell-muted"> {{ row.reading_type.unit }}</span>
                   </td>
                   <td class="report-table-num">
                     {{ row.delta != null ? row.delta : '—' }}

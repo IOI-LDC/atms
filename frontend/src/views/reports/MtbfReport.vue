@@ -17,7 +17,7 @@ import { useMtbfReport, type MtbfFilters } from '@/composables/useMtbfReport'
 import { useLocations } from '@/composables/useLocations'
 import { useListOptions } from '@/composables/useListOptions'
 import { fmtKpiDays } from '@/lib/displayHelpers'
-import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
+import { toMaintenanceCategoryIdFilterOptions } from '@/lib/assetColumns'
 import { DIMENSION_GROUP_BY_OPTIONS, reportDateWindow } from '@/lib/reportOptions'
 import type { MtbfGroupBy } from '@/types'
 
@@ -26,15 +26,17 @@ const DEFAULT = reportDateWindow(90)
 
 const { loading, error, summary, rows, load } = useMtbfReport()
 const { activeLocations, loadLocations } = useLocations()
-const { faSubclasses, loadFaSubclasses } = useListOptions()
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
 
-const faSubclassOptions = computed(() => toFaSubclassFilterOptions(faSubclasses.value))
+const categoryOptions = computed(() =>
+  toMaintenanceCategoryIdFilterOptions(maintenanceCategories.value),
+)
 
 const fromDate = ref(DEFAULT.from)
 const toDate = ref(DEFAULT.to)
 const groupBy = ref<MtbfGroupBy>('asset')
 const locationId = ref<string>(ALL)
-const faSubclassCode = ref<string>(ALL)
+const categoryId = ref<string>(ALL)
 const appliedGroupBy = ref<MtbfGroupBy>('asset')
 
 const todayStr = new Date().toLocaleDateString('en-CA')
@@ -55,8 +57,8 @@ function applyFilters() {
   if (locationId.value !== ALL) {
     filters.location_id = locationId.value
   }
-  if (faSubclassCode.value !== ALL) {
-    filters.fa_subclass_code = faSubclassCode.value
+  if (categoryId.value !== ALL) {
+    filters.maintenance_category_id = categoryId.value
   }
   appliedGroupBy.value = groupBy.value
   load(filters)
@@ -67,14 +69,14 @@ function clearFilters() {
   toDate.value = DEFAULT.to
   groupBy.value = 'asset'
   locationId.value = ALL
-  faSubclassCode.value = ALL
+  categoryId.value = ALL
   appliedGroupBy.value = 'asset'
   load({ group_by: 'asset', from: DEFAULT.from, to: DEFAULT.to })
 }
 
 onMounted(() => {
   loadLocations()
-  loadFaSubclasses()
+  loadMaintenanceCategories()
   load({ group_by: 'asset', from: DEFAULT.from, to: DEFAULT.to })
 })
 </script>
@@ -118,12 +120,12 @@ onMounted(() => {
           </Select>
         </div>
         <div class="report-filter">
-          <Label for="mtbf-class">Asset class</Label>
-          <Select v-model="faSubclassCode">
-            <SelectTrigger id="mtbf-class"><SelectValue /></SelectTrigger>
+          <Label for="mtbf-category">Maintenance category</Label>
+          <Select v-model="categoryId">
+            <SelectTrigger id="mtbf-category"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem :value="ALL">All classes</SelectItem>
-              <SelectItem v-for="o in faSubclassOptions" :key="o.value" :value="o.value">
+              <SelectItem :value="ALL">All categories</SelectItem>
+              <SelectItem v-for="o in categoryOptions" :key="o.value" :value="o.value">
                 {{ o.label }}
               </SelectItem>
             </SelectContent>

@@ -17,7 +17,11 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useAssets } from '@/composables/useAssets'
 import { useListOptions } from '@/composables/useListOptions'
 import { useIdentityFilters } from '@/composables/useIdentityFilters'
-import { assetColumns, assetFilterOptions, toFaSubclassFilterOptions } from '@/lib/assetColumns'
+import {
+  assetColumns,
+  assetFilterOptions,
+  toMaintenanceCategoryFilterOptions,
+} from '@/lib/assetColumns'
 import type { Asset } from '@/types'
 import {
   assetMaintenanceStatusClass,
@@ -31,13 +35,13 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const { all, locations, loadLocations } = useAssets()
-const { faSubclasses, loadFaSubclasses } = useListOptions()
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
 
-// Static filter options + the live FA-subclass list (readable by every role,
-// unlike the Admin/Manager-gated location filter above).
+// Static filter options + the live maintenance-category list (readable by every
+// role, unlike the Admin/Manager-gated location filter above).
 const mergedFilterOptions = computed(() => ({
   ...assetFilterOptions,
-  fa_subclass_code: toFaSubclassFilterOptions(faSubclasses.value),
+  'maintenance_category.name': toMaintenanceCategoryFilterOptions(maintenanceCategories.value),
 }))
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -62,7 +66,7 @@ watch(
     if (tab === 'all-assets') {
       all.load()
       if (auth.isAdminOrManager || auth.isLogistics) loadLocations()
-      loadFaSubclasses()
+      loadMaintenanceCategories()
     }
   },
   { immediate: true },
@@ -173,8 +177,8 @@ function goDetail(payload: { row: Asset }) {
               </AssetIdentity>
             </span>
 
-            <span v-else-if="column.field === 'fa_subclass_code'">
-              {{ row.fa_subclass_code ?? '—' }}
+            <span v-else-if="column.field === 'maintenance_category.name'">
+              {{ row.maintenance_category?.name ?? '—' }}
             </span>
 
             <span v-else-if="column.field === 'asset_kind'" :class="assetKindClass(row.asset_kind)">

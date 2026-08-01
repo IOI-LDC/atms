@@ -4,11 +4,15 @@ import { Activity, CalendarCheck, HardDrive, ListTodo, Package, Gauge } from '@l
 /**
  * Static catalogue of the ATMS Phase 1 reports (spec: `docs/atms/01-product/REPORTS.md`).
  *
- * This backs the Reports landing page only. Pass 1 (Must tier) is live:
- * R-1, R-2, R-7, R-8, R-10A, and R-14 are `available` and route to their pages
- * at `/reports/{slug}`. The rest are `planned` (endpoint not built yet) or
- * `deferred` (R-5 no downtime source D-1; R-10B/R-11/R-12 Phase 2). Deferred
- * reports are hidden by the landing page (see `plannedThemes` below).
+ * This backs the Reports landing page, which lists **every** `available`
+ * report grouped by theme — each one has a built page at `/reports/{slug}`.
+ * The rest are `planned` (endpoint not built yet) or `deferred` (R-5 no
+ * downtime source D-1; R-12 needs the Phase 2 asset-assembly model). Deferred
+ * reports are hidden by the landing page (see `plannedThemes`).
+ *
+ * Anything reporting on `maintenance_status = withdrawn` or its sub-statuses
+ * (LIH, DBR, Disposed, Scrapped) is out of ATMS scope — the ERP owns it. Two
+ * such entries were removed on 2026-07-31; do not add more.
  *
  * When a report's backend endpoint lands, flip its `status` to `available` and
  * add its route (`/reports/{slug}`). Keep this list in sync with the spec.
@@ -26,7 +30,10 @@ export interface ReportCatalogItem {
   status: ReportStatus
   /** Short reason shown for deferred/conditional reports. */
   note?: string
-  /** Pass 1 Must-tier report (R-1, R-2, R-7, R-8, R-10A, R-14). */
+  /**
+   * Historical marker: this was a Pass 1 Must-tier report. Kept as provenance
+   * only — the landing page lists every `available` report, not just these.
+   */
   pass1?: boolean
 }
 
@@ -51,10 +58,8 @@ const STATUS_META: Record<ReportStatus, ReportStatusMeta> = {
 }
 
 export function useReportCatalog(): {
-  /** Live reports, grouped by theme. */
+  /** Live reports, grouped by theme. This is what the landing page renders. */
   availableThemes: ReportThemeGroup[]
-  /** Pass 1 Must-tier reports, grouped by theme. */
-  mustTierThemes: ReportThemeGroup[]
   /** Not-yet-built reports, grouped by theme. Deferred reports are excluded. */
   plannedThemes: ReportThemeGroup[]
   statusMeta: Record<ReportStatus, ReportStatusMeta>
@@ -144,9 +149,21 @@ export function useReportCatalog(): {
       items: [
         {
           id: 'R-2',
-          slug: 'assets-by-location',
-          title: 'Asset Distribution by Location',
-          question: 'Where are our assets, and how many are at each location?',
+          slug: 'asset-distribution',
+          title: 'Asset Distribution',
+          question:
+            'How are assets spread across location, maintenance category, or size — with status, kind and booked breakdowns?',
+          status: 'available',
+          pass1: true,
+        },
+        {
+          // LDC's "Report 1". The only listing in the catalogue — every other
+          // entry is an analysis. Built 2026-07-31.
+          id: 'R-1B',
+          slug: 'asset-status',
+          title: 'Assets Status Report',
+          question:
+            'The asset register: tag, name, type, status, location, assignee, and dates — filterable and exportable.',
           status: 'available',
           pass1: true,
         },
@@ -159,22 +176,11 @@ export function useReportCatalog(): {
           status: 'available',
           pass1: true,
         },
-        {
-          id: 'R-10B',
-          slug: 'maintenance-lifecycle-status',
-          title: 'Maintenance Lifecycle Status Distribution',
-          question: 'How is the fleet split across ERP-derived maintenance lifecycle states?',
-          status: 'deferred',
-          note: 'Deferred to Phase 2 — depends on ERP-derived maintenance lifecycle state.',
-        },
-        {
-          id: 'R-11',
-          slug: 'lost-decommissioned-assets',
-          title: 'Lost / Decommissioned Assets',
-          question: 'Counts of LIH, DBR, Disposed, and Scrapped in the period.',
-          status: 'deferred',
-          note: 'Deferred to Phase 2 — depends on ERP-derived maintenance lifecycle state.',
-        },
+        // R-10B (Maintenance Lifecycle Status Distribution) and R-11 (Lost /
+        // Decommissioned Assets) were removed on 2026-07-31, not deferred.
+        // Both reported on `maintenance_status = withdrawn` and its sub-statuses
+        // (LIH, DBR, Disposed, Scrapped), which the ERP owns. ATMS does not
+        // surface, count, or report withdrawal — do not reinstate them.
         {
           id: 'R-12',
           slug: 'spare-rotor-pool',
@@ -182,6 +188,15 @@ export function useReportCatalog(): {
           question: 'Components Ready (spare) vs Installed — spare availability by category.',
           status: 'deferred',
           note: 'Deferred to Phase 2 — depends on the asset-assembly / component model (D-3).',
+        },
+        {
+          // LDC ask (2026-07-31): which asset has been used the most.
+          id: 'R-22',
+          slug: 'asset-usage',
+          title: 'Most-Used Assets',
+          question:
+            'Which assets did the most work — by operating hours, kilometres driven, or depth — grouped by maintenance category or size?',
+          status: 'available',
         },
         {
           id: 'R-13',
@@ -282,16 +297,11 @@ export function useReportCatalog(): {
     }))
     .filter((theme) => theme.items.length > 0)
 
-  // Pass 1 Must-tier reports (R-1, R-2, R-7, R-8, R-10A, R-14), grouped by theme.
-  const mustTierThemes: ReportThemeGroup[] = allThemes
-    .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.pass1 === true) }))
-    .filter((theme) => theme.items.length > 0)
-
   // Remaining themed sections show only planned reports; deferred are hidden for
   // now (kept in the catalogue data above so they're easy to reinstate later).
   const plannedThemes: ReportThemeGroup[] = allThemes
     .map((theme) => ({ ...theme, items: theme.items.filter((item) => item.status === 'planned') }))
     .filter((theme) => theme.items.length > 0)
 
-  return { availableThemes, mustTierThemes, plannedThemes, statusMeta: STATUS_META }
+  return { availableThemes, plannedThemes, statusMeta: STATUS_META }
 }

@@ -28,8 +28,7 @@ class WorkOrderBacklogReportQuery
         };
 
         $base = WorkOrder::whereIn('status', $statuses)
-            ->when($filters['location_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
+            ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
             ->when($filters['assigned_to'] ?? null, fn ($q, $v) => $q->where('assigned_to_user_id', $v))
             ->when($filters['priority'] ?? null, fn ($q, $v) => $q->where('priority', $v));
 

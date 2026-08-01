@@ -38,8 +38,7 @@ class UpcomingPmReportQuery
                 ->whereIn('trigger_type', [PmTriggerType::DATE, PmTriggerType::DATE_OR_READING]))
             ->whereHas('asset', fn ($q) => $q->where('maintenance_status', MaintenanceStatus::ENROLLED))
             ->when($filters['pm_rule_id'] ?? null, fn ($q, $v) => $q->where('pm_rule_id', $v))
-            ->when($filters['location_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
+            ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
             ->with(['asset.currentLocation', 'asset.maintenanceCategory', 'pmRule'])
             ->get();
 

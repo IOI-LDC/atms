@@ -17,16 +17,14 @@ use Illuminate\Contracts\Pagination\CursorPaginator;
 class FormResultsReportQuery
 {
     /**
-     * @param  array{asset_id?: ?int, fa_subclass_code?: ?string, field_uuid?: ?string}  $filters
+     * @param  array{asset_id?: ?int, maintenance_category_id?: ?int, field_uuid?: ?string}  $filters
      * @return array{summary: array<string, int|float|null>, paginator: CursorPaginator}
      */
     public function handle(int $perPage, Carbon $from, Carbon $to, array $filters): array
     {
         $base = WorkOrderFormField::whereHas('workOrderForm.workOrder', fn ($q) => $q->whereBetween('created_at', [$from, $to]))
-            ->when($filters['asset_id'] ?? null, fn ($q, $v) =>
-                $q->whereHas('workOrderForm.workOrder', fn ($sub) => $sub->where('asset_id', $v)))
-            ->when($filters['fa_subclass_code'] ?? null, fn ($q, $v) =>
-                $q->whereHas('workOrderForm.workOrder.asset', fn ($sub) => $sub->where('fa_subclass_code', $v)))
+            ->when($filters['asset_id'] ?? null, fn ($q, $v) => $q->whereHas('workOrderForm.workOrder', fn ($sub) => $sub->where('asset_id', $v)))
+            ->when($filters['maintenance_category_id'] ?? null, fn ($q, $v) => $q->whereHas('workOrderForm.workOrder.asset', fn ($sub) => $sub->where('maintenance_category_id', $v)))
             ->when($filters['field_uuid'] ?? null, fn ($q, $v) => $q->where('uuid', $v));
 
         $summaryRow = (clone $base)
@@ -85,7 +83,8 @@ class FormResultsReportQuery
         // Paginated rows with eager-loaded relations for context
         $paginator = (clone $base)
             ->with([
-                'workOrderForm.workOrder.asset' => fn ($q) => $q->select('id', 'name', 'erp_asset_code', 'fa_subclass_code'),
+                'workOrderForm.workOrder.asset' => fn ($q) => $q->select('id', 'name', 'erp_asset_code', 'maintenance_category_id'),
+                'workOrderForm.workOrder.asset.maintenanceCategory' => fn ($q) => $q->select('id', 'code', 'name'),
             ])
             ->orderBy('uuid')
             ->orderBy('id')

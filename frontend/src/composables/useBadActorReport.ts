@@ -8,7 +8,7 @@ export interface BadActorFilters {
   to?: string
   group_by?: MtbfGroupBy
   location_id?: string | number
-  fa_subclass_code?: string
+  maintenance_category_id?: string | number
   limit?: string | number
 }
 
@@ -38,8 +38,8 @@ export function useBadActorReport() {
       if (filters.location_id) {
         query.location_id = filters.location_id
       }
-      if (filters.fa_subclass_code) {
-        query.fa_subclass_code = filters.fa_subclass_code
+      if (filters.maintenance_category_id) {
+        query.maintenance_category_id = filters.maintenance_category_id
       }
       if (filters.limit) {
         query.limit = filters.limit

@@ -21,7 +21,7 @@ import {
   type PartsConsumptionFilters,
 } from '@/composables/usePartsConsumptionReport'
 import { useListOptions } from '@/composables/useListOptions'
-import { toFaSubclassFilterOptions } from '@/lib/assetColumns'
+import { toMaintenanceCategoryIdFilterOptions } from '@/lib/assetColumns'
 import { reportDateWindow } from '@/lib/reportOptions'
 
 const ALL = '__all__'
@@ -29,15 +29,17 @@ const DEFAULT = reportDateWindow(90)
 
 const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } =
   usePartsConsumptionReport()
-const { faSubclasses, loadFaSubclasses } = useListOptions()
+const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
 
-const faSubclassOptions = computed(() => toFaSubclassFilterOptions(faSubclasses.value))
+const categoryOptions = computed(() =>
+  toMaintenanceCategoryIdFilterOptions(maintenanceCategories.value),
+)
 
 const fromDate = ref(DEFAULT.from)
 const toDate = ref(DEFAULT.to)
 const selectedPart = ref<{ id: number; label: string } | null>(null)
 const selectedAsset = ref<{ id: number; label: string } | null>(null)
-const faSubclassCode = ref<string>(ALL)
+const categoryId = ref<string>(ALL)
 
 const todayStr = new Date().toLocaleDateString('en-CA')
 const dateRangeError = computed(() =>
@@ -73,8 +75,8 @@ function applyFilters() {
   if (selectedAsset.value) {
     filters.asset_id = selectedAsset.value.id
   }
-  if (faSubclassCode.value !== ALL) {
-    filters.fa_subclass_code = faSubclassCode.value
+  if (categoryId.value !== ALL) {
+    filters.maintenance_category_id = categoryId.value
   }
   load(filters)
 }
@@ -84,12 +86,12 @@ function clearFilters() {
   toDate.value = DEFAULT.to
   selectedPart.value = null
   selectedAsset.value = null
-  faSubclassCode.value = ALL
+  categoryId.value = ALL
   load({ from: DEFAULT.from, to: DEFAULT.to })
 }
 
 onMounted(() => {
-  loadFaSubclasses()
+  loadMaintenanceCategories()
   load({ from: DEFAULT.from, to: DEFAULT.to })
 })
 </script>
@@ -114,20 +116,20 @@ onMounted(() => {
           <PartCombobox v-model="selectedPart" input-id="pc-part" />
         </div>
         <div class="report-filter">
-          <Label for="pc-asset">Asset</Label>
-          <AssetCombobox v-model="selectedAsset" input-id="pc-asset" />
-        </div>
-        <div class="report-filter">
-          <Label for="pc-class">Asset class</Label>
-          <Select v-model="faSubclassCode">
-            <SelectTrigger id="pc-class"><SelectValue /></SelectTrigger>
+          <Label for="pc-category">Maintenance category</Label>
+          <Select v-model="categoryId">
+            <SelectTrigger id="pc-category"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem :value="ALL">All classes</SelectItem>
-              <SelectItem v-for="o in faSubclassOptions" :key="o.value" :value="o.value">
+              <SelectItem :value="ALL">All categories</SelectItem>
+              <SelectItem v-for="o in categoryOptions" :key="o.value" :value="o.value">
                 {{ o.label }}
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div class="report-filter report-filter-asset">
+          <Label for="pc-asset">Asset</Label>
+          <AssetCombobox v-model="selectedAsset" input-id="pc-asset" />
         </div>
         <div class="report-filter-actions">
           <Button variant="outline" :disabled="loading" @click="clearFilters">Clear</Button>
@@ -161,7 +163,7 @@ onMounted(() => {
               <thead>
                 <tr>
                   <th scope="col">Part</th>
-                  <th scope="col">Asset class</th>
+                  <th scope="col">Maintenance category</th>
                   <th scope="col">Asset size</th>
                   <th scope="col" class="report-table-num">Quantity</th>
                   <th scope="col" class="report-table-num">Line items</th>
@@ -171,12 +173,12 @@ onMounted(() => {
               <tbody>
                 <tr
                   v-for="row in rows"
-                  :key="`${row.part_id}|${row.asset_class}|${row.asset_size_inches ?? 'unspecified'}`"
+                  :key="`${row.part_id}|${row.asset_maintenance_category}|${row.asset_size_inches ?? 'unspecified'}`"
                 >
                   <td>
                     <PartIdentity :part="row.part" stacked />
                   </td>
-                  <td class="report-cell-muted">{{ row.asset_class }}</td>
+                  <td class="report-cell-muted">{{ row.asset_maintenance_category }}</td>
                   <td class="report-cell-muted">{{ row.asset_size }}</td>
                   <td class="report-table-num report-cell-strong">
                     {{ row.total_quantity

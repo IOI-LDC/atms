@@ -675,11 +675,45 @@ export interface OperationalStatusDistributionReport {
   items: OperationalStatusDistributionRow[]
 }
 
-// R-2 Asset Distribution by Location
-export interface AssetsByLocationRow {
-  location_id: number | null
-  location_name: string | null // "Unassigned" when is_unassigned
+// R-22 Most-Used Assets (group_by: asset | maintenance_category | size)
+export type AssetUsageGroupBy = 'asset' | 'maintenance_category' | 'size'
+export interface AssetUsageRow {
+  /** Asset id, category id, or canonical size. Null = the catch-all bucket. */
+  group_key: number | string | null
+  group_label: string | null
+  /** Only present on grouped (non-asset) rows. */
+  is_unassigned?: boolean
+  /** Accumulated usage in the window, in `reading_type.unit`. */
+  usage: number
+  asset_count: number
+  reading_count: number
+  /** Per-asset rows only — where the meter currently stands. */
+  latest_reading?: number
+  last_reading_at?: string | null
+  asset?: AssetIdentity | null
+}
+export interface AssetUsageReport {
+  /** Units differ per type, so the unit travels with the numbers. */
+  reading_type: { id: number; name: string; unit: string | null }
+  group_by: AssetUsageGroupBy
+  summary: { total_usage: number; assets_with_usage: number; unit: string | null }
+  items: AssetUsageRow[]
+}
+
+// R-2 Asset Distribution (group_by: location | maintenance_category | size)
+export type AssetDistributionGroupBy = 'location' | 'maintenance_category' | 'size'
+/** One grouped dimension's value on a distribution row. */
+export interface AssetDistributionGroup {
+  dimension: AssetDistributionGroupBy
+  /** Location id, category id, or canonical size string. Null = catch-all bucket. */
+  key: number | string | null
+  /** "Unassigned" / "Uncategorised" / "Unspecified" when `is_unassigned`. */
+  label: string | null
   is_unassigned: boolean
+}
+export interface AssetDistributionRow {
+  /** One entry per requested dimension, in the order requested. */
+  groups: AssetDistributionGroup[]
   asset_count: number
   by_operational_status: {
     active: number
@@ -690,9 +724,12 @@ export interface AssetsByLocationRow {
   by_asset_kind: { standalone: number; package: number; component: number }
   booked_count: number
 }
-export interface AssetsByLocationReport {
-  summary: { total_assets: number; total_locations: number; total_booked: number }
-  items: AssetsByLocationRow[]
+export interface AssetDistributionReport {
+  /** Dimensions actually grouped on, in column order. */
+  group_by: AssetDistributionGroupBy[]
+  /** `total_groups` excludes rows with any null bucket — visible, but not actionable. */
+  summary: { total_assets: number; total_groups: number; total_booked: number }
+  items: AssetDistributionRow[]
 }
 
 // R-7 PM Compliance (group_by: rule | asset | location)
@@ -740,6 +777,27 @@ export interface OverduePmItem extends MaintenanceRequest {
   days_overdue: number
   bucket: AgingBucket
 }
+// R-1 Assets Status Report — flat asset register (cursor-paginated).
+export interface AssetStatusReportItem {
+  id: number
+  asset_tag: string | null
+  name: string
+  asset_kind: string | null
+  maintenance_category?: string | null
+  operational_status: string | null
+  is_booked: boolean
+  location?: string | null
+  /** Technician on the asset's open work order — assets have no custodian field. */
+  assigned_to: string | null
+  open_work_order_number: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+export interface AssetStatusReportPage extends CursorPage<AssetStatusReportItem> {
+  /** Counts over the same filtered set as the rows, so the two reconcile. */
+  summary: { total: number; by_status: Record<string, number>; booked: number }
+}
+
 export interface OverduePmReportPage extends CursorPage<OverduePmItem> {
   // Facet context (D8): all 4 buckets over the scoped set, independent of the
   // `bucket` row filter. `total` is the scoped grand total.
@@ -765,8 +823,8 @@ export interface WoBacklogReportPage extends CursorPage<WoBacklogItem> {
 // Explicit report dimensions approved in the 2026-07-30 design. The legacy
 // `category` value is rejected by the API with a 422.
 
-export type MtbfGroupBy = 'asset' | 'maintenance_category' | 'asset_class' | 'size' | 'location'
-export type MttrGroupBy = 'asset' | 'maintenance_category' | 'asset_class' | 'size' | 'technician'
+export type MtbfGroupBy = 'asset' | 'maintenance_category' | 'size' | 'location'
+export type MttrGroupBy = 'asset' | 'maintenance_category' | 'size' | 'technician'
 
 // R-3 MTBF / Failure Rate by dimension
 export interface MtbfRow {
@@ -828,7 +886,8 @@ export interface PartsConsumptionItem {
   part_id: number
   /** Nested Part Identity — same shape as PartIdentityResource. */
   part: PartIdentity
-  asset_class: string
+  /** The *asset's* Maintenance Category — not `part.maintenance_category`. */
+  asset_maintenance_category: string
   /** O&G notation, or `Unspecified` when the asset has no size. */
   asset_size: string
   /** Canonical inches, or null when the asset has no size. */
@@ -1001,7 +1060,7 @@ export interface FormResultRow {
   post_value: string | null
   notes: string | null
   work_order: { id: number; number: string }
-  asset: (AssetIdentity & { asset_class: string | null }) | null
+  asset: (AssetIdentity & { maintenance_category: string | null }) | null
 }
 export interface FormResultsReportPage extends CursorPage<FormResultRow> {
   summary: {

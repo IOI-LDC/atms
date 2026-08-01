@@ -2495,6 +2495,7 @@
 
 .app-data-table-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.875rem;
   color: var(--foreground);
@@ -2536,6 +2537,9 @@
 .app-data-table-sort-btn {
   display: flex;
   align-items: center;
+  /* Overrides the Button primitive's `justify-center` — header labels must sit
+     flush left, matching the non-sortable columns. */
+  justify-content: flex-start;
   gap: 0.375rem;
   width: 100%;
   padding: 0;
@@ -2582,6 +2586,8 @@
 .app-data-table-cell {
   padding: 0.625rem 0.85rem;
   vertical-align: middle;
+  overflow: hidden;
+  overflow-wrap: break-word;
 }
 .app-data-table-th-center {
   text-align: center;
@@ -6257,6 +6263,21 @@
   gap: 0.5rem;
   margin-left: auto;
 }
+
+/* Caveat sitting under a filter bar — states what a control actually does when
+   the obvious reading would be wrong (e.g. a date range that filters
+   created/updated timestamps rather than reconstructing historical status). */
+.report-filter-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.report-filter-note strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
 /* Checkbox-style filter — label + checkbox on one line, bottom-aligned. */
 .report-filter-inline {
   justify-content: flex-end;
@@ -6269,6 +6290,90 @@
   font-weight: 400;
   cursor: pointer;
   padding-bottom: 0.375rem;
+}
+
+/* The asset picker always sits last in a filter bar and takes whatever width is
+   left over. Asset names are long and carry Serial Number / Size / Category
+   badges, so at the 11rem default both the input and its dropdown truncate to
+   the point of being unusable — the dropdown panel inherits the trigger width.
+   Growing rather than fixing the width keeps it honest on narrow screens. */
+.report-filter-asset {
+  flex: 1 1 22rem;
+  min-width: 22rem;
+}
+
+/* A filter that holds several controls (e.g. a multi-select dimension group),
+   so it is allowed more room than the 11rem single-control default. */
+.report-filter-wide {
+  min-width: 20rem;
+}
+
+/* Stacks a caption above the Clear/Apply pair at the end of a filter bar.
+   `.report-filter-actions` stays a plain button row so every other report is
+   unaffected; only its auto margin moves up to this wrapper. */
+.report-filter-tail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.report-filter-tail .report-filter-actions {
+  margin-left: 0;
+}
+.report-filter-tail .report-filter-note {
+  margin: 0;
+  text-align: right;
+}
+
+/* Selectable dimension chip. The shared Toggle primitive marks its on-state
+   with a flat grey fill; these use a tinted wash and coloured text instead —
+   enough to read as selected at a glance without the filter bar turning into a
+   block of solid colour. */
+.report-dimension-chip {
+  height: 2rem;
+  padding: 0 0.7rem;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.report-dimension-chip:hover {
+  background: color-mix(in oklab, var(--muted) 60%, transparent);
+  color: var(--foreground);
+}
+.report-dimension-chip[data-state='on'] {
+  background: color-mix(in oklab, var(--primary) 7%, transparent);
+  border-color: color-mix(in oklab, var(--primary) 32%, var(--border));
+  color: var(--primary);
+}
+.report-dimension-chip[data-state='on']:hover {
+  background: color-mix(in oklab, var(--primary) 11%, transparent);
+  color: var(--primary);
+}
+
+/* Column-position badge inside a selected chip. Tinted from `currentColor` so
+   it needs no state-specific rule, and stays quiet enough to read as a
+   secondary mark rather than a second label. */
+.report-dimension-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, currentColor 15%, transparent);
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 /* Summary strip */
@@ -6648,12 +6753,24 @@
    widths rather than the labels, so SPN and CODE tightened from 32/28mm.
    Landscape A4 gives ~281mm usable: 10 + 18 + 12 + 26 + 26 = 92mm fixed,
    leaving ~189mm for the description — needed, at part names up to 103 chars. */
-.pr-w-item { width: 10mm; }
-.pr-w-desc { width: auto; }
-.pr-w-size { width: 18mm; }
-.pr-w-qty { width: 12mm; }
-.pr-w-pn { width: 26mm; }
-.pr-w-erp { width: 26mm; }
+.pr-w-item {
+  width: 10mm;
+}
+.pr-w-desc {
+  width: auto;
+}
+.pr-w-size {
+  width: 18mm;
+}
+.pr-w-qty {
+  width: 12mm;
+}
+.pr-w-pn {
+  width: 26mm;
+}
+.pr-w-erp {
+  width: 26mm;
+}
 
 /* Narrow columns hold short centred values; the table's cell padding would
    crowd them. */
@@ -6816,9 +6933,15 @@
   gap: 1rem;
 }
 
-.dash-span-4 { grid-column: span 4; }
-.dash-span-6 { grid-column: span 6; }
-.dash-span-12 { grid-column: span 12; }
+.dash-span-4 {
+  grid-column: span 4;
+}
+.dash-span-6 {
+  grid-column: span 6;
+}
+.dash-span-12 {
+  grid-column: span 12;
+}
 
 .dash-card {
   display: flex;
@@ -6875,8 +6998,12 @@
   background-color: var(--border);
 }
 
-.dash-dot-critical { background-color: var(--destructive); }
-.dash-dot-warning { background-color: var(--warning); }
+.dash-dot-critical {
+  background-color: var(--destructive);
+}
+.dash-dot-warning {
+  background-color: var(--warning);
+}
 
 .dash-attn-body {
   display: flex;
@@ -6974,11 +7101,21 @@
   background-color: var(--muted);
 }
 
-.dash-swatch-deployed { background-color: var(--success); }
-.dash-swatch-idle { background-color: color-mix(in oklch, var(--info) 45%, transparent); }
-.dash-swatch-maintenance { background-color: var(--warning); }
-.dash-swatch-unlocated { background-color: var(--border); }
-.dash-swatch-unclassified { background-color: color-mix(in oklch, var(--destructive) 40%, transparent); }
+.dash-swatch-deployed {
+  background-color: var(--success);
+}
+.dash-swatch-idle {
+  background-color: color-mix(in oklch, var(--info) 45%, transparent);
+}
+.dash-swatch-maintenance {
+  background-color: var(--warning);
+}
+.dash-swatch-unlocated {
+  background-color: var(--border);
+}
+.dash-swatch-unclassified {
+  background-color: color-mix(in oklch, var(--destructive) 40%, transparent);
+}
 
 /* ── Metric triads (reliability / process) ───────────────────────── */
 
@@ -7189,6 +7326,13 @@ a.dash-row:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.dash-dot-active { background-color: var(--success); }
-.dash-dot-muted { background-color: var(--muted-foreground); opacity: 0.45; }
-.dash-dot-info { background-color: var(--info); }
+.dash-dot-active {
+  background-color: var(--success);
+}
+.dash-dot-muted {
+  background-color: var(--muted-foreground);
+  opacity: 0.45;
+}
+.dash-dot-info {
+  background-color: var(--info);
+}

@@ -138,7 +138,13 @@ function buildUrl(path: string, params?: Record<string, unknown>): string {
   if (!params) return path
   const qs = Object.entries(params)
     .filter(([, v]) => v != null && v !== '')
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .flatMap(([k, v]) =>
+      // Arrays repeat as `key[]=a&key[]=b` so Laravel parses them as an array.
+      // Joining them into one value would arrive as the string "a,b".
+      Array.isArray(v)
+        ? v.map((item) => `${encodeURIComponent(k)}[]=${encodeURIComponent(String(item))}`)
+        : [`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`],
+    )
     .join('&')
   return qs ? `${path}?${qs}` : path
 }
