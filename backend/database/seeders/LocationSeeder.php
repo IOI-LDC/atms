@@ -12,7 +12,10 @@ class LocationSeeder extends Seeder
         $locations = [
             ['name' => 'Workshop',       'type' => 'workshop',      'code' => 'WS',   'description' => 'Main workshop facility'],
             ['name' => 'Main Yard',       'type' => 'yard',          'code' => 'MY',   'description' => 'Primary equipment yard'],
-            ['name' => 'Workshop Yard',   'type' => 'workshop_yard', 'code' => 'WSY',  'description' => 'Workshop yard area'],
+            // `yard`, not `workshop_yard`: the latter is not a LocationType, so
+            // AssetDeployment cannot bucket it and anything parked here drops out
+            // of every utilisation figure. Production already holds `yard` here.
+            ['name' => 'Workshop Yard',   'type' => 'yard',          'code' => 'WSY',  'description' => 'Workshop yard area'],
             ['name' => 'Well X',          'type' => 'well_site',     'code' => 'WX',   'description' => 'Well X drilling site'],
             ['name' => 'Well Y',          'type' => 'well_site',     'code' => 'WY',   'description' => 'Well Y drilling site'],
             ['name' => 'Rig A',           'type' => 'rig',           'code' => 'RA',   'description' => 'Rig A location'],

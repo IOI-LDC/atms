@@ -82,6 +82,8 @@ class WorkOrderFormCompletionGateTest extends TestCase
             'name' => 'Gated Asset',
             'is_active' => true,
             'maintenance_category_id' => $this->category($categoryCode)->id,
+            // Work orders start only at a workshop or yard — see StartWorkOrder.
+            'current_location_id' => $this->workshopLocation()->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);
@@ -201,6 +203,8 @@ class WorkOrderFormCompletionGateTest extends TestCase
             'name' => 'Formless',
             'is_active' => true,
             'maintenance_category_id' => $this->category('NOFORM')->id,
+            // Work orders start only at a workshop or yard — see StartWorkOrder.
+            'current_location_id' => $this->workshopLocation()->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);

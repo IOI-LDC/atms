@@ -17,7 +17,8 @@ class RecordMeterReading
         string $source,
         ?int $enteredByUserId = null,
         ?int $maintenanceRequestId = null,
-        ?string $notes = null
+        ?string $notes = null,
+        ?int $workOrderId = null
     ): AssetMeterReading {
         $logger = app(AuditLogger::class);
         $before = [];
@@ -31,6 +32,7 @@ class RecordMeterReading
             'source' => $source,
             'entered_by_user_id' => $enteredByUserId,
             'maintenance_request_id' => $maintenanceRequestId,
+            'work_order_id' => $workOrderId,
             'notes' => $notes,
         ]);
 

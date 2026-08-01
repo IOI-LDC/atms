@@ -80,6 +80,8 @@ class BulkUpdateWorkOrderFormFieldValuesTest extends TestCase
             'name' => 'Bulk Asset',
             'is_active' => true,
             'maintenance_category_id' => $category->id,
+            // Work orders start only at a workshop or yard — see StartWorkOrder.
+            'current_location_id' => $this->workshopLocation()->id,
         ]);
 
         $mr = MaintenanceRequest::create([

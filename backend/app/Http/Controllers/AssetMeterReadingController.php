@@ -9,6 +9,7 @@ use App\Actions\Assets\UpdateMeterReading;
 use App\Models\Asset;
 use App\Models\AssetMeterReading;
 use App\Models\UsageReadingType;
+use App\Models\WorkOrder;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,9 @@ class AssetMeterReadingController extends Controller
             'reading_at' => ['required', 'date'],
             'source' => ['required', 'string', 'in:user,manual'],
             'notes' => ['nullable', 'string'],
+            // Set when the reading is taken from a work order page, so that page
+            // can tell its own readings apart from the asset's prior history.
+            'work_order_id' => ['nullable', 'integer', 'exists:work_orders,id'],
         ]);
 
         if (! $asset->is_active) {
@@ -38,6 +42,11 @@ class AssetMeterReadingController extends Controller
             return response()->json(['message' => 'Cannot use an inactive reading type.'], 422);
         }
 
+        if (isset($validated['work_order_id'])
+            && WorkOrder::where('id', $validated['work_order_id'])->value('asset_id') !== $asset->id) {
+            return response()->json(['message' => 'That work order belongs to a different asset.'], 422);
+        }
+
         $reading = $action->execute(
             $asset,
             $readingType,
@@ -46,7 +55,8 @@ class AssetMeterReadingController extends Controller
             $validated['source'],
             $request->user()->id,
             null,
-            $validated['notes'] ?? null
+            $validated['notes'] ?? null,
+            $validated['work_order_id'] ?? null
         );
 
         return response()->json(['message' => 'Meter reading recorded.', 'data' => $reading], 201);

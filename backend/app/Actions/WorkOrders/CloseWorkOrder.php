@@ -2,7 +2,6 @@
 
 namespace App\Actions\WorkOrders;
 
-use App\Actions\WorkOrders\ApplyWorkOrderAssetStatusTransition;
 use App\Enums\OperationalStatus;
 use App\Enums\PmTriggerType;
 use App\Enums\RoleCode;
@@ -20,9 +19,13 @@ use Illuminate\Support\Facades\Notification;
 
 class CloseWorkOrder
 {
-    public function execute(WorkOrder $workOrder, int $closedByUserId, ?bool $isFailureOverride = null): WorkOrder
-    {
-        return DB::transaction(function () use ($workOrder, $closedByUserId, $isFailureOverride) {
+    public function execute(
+        WorkOrder $workOrder,
+        int $closedByUserId,
+        ?bool $isFailureOverride = null,
+        ?OperationalStatus $assetStatus = null
+    ): WorkOrder {
+        return DB::transaction(function () use ($workOrder, $closedByUserId, $isFailureOverride, $assetStatus) {
             $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();
 
@@ -39,11 +42,12 @@ class CloseWorkOrder
             $after = $workOrder->fresh()->toArray();
             $logger->log('work_order.closed', $locked, $before, $after);
 
-            // Revert the asset to ACTIVE on close - but only from a workflow
-            // state (DOWN / UNDER_MAINTENANCE). Never un-retire INACTIVE and
-            // no-op if already ACTIVE.
+            // The closer's explicit asset-status choice wins, defaulting to
+            // ACTIVE when absent (the original behaviour). Close is a workflow
+            // event, never an asset-management one: an INACTIVE (retired)
+            // asset is never touched, and a no-op when already at the target.
             app(ApplyWorkOrderAssetStatusTransition::class)
-                ->execute($locked, OperationalStatus::ACTIVE, [OperationalStatus::ACTIVE, OperationalStatus::INACTIVE]);
+                ->execute($locked, $assetStatus ?? OperationalStatus::ACTIVE, [OperationalStatus::INACTIVE]);
 
             $mr = $locked->maintenanceRequest;
 

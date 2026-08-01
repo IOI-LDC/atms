@@ -22,6 +22,7 @@ use App\Exceptions\WorkOrderFormIncompleteException;
 use App\Http\Resources\AssetResource;
 use App\Http\Resources\WorkOrderFormResource;
 use App\Http\Resources\WorkOrderResource;
+use App\Models\Location;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Queries\WorkOrders\WorkOrderIndexQuery;
@@ -47,7 +48,7 @@ class WorkOrderController extends Controller
         // Only load the (relatively heavy) form relations for roles that can
         // see the form — avoids 2-3 wasted queries for Logistics/Requester,
         // matching the Resource's $canSeeForm gate.
-        $loads = ['asset', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments'];
+        $loads = ['asset', 'asset.currentLocation', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments'];
         $canSeeForm = $request->user()->hasRole(RoleCode::ADMINISTRATOR)
             || $request->user()->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $request->user()->hasRole(RoleCode::TECHNICIAN);
@@ -79,12 +80,22 @@ class WorkOrderController extends Controller
         }
     }
 
-    public function start(WorkOrder $workOrder, StartWorkOrder $action): JsonResponse
+    public function start(Request $request, WorkOrder $workOrder, StartWorkOrder $action): JsonResponse
     {
         Gate::authorize('start', $workOrder);
 
+        // Optional here, but required by the action when the asset is not already
+        // at a workshop or yard — see StartWorkOrder::resolveWorkLocation().
+        $validated = $request->validate([
+            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
+        ]);
+
+        $location = isset($validated['location_id'])
+            ? Location::find($validated['location_id'])
+            : null;
+
         try {
-            $wo = $action->execute($workOrder);
+            $wo = $action->execute($workOrder, $location, $request->user()->id);
 
             return response()->json(['message' => 'Work order started.', 'data' => $wo]);
         } catch (\DomainException $e) {
@@ -137,15 +148,23 @@ class WorkOrderController extends Controller
 
         // Optional ground-truth override: on close the manager may revise the
         // MR's is_failure after inspecting the asset. Absent = keep existing value.
+        // The manager also decides the asset's next operational status; absent
+        // falls back to ACTIVE (the pre-picker behaviour).
         $validated = $request->validate([
             'is_failure' => ['nullable', 'boolean'],
+            'asset_status' => ['nullable', 'string', 'in:down,active'],
         ]);
+
+        $assetStatus = isset($validated['asset_status'])
+            ? OperationalStatus::from($validated['asset_status'])
+            : null;
 
         try {
             $wo = $action->execute(
                 $workOrder,
                 $request->user()->id,
-                array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null
+                array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null,
+                $assetStatus,
             );
 
             return response()->json(['message' => 'Work order closed.', 'data' => $wo]);

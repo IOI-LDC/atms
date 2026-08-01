@@ -70,6 +70,8 @@ class ShowWorkOrderFormTest extends TestCase
             'name' => 'Show Asset',
             'is_active' => true,
             'maintenance_category_id' => $this->category($categoryCode)->id,
+            // Work orders start only at a workshop or yard — see StartWorkOrder.
+            'current_location_id' => $this->workshopLocation()->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);
@@ -123,6 +125,8 @@ class ShowWorkOrderFormTest extends TestCase
             'name' => 'No Form',
             'is_active' => true,
             'maintenance_category_id' => $this->category('SHOW3')->id,
+            // Work orders start only at a workshop or yard — see StartWorkOrder.
+            'current_location_id' => $this->workshopLocation()->id,
         ]);
 
         $requester = $this->createUser(RoleCode::REQUESTER);

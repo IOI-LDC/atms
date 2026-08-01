@@ -3,6 +3,7 @@
 namespace Tests\Feature\WorkOrders;
 
 use App\Enums\MaintenanceRequestStatus;
+use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
@@ -39,6 +40,10 @@ class WorkOrderLifecycleTest extends TestCase
             'erp_asset_code' => 'AST-WO-'.uniqid(),
             'name' => 'Test Asset',
             'is_active' => true,
+            // Starting a work order requires the asset to be at a workshop or
+            // yard (see StartWorkOrder); these tests are about the lifecycle,
+            // not the location guard, so put it somewhere valid up front.
+            'current_location_id' => $this->workshopLocation()->id,
         ]);
     }
 
@@ -690,5 +695,95 @@ class WorkOrderLifecycleTest extends TestCase
             'id' => $mr->id,
             'is_failure' => null,
         ]);
+    }
+
+    // ── Close-time asset status choice ──────────────────────────────────────
+
+    private function assignStartComplete(WorkOrder $wo, User $manager, User $tech): void
+    {
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+    }
+
+    public function test_close_with_asset_status_down_keeps_asset_down(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+        $this->assignStartComplete($wo, $manager, $tech);
+
+        // The closer inspected the asset and reports it is still faulty.
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'asset_status' => 'down',
+        ])->assertOk();
+
+        $this->assertEquals('down', $wo->asset->fresh()->operational_status->value);
+    }
+
+    public function test_close_with_asset_status_active_marks_asset_active(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+        $this->assignStartComplete($wo, $manager, $tech);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'asset_status' => 'active',
+        ])->assertOk();
+
+        $this->assertEquals('active', $wo->asset->fresh()->operational_status->value);
+    }
+
+    public function test_close_without_asset_status_reverts_asset_to_active(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+        $this->assignStartComplete($wo, $manager, $tech);
+
+        // No asset_status in the payload — the default (active) must apply.
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $this->assertEquals('active', $wo->asset->fresh()->operational_status->value);
+    }
+
+    public function test_close_never_un_retires_an_inactive_asset(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+        $this->assignStartComplete($wo, $manager, $tech);
+
+        // The asset was retired while the work ran (e.g. scrapped) — closing the
+        // work order must not silently un-retire it, even on an explicit choice.
+        $wo->asset->update(['operational_status' => OperationalStatus::INACTIVE]);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'asset_status' => 'active',
+        ])->assertOk();
+
+        $this->assertEquals('inactive', $wo->asset->fresh()->operational_status->value);
+    }
+
+    public function test_close_rejects_asset_statuses_outside_down_and_active(): void
+    {
+        $requester = $this->createUser(RoleCode::REQUESTER);
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $wo = $this->createApprovedWorkOrder($requester, $manager);
+        $this->assignStartComplete($wo, $manager, $tech);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'asset_status' => 'inactive',
+        ])->assertStatus(422);
+
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'asset_status' => 'broken',
+        ])->assertStatus(422);
     }
 }

@@ -3376,6 +3376,43 @@
   color: oklch(0.48 0.008 260);
 }
 
+/* Location name followed by its type badge, in a rail detail field. Wraps as a
+   unit so a long name never strands the badge on its own line. */
+.asset-location-value {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+/* ── Work order reading groups ────────────────────────────────────────────── */
+/* The work order page separates readings taken on the job from the asset's
+   earlier history. The heading is quiet — it is a divider, not a section title,
+   and the card header above it already says "Updated readings". */
+.reading-group + .reading-group {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.reading-group-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.reading-history-toggle {
+  padding-inline: 0;
+  color: var(--muted-foreground);
+}
+.reading-history-toggle svg {
+  transition: transform 150ms ease;
+}
+.reading-history-toggle svg.is-open {
+  transform: rotate(90deg);
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    Lists & Dropdowns — left rail + table panel
    ═══════════════════════════════════════════════════════════════════ */

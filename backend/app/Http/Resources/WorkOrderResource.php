@@ -34,9 +34,23 @@ class WorkOrderResource extends JsonResource
             // The shared identity shape plus operational_status, which the WO
             // detail "Asset status" card needs so it reflects updates made via
             // POST /work-orders/{id}/asset-status.
+            //
+            // current_location carries `type` as well as the name, because the
+            // page uses it for more than display: the Start button reads it to
+            // decide whether the asset must be moved to a workshop/yard first
+            // (see StartWorkOrder). AssetResource's location fragment is only
+            // {id, name}, which is not enough for that.
             'asset' => $this->whenLoaded('asset', fn () => array_merge(
                 (new AssetIdentityResource($this->asset))->toArray($request),
-                ['operational_status' => $this->asset?->operational_status?->value],
+                [
+                    'operational_status' => $this->asset?->operational_status?->value,
+                    'current_location' => $this->asset?->currentLocation === null ? null : [
+                        'id' => $this->asset->currentLocation->id,
+                        'name' => $this->asset->currentLocation->name,
+                        'code' => $this->asset->currentLocation->code,
+                        'type' => $this->asset->currentLocation->type,
+                    ],
+                ],
             )),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

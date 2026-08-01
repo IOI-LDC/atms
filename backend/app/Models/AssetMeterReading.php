@@ -18,6 +18,7 @@ class AssetMeterReading extends Model
         'source',
         'entered_by_user_id',
         'maintenance_request_id',
+        'work_order_id',
         'confirmed_by_user_id',
         'confirmed_at',
         'notes',
@@ -38,6 +39,11 @@ class AssetMeterReading extends Model
     public function readingType(): BelongsTo
     {
         return $this->belongsTo(UsageReadingType::class, 'usage_reading_type_id');
+    }
+
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class);
     }
 
     public function enteredBy(): BelongsTo

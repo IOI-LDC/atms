@@ -16,6 +16,7 @@ class AssetMeterReadingResource extends JsonResource
             'reading_value' => $this->reading_value,
             'reading_at' => $this->reading_at?->toIso8601String(),
             'source' => $this->source,
+            'work_order_id' => $this->work_order_id,
             'entered_by_user_id' => $this->entered_by_user_id,
             'confirmed_by_user_id' => $this->confirmed_by_user_id,
             'confirmed_at' => $this->confirmed_at?->toIso8601String(),

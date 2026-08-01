@@ -3,6 +3,81 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
+## Session — 2026-08-01 (latest)
+
+### Work Order page: asset location shown, workshop transfer forced on start, readings attributed
+
+Three defects found in live testing, all on `WorkOrderDetailView`. **1037 tests
+pass (3089 assertions)**, Pint clean, `vue-tsc --build` clean. Verified against
+the live stack over HTTP, not tests alone.
+
+**1 — The work order never showed where the asset was.** `WorkOrderResource`'s
+asset fragment now carries `current_location {id, name, code, type}` beside
+`operational_status` (`AssetIdentityResource` untouched — its shared shape is
+deliberately strict). `type` rides along because the page *routes on it*, not
+just displays it. Eager-loaded in `WorkOrderController@show` and
+`WorkOrderIndexQuery`. The rail's "Asset status" card gained **Current
+location** with a tinted `locationTypeClass` badge; `Current status` was
+badged at the same time (it was bare text here but badged in `AssetDetailView`).
+
+**2 — Assets were being "repaired" on rigs. ⚠️ `POST /work-orders/{id}/start`
+is now a hard gate.** Nothing in the WO lifecycle had ever touched
+`assets.current_location_id`, so an asset started work while still recorded at
+Rig A — and `AssetDeployment` buckets `rig`/`well_site` as **DEPLOYED**, so the
+dashboard counted it as earning while it was in pieces. Start now refuses
+(`DomainException` → 409) unless the asset is at a `workshop` or `yard`, or a
+`location_id` of one of those types is supplied in the same request, which is
+applied through `UpdateAssetLocation` inside the same transaction with reason
+`Started work order WO-xxxx`.
+
+> **Decisions, so they are not reopened.** (a) **Hard block, not a warning** —
+> the user chose this over a "Start anyway" escape; a soft prompt leaves exactly
+> the bad data that prompted the work. (b) **Workshops *and* yards** are valid
+> work locations, not workshops alone. (c) **Whoever may start the WO may
+> perform the move, technicians included** — `AssetPolicy::updateLocation`
+> (admin/manager/logistics) is deliberately *not* consulted, because this is a
+> work-order transition, not a logistics move. The standalone
+> `POST /assets/{id}/location` route keeps its narrower policy. (d) A **null or
+> unrecognised** location type counts as "must choose", matching
+> `AssetDeployment`'s habit of surfacing unclassified rather than absorbing it.
+
+> ⚠️ **Live-data consequence the user must plan for: 396 of 400 assets have no
+> location at all.** So in practice *every* work order start hits the dialog
+> today, not just the rig edge case. That is the guard working as designed — it
+> is how location data starts getting populated — but it is a workflow change
+> for every technician, not a rare prompt. Revisit only if LDC pushes back.
+
+Blast radius on the suite was real: `createAsset()` helpers made assets with no
+location, and start is a setup step in ~20 tests across 7 files. Added
+`TestCase::workshopLocation()` (shared `firstOrCreate` on code `WS`) and pointed
+every helper at it. New `StartWorkOrderLocationTest` (14 tests) pins the guard,
+the recorded move, the technician permission, and both audit events.
+
+**3 — The readings table claimed work it had not done.** The card listed every
+reading the asset ever had, with no way to tell which belonged to the job on
+screen. `asset_meter_readings` gained a nullable `work_order_id`
+(`nullOnDelete` — a reading is a measurement of the *asset* and outlives the WO
+that prompted it) plus an `(asset_id, work_order_id)` index. Existing rows stay
+null and read as history, which is accurate. The card now shows **Recorded on
+this work order** first and a collapsed **Asset reading history (N earlier)**
+below; table markup extracted to `WoReadingsTable.vue` so the two cannot drift.
+`sinceLastService` still derives from the **full** list — it is a meter
+progression, not a per-WO figure. Edit/delete stayed on history rows: the
+complaint was attribution, not permissions.
+
+> `RecordMeterReading`'s new `$workOrderId` is **appended last**. The existing
+> `?int $maintenanceRequestId` sits at position 7 and callers pass positionally.
+
+**Adjacent fix, load-bearing for the guard:** `workshop_yard` was selectable in
+`LocationForm.vue` and seeded by `LocationSeeder`, but is not a `LocationType`
+case — so such a location silently dropped out of every utilisation figure and
+would have failed the new start guard for no reason. Removed from the form
+options; seeder corrected to `yard` (which is what the prod baseline and live DB
+already hold for that row). The `displayHelpers` label survives so legacy rows
+still render.
+
+---
+
 ## Session — 2026-08-01 (later)
 
 ### Maintenance Category as the ATMS routing key — all four phases BUILT

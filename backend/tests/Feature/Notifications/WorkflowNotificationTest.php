@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Notifications;
 
+use App\Enums\LocationType;
 use App\Enums\MaintenanceRequestStatus;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
@@ -57,7 +58,9 @@ class WorkflowNotificationTest extends TestCase
 
     private function createAsset(): Asset
     {
-        $location = Location::create(['name' => 'Loc-'.uniqid(), 'type' => 'building']);
+        // A workshop, not a building: starting a work order requires the asset
+        // to already be at a workshop or yard (see StartWorkOrder).
+        $location = Location::create(['name' => 'Loc-'.uniqid(), 'type' => LocationType::WORKSHOP->value]);
 
         return Asset::create([
             'erp_asset_code' => 'A-'.uniqid(),

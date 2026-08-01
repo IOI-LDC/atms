@@ -50,7 +50,11 @@ const description = ref('')
 const errorMessage = ref<string | null>(null)
 const isEdit = ref(false)
 
-const typeOptions = ['workshop', 'yard', 'workshop_yard', 'well_site', 'rig', 'building']
+// Mirrors App\Enums\LocationType. `workshop_yard` was offered here but is not a
+// case, so locations created with it fell out of every utilisation figure and
+// would fail the work-order start guard. Its label survives in displayHelpers
+// so any legacy row still renders.
+const typeOptions = ['workshop', 'yard', 'well_site', 'rig', 'building']
 
 function resetForm() {
   name.value = ''

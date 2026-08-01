@@ -4,12 +4,12 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import {
   ArrowLeftIcon,
   PaperclipIcon,
-  PencilIcon,
   UserPlusIcon,
   UserPenIcon,
   EyeIcon,
   Trash2Icon,
   TriangleAlert,
+  ChevronRightIcon,
 } from '@lucide/vue'
 import AppLayout from '@/components/app/AppLayout.vue'
 import AssetIdentity from '@/components/app/AssetIdentity.vue'
@@ -34,12 +34,15 @@ import { Progress } from '@/components/ui/progress'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { FileInput } from '@/components/ui/file-input'
 import WoChecklistSheet from '@/components/work-orders/WoChecklistSheet.vue'
+import WoReadingsTable from '@/components/work-orders/WoReadingsTable.vue'
 import { useWorkOrderDetail } from '@/composables/useWorkOrderDetail'
 import { openAttachmentInNewTab } from '@/lib/attachments'
 import {
@@ -50,6 +53,9 @@ import {
   failureClass,
   failureLabel,
   operationalStatusLabel,
+  operationalStatusClass,
+  locationTypeLabel,
+  locationTypeClass,
   fmtDate,
   formatBytes,
   roleLabel,
@@ -101,6 +107,12 @@ const {
   openAssign,
   doAssign,
   startLoading,
+  startOpen,
+  startLocationId,
+  startLocationRequired,
+  workLocationGroups,
+  locationsLoading,
+  openStart,
   doStart,
   completeOpen,
   completeLoading,
@@ -110,6 +122,7 @@ const {
   closeOpen,
   closeLoading,
   closeIsFailure,
+  closeAssetStatus,
   openClose,
   doClose,
   cancelOpen,
@@ -133,7 +146,9 @@ const {
   recordReadingOpen,
   readingLoading,
   readingDraft,
-  assetReadings,
+  workOrderReadings,
+  historyReadings,
+  readingHistoryOpen,
   readingsLoading,
   lastReadingForDraft,
   readingBelowLast,
@@ -190,6 +205,13 @@ const readingTypeIdStr = computed({
   get: () => (readingDraft.value.typeId !== null ? String(readingDraft.value.typeId) : undefined),
   set: (v: string | undefined) => {
     readingDraft.value.typeId = v ? Number(v) : null
+  },
+})
+// Start-dialog location select round-trips through a string (mirrors readingTypeIdStr).
+const startLocationIdStr = computed({
+  get: () => (startLocationId.value !== null ? String(startLocationId.value) : undefined),
+  set: (v: string | undefined) => {
+    startLocationId.value = v ? Number(v) : null
   },
 })
 const selectedStatusStr = computed({
@@ -365,8 +387,8 @@ watch(
               class="detail-command-actions"
             >
               <Button v-if="canCancel" variant="outline" @click="openCancel">Cancel</Button>
-              <Button v-if="canStart" :disabled="startLoading" @click="doStart">
-                {{ startLoading ? 'Starting…' : 'Start' }}
+              <Button v-if="canStart" :disabled="startLoading" @click="openStart">
+                {{ startLoading ? 'Starting…' : startLocationRequired ? 'Start…' : 'Start' }}
               </Button>
               <Button v-if="canComplete" @click="openComplete">Complete…</Button>
               <Button v-if="canClose" @click="openClose">Close…</Button>
@@ -605,59 +627,46 @@ watch(
               </div>
               <div class="data-card-content">
                 <div v-if="readingsLoading" class="loading-state">Loading readings…</div>
-                <div v-else-if="assetReadings.length === 0" class="empty-state">
-                  No meter readings recorded.
-                </div>
-                <table v-else class="detail-table">
-                  <thead class="detail-table-head">
-                    <tr>
-                      <th>Reading</th>
-                      <th>Value</th>
-                      <th>Read at</th>
-                      <th>Status</th>
-                      <th v-if="canManageReadings"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="r in assetReadings" :key="r.id" class="detail-table-row">
-                      <td class="detail-table-cell">
-                        {{
-                          readingTypes.find((t) => t.id === r.usage_reading_type_id)?.name ??
-                          'Meter reading'
-                        }}
-                      </td>
-                      <td class="detail-table-cell">{{ r.reading_value }}</td>
-                      <td class="detail-table-cell">{{ fmtDate(r.reading_at) }}</td>
-                      <td class="detail-table-cell">
-                        <span v-if="r.confirmed_at">Confirmed</span>
-                        <span v-else class="detail-table-remove">—</span>
-                      </td>
-                      <td v-if="canManageReadings" class="detail-table-cell">
-                        <div v-if="!r.confirmed_at" class="detail-table-actions">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            :title="`Edit reading ${r.reading_value}`"
-                            :aria-label="`Edit reading ${r.reading_value}`"
-                            @click="openEditReading(r)"
-                          >
-                            <PencilIcon />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            class="attachment-delete"
-                            :title="`Delete reading ${r.reading_value}`"
-                            :aria-label="`Delete reading ${r.reading_value}`"
-                            @click="openDeleteReading(r.id)"
-                          >
-                            <Trash2Icon />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <template v-else>
+                  <!-- Readings taken on this work order, kept apart from the
+                       asset's earlier history so the table cannot be read as
+                       though all of it belongs to this job. -->
+                  <div class="reading-group">
+                    <p class="reading-group-title">Recorded on this work order</p>
+                    <div v-if="workOrderReadings.length === 0" class="empty-state">
+                      No readings recorded on this work order yet.
+                    </div>
+                    <WoReadingsTable
+                      v-else
+                      :readings="workOrderReadings"
+                      :types="readingTypes"
+                      :can-manage="canManageReadings"
+                      @edit="openEditReading"
+                      @remove="openDeleteReading"
+                    />
+                  </div>
+
+                  <div v-if="historyReadings.length > 0" class="reading-group">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      class="reading-history-toggle"
+                      :aria-expanded="readingHistoryOpen"
+                      @click="readingHistoryOpen = !readingHistoryOpen"
+                    >
+                      <ChevronRightIcon :class="readingHistoryOpen ? 'is-open' : undefined" />
+                      Asset reading history ({{ historyReadings.length }} earlier)
+                    </Button>
+                    <WoReadingsTable
+                      v-if="readingHistoryOpen"
+                      :readings="historyReadings"
+                      :types="readingTypes"
+                      :can-manage="canManageReadings"
+                      @edit="openEditReading"
+                      @remove="openDeleteReading"
+                    />
+                  </div>
+                </template>
                 <p v-if="sinceLastService" class="table-cell-secondary detail-field-muted">
                   {{ sinceLastService.type }}: {{ sinceLastService.since }} /
                   {{ sinceLastService.interval }} {{ sinceLastService.unit }} since last service
@@ -737,8 +746,22 @@ watch(
                   <div class="detail-field">
                     <span class="detail-field-label">Current status</span>
                     <p class="detail-field-value">
-                      {{ operationalStatusLabel(record.asset.operational_status) }}
+                      <span :class="operationalStatusClass(record.asset.operational_status)">{{
+                        operationalStatusLabel(record.asset.operational_status)
+                      }}</span>
                     </p>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-field-label">Current location</span>
+                    <p v-if="record.asset.current_location" class="detail-field-value">
+                      <span class="asset-location-value">
+                        {{ record.asset.current_location.name }}
+                        <span :class="locationTypeClass(record.asset.current_location.type)">{{
+                          locationTypeLabel(record.asset.current_location.type)
+                        }}</span>
+                      </span>
+                    </p>
+                    <p v-else class="detail-field-muted">No location recorded</p>
                   </div>
                 </div>
               </div>
@@ -930,6 +953,21 @@ watch(
           <p class="form-help">
             Pre-filled from the review decision — update it if inspection changed the outcome. Used
             in the MTBF metric.
+          </p>
+        </div>
+        <div class="form-field">
+          <Label for="wo-close-status">Asset status after close</Label>
+          <Select v-model="closeAssetStatus">
+            <SelectTrigger id="wo-close-status"
+              ><SelectValue placeholder="Is the asset operational again?"
+            /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active — back in service</SelectItem>
+              <SelectItem value="down">Down — still faulty</SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="form-help">
+            Pre-set to Active — change it to Down only if the repair did not restore the asset.
           </p>
         </div>
         <DialogFooter>
@@ -1134,6 +1172,56 @@ watch(
             @click="doRecordReading"
           >
             {{ readingLoading ? 'Recording…' : 'Record Reading' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Start — asks for a work location when the asset is not at a workshop or yard -->
+    <Dialog v-model:open="startOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Start work order {{ record?.number }}?</DialogTitle>
+          <DialogDescription>
+            <template v-if="record?.asset.current_location">
+              This asset is recorded at {{ record.asset.current_location.name }}. Work orders are
+              performed at a workshop or yard — starting will record the move.
+            </template>
+            <template v-else>
+              This asset has no recorded location. Select where the work is being performed —
+              starting will record it.
+            </template>
+          </DialogDescription>
+        </DialogHeader>
+        <div class="form-field">
+          <Label for="wo-start-location">
+            Move asset to <span class="field-required">*</span>
+          </Label>
+          <Select v-model="startLocationIdStr">
+            <SelectTrigger id="wo-start-location">
+              <SelectValue
+                :placeholder="locationsLoading ? 'Loading locations…' : 'Select a location…'"
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <template v-for="[type, locs] in workLocationGroups" :key="type">
+                <SelectGroup>
+                  <SelectLabel>{{ locationTypeLabel(type) }}</SelectLabel>
+                  <SelectItem v-for="loc in locs" :key="loc.id" :value="String(loc.id)">
+                    {{ loc.name }}
+                    <span v-if="loc.code" class="select-code-hint">{{ loc.code }}</span>
+                  </SelectItem>
+                </SelectGroup>
+              </template>
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" :disabled="startLoading" @click="startOpen = false"
+            >Back</Button
+          >
+          <Button :disabled="startLoading || startLocationId === null" @click="doStart">
+            {{ startLoading ? 'Starting…' : 'Move & Start' }}
           </Button>
         </DialogFooter>
       </DialogContent>

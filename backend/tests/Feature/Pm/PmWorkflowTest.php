@@ -48,6 +48,8 @@ class PmWorkflowTest extends TestCase
             'erp_asset_code' => 'AST-PM-'.uniqid(),
             'name' => 'PM Asset',
             'is_active' => true,
+            // Work orders can only start at a workshop or yard — see StartWorkOrder.
+            'current_location_id' => $this->workshopLocation()->id,
         ]);
     }
 

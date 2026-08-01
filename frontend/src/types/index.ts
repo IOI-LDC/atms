@@ -38,10 +38,15 @@ export interface Role {
 
 /**
  * Legacy alias for the canonical embedded asset shape. The Work Order embed
- * additionally carries `operational_status`, which the WO detail "Asset status"
- * card needs. Prefer {@link AssetIdentity} in new code.
+ * additionally carries `operational_status` and `current_location`, which the
+ * WO detail "Asset status" card needs — the latter including `type`, because
+ * the Start button uses it to decide whether the asset must be moved to a
+ * workshop or yard first. Prefer {@link AssetIdentity} in new code.
  */
-export type AssetRef = AssetIdentity & { operational_status?: string }
+export type AssetRef = AssetIdentity & {
+  operational_status?: string
+  current_location?: LocationRef | null
+}
 
 /** Minimal user reference. `email` only visible to Admin/Manager. */
 export interface UserRef {
@@ -61,6 +66,7 @@ export interface LocationRef {
   id: number
   name: string
   type?: string
+  code?: string | null
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -171,6 +177,8 @@ export interface AssetMeterReading {
   reading_value: string
   reading_at: string
   source: MeterReadingSource
+  /** Set when the reading was taken from a work order page; null means asset history. */
+  work_order_id?: number | null
   entered_by_user_id: number
   confirmed_by_user_id: number | null
   confirmed_at: string | null

@@ -2,15 +2,25 @@ import { ref, computed, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
+import { useLocations } from '@/composables/useLocations'
 import type {
   WorkOrder,
   WorkOrderPart,
   Assignee,
   Attachment,
   AssetMeterReading,
+  Location,
   MissingField,
   WoFormFieldValue,
 } from '@/types'
+
+/**
+ * Where work may be performed. An asset recorded at a rig or well site while a
+ * work order runs is counted as deployed-and-earning by the dashboard, so
+ * starting a work order elsewhere forces a recorded move first. Mirrors
+ * `StartWorkOrder::WORK_LOCATION_TYPES` on the backend, which is authoritative.
+ */
+const WORK_LOCATION_TYPES = ['workshop', 'yard']
 
 /**
  * Owns the state and actions for a single Work Order detail page.
@@ -19,7 +29,10 @@ import type {
  *  GET    /work-orders/{id}                  -> { data: WorkOrder }
  *  PATCH  /work-orders/{id}                  -> { data: WorkOrder }   (description only)
  *  POST   /work-orders/{id}/assign           -> { message, data }     { user_id }
- *  POST   /work-orders/{id}/start            -> { message, data }
+ *  POST   /work-orders/{id}/start            -> { message, data }     { location_id? }
+ *                                               location_id is REQUIRED (409 without it)
+ *                                               unless the asset is already at a
+ *                                               workshop or yard.
  *  POST   /work-orders/{id}/complete         -> { message, data }     { completion_notes? }
  *  POST   /work-orders/{id}/close            -> { message, data }
  *  POST   /work-orders/{id}/cancel           -> { message, data }     { reason }
@@ -183,6 +196,30 @@ export function useWorkOrderDetail() {
 
   // ── Workflow transitions ─────────────────────────────────────────────────
   const startLoading = ref(false)
+  const startOpen = ref(false)
+  const startLocationId = ref<number | null>(null)
+  const { activeLocations, loadLocations, locationsLoading } = useLocations()
+
+  /**
+   * True when the asset is not already somewhere work may happen, so starting
+   * has to record a move first. Null location and unrecognised types both count
+   * as "we don't know it is in the right place" — the backend agrees, and 409s.
+   */
+  const startLocationRequired = computed(
+    () => !WORK_LOCATION_TYPES.includes(record.value?.asset?.current_location?.type ?? ''),
+  )
+
+  /** Workshops and yards, grouped by type for the picker. */
+  const workLocationGroups = computed(() => {
+    const groups = new Map<string, Location[]>()
+    for (const loc of activeLocations.value) {
+      if (!WORK_LOCATION_TYPES.includes(loc.type)) continue
+      const bucket = groups.get(loc.type)
+      if (bucket) bucket.push(loc)
+      else groups.set(loc.type, [loc])
+    }
+    return [...groups.entries()]
+  })
   const completeOpen = ref(false)
   const completeLoading = ref(false)
   const completionNotes = ref('')
@@ -192,6 +229,9 @@ export function useWorkOrderDetail() {
   // from the linked MR's current value so the reviewer sees the prior decision. Sent
   // to the API as `is_failure`.
   const closeIsFailure = ref<boolean | null>(null)
+  // Caller-chosen asset status on close, pre-seeded to 'active' (back in service);
+  // 'down' keeps the asset out of service. Sent to the API as `asset_status`.
+  const closeAssetStatus = ref<'active' | 'down'>('active')
   const cancelOpen = ref(false)
   const cancelLoading = ref(false)
   const cancelReason = ref('')
@@ -226,6 +266,16 @@ export function useWorkOrderDetail() {
   })
   const assetReadings = ref<AssetMeterReading[]>([])
   const readingsLoading = ref(false)
+  const readingHistoryOpen = ref(false)
+
+  // The endpoint returns every reading the asset has ever had. Split them, or
+  // the table reads as though all of it belongs to the work order on screen.
+  const workOrderReadings = computed(() =>
+    assetReadings.value.filter((r) => r.work_order_id === record.value?.id),
+  )
+  const historyReadings = computed(() =>
+    assetReadings.value.filter((r) => r.work_order_id !== record.value?.id),
+  )
 
   // ── Last-reading guard ─────────────────────────────────────────────────────
   // Most recent reading for the type selected in the record draft, so operators
@@ -465,12 +515,35 @@ export function useWorkOrderDetail() {
   // ══════════════════════════════════════════════════════════════════════════
   //  Workflow transitions
   // ══════════════════════════════════════════════════════════════════════════
+  /**
+   * Start, asking for a workshop/yard first when the asset is somewhere work
+   * does not happen. Assets already in the right place keep the one-click path.
+   */
+  function openStart() {
+    if (!startLocationRequired.value) {
+      void doStart()
+      return
+    }
+    startLocationId.value = null
+    startOpen.value = true
+    void loadLocations()
+  }
+
   async function doStart() {
     if (!record.value) return
+    if (startLocationRequired.value && startLocationId.value === null) return
     startLoading.value = true
     try {
-      await api.post(`/work-orders/${record.value.id}/start`)
-      toast.success('Work order started.')
+      await api.post(
+        `/work-orders/${record.value.id}/start`,
+        startLocationId.value === null ? {} : { location_id: startLocationId.value },
+      )
+      toast.success(
+        startLocationId.value === null
+          ? 'Work order started.'
+          : 'Asset moved and work order started.',
+      )
+      startOpen.value = false
       await load(record.value.id, { silent: true })
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to start work order.')
@@ -510,19 +583,26 @@ export function useWorkOrderDetail() {
     // Seed the toggle with the prior review-time decision so the reviewer can
     // confirm or override it after physical inspection.
     closeIsFailure.value = record.value?.maintenance_request?.is_failure ?? null
+    // The asset is presumed back in service; the closer changes it to 'down'
+    // only when the repair did not restore it.
+    closeAssetStatus.value = 'active'
     closeOpen.value = true
   }
   async function doClose() {
     if (!record.value) return
     closeLoading.value = true
     try {
-      // Only send `is_failure` for corrective-origin WOs when a value is chosen —
-      // never send null, which would clobber the review-time classification. The
-      // key is omitted entirely for PM WOs and when unset.
-      const payload =
-        isCorrectiveOrigin.value && closeIsFailure.value !== null
-          ? { is_failure: closeIsFailure.value }
-          : undefined
+      // `asset_status` is always sent — the closer decides the asset's next
+      // operational status (pre-seeded to active). `is_failure` is only sent
+      // for corrective-origin WOs when a value is chosen — never null, which
+      // would clobber the review-time classification. The key is omitted
+      // entirely for PM WOs and when unset.
+      const payload: { is_failure?: boolean; asset_status: 'active' | 'down' } = {
+        asset_status: closeAssetStatus.value,
+      }
+      if (isCorrectiveOrigin.value && closeIsFailure.value !== null) {
+        payload.is_failure = closeIsFailure.value
+      }
       await api.post(`/work-orders/${record.value.id}/close`, payload)
       toast.success('Work order closed.')
       closeOpen.value = false
@@ -629,6 +709,8 @@ export function useWorkOrderDetail() {
         reading_at: readingDraft.value.readAt,
         source: 'manual',
         notes: readingDraft.value.notes || null,
+        // Attribute it, so this page can tell it apart from the asset's history.
+        work_order_id: record.value.id,
       })
       toast.success('Meter reading recorded.')
       recordReadingOpen.value = false
@@ -914,6 +996,12 @@ export function useWorkOrderDetail() {
     doAssign,
     // Workflow
     startLoading,
+    startOpen,
+    startLocationId,
+    startLocationRequired,
+    workLocationGroups,
+    locationsLoading,
+    openStart,
     doStart,
     completeOpen,
     completeLoading,
@@ -923,6 +1011,7 @@ export function useWorkOrderDetail() {
     closeOpen,
     closeLoading,
     closeIsFailure,
+    closeAssetStatus,
     openClose,
     doClose,
     cancelOpen,
@@ -949,6 +1038,9 @@ export function useWorkOrderDetail() {
     readingLoading,
     readingDraft,
     assetReadings,
+    workOrderReadings,
+    historyReadings,
+    readingHistoryOpen,
     readingsLoading,
     lastReadingForDraft,
     readingBelowLast,

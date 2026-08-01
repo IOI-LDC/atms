@@ -20,7 +20,7 @@ class WorkOrderIndexQuery
     public function build(Request $request): CursorPaginator
     {
         $user = $request->user();
-        $query = WorkOrder::with(['asset', 'asset.maintenanceCategory', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'parts.part.maintenanceCategory', 'attachments']);
+        $query = WorkOrder::with(['asset', 'asset.maintenanceCategory', 'asset.currentLocation', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'parts.part.maintenanceCategory', 'attachments']);
 
         $this->applyRoleScoping($query, $user);
         $this->applyFilters($query, $request);
