@@ -134,8 +134,7 @@ Administrator:
 2. The Administrator selects an imported employee and provisions them as a user,
    assigning one of the five fixed roles: Administrator, Maintenance Manager,
    Technician, Logistics, or Requester.
-3. The system sends an activation email to the user through Microsoft Graph.
-   This email contains a one-time activation link.
+3. The system sends an activation email to the user through Microsoft Graph. This email contains a one-time activation link.
 4. The user clicks the activation link, sets their own password, and gains
    access.
 
@@ -147,8 +146,7 @@ password reset, which sends a new token through the same email channel.
 
 1. Open the ATMS application in your browser.
 2. Enter your work email address and password.
-3. If your credentials are correct and your account is active, the system sets a
-   session cookie and redirects you to the Dashboard.
+3. If your credentials are correct and your account is active, the system sets a session cookie and redirects you to the Dashboard.
 4. If your account has not been activated yet, you will see a message directing
    you to complete activation first.
 
@@ -160,8 +158,7 @@ IP address and email combination, further attempts are temporarily blocked.
 When an Administrator provisions your account, you will receive an email with an
 activation link. Follow these steps:
 
-1. Click the activation link in the email, or copy the token and navigate to the
-   activation page.
+1. Click the activation link in the email, or copy the token and navigate to the activation page.
 2. Enter your email address, the activation token, and your new password.
 3. Confirm your password.
 4. After successful activation, you can log in with your email and new password.
@@ -173,8 +170,7 @@ activation attempts per minute.
 
 1. On the login page, select "Forgot Password."
 2. Enter your email address.
-3. If the email matches an active user account, the system sends a password
-   reset email through Microsoft Graph.
+3. If the email matches an active user account, the system sends a password reset email through Microsoft Graph.
 4. Click the link in the email.
 5. Enter your email, the reset token, and a new password.
 6. After a successful reset, you can log in with your new password.
@@ -533,9 +529,9 @@ And a fifth dimension for the asset record itself:
   invisible to all workflows regardless of any other status.
 
 For detailed explanations, see:
-- **Section 5.9** — Asset Operational Status (`operational_status`)
 - **Section 5.4** — Asset Maintenance Status (`maintenance_status` and `maintenance_sub_status`)
 - **Section 5.5** — Asset Booking (`is_booked`)
+- **Section 5.9** — Asset Operational Status (`operational_status`)
 
 **Hierarchy & Assembly:**
 
@@ -632,6 +628,7 @@ code to the 3-letter type code abbreviation is seeded system data
 (`fa_subclass_type_codes`); the ERP import records any code it has not seen
 before with the type code `UNK`, and there is no admin interface for editing
 this mapping.
+
 ### 5.2 Asset Kinds
 
 Every asset in ATMS carries an `asset_kind` that declares what role it can play in
@@ -777,6 +774,7 @@ operational need changes — for example, if a previously standalone pump is lat
 designated as part of a larger skid assembly and you want to track its internal
 parts individually. The reverse (downgrading a `package` to `component`) is only
 possible if the asset currently has no children (`childAssets` count is zero).
+
 ### 5.3 Asset Tags
 
 Each asset carries a unique, human-readable **asset tag** — a short code
@@ -823,7 +821,7 @@ L - BBB - CCC - XXXX
 Each asset has an **Asset Maintenance Status** that represents its
 maintenance-service state. This status is completely independent of ERP
 disposal, financial treatment, capitalization, or depreciation. An asset can be
-Withdrawn (`disposed`) in ATMS while still appearing in ERP financial records.
+marked **Withdrawn** in ATMS while still appearing in ERP financial records.
 
 > The two states are stored as `enrolled` and `withdrawn`. They are displayed in
 > the UI as **"In maintenance program"** (`enrolled`) and **"Withdrawn"**
@@ -1445,10 +1443,7 @@ types, evaluation, suppression, and cumulative maintenance — see **Section 12*
    **active maintenance chain**. An active chain exists when:
    - A `pending_review` MR already exists for the same asset + template, or
    - A converted WO in `open`, `in_progress`, or `completed` status exists.
-5. If no active chain exists and the threshold is met, the system creates one
-Preventive Maintenance Request with `is_preventive = true` and `pm_rule_id`
-set (its `type` is derived as `"preventive"` in the API response). The MR
-follows the same Manager review and WO lifecycle as a corrective MR.
+5. If no active chain exists and the threshold is met, the system creates one Preventive Maintenance Request (`is_preventive = true`, `pm_rule_id` set, `type` derived as `"preventive"` in the API response). The MR follows the same Manager review and WO lifecycle as a corrective MR.
 6. The Maintenance Manager reviews the PM request the same as any other MR. They
    may approve (creating a WO), reject, or cancel.
 
@@ -1760,8 +1755,7 @@ During `in_progress`, the assigned Technician can:
 
 Parts used on a WO are selected from the SM parts catalogue:
 
-1. From the WO detail screen, the Technician (or Admin/Manager) opens the "Add
-   Part" form.
+1. From the WO detail screen, the Technician (or Admin/Manager) opens the "Add Part" form.
 2. They search and select a part from the SM catalogue.
 3. They enter the quantity used.
 4. The part line is recorded against the WO.
@@ -1830,8 +1824,7 @@ and affected fields.
 2. A Maintenance Manager or Administrator opens the WO.
 3. They review: work notes, parts used, readings updated, final asset status.
 4. For corrective WOs, they confirm or revise whether this was a real failure.
-5. They confirm the asset's status after close — pre-selected to **Active**;
-   they switch to **Down** only if the repair did not restore the asset.
+5. They confirm the asset's status after close — pre-selected to **Active**; they switch to **Down** only if the repair did not restore the asset.
 6. They select "Close Work Order" and confirm.
 7. The WO becomes `closed` — permanently immutable.
 
@@ -2002,18 +1995,19 @@ determine the work should not have been done, was done on the wrong asset, or is
 otherwise invalid. Cancellation from `completed` provides an escape path before
 final closure, with a required audit reason.
 
-**Why does closing a WO reset the asset to `active`?**
-The act of closing a WO means the maintenance work is finished and reviewed. The
-default assumption is that the asset is now operational. If the asset should
-remain `down` (e.g. the WO was for a partial repair and more work is needed), a
-new Corrective MR should be created — this keeps the audit trail clear: one WO
-closed it, another MR documents the remaining fault.
+**Why does closing a WO ask for the asset's next status?**
+Closing means the work is finished and reviewed, so the dialog defaults to
+**Active** — the asset is presumed back in service. The closer switches it to
+**Down** only if the repair did not restore the asset; a new Corrective MR
+should then follow — this keeps the audit trail clear: one WO closed it,
+another MR documents the remaining fault.
 
 **Why does a corrective MR approval set the asset to `down`?**
 When someone reports a fault and a Manager approves the resulting MR, the system
 assumes the fault is real. Setting the asset to `down` signals that it needs
 attention. This is skipped for preventive MRs — a scheduled service doesn't mean
 the asset was broken.
+
 ---
 
 ## 9. Asset Management
@@ -2205,8 +2199,7 @@ confirmed reading. Instead:
 
 #### Recording a Reading
 
-1. Navigate to an asset's detail page and open the Usage & Meter Readings
-   section (or enter a reading while creating a Corrective MR).
+1. Navigate to an asset's detail page and open the Usage & Meter Readings section (or enter a reading while creating a Corrective MR).
 2. Select the reading type (operating hours, kilometers, etc.).
 3. Enter the reading value and reading date/time.
 4. Submit. The reading is created in **unverified** state.
@@ -2246,6 +2239,7 @@ when checking if a reading-triggered PM rule is due. Specifically:
   unverified readings; confirmation is a separate step).
 - Soft-deleted readings are preserved in the database with `deleted_at` set but
   excluded from all queries and lists.
+
 ### 9.5 Asset Location History
 
 Asset current location and location history are owned by the AM subsystem. ATMS
@@ -2420,8 +2414,7 @@ history, and update its physical location.
 **How it works:**
 
 1. The list displays all active assets with their current location.
-2. Each row shows: asset tag, name, category, current location, latest usage
-   reading, maintenance status badge.
+2. Each row shows: asset tag, name, category, current location, latest usage reading, maintenance status badge.
 3. Click "Update Location" on any row to open the `UpdateLocationSheet` (side
    sheet).
 4. The side sheet shows:
@@ -2433,8 +2426,7 @@ history, and update its physical location.
    - **Notes** — textarea (optional).
 5. Submit → confirmation dialog → the system executes the location update.
 6. On success, the location history is updated and the list refreshes.
-7. A location change does **not** release an active booking — bookings
-   survive moves (see Section 5.5).
+7. A location change does **not** release an active booking — bookings survive moves (see Section 5.5).
 8. A "View Location History" link per row navigates to the asset's location
    history drill-down.
 
@@ -3045,6 +3037,7 @@ at evaluation time. If you change a template from 500 hours to 300 hours, all
 assignments using that template will immediately use the new 300-hour interval
 on their next evaluation. The baseline (when the interval started) is stored on
 the assignment, not the template.
+
 ---
 
 ## 13. Administration
@@ -3089,17 +3082,14 @@ system configuration, and master data.
 
 **Visible to:** Admin only.
 
-Manage all configurable dropdown values used across the system:
+Manage the configurable dropdown values used across the system:
 
-- Location definitions (also accessible via the dedicated Locations sidebar
-  item).
-- Asset operational statuses.
-- Asset maintenance sub-statuses.
-- Maintenance priorities.
-- Usage reading types.
-- Work Order statuses.
-- Maintenance categories.
-- Other master data and lookup values.
+- **Maintenance Priorities** — the priority values available on maintenance
+  requests.
+- **Maintenance Categories** — the ATMS-owned categories that route WO Forms
+  and PM rules; an asset always carries one (Section 5.1).
+- **Usage Reading Types** — the meter types available for asset readings
+  (Section 9.4).
 
 Each list supports full CRUD through side sheets. Values are never physically
 deleted — they are deactivated when no longer needed.

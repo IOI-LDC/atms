@@ -187,11 +187,16 @@ function renderManual(source: string): RenderedManual {
     // Ordered list
     if (/^\s*\d+\.\s+/.test(line)) {
       const items: string[] = []
+      const firstNumber = Number(line.match(/^\s*(\d+)\.\s+/)?.[1] ?? 1)
       while (i < lines.length && /^\s*\d+\.\s+/.test(lineAt(i))) {
         items.push(`<li>${renderInline(lineAt(i).replace(/^\s*\d+\.\s+/, ''))}</li>`)
         i++
       }
-      html.push(`<ol class="manual-steps">${items.join('')}</ol>`)
+      // A numbered run interrupted by sub-bullets would otherwise re-render as
+      // its own <ol> starting at 1. Carry the literal number so the manual's
+      // steps keep their intended sequence.
+      const start = firstNumber !== 1 ? ` start="${firstNumber}"` : ''
+      html.push(`<ol class="manual-steps"${start}>${items.join('')}</ol>`)
       continue
     }
 
