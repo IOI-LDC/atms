@@ -1246,7 +1246,7 @@ watch(
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="under_maintenance">Under Maintenance</SelectItem>
               <SelectItem value="down">Down</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="inactive">Retired</SelectItem>
             </SelectContent>
           </Select>
         </div>

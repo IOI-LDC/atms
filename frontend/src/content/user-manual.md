@@ -243,7 +243,7 @@ workflow.
   status and sub-statuses, book and unbook assets.
 - **Maintenance Workflow:** Create corrective MRs, update any pending MR, cancel
   any pending MR, approve MRs (creating Work Orders), reject MRs with a reason,
-  assign and reassign Work Orders to active Technicians, edit execution details
+  assign and reassign Work Orders to active Technicians or Maintenance Managers, edit execution details
   on non-terminal WOs (all changes audited), mark WOs as completed, close
   completed WOs, cancel non-closed WOs with required reason, record and confirm
   meter readings, update asset operational status via WO.
@@ -293,7 +293,7 @@ The Technician executes assigned Work Orders in the field.
 - Approve or reject Maintenance Requests.
 - Cancel Maintenance Requests.
 - Assign or reassign Work Orders — only Administrators and Maintenance Managers
-  can assign WOs to Technicians.
+  can assign WOs to Technicians or Maintenance Managers.
 - Close completed Work Orders — only Administrators and Maintenance Managers can
   close WOs.
 - Cancel Work Orders — only Administrators and Maintenance Managers can cancel
@@ -1073,7 +1073,7 @@ values:
 | `active` | **Active** | The asset is fully operational and available for normal use. |
 | `under_maintenance` | **Under Maintenance** | The asset is currently in the workshop being serviced. Work is in progress. |
 | `down` | **Down** | The asset has a known fault or failure and is not operational. It is waiting to be repaired. |
-| `inactive` | **Inactive** | The asset has been permanently retired, decommissioned, or removed from the operational pool. It will not be used again. |
+| `inactive` | **Retired** | The asset has been permanently retired, decommissioned, or removed from the operational pool. It will not be used again. |
 
 #### How Operational Status Changes
 
@@ -1157,18 +1157,18 @@ This is a common point of confusion. Here is the complete distinction:
 > the whole time (booking survives maintenance events — the Operations team still
 > expects this motor for a job next week).
 
-#### Inactive — The Terminal Operational State
+#### Retired — The Terminal Operational State
 
 `operational_status = inactive` is the only terminal operational state. It means
 the asset has been permanently removed from service:
 
-- It appears in the registry but with a clear "Inactive" badge.
+- It appears in the registry but with a clear **Retired** badge.
 - It cannot have new Maintenance Requests created against it.
 - It cannot have new Work Orders created against it.
 - PM rules stop evaluating it.
 - All historical records (MRs, WOs, readings, attachments) are preserved.
 
-**How an asset becomes inactive:**
+**How an asset becomes retired:**
 - A user sets `inactive` via the WO "Update Asset Status" action during a
   decommissioning WO.
 - The automated WO lifecycle transitions will **never** set an asset to
@@ -1269,7 +1269,7 @@ explanatory empty state ("No failures yet", "None closed"), never zero.
 ### 6.4 Asset Status & By Location
 
 - **Asset status** lists all four operational states — Active, Under Maintenance,
-  Down, Inactive — with counts. **Booked** appears below a separator: it is a
+  Down, Retired — with counts. **Booked** appears below a separator: it is a
   different axis, not a fifth state, and deliberately does not sum with the rows
   above it (an asset can be Booked and Under Maintenance at once).
 - **By location** shows the six locations holding the most assets, with
@@ -1636,7 +1636,7 @@ Work Orders are stored in the `work_orders` table. Key fields:
 | `status` | `WorkOrderStatus` enum | Current state. See Section 8.1. |
 | `priority` | string | Copied from the MR at creation. Values: `low`, `medium`, `high`, `critical`. |
 | `description` | text | Work description (copied from the MR, may be updated during execution). |
-| `assigned_to` | FK → users, nullable | The Technician responsible for executing the WO. Required before the WO can start. |
+| `assigned_to` | FK → users, nullable | The user responsible for executing the WO (Technician or Maintenance Manager). Required before the WO can start. |
 | `assigned_at` | timestamp, nullable | When the WO was assigned. |
 | `started_at` | timestamp, nullable | When work began (`open` → `in_progress`). |
 | `completed_at` | timestamp, nullable | When the Technician submitted completion. |
@@ -1654,7 +1654,7 @@ Work Orders follow a strict lifecycle with five states, defined by the
 | DB Value | Display Label | Meaning |
 |---|---|---|
 | `open` | **Open** | Created from an approved MR. May be unassigned. Awaiting assignment and work commencement. |
-| `in_progress` | **In Progress** | Work has started. Must be assigned to an active Technician. |
+| `in_progress` | **In Progress** | Work has started. Must be assigned to an active Technician or Maintenance Manager. |
 | `completed` | **Completed** | Technician has submitted all work. Awaiting Manager review and closure. |
 | `closed` | **Closed** | Reviewed and finalized by Manager. **Permanently immutable.** |
 | `cancelled` | **Cancelled** | Cancelled by Manager with required reason. Terminal and read-only. |
@@ -1704,25 +1704,37 @@ Work Orders follow a strict lifecycle with five states, defined by the
 
 | Transition | Who Can Do It | Conditions |
 |---|---|---|
-| `open` → assign | Admin/Manager | Assignee must be an active user with Technician role |
-| `open` → `in_progress` | Assigned Technician | Must be assigned first. Asset `operational_status` → `under_maintenance`. |
+| `open` → assign | Admin/Manager | Assignee must be an active Technician or Maintenance Manager; the asset must not be withdrawn |
+| `open` → `in_progress` | Assigned user, Admin/Manager | Must be assigned first. Asset `operational_status` → `under_maintenance` (forced). The asset must already be at a `workshop`/`yard`, or the Start dialog supplies the work location — starting then records a real location move (Section 8.3). |
 | `open` → `cancelled` | Admin/Manager | `cancellation_reason` required |
-| `in_progress` → `completed` | Assigned Technician | All required WO Form fields must be filled. Technician fields locked after. |
+| `in_progress` → `completed` | Assigned user, Admin/Manager | All required WO Form fields must be filled. Asset `operational_status` and location unchanged — stays `under_maintenance` until close or cancel. |
 | `in_progress` → `cancelled` | Admin/Manager | `cancellation_reason` required |
 | `completed` → `closed` | Admin/Manager | **Side effects run** (see Section 8.5). Asset `operational_status` set to the closer's choice — `active` (default) or `down`; never touches `inactive`. |
-| `completed` → `cancelled` | Admin/Manager | `cancellation_reason` required. Asset `operational_status` set to caller-chosen value. |
+| `completed` → `cancelled` | Admin/Manager | `cancellation_reason` required. Asset `operational_status` set to the caller-chosen value — applied only when the cancel payload carries `asset_status`; otherwise the asset is left untouched. |
 
 ### 8.2 Work Order Assignment
 
 - Only Administrators and Maintenance Managers can assign or reassign Work
   Orders.
-- A WO may be assigned only to an active user with the Technician role.
+- A WO may be assigned only to an active Technician or Maintenance Manager.
 - Assignment is required before the WO can transition to `in_progress`.
-- Reassignment may occur while the WO is `open` or `in_progress`.
+- Reassignment may occur while the WO is `open`, `in_progress`, or `completed`
+  — never after close or cancel.
+- Assignment is refused for withdrawn assets (`maintenance_status = withdrawn`).
 - Assignment is tracked: `assigned_to`, `assigned_at`, and the assignment
   history is audited.
 
 ### 8.3 Work Order Execution
+
+**Starting work (`open` → `in_progress`):** The WO must be assigned first, and
+the asset's `operational_status` is **forced to `under_maintenance`**. The asset
+must already be recorded at a `workshop` or `yard`; if it is not, the Start
+dialog asks for the work location (workshop/yard only) and starting records it
+as a **real location transfer** — an `asset_location_histories` row with reason
+`Started work order WO-xxxx`, performed by whoever starts the WO (the assigned
+user, or an Admin/Manager). **Closing the WO does not move the asset back** — it
+stays at the workshop/yard until someone moves it via the Locations section or
+the AM workflow.
 
 During `in_progress`, the assigned Technician can:
 
@@ -1843,7 +1855,9 @@ Manager only. A required reason must be provided. Cancellation is available from
 - `cancellation_reason` and `cancelled_at` recorded.
 - Asset `operational_status` set to a caller-chosen value: `down` (the fault
   still exists, a new MR will be needed) or `active` (the WO was a false alarm,
-  the asset was never actually faulty).
+  the asset was never actually faulty). The choice is applied only when the
+  cancel payload carries `asset_status` — the UI always sends it, but an API
+  call without it leaves the asset untouched.
 
 **PM interaction:** If the originating MR was a preventive request, cancelling
 the WO does **not** automatically suppress future PM occurrences — the PM
@@ -1927,7 +1941,7 @@ After the WO transitions to `completed`, all form fields become read-only.
 | Status        | Meaning                                                           | Editable By                                                                               | Terminal? |
 | ------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------- |
 | `open`        | Created from approved MR. May be unassigned.                      | Manager (assign, edit exec details), Technician (after assignment)                        | No        |
-| `in_progress` | Work has started. Must be assigned to an active Technician.       | Assigned Technician (exec details, parts, readings, status), Admin/Manager (exec details) | No        |
+| `in_progress` | Work has started. Must be assigned to an active Technician or Maintenance Manager.       | Assigned Technician (exec details, parts, readings, status), Admin/Manager (exec details) | No        |
 | `completed`   | Technician has submitted all completion info. Awaiting closure.   | Admin/Manager (edit exec details, close, cancel)                                          | No        |
 | `closed`      | Reviewed and finalized by Admin or Manager. PM baselines updated. | No one — permanently immutable                                                            | Yes       |
 | `cancelled`   | Cancelled by Admin or Manager with required reason.               | No one — terminal and read-only                                                           | Yes       |
@@ -1959,9 +1973,9 @@ Clicking a WO row opens the full-page Work Order Detail screen. Sections:
 
 **Actions (role and status dependent):**
 
-- **Assign** — visible on `open` WOs for Admin/Manager.
-- **Start Work** — visible to assigned Technician on `open` WOs.
-- **Complete** — visible to assigned Technician on `in_progress` WOs.
+- **Assign** — visible on `open` and `in_progress` WOs for Admin/Manager.
+- **Start Work** — visible to the assigned user or Admin/Manager on `open` WOs.
+- **Complete** — visible to the assigned user or Admin/Manager on `in_progress` WOs.
 - **Close** — visible to Admin/Manager on `completed` WOs.
 - **Cancel** — visible to Admin/Manager on non-closed WOs.
 - **Add Part** — visible to assigned Technician (or Admin/Manager) on
@@ -2024,10 +2038,12 @@ The "All Assets" tab displays the full asset registry with search and filters.
 
 **Visible to:** Admin, Manager, Technician, Logistics.
 
-**Columns:** asset tag, name, category, maintenance status badge ("In maintenance
-program" / "Withdrawn" with sub-status), current location, latest confirmed usage reading, PM status
-indicator, asset kind badge (Asset / Package / Component), parent asset reference
-(for components).
+**Columns:** asset tag, name (with serial, size, and maintenance-category badges),
+category, kind badge (Asset / Package / Component), operational status badge
+(Active / Under Maintenance / Down / Retired), current location. Maintenance
+status is not shown in the table — with the register effectively always
+`enrolled`, the badge carried no information; it stays on the asset detail
+page.
 
 **Row actions:**
 
@@ -3320,7 +3336,7 @@ question it answers; click a card to open the report.
 | R-7 | PM Compliance | On-time PM completion percentage by rule, asset, location, and period. |
 | R-8 | Overdue PM | PMs past due and not closed, by aging bucket. |
 | R-9 | PM Coverage / Gaps | Active assets with no active PM assignment. |
-| R-10A | Operational Status Distribution | Fleet split across operational states — Active, Under Maintenance, Down, Inactive. |
+| R-10A | Operational Status Distribution | Fleet split across operational states — Active, Under Maintenance, Down, Retired. |
 | R-13 | Asset Booking / Availability | Booked vs freely available assets, by location. |
 | R-14 | WO Backlog / Aging | Open and in-progress work orders by age bucket and priority. |
 | R-15 | Workload by Technician | Assigned vs completed work orders and average duration per technician (operational workload only — never performance appraisal or labour costing). |
@@ -3417,7 +3433,7 @@ drill-down layer for the dashboard's headline numbers.
 | Status        | Description                                              | Terminal |
 | ------------- | -------------------------------------------------------- | -------- |
 | `open`        | Created from approved MR. May be unassigned.             | No       |
-| `in_progress` | Work started. Must be assigned to active Technician.     | No       |
+| `in_progress` | Work started. Must be assigned to an active Technician or Maintenance Manager.     | No       |
 | `completed`   | Technician submitted all work. Awaiting Manager closure. | No       |
 | `closed`      | Reviewed and finalized. Permanently immutable.           | Yes      |
 | `cancelled`   | Cancelled by Admin/Manager with required reason.         | Yes      |
@@ -3445,7 +3461,7 @@ functional. It is driven by Work Order lifecycle events. See Section 5.9.
 | `active` | **Active** | Fully operational and available for normal use. |
 | `under_maintenance` | **Under Maintenance** | Currently in the workshop being serviced. Work is in progress. |
 | `down` | **Down** | Has a known fault or failure. Not operational. Awaiting repair. |
-| `inactive` | **Inactive** | Permanently retired, decommissioned, or removed from the operational pool. |
+| `inactive` | **Retired** | Permanently retired, decommissioned, or removed from the operational pool. |
 
 ### Maintenance Sub-Statuses
 

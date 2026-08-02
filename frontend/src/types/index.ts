@@ -16,6 +16,7 @@ export type MrType = 'corrective' | 'preventive'
 export type MeterReadingSource = 'user' | 'manual'
 export type ErpSyncStatus = 'running' | 'success' | 'partial' | 'failed'
 export type AssetMaintenanceStatus = 'enrolled' | 'withdrawn'
+export type AssetOperationalStatus = 'active' | 'under_maintenance' | 'down' | 'inactive'
 export type AssetKind = 'asset' | 'package' | 'component'
 export type AssetMaintenanceSubStatus =
   | 'installed'

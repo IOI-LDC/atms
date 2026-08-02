@@ -91,7 +91,7 @@ const summaryStats = computed(() => {
     { label: 'Active', value: s.by_status.active ?? 0 },
     { label: 'Under Maintenance', value: s.by_status.under_maintenance ?? 0 },
     { label: 'Down', value: s.by_status.down ?? 0 },
-    { label: 'Inactive', value: s.by_status.inactive ?? 0 },
+    { label: 'Retired', value: s.by_status.inactive ?? 0 },
     { label: 'Booked', value: s.booked },
   ]
 })

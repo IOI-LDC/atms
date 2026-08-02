@@ -172,7 +172,7 @@ export function useReportCatalog(): {
           slug: 'asset-status-distribution',
           title: 'Operational Status Distribution',
           question:
-            'How is the fleet split across operational states — Active, Under Maintenance, Down, Inactive?',
+            'How is the fleet split across operational states — Active, Under Maintenance, Down, Retired?',
           status: 'available',
           pass1: true,
         },

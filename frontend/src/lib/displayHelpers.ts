@@ -84,7 +84,7 @@ export function operationalStatusLabel(s: string | null | undefined): string {
     active: 'Active',
     under_maintenance: 'Under Maintenance',
     down: 'Down',
-    inactive: 'Inactive',
+    inactive: 'Retired',
   }
   return m[s] ?? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
@@ -269,7 +269,8 @@ export function fmtDateTime(iso: string | null | undefined): string {
     second: '2-digit',
     hour12: false,
   }).formatToParts(d)
-  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? ''
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? ''
   // Some engines emit "24" for midnight under hour12:false — normalise to "00".
   const hour = get('hour') === '24' ? '00' : get('hour')
   return `${get('year')}-${get('month')}-${get('day')} ${hour}:${get('minute')}:${get('second')}`

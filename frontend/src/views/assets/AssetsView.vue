@@ -24,8 +24,8 @@ import {
 } from '@/lib/assetColumns'
 import type { Asset } from '@/types'
 import {
-  assetMaintenanceStatusClass,
-  assetMaintenanceStatusLabel,
+  operationalStatusClass,
+  operationalStatusLabel,
   assetKindClass,
   assetKindLabel,
 } from '@/lib/displayHelpers'
@@ -186,10 +186,10 @@ function goDetail(payload: { row: Asset }) {
             </span>
 
             <span
-              v-else-if="column.field === 'maintenance_status'"
-              :class="assetMaintenanceStatusClass(row.maintenance_status)"
+              v-else-if="column.field === 'operational_status'"
+              :class="operationalStatusClass(row.operational_status)"
             >
-              {{ assetMaintenanceStatusLabel(row.maintenance_status) }}
+              {{ operationalStatusLabel(row.operational_status) }}
             </span>
 
             <span v-else-if="column.field === 'current_location'">

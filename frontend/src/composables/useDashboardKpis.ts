@@ -73,7 +73,12 @@ export function useDashboardKpis() {
     const pct = (n: number) => (n / u.total) * 100
 
     const segments: UtilisationSegment[] = [
-      { key: 'deployed', label: 'Deployed', count: u.by_bucket.deployed, width: pct(u.by_bucket.deployed) },
+      {
+        key: 'deployed',
+        label: 'Deployed',
+        count: u.by_bucket.deployed,
+        width: pct(u.by_bucket.deployed),
+      },
       { key: 'idle', label: 'Idle', count: u.by_bucket.idle, width: pct(u.by_bucket.idle) },
       {
         key: 'maintenance',
@@ -107,7 +112,12 @@ export function useDashboardKpis() {
 
     return [
       { key: 'pm_coverage', label: 'PM coverage', ...r.pm_coverage, total: r.total },
-      { key: 'location_recorded', label: 'Location recorded', ...r.location_recorded, total: r.total },
+      {
+        key: 'location_recorded',
+        label: 'Location recorded',
+        ...r.location_recorded,
+        total: r.total,
+      },
       { key: 'baseline_reading', label: 'Baseline reading', ...r.baseline_reading, total: r.total },
     ]
   })
@@ -132,7 +142,7 @@ export function useDashboardKpis() {
         tone: 'warning',
       },
       { key: 'down', label: 'Down', count: h.by_status.down, tone: 'critical' },
-      { key: 'inactive', label: 'Inactive', count: h.by_status.inactive, tone: 'muted' },
+      { key: 'inactive', label: 'Retired', count: h.by_status.inactive, tone: 'muted' },
     ]
   })
 

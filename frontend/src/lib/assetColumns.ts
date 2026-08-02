@@ -1,6 +1,6 @@
 import type { AppColumnDef as ColumnDef } from '@/lib/appTable'
-import type { Asset, AssetMaintenanceStatus, AssetKind, MaintenanceCategoryOption } from '@/types'
-import { assetKindLabel, assetMaintenanceStatusLabel } from '@/lib/displayHelpers'
+import type { Asset, AssetKind, AssetOperationalStatus, MaintenanceCategoryOption } from '@/types'
+import { assetKindLabel, operationalStatusLabel } from '@/lib/displayHelpers'
 import type { FilterOption } from '@/lib/dataTableSource'
 
 /**
@@ -14,6 +14,11 @@ import type { FilterOption } from '@/lib/dataTableSource'
  * - `current_location` is an object { id, name } — no headerFilter (location
  *   filtering is handled externally via the select in the table's #toolbar
  *   slot, shown to Admin/Manager/Logistics only).
+ * - The status column shows `operational_status` (Active / Under Maintenance /
+ *   Down / Retired) — the business-relevant "is it usable right now?" signal
+ *   that moves with the MR/WO workflow. `maintenance_status` was dropped from
+ *   the table: 400/400 assets read `enrolled`, so the badge carried no
+ *   information; it remains on the asset detail page.
  * - "Latest usage reading" and "PM status" are not returned by the list
  *   endpoint and are deferred to the asset detail page.
  */
@@ -50,11 +55,11 @@ export const assetColumns: ColumnDef<Asset>[] = [
     minWidth: 100,
   },
   {
-    field: 'maintenance_status',
-    header: 'Status',
+    field: 'operational_status',
+    header: 'Operational Status',
     sortable: true,
     headerFilter: 'select',
-    minWidth: 100,
+    minWidth: 130,
   },
   {
     field: 'current_location',
@@ -102,8 +107,10 @@ export const assetFilterOptions: Record<string, FilterOption[]> = {
     value: v,
     label: assetKindLabel(v),
   })),
-  maintenance_status: (['enrolled', 'withdrawn'] as AssetMaintenanceStatus[]).map((v) => ({
+  operational_status: (
+    ['active', 'under_maintenance', 'down', 'inactive'] as AssetOperationalStatus[]
+  ).map((v) => ({
     value: v,
-    label: assetMaintenanceStatusLabel(v),
+    label: operationalStatusLabel(v),
   })),
 }

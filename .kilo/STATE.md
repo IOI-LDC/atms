@@ -3,7 +3,44 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-01 (latest)
+## Session — 2026-08-02 (latest)
+
+### Phase 1 tidy-up per user decisions: Retired rename, D-007 deleted, no activity feed
+
+User decisions from the Phase-1 "what's next" review, all handled this session:
+
+1. **D-007 — `views/locations/AssetLocationUpdateView.vue` DELETED** (user: "No
+   longer needed"). Zero references remained in the codebase (grep-verified);
+   `git rm`, tracked in TLD.md as D-007 ✅.
+2. **`operational_status = 'inactive'` now displays as "Retired"** — display-only
+   rename, user-approved, no migration / no API change. Touched:
+   `operationalStatusLabel` (badges), `reportOptions` (report filters),
+   `useDashboardKpis` legend, `useReportCatalog` copy, the WO "Update Asset
+   Status" and asset edit-form selects, `assetColumns` docblock, and the manual
+   (§5.9 table + terminal-state section, §6.4, §9.1, R-10A, Appendix A).
+   `is_active = false` keeps "Inactive" — the collision is resolved.
+3. **No activity feed — ruled out by the user.** "Recent asset moves" is the
+   final dashboard closing column; the previously flagged `audit_logs`-backed
+   activity-feed endpoint will NOT be built. Decision recorded in STATE/TLD.
+4. **Data repairs — user will reassign manually** ("L3 Maintenance Motors" PM
+   rule categories; the 2 deactivated WO Form templates). No code action.
+5. **Manual accuracy pass (2026-08-01→02):** user manual aligned to the code for
+   the WO workflow — transition-table actors (Managers assignable/startable/
+   completable), the start location gate + one-way move ("closing does not move
+   the asset back"), cancel `asset_status` nuance, §8.10 actions. The All Assets
+   table's Status column swapped from `maintenance_status` (400/400 `enrolled`
+   = zero information) to **`operational_status`** — new `AssetOperationalStatus`
+   type, filter options, badge cell, §9.1 corrected. The in-app manual renderer
+   now emits ordered-list `start="N"` so step lists interrupted by sub-bullets
+   no longer restart at 1; 19 grouping/hygiene edits (glued `---` rendered as
+   literal text, glued headings, wrapped step lines, stale §13.2 dropdown
+   groups, close-status FAQ, cross-ref ordering).
+6. **All of the above is UNCOMMITTED** (plus the earlier close-status-picker
+   docs, STATE/TLD updates, manual updates) — awaiting commit instruction.
+
+---
+
+## Session — 2026-08-01
 
 ### Close now asks for the asset's next operational status — and what the audit trail revealed
 
@@ -641,15 +678,15 @@ not sum. ⚠️ Two earlier attempts were rejected — a per-axis progress fill 
 a different numerator, so one visual meant three things) and 100%-stacked bars per
 axis. Don't reintroduce either.
 
-**Still open (raised, not resolved):** `operational_status = 'inactive'` and the
-record-level `is_active = false` are two different concepts sharing the word
-"Inactive", and the dashboard shows the first while silently filtering out the
-second. A display-only rename (e.g. Inactive → Retired) would fix it without a
-migration. No decision taken.
+**RESOLVED 2026-08-02 (user decision):** `operational_status = 'inactive'` now
+renders as **Retired** — a display-only rename, no migration, no API change
+(badges, report filters, dashboard legend, catalogue copy, WO/asset selects,
+manual). The record-level `is_active = false` keeps its "Inactive" wording —
+the collision is gone.
 
-⚠️ **Known gap:** the closing pair's right-hand column is **Recent asset moves**
-(from the existing relocated feed), not the full "Recent activity" in the design.
-A unified activity feed needs a new `audit_logs`-backed endpoint — not built.
+✅ **DECIDED 2026-08-02 (user):** **no activity feed.** "Recent asset moves" is
+the final closing column of the dashboard pair — do not build an
+`audit_logs`-backed activity feed.
 
 ### Reports — R-1 BUILT 2026-07-31, export still open
 

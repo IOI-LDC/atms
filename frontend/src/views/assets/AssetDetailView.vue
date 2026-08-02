@@ -154,7 +154,6 @@ const maintenanceCategoryValue = computed({
   },
 })
 
-
 // FileInput primitive — its open() method is triggered via ref.
 const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
 
@@ -268,11 +267,7 @@ watch(
             </div>
 
             <div class="detail-command-actions">
-              <Button
-                v-if="canManageBooking"
-                size="sm"
-                variant="outline"
-                @click="openBookingForm"
+              <Button v-if="canManageBooking" size="sm" variant="outline" @click="openBookingForm"
                 >Book</Button
               >
               <Button v-if="canEdit" size="sm" @click="openEdit">Edit Asset</Button>
@@ -483,7 +478,9 @@ watch(
               </div>
               <div class="data-card-content">
                 <div v-if="bookingsLoading" class="loading-state">Loading bookings…</div>
-                <div v-else-if="bookings.length === 0" class="empty-state">No bookings recorded.</div>
+                <div v-else-if="bookings.length === 0" class="empty-state">
+                  No bookings recorded.
+                </div>
                 <ul v-else class="booking-list">
                   <li
                     v-for="b in bookings"
@@ -491,7 +488,9 @@ watch(
                     class="booking-list-item"
                     @click="openBookingDetail(b)"
                   >
-                    <span class="booking-list-ref">{{ b.booking_reference || 'No reference' }}</span>
+                    <span class="booking-list-ref">{{
+                      b.booking_reference || 'No reference'
+                    }}</span>
                     <span :class="`status-badge status-${b.status}`">{{ b.status }}</span>
                   </li>
                 </ul>
@@ -645,7 +644,11 @@ watch(
           <div class="sheet-header-meta">
             <Badge variant="secondary">
               FA Asset Class:
-              {{ record?.fa_subclass_code ? faSubclassLabel(record.fa_subclass_code) : 'Not classified' }}
+              {{
+                record?.fa_subclass_code
+                  ? faSubclassLabel(record.fa_subclass_code)
+                  : 'Not classified'
+              }}
             </Badge>
           </div>
         </SheetHeader>
@@ -813,7 +816,7 @@ watch(
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="under_maintenance">Under Maintenance</SelectItem>
                   <SelectItem value="down">Down</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="inactive">Retired</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -957,7 +960,8 @@ watch(
           <DialogTitle>{{ bookingEditTarget ? 'Edit booking' : 'Book this asset' }}</DialogTitle>
           <DialogDescription>
             <template v-if="bookingEditTarget">
-              Update dates or details for this booking on <strong>{{ record?.name }}</strong>.
+              Update dates or details for this booking on <strong>{{ record?.name }}</strong
+              >.
             </template>
             <template v-else>
               Reserve <strong>{{ record?.name }}</strong> for a job or project.
@@ -967,11 +971,21 @@ watch(
         <div class="form-grid">
           <div class="form-field">
             <Label>From</Label>
-            <DatePicker v-model="bookingForm.booked_from" disable-portal placeholder="Select start date" :max="bookingForm.booked_until || null" />
+            <DatePicker
+              v-model="bookingForm.booked_from"
+              disable-portal
+              placeholder="Select start date"
+              :max="bookingForm.booked_until || null"
+            />
           </div>
           <div class="form-field">
             <Label>Until</Label>
-            <DatePicker v-model="bookingForm.booked_until" disable-portal placeholder="Select end date" :min="bookingForm.booked_from || null" />
+            <DatePicker
+              v-model="bookingForm.booked_until"
+              disable-portal
+              placeholder="Select end date"
+              :min="bookingForm.booked_from || null"
+            />
           </div>
           <p v-if="bookingError" class="form-error form-field-full">{{ bookingError }}</p>
           <div class="form-field-full">
@@ -989,8 +1003,8 @@ watch(
           </p>
           <ul class="booking-conflict-list">
             <li v-for="c in bookingConflicts" :key="c.id">
-              {{ c.booking_reference || 'No reference' }} — {{ fmtDate(c.booked_from) }} to {{ fmtDate(c.booked_until) }}
-              ({{ c.booked_by?.name ?? 'unknown' }})
+              {{ c.booking_reference || 'No reference' }} — {{ fmtDate(c.booked_from) }} to
+              {{ fmtDate(c.booked_until) }} ({{ c.booked_by?.name ?? 'unknown' }})
             </li>
           </ul>
         </div>

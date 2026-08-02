@@ -24,7 +24,7 @@ export const OPERATIONAL_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'active', label: 'Active' },
   { value: 'under_maintenance', label: 'Under Maintenance' },
   { value: 'down', label: 'Down' },
-  { value: 'inactive', label: 'Inactive' },
+  { value: 'inactive', label: 'Retired' },
 ]
 
 export const AGING_BUCKET_OPTIONS: { value: AgingBucket; label: string }[] = [
