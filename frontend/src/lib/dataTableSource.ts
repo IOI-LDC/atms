@@ -3,9 +3,9 @@ import type { CursorPage } from '@/types'
 
 /**
  * Page size sent on every cursor request. The backend enforces its own cap
- * (currently 100 for most endpoints). Sending a large value means the backend
- * applies its cap and we follow the cursor until next_cursor is null, so all
- * records are fetched regardless of the per-endpoint server limit.
+ * (currently 5000 for most index endpoints). Sending this value means the
+ * backend applies its cap and we follow the cursor until next_cursor is null,
+ * so all records are fetched regardless of the per-endpoint server limit.
  */
 export const FETCH_LIMIT = 5000
 
@@ -21,7 +21,7 @@ export interface FilterOption {
  * happen in the browser via TanStack Table (AppDataTable) after the full set is
  * loaded.
  *
- * The backend caps per_page per endpoint (e.g. 100 for assets). This function
+ * The backend caps per_page per endpoint (e.g. 5000 for assets). This function
  * transparently walks all pages so callers always receive the full result set.
  * `params` carry fixed tab semantics (e.g. { status: 'pending_review' }).
  */

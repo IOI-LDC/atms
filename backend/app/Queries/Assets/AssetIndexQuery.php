@@ -30,7 +30,7 @@ class AssetIndexQuery
         $this->applyFilters($query, $request);
         $this->applySort($query, $request);
 
-        $perPage = min((int) $request->input('per_page', 25), 100);
+        $perPage = min((int) $request->input('per_page', 25), 5000);
 
         return $query->cursorPaginate($perPage);
     }

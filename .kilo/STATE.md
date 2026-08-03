@@ -3,7 +3,37 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-02 (latest)
+## Session — 2026-08-03 (latest)
+
+### Index `per_page` cap raised 100 → 5000 (assets/parts load-time fix)
+
+User-reported slowness from the VPS: the Assets page took >2 s and the Parts
+page ~2.1 s to load. Diagnosis (measured, not guessed):
+
+- DB query for all 400 assets with eager loads: **5–7 ms** — the database is
+  not the bottleneck.
+- Warm HTTP request through nginx+FPM (local Docker): **~40 ms**.
+- Against the VPS (`atmsapi.inova.krd`): **~310–440 ms per request**, of which
+  ~150–300 ms is TLS/network and ~140 ms server processing.
+- The frontend (`dataTableSource.fetchList`) loads the full set by following
+  cursor pagination, but six index queries capped `per_page` at 100 while
+  `WorkOrderIndexQuery`/`MaintenanceRequestIndexQuery` already allowed 5000.
+  Result: 400 assets = 4 sequential round trips; 743 parts = 8.
+
+**Change:** cap raised to 5000 in `AssetIndexQuery`, `PartIndexQuery`,
+`EmployeeIndexQuery`, `PmRuleIndexQuery`, `FormTemplateIndexQuery`, and
+`BuildAssetMaintenanceHistory` — now uniform across all index endpoints.
+Frontend `FETCH_LIMIT` comments updated to match. New regression tests:
+`AssetIndexPaginationTest`, `PartIndexPaginationTest` (105 rows returned in one
+page; cap pinned at 5000). Full suite **1046 passed**, Pint clean.
+
+Expected effect on VPS: Assets 4 requests → 1 (~350 ms), Parts 8 → 1 (~350 ms).
+
+⚠️ **Uncommitted** — awaiting commit instruction.
+
+---
+
+## Session — 2026-08-02
 
 ### Phase 1 tidy-up per user decisions: Retired rename, D-007 deleted, no activity feed
 

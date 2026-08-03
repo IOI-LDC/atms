@@ -22,7 +22,7 @@ class BuildAssetMaintenanceHistory
             $query->whereHas('maintenanceRequest', fn ($q) => $q->where('created_by', $user->id));
         }
 
-        $perPage = min((int) $request->input('per_page', 25), 100);
+        $perPage = min((int) $request->input('per_page', 25), 5000);
 
         return $query->orderByDesc('closed_at')->cursorPaginate($perPage);
     }
