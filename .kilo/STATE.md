@@ -5,6 +5,25 @@
 
 ## Session — 2026-08-03 (latest)
 
+### Admin table visual fixes: centered-header alignment + wider Template columns
+
+User-reported visual defects on Admin > PM Rules and Admin > WO Forms:
+
+1. **Centered columns had left-aligned headers** (Level/Assets on PM Rules,
+   Fields on WO Forms). Root cause: `.app-data-table-thead th` (specificity
+   0,1,1, `text-align: left`) out-ranked `.app-data-table-th-center` (0,1,0),
+   so data centered while headers stayed flush left. Fixed by re-scoping the
+   center rule to `.app-data-table-thead th.app-data-table-th-center` — this
+   also repairs the same latent misalignment on every centered column app-wide
+   (Active columns etc.).
+2. **Template column widened 180/200 → 320 px** on both tables
+   (`minWidth` is the real width under `table-layout: fixed`).
+
+Files: `style.css`, `PmRulesView.vue`, `WoFormsView.vue`. `vue-tsc --build`
+clean. Frontend-only — needs rebuild/deploy to reach the VPS.
+
+---
+
 ### Index `per_page` cap raised 100 → 5000 (assets/parts load-time fix)
 
 User-reported slowness from the VPS: the Assets page took >2 s and the Parts
@@ -28,8 +47,8 @@ Frontend `FETCH_LIMIT` comments updated to match. New regression tests:
 page; cap pinned at 5000). Full suite **1046 passed**, Pint clean.
 
 Expected effect on VPS: Assets 4 requests → 1 (~350 ms), Parts 8 → 1 (~350 ms).
-
-⚠️ **Uncommitted** — awaiting commit instruction.
+Committed `185c7c5`, pushed, deployed — verified live: assets now load in a
+single 22.5 kB request (~0.7 s total, was >2 s).
 
 ---
 

@@ -69,7 +69,7 @@ const filteredTemplates = computed<WoFormTemplate[]>(() => {
 
 // ── Columns ───────────────────────────────────────────────────────────────────
 const columns: AppColumnDef<WoFormTemplate>[] = [
-  { field: 'name', header: 'Template', sortable: true, minWidth: 200 },
+  { field: 'name', header: 'Template', sortable: true, minWidth: 320 },
   {
     field: 'maintenance_categories',
     header: 'Maintenance Categories',

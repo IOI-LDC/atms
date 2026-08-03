@@ -2589,7 +2589,9 @@
   overflow: hidden;
   overflow-wrap: break-word;
 }
-.app-data-table-th-center {
+/* Must carry thead-th specificity (0,1,1+) or `.app-data-table-thead th`
+   reasserts text-align: left and centered headers sit left of centered data. */
+.app-data-table-thead th.app-data-table-th-center {
   text-align: center;
 }
 .app-data-table-th-center .app-data-table-sort-btn {

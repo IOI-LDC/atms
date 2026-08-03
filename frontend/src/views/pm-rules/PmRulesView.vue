@@ -64,7 +64,7 @@ const filteredRules = computed<PmRule[]>(() => {
 
 // ── Columns ───────────────────────────────────────────────────────────────────
 const columns: AppColumnDef<PmRule>[] = [
-  { field: 'name', header: 'Template', sortable: true, minWidth: 180 },
+  { field: 'name', header: 'Template', sortable: true, minWidth: 320 },
   { field: 'maintenance_level', header: 'Level', sortable: false, align: 'center' },
   { field: 'schedule', header: 'Schedule', sortable: false, minWidth: 220 },
   { field: 'assignments_count', header: 'Assets', sortable: false, align: 'center' },
