@@ -14,4 +14,8 @@ return [
      * so a default argument would never apply and links would come out relative.
      */
     'frontend_url' => env('FRONTEND_URL') ?: env('APP_URL'),
+    'allowed_email_domains' => array_map(
+        'trim',
+        explode(',', (string) env('ATMS_ALLOWED_EMAIL_DOMAINS', 'ldc.com.ly')),
+    ),
 ];
