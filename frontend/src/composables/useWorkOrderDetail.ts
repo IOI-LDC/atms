@@ -305,12 +305,23 @@ export function useWorkOrderDetail() {
   })
 
   // Absolute total that will be recorded: last reading + entered delta. With no
-  // prior reading for the type, the entered delta is the total itself.
+  // prior reading for the type, the entered delta is the total itself. Always
+  // rounded to 2dp so the displayed value equals what is stored (decimal(12,2)).
   const draftTotal = computed<number | null>(() => {
     const base = lastReadingForDraft.value
     const delta = readingDraft.value.value
     if (delta == null) return null
-    return base ? Math.round((base.value + delta) * 100) / 100 : delta
+    const total = base ? base.value + delta : delta
+    return Math.round(total * 100) / 100
+  })
+
+  // Unit of the type selected in the record draft — same source as
+  // `lastReadingForDraft.unit`, but also resolved without a base so the Total
+  // display always shows a unit, even on the first reading.
+  const draftUnit = computed<string>(() => {
+    const typeId = readingDraft.value.typeId
+    if (typeId == null) return ''
+    return readingTypes.value.find((t) => t.id === typeId)?.unit ?? ''
   })
 
   // A negative delta can never be valid — meter totals only increase.
@@ -1040,6 +1051,7 @@ export function useWorkOrderDetail() {
     readingsLoading,
     lastReadingForDraft,
     draftTotal,
+    draftUnit,
     readingDeltaNegative,
     sinceLastService,
     openRecordReading,

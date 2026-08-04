@@ -151,6 +151,7 @@ const {
   readingsLoading,
   lastReadingForDraft,
   draftTotal,
+  draftUnit,
   readingDeltaNegative,
   sinceLastService,
   openRecordReading,
@@ -1114,7 +1115,7 @@ watch(
           </Select>
         </div>
         <div class="form-field">
-          <Label for="wo-reading-value">Value since last reading <span class="field-required">*</span></Label>
+          <Label for="wo-reading-value">Used since last reading <span class="field-required">*</span></Label>
           <Input
             id="wo-reading-value"
             v-model="readingValueStr"
@@ -1125,13 +1126,16 @@ watch(
             Last recorded:
             <b>{{ lastReadingForDraft.value.toLocaleString() }} {{ lastReadingForDraft.unit }}</b>
             · {{ fmtDate(lastReadingForDraft.readAt)
-            }}<span v-if="lastReadingForDraft.confirmed"> · confirmed</span>
+            }}<span v-if="lastReadingForDraft.confirmed"> · confirmed</span
+            ><span v-else> · not yet confirmed</span>
           </p>
         </div>
         <div v-if="draftTotal != null" class="form-field">
-          <Label>Total (current meter reading)</Label>
+          <p class="detail-field-label">Total (current meter reading)</p>
           <p class="reading-total-display">
-            <b>{{ draftTotal.toLocaleString() }} {{ lastReadingForDraft?.unit ?? '' }}</b>
+            <b
+              >{{ draftTotal.toLocaleString() }}<span v-if="draftUnit"> {{ draftUnit }}</span></b
+            >
           </p>
         </div>
         <div v-if="readingDeltaNegative" class="form-field">
@@ -1165,7 +1169,7 @@ watch(
             :disabled="
               readingLoading ||
               readingTypeIdStr === undefined ||
-              readingDraft.value == null ||
+              draftTotal == null ||
               readingDeltaNegative
             "
             @click="doRecordReading"
