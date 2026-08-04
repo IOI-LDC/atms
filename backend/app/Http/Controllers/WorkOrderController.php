@@ -29,6 +29,7 @@ use App\Queries\WorkOrders\WorkOrderIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class WorkOrderController extends Controller
 {
@@ -149,10 +150,10 @@ class WorkOrderController extends Controller
         // Optional ground-truth override: on close the manager may revise the
         // MR's is_failure after inspecting the asset. Absent = keep existing value.
         // The manager also decides the asset's next operational status; absent
-        // falls back to ACTIVE (the pre-picker behaviour).
+        // falls back to READY_FOR_FIELD (the pre-picker behaviour).
         $validated = $request->validate([
             'is_failure' => ['nullable', 'boolean'],
-            'asset_status' => ['nullable', 'string', 'in:down,active'],
+            'asset_status' => ['nullable', 'string', Rule::in(['down', 'ready_for_field'])],
         ]);
 
         $assetStatus = isset($validated['asset_status'])
@@ -179,7 +180,7 @@ class WorkOrderController extends Controller
 
         $validated = $request->validate([
             'reason' => ['required', 'string'],
-            'asset_status' => ['nullable', 'in:down,active'],
+            'asset_status' => ['nullable', Rule::in(['down', 'ready_for_field'])],
         ]);
 
         $assetStatus = isset($validated['asset_status'])

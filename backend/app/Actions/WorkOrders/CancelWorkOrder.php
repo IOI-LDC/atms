@@ -36,7 +36,7 @@ class CancelWorkOrder
             $after = $workOrder->fresh()->toArray();
             $logger->log('work_order.cancelled', $locked, $before, $after);
 
-            // Caller-chosen asset status: DOWN = still faulty, ACTIVE = false alarm.
+            // Caller-chosen asset status: DOWN = still faulty, READY_FOR_FIELD = false alarm.
             if ($assetStatus !== null) {
                 app(ApplyWorkOrderAssetStatusTransition::class)->execute($locked, $assetStatus);
             }
