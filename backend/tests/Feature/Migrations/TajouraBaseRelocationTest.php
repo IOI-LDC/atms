@@ -53,6 +53,58 @@ class TajouraBaseRelocationTest extends TestCase
             'reason' => 'bulk relocation',
             'notes' => self::MARKER,
         ]);
+
+        // effective_at feeds the R-18 asset-movement report date window — a null
+        // here would silently drop rows from the report.
+        $this->assertSame(2, DB::table('asset_location_histories')
+            ->where('notes', self::MARKER)
+            ->whereNotNull('effective_at')
+            ->count());
+    }
+
+    public function test_migration_handles_asset_without_prior_location(): void
+    {
+        [$assetAId, $assetBId, , ] = $this->seedAssets();
+
+        $maintenanceCategory = MaintenanceCategory::factory()->create();
+        $now = now();
+
+        DB::table('assets')->insert([
+            'erp_asset_code' => 'AST-TJB-NOLOC',
+            'name' => 'AST-TJB-NOLOC',
+            'maintenance_category_id' => $maintenanceCategory->id,
+            'is_active' => true,
+            'operational_status' => 'ready_for_field',
+            'current_location_id' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $assetCId = DB::table('assets')->where('erp_asset_code', 'AST-TJB-NOLOC')->value('id');
+
+        $migration = $this->migration();
+        $migration->up();
+
+        $tjbId = Location::where('code', 'TJB')->sole()->id;
+
+        $this->assertDatabaseHas('assets', [
+            'id' => $assetCId,
+            'current_location_id' => $tjbId,
+        ]);
+        $this->assertDatabaseHas('asset_location_histories', [
+            'asset_id' => $assetCId,
+            'from_location_id' => null,
+            'to_location_id' => $tjbId,
+            'reason' => 'bulk relocation',
+            'notes' => self::MARKER,
+        ]);
+
+        $migration->down();
+
+        $this->assertDatabaseMissing('locations', ['code' => 'TJB']);
+        $this->assertDatabaseHas('assets', [
+            'id' => $assetCId,
+            'current_location_id' => null,
+        ]);
     }
 
     public function test_migration_is_idempotent(): void

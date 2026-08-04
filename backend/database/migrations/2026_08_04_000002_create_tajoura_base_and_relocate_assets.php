@@ -53,6 +53,10 @@ return new class extends Migration
             ->get();
 
         foreach ($rows as $row) {
+            // Edge case: an asset already at TJB before up() is restored to TJB here,
+            // and the from_location_id nullOnDelete FK then nulls its location when TJB
+            // is dropped below. Not reachable on the VPS deploy path (TJB is created by
+            // this migration), but manual reruns of down() on a live DB should know.
             DB::table('assets')->where('id', $row->asset_id)->update(['current_location_id' => $row->from_location_id]);
         }
 
