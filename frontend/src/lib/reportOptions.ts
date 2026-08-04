@@ -21,10 +21,12 @@ export const ASSET_KIND_OPTIONS: { value: AssetKind; label: string }[] = [
 ]
 
 export const OPERATIONAL_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'active', label: 'Active' },
+  { value: 'ready_for_field', label: 'Ready for Field' },
   { value: 'under_maintenance', label: 'Under Maintenance' },
   { value: 'down', label: 'Down' },
-  { value: 'inactive', label: 'Retired' },
+  { value: 'scraped', label: 'Scraped' },
+  { value: 'under_inspection', label: 'Under Inspection' },
+  { value: 'lih', label: 'Lost in Hole' },
 ]
 
 export const AGING_BUCKET_OPTIONS: { value: AgingBucket; label: string }[] = [

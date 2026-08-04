@@ -14,8 +14,9 @@ import type { FilterOption } from '@/lib/dataTableSource'
  * - `current_location` is an object { id, name } — no headerFilter (location
  *   filtering is handled externally via the select in the table's #toolbar
  *   slot, shown to Admin/Manager/Logistics only).
- * - The status column shows `operational_status` (Active / Under Maintenance /
- *   Down / Retired) — the business-relevant "is it usable right now?" signal
+ * - The status column shows `operational_status` (Ready for Field / Under
+ *   Maintenance / Down / Scraped / Under Inspection / Lost in Hole) — the
+ *   business-relevant "is it usable right now?" signal
  *   that moves with the MR/WO workflow. `maintenance_status` was dropped from
  *   the table: 400/400 assets read `enrolled`, so the badge carried no
  *   information; it remains on the asset detail page.
@@ -108,7 +109,14 @@ export const assetFilterOptions: Record<string, FilterOption[]> = {
     label: assetKindLabel(v),
   })),
   operational_status: (
-    ['active', 'under_maintenance', 'down', 'inactive'] as AssetOperationalStatus[]
+    [
+      'ready_for_field',
+      'under_maintenance',
+      'down',
+      'scraped',
+      'under_inspection',
+      'lih',
+    ] as AssetOperationalStatus[]
   ).map((v) => ({
     value: v,
     label: operationalStatusLabel(v),

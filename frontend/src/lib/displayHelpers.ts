@@ -81,23 +81,24 @@ export function failureClass(v: boolean | null | undefined): string {
 export function operationalStatusLabel(s: string | null | undefined): string {
   if (!s) return '—'
   const m: Record<string, string> = {
-    active: 'Active',
+    ready_for_field: 'Ready for Field',
     under_maintenance: 'Under Maintenance',
     down: 'Down',
-    inactive: 'Retired',
+    scraped: 'Scraped',
+    under_inspection: 'Under Inspection',
+    lih: 'Lost in Hole',
   }
   return m[s] ?? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
 
 export function operationalStatusClass(s: string | null | undefined): string {
   const m: Record<string, string> = {
-    // active/inactive → new .status-active / .status-inactive (added to style.css)
-    active: 'status-badge status-active',
-    inactive: 'status-badge status-inactive',
-    // under_maintenance → reuse existing amber WO badge
+    ready_for_field: 'status-badge status-active',
     under_maintenance: 'status-badge status-in-progress',
-    // down → reuse existing red priority badge
     down: 'status-badge priority-critical',
+    scraped: 'status-badge status-inactive',
+    under_inspection: 'status-badge status-in-progress',
+    lih: 'status-badge status-inactive',
   }
   return m[s ?? ''] ?? 'status-badge'
 }

@@ -229,14 +229,14 @@ export function useWorkOrderDetail() {
   // from the linked MR's current value so the reviewer sees the prior decision. Sent
   // to the API as `is_failure`.
   const closeIsFailure = ref<boolean | null>(null)
-  // Caller-chosen asset status on close, pre-seeded to 'active' (back in service);
+  // Caller-chosen asset status on close, pre-seeded to 'ready_for_field' (back in service);
   // 'down' keeps the asset out of service. Sent to the API as `asset_status`.
-  const closeAssetStatus = ref<'active' | 'down'>('active')
+  const closeAssetStatus = ref<'ready_for_field' | 'down'>('ready_for_field')
   const cancelOpen = ref(false)
   const cancelLoading = ref(false)
   const cancelReason = ref('')
-  // Caller-chosen asset status on cancel: 'down' (still faulty) | 'active' (false alarm).
-  const cancelAssetStatus = ref<'down' | 'active' | null>(null)
+  // Caller-chosen asset status on cancel: 'down' (still faulty) | 'ready_for_field' (false alarm).
+  const cancelAssetStatus = ref<'down' | 'ready_for_field' | null>(null)
 
   // ── Parts state ──────────────────────────────────────────────────────────
   const addPartOpen = ref(false)
@@ -585,7 +585,7 @@ export function useWorkOrderDetail() {
     closeIsFailure.value = record.value?.maintenance_request?.is_failure ?? null
     // The asset is presumed back in service; the closer changes it to 'down'
     // only when the repair did not restore it.
-    closeAssetStatus.value = 'active'
+    closeAssetStatus.value = 'ready_for_field'
     closeOpen.value = true
   }
   async function doClose() {
@@ -593,11 +593,11 @@ export function useWorkOrderDetail() {
     closeLoading.value = true
     try {
       // `asset_status` is always sent — the closer decides the asset's next
-      // operational status (pre-seeded to active). `is_failure` is only sent
-      // for corrective-origin WOs when a value is chosen — never null, which
-      // would clobber the review-time classification. The key is omitted
+      // operational status (pre-seeded to ready_for_field). `is_failure` is only
+      // sent for corrective-origin WOs when a value is chosen — never null,
+      // which would clobber the review-time classification. The key is omitted
       // entirely for PM WOs and when unset.
-      const payload: { is_failure?: boolean; asset_status: 'active' | 'down' } = {
+      const payload: { is_failure?: boolean; asset_status: 'ready_for_field' | 'down' } = {
         asset_status: closeAssetStatus.value,
       }
       if (isCorrectiveOrigin.value && closeIsFailure.value !== null) {
