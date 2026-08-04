@@ -25,7 +25,7 @@ services:
       CORS_SUPPORTS_CREDENTIALS: "${CORS_SUPPORTS_CREDENTIALS:-true}"
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
       ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
-      EMPLOYEE_VISIBLE_EMP_IDS: "${EMPLOYEE_VISIBLE_EMP_IDS:-}"
+      ATMS_ALLOWED_EMAIL_DOMAINS: "${ATMS_ALLOWED_EMAIL_DOMAINS:-ldc.com.ly}"
       # These are set from the ROOT .env, which Compose reads. A value present only
       # in backend/.env will NOT be used: Compose injects the empty default here as
       # a real environment variable, and Laravel's Env reads $_SERVER before the

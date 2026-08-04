@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\ApiClientController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CompanySettingController;
-use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\ErpSyncController;
 use App\Http\Controllers\Admin\FormTemplateController;
 use App\Http\Controllers\Admin\MaintenanceCategoryController;
@@ -94,10 +93,6 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
         Route::post('/users/{user}/reactivate', [UserController::class, 'reactivate']);
 
         Route::get('/roles', [RoleController::class, 'index']);
-
-        Route::get('/employees', [EmployeeController::class, 'index']);
-        Route::post('/employees/import', [EmployeeController::class, 'import']);
-        Route::post('/employees/provision-user', [EmployeeController::class, 'provisionUser']);
 
         Route::get('/erp/sync-jobs', [ErpSyncController::class, 'index']);
         Route::post('/erp/sync-parts', [ErpSyncController::class, 'syncParts']);

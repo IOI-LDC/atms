@@ -2,14 +2,11 @@
 
 namespace App\Providers;
 
-use App\Contracts\Employees\EmployeeDirectorySource;
 use App\Contracts\Erp\ErpSource;
 use App\Contracts\Notifications\AccountEmailTransport;
 use App\Models\Attachment;
 use App\Models\User;
 use App\Notifications\Channels\AccountEmailChannel;
-use App\Services\Employees\CsvEmployeeDirectorySource;
-use App\Services\Employees\FakeEmployeeDirectorySource;
 use App\Services\Erp\LdcErpHttpSource;
 use App\Services\Notifications\FakeAccountEmailTransport;
 use App\Services\Notifications\GraphAccountEmailTransport;
@@ -31,22 +28,6 @@ class AppServiceProvider extends ServiceProvider
                 'graph' => new GraphAccountEmailTransport,
                 default => new FakeAccountEmailTransport,
             };
-        });
-
-        $this->app->singleton(EmployeeDirectorySource::class, function () {
-            $source = config('employees.directory_source', 'csv');
-
-            if ($source === 'sharepoint') {
-                throw new \RuntimeException('Real SharePoint transport is not yet implemented. Please use "fake" or "csv" source.');
-            }
-
-            if ($source === 'csv') {
-                $path = config('employees.csv_path', base_path('employee.csv'));
-
-                return new CsvEmployeeDirectorySource($path);
-            }
-
-            return new FakeEmployeeDirectorySource;
         });
 
         $this->app->singleton(ErpSource::class, LdcErpHttpSource::class);
