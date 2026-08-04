@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue'
 import api, { ApiError } from '@/lib/api'
-import { fetchList } from '@/lib/dataTableSource'
-import type { Employee, User, Role } from '@/types'
+import type { User, Role } from '@/types'
 
 export function useUsers() {
   // ── Roles ──────────────────────────────────────────────────────────────────
@@ -23,38 +22,10 @@ export function useUsers() {
     }
   }
 
-  // ── Employees ──────────────────────────────────────────────────────────────
-  const employees = ref<Employee[]>([])
-  const employeesLoading = ref(false)
-  const employeesError = ref<string | null>(null)
-
-  async function loadEmployees(force = false) {
-    if (employees.value.length > 0 && !force) return
-    employeesLoading.value = true
-    employeesError.value = null
-    try {
-      employees.value = await fetchList<Employee>('/admin/employees', { sort: 'name:asc' })
-    } catch {
-      employees.value = []
-      employeesError.value = 'Failed to load employees.'
-    } finally {
-      employeesLoading.value = false
-    }
-  }
-
   // ── Users ──────────────────────────────────────────────────────────────────
   const users = ref<User[]>([])
   const usersLoading = ref(false)
   const usersError = ref<string | null>(null)
-
-  // Set of emp_ids that are already provisioned — cross-reference without eager-load
-  const provisionedEmpIds = computed(() => {
-    const set = new Set<string>()
-    for (const u of users.value) {
-      if (u.emp_id) set.add(u.emp_id)
-    }
-    return set
-  })
 
   async function loadUsers(force = false) {
     if (users.value.length > 0 && !force) return
@@ -72,25 +43,29 @@ export function useUsers() {
   }
 
   async function refreshAll() {
-    await Promise.all([loadEmployees(true), loadUsers(true)])
+    await loadUsers(true)
   }
 
-  // ── Provision employee as user ─────────────────────────────────────────────
-  const provisioning = ref(false)
-  const provisionErrors = ref<Record<string, string[]> | null>(null)
+  // ── Create user ────────────────────────────────────────────────────────────
+  const creating = ref(false)
+  const createErrors = ref<Record<string, string[]> | null>(null)
 
-  async function provisionUser(empId: string, roleId: number): Promise<boolean> {
-    provisioning.value = true
-    provisionErrors.value = null
+  async function createUser(payload: {
+    name: string
+    email: string
+    role_id: number
+  }): Promise<boolean> {
+    creating.value = true
+    createErrors.value = null
     try {
-      await api.post('/admin/employees/provision-user', { emp_id: empId, role_id: roleId })
-      await refreshAll()
+      await api.post('/admin/users', payload)
+      await loadUsers(true)
       return true
     } catch (e) {
-      if (e instanceof ApiError && e.validationErrors) provisionErrors.value = e.validationErrors
+      if (e instanceof ApiError && e.validationErrors) createErrors.value = e.validationErrors
       return false
     } finally {
-      provisioning.value = false
+      creating.value = false
     }
   }
 
@@ -178,18 +153,13 @@ export function useUsers() {
     assignableRoles,
     rolesLoading,
     loadRoles,
-    employees,
-    employeesLoading,
-    employeesError,
-    loadEmployees,
     users,
     usersLoading,
     usersError,
     loadUsers,
-    provisionedEmpIds,
-    provisioning,
-    provisionErrors,
-    provisionUser,
+    creating,
+    createErrors,
+    createUser,
     saving,
     validationErrors,
     updateUser,

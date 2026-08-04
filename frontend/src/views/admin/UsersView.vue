@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
 import AppDataTable from '@/components/app/AppDataTable.vue'
-import ProvisionUserDialog from '@/components/admin/ProvisionUserDialog.vue'
+import CreateUserDialog from '@/components/admin/CreateUserDialog.vue'
 import EditUserSheet from '@/components/admin/EditUserSheet.vue'
 import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog.vue'
 import UserStatusDialog from '@/components/admin/UserStatusDialog.vue'
@@ -12,25 +12,20 @@ import { useAuthStore } from '@/stores/auth.store'
 import { roleClass, roleLabel, userStatusClass, userStatusLabel } from '@/lib/displayHelpers'
 import { Pencil, KeyRound, ToggleLeft, ToggleRight, UserPlus } from '@lucide/vue'
 import type { AppColumnDef } from '@/lib/appTable'
-import type { Employee, User } from '@/types'
+import type { User } from '@/types'
 
 const auth = useAuthStore()
 
 const {
   assignableRoles,
   loadRoles,
-  employees,
-  employeesLoading,
-  employeesError,
-  loadEmployees,
   users,
   usersLoading,
   usersError,
   loadUsers,
-  provisionedEmpIds,
-  provisioning,
-  provisionErrors,
-  provisionUser,
+  creating,
+  createErrors,
+  createUser,
   saving,
   validationErrors,
   updateUser,
@@ -43,15 +38,6 @@ const {
 } = useUsers()
 
 // ── Column definitions ────────────────────────────────────────────────────────
-const employeeColumns: AppColumnDef<Employee>[] = [
-  { field: 'name', header: 'Name', sortable: true },
-  { field: 'emp_id', header: 'Employee ID', sortable: true },
-  { field: 'email', header: 'Email', sortable: true },
-  { field: 'department', header: 'Department', sortable: true },
-  { field: 'job_title', header: 'Job Title', sortable: true },
-  { field: 'actions', header: '', sortable: false, align: 'center', minWidth: 150 },
-]
-
 const userColumns: AppColumnDef<User>[] = [
   { field: 'name', header: 'Name', sortable: true },
   { field: 'email', header: 'Email', sortable: true },
@@ -63,7 +49,6 @@ const userColumns: AppColumnDef<User>[] = [
 // ── Initial load ──────────────────────────────────────────────────────────────
 onMounted(() => {
   loadRoles()
-  loadEmployees()
   loadUsers()
 })
 
@@ -72,37 +57,21 @@ function isSelf(user: User) {
   return user.id === auth.user?.id
 }
 
-// ── Provision ─────────────────────────────────────────────────────────────────
-const provisionTarget = ref<Employee | null>(null)
-const provisionOpen = ref(false)
+// ── Create user ───────────────────────────────────────────────────────────────
+const createOpen = ref(false)
 
-function openProvision(employee: Employee) {
-  provisionTarget.value = employee
-  provisionOpen.value = true
+function closeCreate() {
+  createOpen.value = false
+  createErrors.value = null
 }
 
-function closeProvision() {
-  provisionOpen.value = false
-  provisionTarget.value = null
-}
-
-async function onProvisionConfirm(roleId: number) {
-  if (!provisionTarget.value) return
-  const target = provisionTarget.value
-  if (!target.emp_id) {
-    toast.error('This employee has no Employee ID and cannot be provisioned.')
-    return
-  }
-  const ok = await provisionUser(target.emp_id, roleId)
+async function onCreateConfirm(payload: { name: string; email: string; role_id: number }) {
+  const ok = await createUser(payload)
   if (ok) {
-    toast.success(`${target.name} provisioned. Activation email queued.`)
-    closeProvision()
-  } else {
-    const msg = provisionErrors.value
-      ? Object.values(provisionErrors.value).flat().join(' ')
-      : 'Failed to provision — this employee may already have an account.'
-    toast.error(msg)
+    toast.success('User created. Activation email queued.')
+    closeCreate()
   }
+  // validation errors surface inline via createErrors prop on the dialog
 }
 
 // ── Edit user ─────────────────────────────────────────────────────────────────
@@ -188,66 +157,6 @@ async function onStatusConfirm() {
 
 <template>
   <div class="page-content">
-    <!-- ── Employee Directory ────────────────────────────────────────────── -->
-    <div class="data-card">
-      <div class="data-card-header">
-        <div>
-          <h2 class="data-card-title">Employee Directory</h2>
-          <p class="data-card-description">
-            Employees imported from SharePoint. Provision to create a system account.
-          </p>
-        </div>
-        <Button disabled aria-label="Import employees from SharePoint">
-          Import from SharePoint
-        </Button>
-      </div>
-      <div class="data-card-content">
-        <div v-if="employeesError" class="error-state" role="alert">{{ employeesError }}</div>
-        <AppDataTable
-          :rows="employees"
-          :columns="employeeColumns"
-          empty-text="No employees found."
-          label="Employees"
-          :loading="employeesLoading"
-        >
-          <template #cell="{ column, row }">
-            <span v-if="column.field === 'name'" class="table-cell-primary">{{ row.name }}</span>
-
-            <span v-else-if="column.field === 'emp_id'" class="atms-erp-code">
-              {{ row.emp_id ?? '—' }}
-            </span>
-
-            <span v-else-if="column.field === 'email'">{{ row.email ?? '—' }}</span>
-
-            <span v-else-if="column.field === 'department'" class="table-cell-secondary">
-              {{ row.department ?? '—' }}
-            </span>
-
-            <span v-else-if="column.field === 'job_title'" class="table-cell-secondary">
-              {{ row.job_title ?? '—' }}
-            </span>
-
-            <div v-else-if="column.field === 'actions'" class="table-row-actions">
-              <span
-                v-if="row.emp_id && provisionedEmpIds.has(row.emp_id)"
-                class="status-badge status-active"
-                >Provisioned</span
-              >
-              <Button
-                v-else
-                variant="outline"
-                size="icon-sm"
-                :aria-label="`Provision ${row.name} as a user`"
-                @click="openProvision(row)"
-              >
-                <UserPlus />
-              </Button>
-            </div>
-          </template>
-        </AppDataTable>
-      </div>
-    </div>
-
     <!-- ── System Users ───────────────────────────────────────────────────── -->
     <div class="data-card">
       <div class="data-card-header">
@@ -257,6 +166,10 @@ async function onStatusConfirm() {
             Active and inactive ATMS accounts. You cannot modify your own account.
           </p>
         </div>
+        <Button variant="outline" aria-label="Add a new user" @click="createOpen = true">
+          <UserPlus />
+          Add User
+        </Button>
       </div>
       <div class="data-card-content">
         <div v-if="usersError" class="error-state" role="alert">{{ usersError }}</div>
@@ -320,13 +233,13 @@ async function onStatusConfirm() {
   </div>
 
   <!-- ── Dialogs / Sheets ───────────────────────────────────────────────── -->
-  <ProvisionUserDialog
-    :open="provisionOpen"
-    :employee="provisionTarget"
+  <CreateUserDialog
+    :open="createOpen"
     :roles="assignableRoles"
-    :loading="provisioning"
-    @confirm="onProvisionConfirm"
-    @cancel="closeProvision"
+    :loading="creating"
+    :validation-errors="createErrors"
+    @confirm="onCreateConfirm"
+    @cancel="closeCreate"
   />
 
   <EditUserSheet
