@@ -117,6 +117,38 @@ class CreateUserTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'x@partner.com']);
     }
 
+    public function test_uppercase_domain_is_accepted(): void
+    {
+        $admin = $this->createAdmin();
+        $role = Role::where('code', RoleCode::TECHNICIAN)->first();
+
+        $response = $this->actingAs($admin)->postJson('/api/admin/users', [
+            'name' => 'Upper Case',
+            'email' => 'JOHN@LDC.COM.LY',
+            'role_id' => $role->id,
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('users', ['email' => 'JOHN@LDC.COM.LY']);
+    }
+
+    public function test_subdomain_is_not_an_exact_domain_match(): void
+    {
+        $admin = $this->createAdmin();
+        $role = Role::where('code', RoleCode::TECHNICIAN)->first();
+
+        $response = $this->actingAs($admin)->postJson('/api/admin/users', [
+            'name' => 'Subdomain User',
+            'email' => 'x@ops.ldc.com.ly',
+            'role_id' => $role->id,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+
+        $this->assertDatabaseCount('users', 1);
+    }
+
     public function test_duplicate_email_is_rejected(): void
     {
         $admin = $this->createAdmin();
@@ -133,6 +165,22 @@ class CreateUserTest extends TestCase
             ->assertJsonValidationErrors('email');
 
         $this->assertDatabaseCount('users', 2);
+    }
+
+    public function test_nonexistent_role_id_is_rejected(): void
+    {
+        $admin = $this->createAdmin();
+
+        $response = $this->actingAs($admin)->postJson('/api/admin/users', [
+            'name' => 'No Role',
+            'email' => 'norole@ldc.com.ly',
+            'role_id' => 999999,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('role_id');
+
+        $this->assertDatabaseCount('users', 1);
     }
 
     #[DataProvider('nonAdminRoles')]

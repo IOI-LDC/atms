@@ -39,7 +39,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email', new AllowedEmailDomain],
+            'email' => ['required', 'email', 'max:255', new AllowedEmailDomain, 'unique:users,email'],
             'role_id' => ['required', 'exists:roles,id'],
         ]);
 
@@ -59,7 +59,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'unique:users,email,'.$user->id, new AllowedEmailDomain],
+            'email' => ['nullable', 'email', new AllowedEmailDomain, 'unique:users,email,'.$user->id],
             'role_id' => ['nullable', 'exists:roles,id'],
             'is_active' => ['nullable', 'boolean'],
         ]);

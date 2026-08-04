@@ -6,6 +6,7 @@ use App\Actions\Auth\ActivateUser;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\UserActivationNotification;
+use App\Services\Audit\AuditLogger;
 use App\Support\FrontendUrl;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -28,6 +29,8 @@ class CreateUser
             $token = $this->activateUserAction->issueToken($user);
             $url = FrontendUrl::to('/activate?token='.$token);
             $user->notify(new UserActivationNotification($url));
+
+            app(AuditLogger::class)->log('user.created', $user, [], $user->toArray());
 
             return $user;
         });
