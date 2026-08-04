@@ -50,6 +50,20 @@ class RenameOperationalStatusValuesTest extends TestCase
             'operational_status' => 'scraped',
         ]);
 
+        DB::table('assets')->insert([
+            'erp_asset_code' => 'AST-DEFAULT',
+            'name' => 'AST-DEFAULT',
+            'maintenance_category_id' => $maintenanceCategory->id,
+            'is_active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $this->assertDatabaseHas('assets', [
+            'erp_asset_code' => 'AST-DEFAULT',
+            'operational_status' => 'ready_for_field',
+        ]);
+
         $migration->up();
 
         $this->assertDatabaseHas('assets', [
@@ -59,6 +73,58 @@ class RenameOperationalStatusValuesTest extends TestCase
         $this->assertDatabaseHas('assets', [
             'erp_asset_code' => 'AST-INACTIVE',
             'operational_status' => 'scraped',
+        ]);
+    }
+
+    public function test_down_restores_legacy_values_and_default(): void
+    {
+        $maintenanceCategory = MaintenanceCategory::factory()->create();
+        $now = now();
+
+        DB::table('assets')->insert([
+            'erp_asset_code' => 'AST-ACTIVE',
+            'name' => 'AST-ACTIVE',
+            'maintenance_category_id' => $maintenanceCategory->id,
+            'is_active' => true,
+            'operational_status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::table('assets')->insert([
+            'erp_asset_code' => 'AST-INACTIVE',
+            'name' => 'AST-INACTIVE',
+            'maintenance_category_id' => $maintenanceCategory->id,
+            'is_active' => true,
+            'operational_status' => 'inactive',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $migration = $this->migration();
+        $migration->up();
+        $migration->down();
+
+        $this->assertDatabaseHas('assets', [
+            'erp_asset_code' => 'AST-ACTIVE',
+            'operational_status' => 'active',
+        ]);
+        $this->assertDatabaseHas('assets', [
+            'erp_asset_code' => 'AST-INACTIVE',
+            'operational_status' => 'inactive',
+        ]);
+
+        DB::table('assets')->insert([
+            'erp_asset_code' => 'AST-DEFAULT',
+            'name' => 'AST-DEFAULT',
+            'maintenance_category_id' => $maintenanceCategory->id,
+            'is_active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $this->assertDatabaseHas('assets', [
+            'erp_asset_code' => 'AST-DEFAULT',
+            'operational_status' => 'active',
         ]);
     }
 
