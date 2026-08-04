@@ -124,19 +124,21 @@ These principles shape every feature and workflow decision in ATMS:
 
 ### 2.1 How Accounts Are Created
 
-ATMS does not support self-registration. All user accounts are provisioned by an
-Administrator:
+ATMS does not support self-registration. All user accounts are created directly
+by an Administrator:
 
-1. The Administrator imports employees from the client's SharePoint employee
-   directory into the local employee list. Importing an employee does **not**
-   grant application access — it simply makes the employee record available for
-   provisioning.
-2. The Administrator selects an imported employee and provisions them as a user,
-   assigning one of the five fixed roles: Administrator, Maintenance Manager,
-   Technician, Logistics, or Requester.
-3. The system sends an activation email to the user through Microsoft Graph. This email contains a one-time activation link.
+1. The Administrator creates the user directly, entering the person's **name,
+   email, and role** — one of the five fixed roles: Administrator, Maintenance
+   Manager, Technician, Logistics, or Requester. The email must be an
+   `@ldc.com.ly` mailbox (case-insensitive; the allowlist is configurable).
+2. The account is created **inactive** with a random password.
+3. The system sends an activation email to the user through Microsoft Graph.
+   This email contains a one-time activation link.
 4. The user clicks the activation link, sets their own password, and gains
    access.
+
+There is no directory sync or import: accounts are created directly, and
+activation is how the person proves mailbox ownership.
 
 Administrators do not set or view user passwords. Each user sets their own
 password during activation. If a user forgets their password, they can request a
@@ -155,7 +157,7 @@ IP address and email combination, further attempts are temporarily blocked.
 
 ### 2.3 Activating Your Account
 
-When an Administrator provisions your account, you will receive an email with an
+When an Administrator creates your account, you will receive an email with an
 activation link. Follow these steps:
 
 1. Click the activation link in the email, or copy the token and navigate to the activation page.
@@ -207,10 +209,9 @@ The Administrator has full access to every part of the system.
 
 **What an Administrator can do:**
 
-- **User Management:** Import employees from SharePoint, provision employees as
-  users, assign fixed roles, activate and deactivate user accounts, force
-  password resets. Cannot deactivate, reset, or edit their own account through
-  admin endpoints.
+- **User Management:** Create users directly (name, email, role), assign fixed
+  roles, activate and deactivate user accounts, force password resets. Cannot
+  deactivate, reset, or edit their own account through admin endpoints.
 - **Asset Management:** Create assets, update any asset field, change asset
   kind, set parent-child assembly relationships, manage asset maintenance status
   and sub-statuses, book and unbook assets.
@@ -263,8 +264,7 @@ workflow.
 
 **What a Maintenance Manager cannot do:**
 
-- Manage users, employees, locations, master data, company settings, or API
-  clients.
+- Manage users, locations, master data, company settings, or API clients.
 - View raw ERP payloads (receives mapped reference fields only).
 - View technical audit logs.
 - Manage ERP sync settings or schedule.
@@ -301,7 +301,7 @@ The Technician executes assigned Work Orders in the field.
 - Create assets or edit asset master data.
 - Book or unbook assets.
 - Manage PM rules or assignments.
-- Manage users, employees, locations, or master data.
+- Manage users, locations, or master data.
 - View technical audit logs.
 
 ### 3.4 Logistics
@@ -329,8 +329,7 @@ Movement) frontend. Within ATMS, Logistics has a focused set of capabilities.
 - Manage PM rules or assignments.
 - Confirm meter readings (can only submit unverified readings).
 - View the Parts catalogue (Parts Management is not visible to Logistics in MVP).
-- Manage users, employees, locations definitions, master data, or company
-  settings.
+- Manage users, locations definitions, master data, or company settings.
 - View technical audit logs.
 
 ### 3.5 Requester
@@ -827,7 +826,8 @@ marked **Withdrawn** in ATMS while still appearing in ERP financial records.
 > the UI as **"In maintenance program"** (`enrolled`) and **"Withdrawn"**
 > (`withdrawn`). (These were renamed from the former "Active"/"Inactive" so that
 > maintenance status is never confused with an asset's separate _operational_
-> status, which has its own "active" value.)
+> status, which has its own value, `ready_for_field`, displayed as "Ready for
+> Field".)
 
 #### Enrolled — displayed as "In maintenance program"
 
@@ -3107,7 +3107,7 @@ employee records are not user accounts.
   given address — the recipient proves mailbox ownership by clicking the
   activation link and setting their own password. That activation is the
   verification step that the person is an LDC employee with a valid LDC mailbox;
-  importing a SharePoint employee is not required and cannot be done.
+  importing from an external directory is not required and cannot be done.
 
 **User Management:**
 
