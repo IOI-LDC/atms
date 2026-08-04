@@ -21,6 +21,7 @@ class LocationSeeder extends Seeder
             ['name' => 'Rig A',           'type' => 'rig',           'code' => 'RA',   'description' => 'Rig A location'],
             ['name' => 'Rig B',           'type' => 'rig',           'code' => 'RB',   'description' => 'Rig B location'],
             ['name' => 'Rig C',           'type' => 'rig',           'code' => 'RC',   'description' => 'Rig C location'],
+            ['name' => 'Tajoura Base',     'type' => 'yard',          'code' => 'TJB',  'description' => 'Tajoura Base — primary asset storage and operational base'],
         ];
 
         foreach ($locations as $loc) {
