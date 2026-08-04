@@ -1275,8 +1275,8 @@ explanatory empty state ("No failures yet", "None closed"), never zero.
   **Booked** appears below a separator: it is a different axis, not a seventh
   state, and deliberately does not sum with the rows above it (an asset can be
   Booked and Under Maintenance at once).
-- **By location** shows the six locations holding the most assets, with
-  proportional bars and counts.
+- **By location** shows the locations holding the most assets (currently
+  Tajoura Base), with proportional bars and counts.
 
 ### 6.5 Programme Readiness
 
