@@ -42,10 +42,6 @@ export function useUsers() {
     }
   }
 
-  async function refreshAll() {
-    await loadUsers(true)
-  }
-
   // ── Create user ────────────────────────────────────────────────────────────
   const creating = ref(false)
   const createErrors = ref<Record<string, string[]> | null>(null)

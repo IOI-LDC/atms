@@ -35,6 +35,7 @@ const emit = defineEmits<{
 const name = ref('')
 const email = ref('')
 const roleId = ref('')
+const formError = ref('')
 
 watch(
   () => props.open,
@@ -43,12 +44,17 @@ watch(
       name.value = ''
       email.value = ''
       roleId.value = ''
+      formError.value = ''
     }
   },
 )
 
 function handleConfirm() {
-  if (!name.value.trim() || !email.value.trim() || !roleId.value) return
+  if (!name.value.trim() || !email.value.trim() || !roleId.value) {
+    formError.value = 'Please fill in all fields.'
+    return
+  }
+  formError.value = ''
   emit('confirm', {
     name: name.value.trim(),
     email: email.value.trim(),
@@ -108,6 +114,8 @@ function handleConfirm() {
         <strong v-if="email.trim()">{{ email.trim() }}</strong
         ><span v-else>the entered email address</span>. The link expires in 24 hours.
       </div>
+
+      <p v-if="formError" class="form-error">{{ formError }}</p>
 
       <DialogFooter>
         <Button variant="outline" :disabled="loading" @click="emit('cancel')">Cancel</Button>

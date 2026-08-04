@@ -70,6 +70,8 @@ async function onCreateConfirm(payload: { name: string; email: string; role_id: 
   if (ok) {
     toast.success('User created. Activation email queued.')
     closeCreate()
+  } else if (!createErrors.value) {
+    toast.error('Failed to create user.')
   }
   // validation errors surface inline via createErrors prop on the dialog
 }
