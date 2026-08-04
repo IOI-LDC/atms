@@ -466,16 +466,6 @@ export interface Attachment {
 
 // ── Admin resources ───────────────────────────────────────────────────────────
 
-export interface Employee {
-  id: number
-  name: string
-  emp_id: string | null
-  email?: string | null
-  department?: string | null
-  job_title?: string | null
-  user?: { id: number; name: string; role: Role } | null
-}
-
 export interface Location {
   id: number
   parent_id: number | null

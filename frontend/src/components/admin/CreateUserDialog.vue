@@ -73,8 +73,13 @@ function handleConfirm() {
 
       <div class="form-field">
         <Label for="create-user-name">Name <span class="field-required">*</span></Label>
-        <Input id="create-user-name" v-model="name" placeholder="Full name" />
-        <p v-if="validationErrors?.name" class="form-error">
+        <Input
+          id="create-user-name"
+          v-model="name"
+          placeholder="Full name"
+          :aria-describedby="validationErrors?.name ? 'create-user-name-error' : undefined"
+        />
+        <p v-if="validationErrors?.name" id="create-user-name-error" class="form-error">
           {{ validationErrors.name[0] }}
         </p>
       </div>
@@ -86,8 +91,9 @@ function handleConfirm() {
           v-model="email"
           type="email"
           placeholder="email@example.com"
+          :aria-describedby="validationErrors?.email ? 'create-user-email-error' : undefined"
         />
-        <p v-if="validationErrors?.email" class="form-error">
+        <p v-if="validationErrors?.email" id="create-user-email-error" class="form-error">
           {{ validationErrors.email[0] }}
         </p>
       </div>
@@ -95,7 +101,10 @@ function handleConfirm() {
       <div class="form-field">
         <Label for="create-user-role">Role <span class="field-required">*</span></Label>
         <Select v-model="roleId">
-          <SelectTrigger id="create-user-role">
+          <SelectTrigger
+            id="create-user-role"
+            :aria-describedby="validationErrors?.role_id ? 'create-user-role-error' : undefined"
+          >
             <SelectValue placeholder="Select a role…" />
           </SelectTrigger>
           <SelectContent disable-portal>
@@ -104,7 +113,7 @@ function handleConfirm() {
             }}</SelectItem>
           </SelectContent>
         </Select>
-        <p v-if="validationErrors?.role_id" class="form-error">
+        <p v-if="validationErrors?.role_id" id="create-user-role-error" class="form-error">
           {{ validationErrors.role_id[0] }}
         </p>
       </div>
