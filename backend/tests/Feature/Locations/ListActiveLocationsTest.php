@@ -37,8 +37,9 @@ class ListActiveLocationsTest extends TestCase
             $this->actingAs($this->createUser($role))
                 ->getJson('/api/locations')
                 ->assertOk()
-                ->assertJsonCount(1, 'data')
+                ->assertJsonCount(2, 'data')
                 ->assertJsonFragment(['name' => 'Active Workshop', 'code' => 'AW', 'is_active' => true])
+                ->assertJsonFragment(['name' => 'Tajoura Base', 'code' => 'TJB', 'is_active' => true])
                 ->assertJsonMissing(['name' => 'Inactive Yard']);
         }
     }
@@ -56,7 +57,8 @@ class ListActiveLocationsTest extends TestCase
         $response = $this->actingAs($this->createUser(RoleCode::LOGISTICS))->getJson('/api/locations');
 
         $response->assertOk();
-        $this->assertSame(['Alpha', 'Zeta'], array_column($response->json('data'), 'name'));
+        // The TJB migration seeds Tajoura Base, so it is expected here under RefreshDatabase.
+        $this->assertSame(['Alpha', 'Tajoura Base', 'Zeta'], array_column($response->json('data'), 'name'));
     }
 
     public function test_response_shape_matches_spec(): void
