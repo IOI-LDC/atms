@@ -86,6 +86,7 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
         Route::patch('/company-settings', [CompanySettingController::class, 'update']);
 
         Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
         Route::get('/users/{user}', [UserController::class, 'show']);
         Route::patch('/users/{user}', [UserController::class, 'update']);
         Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);

@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Users\AdminResetUserPassword;
+use App\Actions\Users\CreateUser;
 use App\Actions\Users\DeactivateUser;
 use App\Actions\Users\ReactivateUser;
 use App\Actions\Users\UpdateUser;
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
+use App\Rules\AllowedEmailDomain;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -30,6 +33,22 @@ class UserController extends Controller
         return response()->json(['data' => $user->load('role')]);
     }
 
+    public function store(Request $request, CreateUser $action): JsonResponse
+    {
+        Gate::authorize('manage', User::class);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email', new AllowedEmailDomain],
+            'role_id' => ['required', 'exists:roles,id'],
+        ]);
+
+        $role = Role::findOrFail($validated['role_id']);
+        $user = $action->execute($validated['name'], $validated['email'], $role);
+
+        return response()->json(['message' => 'User created and activation email queued.', 'data' => $user->load('role')], 201);
+    }
+
     public function update(Request $request, User $user, UpdateUser $action): JsonResponse
     {
         Gate::authorize('update', $user);
@@ -40,7 +59,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'unique:users,email,'.$user->id],
+            'email' => ['nullable', 'email', 'unique:users,email,'.$user->id, new AllowedEmailDomain],
             'role_id' => ['nullable', 'exists:roles,id'],
             'is_active' => ['nullable', 'boolean'],
         ]);
