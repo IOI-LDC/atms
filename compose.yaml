@@ -119,6 +119,7 @@ services:
       QUEUE_CONNECTION: database
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
       ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
+      ATMS_ALLOWED_EMAIL_DOMAINS: "${ATMS_ALLOWED_EMAIL_DOMAINS:-ldc.com.ly}"
       # These are set from the ROOT .env, which Compose reads. A value present only
       # in backend/.env will NOT be used: Compose injects the empty default here as
       # a real environment variable, and Laravel's Env reads $_SERVER before the
@@ -165,6 +166,7 @@ services:
       QUEUE_CONNECTION: database
       ATMS_COMPANY_TIMEZONE: "${ATMS_COMPANY_TIMEZONE:-Africa/Tripoli}"
       ATMS_ATTACHMENT_DISK: "${ATMS_ATTACHMENT_DISK:-attachments}"
+      ATMS_ALLOWED_EMAIL_DOMAINS: "${ATMS_ALLOWED_EMAIL_DOMAINS:-ldc.com.ly}"
       # Mirrors the api/queue blocks; see the note there. The scheduler needs the
       # full set because a scheduled job may queue a notification.
       FRONTEND_URL: "${FRONTEND_URL:-}"
