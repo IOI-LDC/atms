@@ -133,10 +133,12 @@ class AssetDistributionReportQuery
             ->when($filters['operational_status'] ?? null, fn ($q, $v) => $q->where('operational_status', $v))
             ->when(! ($filters['include_inactive'] ?? false), fn ($q) => $q->where('is_active', true))
             ->selectRaw('count(*) as asset_count')
-            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as active_count', [OperationalStatus::ACTIVE->value])
+            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as ready_for_field_count', [OperationalStatus::READY_FOR_FIELD->value])
             ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as under_maintenance_count', [OperationalStatus::UNDER_MAINTENANCE->value])
             ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as down_count', [OperationalStatus::DOWN->value])
-            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as inactive_count', [OperationalStatus::INACTIVE->value])
+            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as scraped_count', [OperationalStatus::SCRAPED->value])
+            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as under_inspection_count', [OperationalStatus::UNDER_INSPECTION->value])
+            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as lih_count', [OperationalStatus::LIH->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as standalone_count', [AssetKind::ASSET->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as package_count', [AssetKind::PACKAGE->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as component_count', [AssetKind::COMPONENT->value])
@@ -210,10 +212,12 @@ class AssetDistributionReportQuery
             'groups' => $groups,
             'asset_count' => (int) $row->asset_count,
             'by_operational_status' => [
-                'active' => (int) $row->active_count,
+                'ready_for_field' => (int) $row->ready_for_field_count,
                 'under_maintenance' => (int) $row->under_maintenance_count,
                 'down' => (int) $row->down_count,
-                'inactive' => (int) $row->inactive_count,
+                'scraped' => (int) $row->scraped_count,
+                'under_inspection' => (int) $row->under_inspection_count,
+                'lih' => (int) $row->lih_count,
             ],
             'by_asset_kind' => [
                 'standalone' => (int) $row->standalone_count,

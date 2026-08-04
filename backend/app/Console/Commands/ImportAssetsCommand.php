@@ -207,7 +207,7 @@ class ImportAssetsCommand extends Command
 
             foreach ([
                 'asset_kind' => ['asset', 'package', 'component'],
-                'operational_status' => ['active', 'under_maintenance', 'down', 'inactive'],
+                'operational_status' => ['ready_for_field', 'under_maintenance', 'down', 'scraped', 'under_inspection', 'lih'],
                 'maintenance_status' => ['enrolled', 'withdrawn'],
             ] as $field => $allowed) {
                 $value = trim($row[$field]);

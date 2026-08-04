@@ -58,7 +58,7 @@ class MaintenanceRequestDemoSeeder extends Seeder
                 ['erp_asset_code' => 'DEMO-AST-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT)],
                 [
                     'name' => $name,
-                    'operational_status' => 'active',
+                    'operational_status' => 'ready_for_field',
                     'erp_status' => 'active',
                     'is_active' => true,
                 ],

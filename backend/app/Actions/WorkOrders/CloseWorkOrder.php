@@ -43,11 +43,11 @@ class CloseWorkOrder
             $logger->log('work_order.closed', $locked, $before, $after);
 
             // The closer's explicit asset-status choice wins, defaulting to
-            // ACTIVE when absent (the original behaviour). Close is a workflow
-            // event, never an asset-management one: an INACTIVE (retired)
+            // READY_FOR_FIELD when absent (the original behaviour). Close is a
+            // workflow event, never an asset-management one: a SCRAPED (retired)
             // asset is never touched, and a no-op when already at the target.
             app(ApplyWorkOrderAssetStatusTransition::class)
-                ->execute($locked, $assetStatus ?? OperationalStatus::ACTIVE, [OperationalStatus::INACTIVE]);
+                ->execute($locked, $assetStatus ?? OperationalStatus::READY_FOR_FIELD, [OperationalStatus::SCRAPED]);
 
             $mr = $locked->maintenanceRequest;
 

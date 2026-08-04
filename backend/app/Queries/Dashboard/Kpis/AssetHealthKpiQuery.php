@@ -12,7 +12,7 @@ use App\Queries\Reports\OperationalStatusDistributionReportQuery;
  *
  * Reuses R-10A (OperationalStatusDistributionReportQuery), which counts assets
  * per operational_status over non-deactivated (is_active = true) assets.
- * Availability is the share of operationally-ACTIVE assets out of all
+ * Availability is the share of operationally-ready assets out of all
  * non-deactivated assets. This is an org-wide executive figure, so no role
  * scoping is applied (consistent with the reports model).
  */
@@ -24,7 +24,7 @@ class AssetHealthKpiQuery
      * @return array{
      *     asset_health: array{
      *         availability: array{percentage: float|null},
-     *         by_status: array{active: int, under_maintenance: int, down: int, inactive: int},
+     *         by_status: array{ready_for_field: int, under_maintenance: int, down: int, scraped: int, under_inspection: int, lih: int},
      *         total: int,
      *     },
      * }
@@ -39,7 +39,7 @@ class AssetHealthKpiQuery
         }
 
         $total = $result['summary']['total'];
-        $active = $byStatus[OperationalStatus::ACTIVE->value] ?? 0;
+        $active = $byStatus[OperationalStatus::READY_FOR_FIELD->value] ?? 0;
 
         return [
             'asset_health' => [
@@ -47,10 +47,12 @@ class AssetHealthKpiQuery
                     'percentage' => $total > 0 ? round($active / $total * 100, 1) : null,
                 ],
                 'by_status' => [
-                    'active' => $active,
+                    'ready_for_field' => $active,
                     'under_maintenance' => $byStatus[OperationalStatus::UNDER_MAINTENANCE->value] ?? 0,
                     'down' => $byStatus[OperationalStatus::DOWN->value] ?? 0,
-                    'inactive' => $byStatus[OperationalStatus::INACTIVE->value] ?? 0,
+                    'scraped' => $byStatus[OperationalStatus::SCRAPED->value] ?? 0,
+                    'under_inspection' => $byStatus[OperationalStatus::UNDER_INSPECTION->value] ?? 0,
+                    'lih' => $byStatus[OperationalStatus::LIH->value] ?? 0,
                 ],
                 'by_booking' => $this->bookingCounts(),
                 'total' => $total,
