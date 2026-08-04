@@ -18,7 +18,7 @@ use App\Services\Audit\AuditLogger;
  *  - corrective approval -> DOWN,     skip if already UNDER_MAINTENANCE
  *  - start               -> UNDER_MAINTENANCE (forced)
  *  - close               -> READY_FOR_FIELD, skip if currently READY_FOR_FIELD or SCRAPED
- *  - cancel              -> caller-chosen (DOWN|ACTIVE), no skip
+ *  - cancel              -> caller-chosen (DOWN|READY_FOR_FIELD), no skip
  */
 class ApplyWorkOrderAssetStatusTransition
 {

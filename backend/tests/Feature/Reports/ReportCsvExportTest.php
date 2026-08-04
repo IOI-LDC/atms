@@ -142,7 +142,7 @@ class ReportCsvExportTest extends TestCase
 
         $csv = $this->csv('/api/reports/asset-distribution?format=csv');
 
-        $this->assertStringContainsString('Location,Assets,Active,"Under Maintenance"', $csv);
+        $this->assertStringContainsString('Location,Assets,"Ready for Field","Under Maintenance",Down,Scraped,"Under Inspection","Lost in Hole"', $csv);
         $this->assertStringContainsString('Yard-B', $csv);
     }
 

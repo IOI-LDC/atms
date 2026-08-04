@@ -98,10 +98,10 @@ class WorkOrderAssetStatusTest extends TestCase
         $wo = $this->createWorkOrder(WorkOrderStatus::COMPLETED, $tech);
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/asset-status", [
-            'operational_status' => 'active',
+            'operational_status' => 'ready_for_field',
         ])->assertOk();
 
-        $this->assertEquals('active', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('ready_for_field', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_unassigned_technician_cannot_set_asset_status(): void
@@ -146,10 +146,10 @@ class WorkOrderAssetStatusTest extends TestCase
         $wo = $this->createWorkOrder(WorkOrderStatus::OPEN);
 
         $this->actingAs($admin)->postJson("/api/work-orders/{$wo->id}/asset-status", [
-            'operational_status' => 'inactive',
+            'operational_status' => 'scraped',
         ])->assertOk();
 
-        $this->assertEquals('inactive', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('scraped', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_assigned_technician_cannot_set_status_on_closed_work_order(): void

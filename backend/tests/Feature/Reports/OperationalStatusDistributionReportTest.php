@@ -52,46 +52,46 @@ class OperationalStatusDistributionReportTest extends TestCase
         $this->getJson('/api/reports/asset-status-distribution')->assertUnauthorized();
     }
 
-    public function test_returns_all_four_statuses_with_zero_for_missing(): void
+    public function test_returns_all_six_statuses_with_zero_for_missing(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $this->createAsset(['operational_status' => OperationalStatus::ACTIVE]);
-        $this->createAsset(['operational_status' => OperationalStatus::ACTIVE]);
+        $this->createAsset(['operational_status' => OperationalStatus::READY_FOR_FIELD]);
+        $this->createAsset(['operational_status' => OperationalStatus::READY_FOR_FIELD]);
         $this->createAsset(['operational_status' => OperationalStatus::DOWN]);
 
         $json = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
 
         $this->assertSame(3, $json['summary']['total']);
         $this->assertSame(
-            ['active' => 2, 'under_maintenance' => 0, 'down' => 1, 'inactive' => 0],
+            ['ready_for_field' => 2, 'under_maintenance' => 0, 'down' => 1, 'scraped' => 0, 'under_inspection' => 0, 'lih' => 0],
             $this->counts($json['items'])
         );
     }
 
-    public function test_inactive_operational_status_is_shown_not_hidden(): void
+    public function test_scraped_operational_status_is_shown_not_hidden(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        // operational_status=inactive but is_active=true must still appear.
+        // operational_status=scraped but is_active=true must still appear.
         $this->createAsset([
-            'operational_status' => OperationalStatus::INACTIVE,
+            'operational_status' => OperationalStatus::SCRAPED,
             'is_active' => true,
         ]);
 
         $json = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
 
         $this->assertSame(1, $json['summary']['total']);
-        $this->assertSame(1, $this->counts($json['items'])['inactive']);
+        $this->assertSame(1, $this->counts($json['items'])['scraped']);
     }
 
     public function test_default_excludes_soft_deactivated(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $this->createAsset(['operational_status' => OperationalStatus::ACTIVE, 'is_active' => true]);
+        $this->createAsset(['operational_status' => OperationalStatus::READY_FOR_FIELD, 'is_active' => true]);
         $this->createAsset(['operational_status' => OperationalStatus::DOWN, 'is_active' => false]);
 
         $defaultJson = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
         $this->assertSame(1, $defaultJson['summary']['total']);
-        $this->assertSame(1, $this->counts($defaultJson['items'])['active']);
+        $this->assertSame(1, $this->counts($defaultJson['items'])['ready_for_field']);
         $this->assertSame(0, $this->counts($defaultJson['items'])['down']);
 
         $includedJson = $this->actingAs($admin)
@@ -104,7 +104,7 @@ class OperationalStatusDistributionReportTest extends TestCase
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $this->createAsset([
-            'operational_status' => OperationalStatus::ACTIVE,
+            'operational_status' => OperationalStatus::READY_FOR_FIELD,
             'asset_kind' => AssetKind::PACKAGE,
         ]);
         $this->createAsset([
@@ -116,7 +116,7 @@ class OperationalStatusDistributionReportTest extends TestCase
             ->getJson('/api/reports/asset-status-distribution?asset_kind=package')->json();
 
         $this->assertSame(1, $json['summary']['total']);
-        $this->assertSame(1, $this->counts($json['items'])['active']);
+        $this->assertSame(1, $this->counts($json['items'])['ready_for_field']);
         $this->assertSame(0, $this->counts($json['items'])['down']);
     }
 
@@ -128,7 +128,7 @@ class OperationalStatusDistributionReportTest extends TestCase
 
         $this->assertSame(0, $json['summary']['total']);
         $this->assertSame(
-            ['active' => 0, 'under_maintenance' => 0, 'down' => 0, 'inactive' => 0],
+            ['ready_for_field' => 0, 'under_maintenance' => 0, 'down' => 0, 'scraped' => 0, 'under_inspection' => 0, 'lih' => 0],
             $this->counts($json['items'])
         );
     }

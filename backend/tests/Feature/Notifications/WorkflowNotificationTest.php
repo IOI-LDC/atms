@@ -237,7 +237,7 @@ class WorkflowNotificationTest extends TestCase
 
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/cancel", [
             'reason' => 'False alarm',
-            'asset_status' => 'active',
+            'asset_status' => 'ready_for_field',
         ])->assertOk();
 
         Notification::assertSentOnDemand(WorkOrderCancelledNotification::class,
@@ -256,7 +256,7 @@ class WorkflowNotificationTest extends TestCase
 
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/cancel", [
             'reason' => 'Duplicate',
-            'asset_status' => 'active',
+            'asset_status' => 'ready_for_field',
         ])->assertOk();
 
         Notification::assertNothingSent();

@@ -722,7 +722,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->assertEquals('down', $wo->asset->fresh()->operational_status->value);
     }
 
-    public function test_close_with_asset_status_active_marks_asset_active(): void
+    public function test_close_with_asset_status_ready_for_field_marks_asset_ready_for_field(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
@@ -731,13 +731,13 @@ class WorkOrderLifecycleTest extends TestCase
         $this->assignStartComplete($wo, $manager, $tech);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
-            'asset_status' => 'active',
+            'asset_status' => 'ready_for_field',
         ])->assertOk();
 
-        $this->assertEquals('active', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('ready_for_field', $wo->asset->fresh()->operational_status->value);
     }
 
-    public function test_close_without_asset_status_reverts_asset_to_active(): void
+    public function test_close_without_asset_status_reverts_asset_to_ready_for_field(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
@@ -745,13 +745,13 @@ class WorkOrderLifecycleTest extends TestCase
         $wo = $this->createApprovedWorkOrder($requester, $manager);
         $this->assignStartComplete($wo, $manager, $tech);
 
-        // No asset_status in the payload — the default (active) must apply.
+        // No asset_status in the payload — the default (ready_for_field) must apply.
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
-        $this->assertEquals('active', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('ready_for_field', $wo->asset->fresh()->operational_status->value);
     }
 
-    public function test_close_never_un_retires_an_inactive_asset(): void
+    public function test_close_never_un_retires_a_scraped_asset(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
@@ -761,16 +761,16 @@ class WorkOrderLifecycleTest extends TestCase
 
         // The asset was retired while the work ran (e.g. scrapped) — closing the
         // work order must not silently un-retire it, even on an explicit choice.
-        $wo->asset->update(['operational_status' => OperationalStatus::INACTIVE]);
+        $wo->asset->update(['operational_status' => OperationalStatus::SCRAPED]);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
-            'asset_status' => 'active',
+            'asset_status' => 'ready_for_field',
         ])->assertOk();
 
-        $this->assertEquals('inactive', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('scraped', $wo->asset->fresh()->operational_status->value);
     }
 
-    public function test_close_rejects_asset_statuses_outside_down_and_active(): void
+    public function test_close_rejects_asset_statuses_outside_down_and_ready_for_field(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
@@ -779,7 +779,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->assignStartComplete($wo, $manager, $tech);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
-            'asset_status' => 'inactive',
+            'asset_status' => 'scraped',
         ])->assertStatus(422);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [

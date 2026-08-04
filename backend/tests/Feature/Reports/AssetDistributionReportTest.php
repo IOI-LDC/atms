@@ -105,7 +105,7 @@ class AssetDistributionReportTest extends TestCase
         $loc = $this->createLocation('Loc-A');
         $this->createAsset([
             'current_location_id' => $loc->id,
-            'operational_status' => OperationalStatus::ACTIVE,
+            'operational_status' => OperationalStatus::READY_FOR_FIELD,
             'asset_kind' => AssetKind::ASSET,
         ]);
         $this->createAsset([
@@ -115,7 +115,7 @@ class AssetDistributionReportTest extends TestCase
         ]);
         $bookedAsset = $this->createAsset([
             'current_location_id' => $loc->id,
-            'operational_status' => OperationalStatus::ACTIVE,
+            'operational_status' => OperationalStatus::READY_FOR_FIELD,
             'asset_kind' => AssetKind::PACKAGE,
         ]);
 
@@ -134,7 +134,7 @@ class AssetDistributionReportTest extends TestCase
 
         $this->assertSame(3, $row['asset_count']);
         $this->assertSame(
-            ['active' => 2, 'under_maintenance' => 0, 'down' => 1, 'inactive' => 0],
+            ['ready_for_field' => 2, 'under_maintenance' => 0, 'down' => 1, 'scraped' => 0, 'under_inspection' => 0, 'lih' => 0],
             $row['by_operational_status']
         );
         $this->assertSame(
@@ -394,7 +394,7 @@ class AssetDistributionReportTest extends TestCase
         $loc = $this->createLocation('Loc-A');
         $this->createAsset([
             'current_location_id' => $loc->id,
-            'operational_status' => OperationalStatus::ACTIVE,
+            'operational_status' => OperationalStatus::READY_FOR_FIELD,
         ]);
         $this->createAsset([
             'current_location_id' => $loc->id,
@@ -402,12 +402,12 @@ class AssetDistributionReportTest extends TestCase
         ]);
 
         $json = $this->actingAs($admin)
-            ->getJson('/api/reports/assets-by-location?operational_status=active')->json();
+            ->getJson('/api/reports/assets-by-location?operational_status=ready_for_field')->json();
 
         $this->assertSame(1, $json['summary']['total_assets']);
         $row = $this->findRow($json['items'], $loc->id);
         $this->assertSame(1, $row['asset_count']);
-        $this->assertSame(1, $row['by_operational_status']['active']);
+        $this->assertSame(1, $row['by_operational_status']['ready_for_field']);
         $this->assertSame(0, $row['by_operational_status']['down']);
     }
 }
