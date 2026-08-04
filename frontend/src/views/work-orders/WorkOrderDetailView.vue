@@ -29,7 +29,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DatePicker } from '@/components/ui/date-picker'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
   Select,
@@ -151,8 +150,8 @@ const {
   readingHistoryOpen,
   readingsLoading,
   lastReadingForDraft,
-  readingBelowLast,
-  lowerReadingAcknowledged,
+  draftTotal,
+  readingDeltaNegative,
   sinceLastService,
   openRecordReading,
   doRecordReading,
@@ -1115,8 +1114,13 @@ watch(
           </Select>
         </div>
         <div class="form-field">
-          <Label for="wo-reading-value">Value <span class="field-required">*</span></Label>
-          <Input id="wo-reading-value" v-model="readingValueStr" type="number" />
+          <Label for="wo-reading-value">Value since last reading <span class="field-required">*</span></Label>
+          <Input
+            id="wo-reading-value"
+            v-model="readingValueStr"
+            type="number"
+            placeholder="Amount operated since the last reading"
+          />
           <p v-if="lastReadingForDraft" class="reading-last-hint">
             Last recorded:
             <b>{{ lastReadingForDraft.value.toLocaleString() }} {{ lastReadingForDraft.unit }}</b>
@@ -1124,22 +1128,16 @@ watch(
             }}<span v-if="lastReadingForDraft.confirmed"> · confirmed</span>
           </p>
         </div>
-        <div v-if="readingBelowLast" class="form-field">
+        <div v-if="draftTotal != null" class="form-field">
+          <Label>Total (current meter reading)</Label>
+          <p class="reading-total-display">
+            <b>{{ draftTotal.toLocaleString() }} {{ lastReadingForDraft?.unit ?? '' }}</b>
+          </p>
+        </div>
+        <div v-if="readingDeltaNegative" class="form-field">
           <div class="reading-warning" role="alert">
             <TriangleAlert class="reading-warning-icon" aria-hidden="true" />
-            <span>
-              This is lower than the last recorded reading of
-              <b
-                >{{ lastReadingForDraft?.value.toLocaleString() }}
-                {{ lastReadingForDraft?.unit }}</b
-              >. Meter readings normally only increase.
-            </span>
-          </div>
-          <div class="reading-ack">
-            <Checkbox id="wo-reading-ack" v-model="lowerReadingAcknowledged" />
-            <Label for="wo-reading-ack" class="reading-ack-label"
-              >This lower reading is correct (e.g. the meter was reset or replaced).</Label
-            >
+            <span>The value since the last reading cannot be negative.</span>
           </div>
         </div>
         <div class="form-field">
@@ -1168,7 +1166,7 @@ watch(
               readingLoading ||
               readingTypeIdStr === undefined ||
               readingDraft.value == null ||
-              (readingBelowLast && !lowerReadingAcknowledged)
+              readingDeltaNegative
             "
             @click="doRecordReading"
           >

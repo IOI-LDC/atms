@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -277,9 +277,10 @@ export function useWorkOrderDetail() {
     assetReadings.value.filter((r) => r.work_order_id !== record.value?.id),
   )
 
-  // ── Last-reading guard ─────────────────────────────────────────────────────
-  // Most recent reading for the type selected in the record draft, so operators
-  // see the previous value and can be warned before entering a lower one.
+  // ── Last-reading base + delta guard ────────────────────────────────────────
+  // Most recent reading for the type selected in the record draft. It is the
+  // base for the delta entry: the operator types the amount operated since this
+  // reading, and the recorded absolute total is derived from it.
   const lastReadingForDraft = computed<{
     value: number
     readAt: string
@@ -303,21 +304,18 @@ export function useWorkOrderDetail() {
     }
   })
 
-  // True when the drafted value is below the last recorded reading for its type.
-  const readingBelowLast = computed<boolean>(() => {
-    const last = lastReadingForDraft.value
-    const v = readingDraft.value.value
-    return last != null && v != null && v < last.value
+  // Absolute total that will be recorded: last reading + entered delta. With no
+  // prior reading for the type, the entered delta is the total itself.
+  const draftTotal = computed<number | null>(() => {
+    const base = lastReadingForDraft.value
+    const delta = readingDraft.value.value
+    if (delta == null) return null
+    return base ? Math.round((base.value + delta) * 100) / 100 : delta
   })
 
-  // A lower-than-last value must be explicitly acknowledged before it can save.
-  // Reset the acknowledgement whenever the type or value changes.
-  const lowerReadingAcknowledged = ref(false)
-  watch(
-    () => [readingDraft.value.typeId, readingDraft.value.value],
-    () => {
-      lowerReadingAcknowledged.value = false
-    },
+  // A negative delta can never be valid — meter totals only increase.
+  const readingDeltaNegative = computed<boolean>(
+    () => readingDraft.value.value != null && readingDraft.value.value < 0,
   )
 
   // Edit + delete are role-gated (Admin/Manager/Technician). Confirmed readings
@@ -698,14 +696,12 @@ export function useWorkOrderDetail() {
   }
 
   async function doRecordReading() {
-    if (!record.value || !readingDraft.value.typeId || readingDraft.value.value == null) return
-    // Warn + require confirm: a lower-than-last value must be acknowledged first.
-    if (readingBelowLast.value && !lowerReadingAcknowledged.value) return
+    if (!record.value || !readingDraft.value.typeId || draftTotal.value == null) return
     readingLoading.value = true
     try {
       await api.post(`/assets/${record.value.asset.id}/meter-readings`, {
         usage_reading_type_id: readingDraft.value.typeId,
-        reading_value: readingDraft.value.value,
+        reading_value: draftTotal.value,
         reading_at: readingDraft.value.readAt,
         source: 'manual',
         notes: readingDraft.value.notes || null,
@@ -1043,8 +1039,8 @@ export function useWorkOrderDetail() {
     readingHistoryOpen,
     readingsLoading,
     lastReadingForDraft,
-    readingBelowLast,
-    lowerReadingAcknowledged,
+    draftTotal,
+    readingDeltaNegative,
     sinceLastService,
     openRecordReading,
     doRecordReading,

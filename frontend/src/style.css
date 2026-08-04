@@ -6692,7 +6692,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Meter reading — last-reading hint + lower-value guard
+   Meter reading — delta entry hint + negative-delta guard
    ═══════════════════════════════════════════════════════════════════ */
 
 .reading-last-hint {
@@ -6703,6 +6703,16 @@
 .reading-last-hint b {
   color: var(--foreground);
   font-weight: 600;
+}
+
+.reading-total-display {
+  margin: 0.375rem 0 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+.reading-total-display b {
+  color: var(--foreground);
+  font-weight: 700;
 }
 
 .reading-warning {
