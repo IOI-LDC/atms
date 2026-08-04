@@ -39,15 +39,15 @@ class AssetHealthKpiQuery
         }
 
         $total = $result['summary']['total'];
-        $active = $byStatus[OperationalStatus::READY_FOR_FIELD->value] ?? 0;
+        $readyForField = $byStatus[OperationalStatus::READY_FOR_FIELD->value] ?? 0;
 
         return [
             'asset_health' => [
                 'availability' => [
-                    'percentage' => $total > 0 ? round($active / $total * 100, 1) : null,
+                    'percentage' => $total > 0 ? round($readyForField / $total * 100, 1) : null,
                 ],
                 'by_status' => [
-                    'ready_for_field' => $active,
+                    'ready_for_field' => $readyForField,
                     'under_maintenance' => $byStatus[OperationalStatus::UNDER_MAINTENANCE->value] ?? 0,
                     'down' => $byStatus[OperationalStatus::DOWN->value] ?? 0,
                     'scraped' => $byStatus[OperationalStatus::SCRAPED->value] ?? 0,

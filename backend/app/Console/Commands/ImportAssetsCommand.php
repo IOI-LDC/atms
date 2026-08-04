@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\OperationalStatus;
 use App\Exceptions\InvalidSizeFormatException;
 use App\Jobs\ReconcilePmCategoryAssignmentsJob;
 use App\Models\Asset;
@@ -207,7 +208,7 @@ class ImportAssetsCommand extends Command
 
             foreach ([
                 'asset_kind' => ['asset', 'package', 'component'],
-                'operational_status' => ['ready_for_field', 'under_maintenance', 'down', 'scraped', 'under_inspection', 'lih'],
+                'operational_status' => array_map(fn ($c) => $c->value, OperationalStatus::cases()),
                 'maintenance_status' => ['enrolled', 'withdrawn'],
             ] as $field => $allowed) {
                 $value = trim($row[$field]);

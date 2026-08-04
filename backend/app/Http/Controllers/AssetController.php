@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Assets\CreateAsset;
 use App\Actions\Assets\UpdateAssetFields;
 use App\Actions\Assets\UpdateAssetLocation;
+use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
 use App\Http\Resources\AssetLocationHistoryResource;
 use App\Http\Resources\AssetMeterReadingResource;
@@ -20,6 +21,7 @@ use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
@@ -52,7 +54,7 @@ class AssetController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'manufacturer' => ['nullable', 'string', 'max:255'],
-            'operational_status' => ['nullable', 'string', 'in:active,under_maintenance,down,inactive'],
+            'operational_status' => ['nullable', Rule::enum(OperationalStatus::class)],
             'maintenance_status' => ['nullable', 'string', 'in:enrolled,withdrawn'],
             'maintenance_sub_status' => ['nullable', 'string', 'in:installed,ready,lih,dbr,disposed,scrapped,other'],
             'asset_kind' => ['nullable', 'string', 'in:asset,package,component'],
@@ -108,7 +110,7 @@ class AssetController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'manufacturer' => ['nullable', 'string', 'max:255'],
-            'operational_status' => ['nullable', 'string', 'in:active,under_maintenance,down,inactive'],
+            'operational_status' => ['nullable', Rule::enum(OperationalStatus::class)],
             'maintenance_status' => ['nullable', 'string', 'in:enrolled,withdrawn'],
             'maintenance_sub_status' => ['nullable', 'string', 'in:installed,ready,lih,dbr,disposed,scrapped,other'],
             'asset_kind' => ['nullable', 'string', 'in:asset,package,component'],

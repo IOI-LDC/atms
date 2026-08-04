@@ -2,6 +2,7 @@
 
 namespace App\Actions\Assets;
 
+use App\Enums\OperationalStatus;
 use App\Models\Asset;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ class CreateAsset
                 'serial_number' => $data['serial_number'] ?? null,
                 'model' => $data['model'] ?? null,
                 'manufacturer' => $data['manufacturer'] ?? null,
-                'operational_status' => $data['operational_status'] ?? 'active',
+                'operational_status' => $data['operational_status'] ?? OperationalStatus::READY_FOR_FIELD->value,
                 'current_location_id' => $data['current_location_id'] ?? null,
                 'is_active' => true,
             ]);

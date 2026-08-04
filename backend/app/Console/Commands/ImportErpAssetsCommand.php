@@ -152,7 +152,7 @@ class ImportErpAssetsCommand extends Command
             'serial_number' => $serialNo !== '' ? $serialNo : null,
             'fa_subclass_code' => trim($row['faSubclassCode'] ?? '') ?: null,
             'manufacturer' => trim($row['vendorNo'] ?? '') ?: null,
-            'operational_status' => $underMaintenance ? 'under_maintenance' : 'active',
+            'operational_status' => $underMaintenance ? 'under_maintenance' : 'ready_for_field',
             'is_active' => ! $inactive,
             'maintenance_status' => 'enrolled',
             'asset_kind' => 'asset',

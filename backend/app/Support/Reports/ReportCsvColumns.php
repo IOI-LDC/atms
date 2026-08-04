@@ -63,10 +63,12 @@ final class ReportCsvColumns
 
         return $columns + [
             'Assets' => 'asset_count',
-            'Active' => 'by_operational_status.active',
+            'Ready for Field' => 'by_operational_status.ready_for_field',
             'Under Maintenance' => 'by_operational_status.under_maintenance',
             'Down' => 'by_operational_status.down',
-            'Inactive' => 'by_operational_status.inactive',
+            'Scraped' => 'by_operational_status.scraped',
+            'Under Inspection' => 'by_operational_status.under_inspection',
+            'Lost in Hole' => 'by_operational_status.lih',
             'Standalone' => 'by_asset_kind.standalone',
             'Packages' => 'by_asset_kind.package',
             'Components' => 'by_asset_kind.component',

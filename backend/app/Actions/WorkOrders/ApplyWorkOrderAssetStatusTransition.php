@@ -17,7 +17,7 @@ use App\Services\Audit\AuditLogger;
  * Guard contract:
  *  - corrective approval -> DOWN,     skip if already UNDER_MAINTENANCE
  *  - start               -> UNDER_MAINTENANCE (forced)
- *  - close               -> ACTIVE,   skip if currently ACTIVE or INACTIVE
+ *  - close               -> READY_FOR_FIELD, skip if currently READY_FOR_FIELD or SCRAPED
  *  - cancel              -> caller-chosen (DOWN|ACTIVE), no skip
  */
 class ApplyWorkOrderAssetStatusTransition
