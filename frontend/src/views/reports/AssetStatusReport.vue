@@ -88,10 +88,12 @@ const summaryStats = computed(() => {
 
   return [
     { label: 'Assets', value: s.total },
-    { label: 'Active', value: s.by_status.active ?? 0 },
+    { label: 'Ready for Field', value: s.by_status.ready_for_field ?? 0 },
     { label: 'Under Maintenance', value: s.by_status.under_maintenance ?? 0 },
     { label: 'Down', value: s.by_status.down ?? 0 },
-    { label: 'Retired', value: s.by_status.inactive ?? 0 },
+    { label: 'Scraped', value: s.by_status.scraped ?? 0 },
+    { label: 'Under Inspection', value: s.by_status.under_inspection ?? 0 },
+    { label: 'Lost in Hole', value: s.by_status.lih ?? 0 },
     { label: 'Booked', value: s.booked },
   ]
 })

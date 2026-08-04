@@ -255,8 +255,8 @@ onMounted(() => {
                 <td class="report-table-num report-cell-strong">{{ row.asset_count }}</td>
                 <td>
                   <div class="report-chips">
-                    <span v-if="row.by_operational_status.active" class="report-chip">
-                      Active <b>{{ row.by_operational_status.active }}</b>
+                    <span v-if="row.by_operational_status.ready_for_field" class="report-chip">
+                      Ready for Field <b>{{ row.by_operational_status.ready_for_field }}</b>
                     </span>
                     <span v-if="row.by_operational_status.under_maintenance" class="report-chip">
                       Under maint. <b>{{ row.by_operational_status.under_maintenance }}</b>
@@ -264,8 +264,14 @@ onMounted(() => {
                     <span v-if="row.by_operational_status.down" class="report-chip">
                       Down <b>{{ row.by_operational_status.down }}</b>
                     </span>
-                    <span v-if="row.by_operational_status.inactive" class="report-chip">
-                      Inactive <b>{{ row.by_operational_status.inactive }}</b>
+                    <span v-if="row.by_operational_status.scraped" class="report-chip">
+                      Scraped <b>{{ row.by_operational_status.scraped }}</b>
+                    </span>
+                    <span v-if="row.by_operational_status.under_inspection" class="report-chip">
+                      Under insp. <b>{{ row.by_operational_status.under_inspection }}</b>
+                    </span>
+                    <span v-if="row.by_operational_status.lih" class="report-chip">
+                      Lost in hole <b>{{ row.by_operational_status.lih }}</b>
                     </span>
                   </div>
                 </td>

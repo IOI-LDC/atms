@@ -637,9 +637,15 @@ export interface DashboardKpiResponse {
     asset_health: {
       availability: { percentage: number | null }
       // Two independent axes — an asset can be booked AND under maintenance at
-      // once, so these never sum across each other. Withdrawal and its
-      // sub-statuses are ERP-owned and deliberately absent from ATMS reporting.
-      by_status: { active: number; under_maintenance: number; down: number; inactive: number }
+      // once, so these never sum across each other.
+      by_status: {
+        ready_for_field: number
+        under_maintenance: number
+        down: number
+        scraped: number
+        under_inspection: number
+        lih: number
+      }
       by_booking: { booked: number; available: number }
       total: number
     }
@@ -701,7 +707,7 @@ export type AgingBucket = '0-7' | '8-30' | '31-90' | '91+'
 
 // R-10A Operational Status Distribution
 export interface OperationalStatusDistributionRow {
-  status: string // OperationalStatus value: active | under_maintenance | down | inactive
+  status: string // OperationalStatus value: ready_for_field | under_maintenance | down | scraped | under_inspection | lih
   count: number
 }
 export interface OperationalStatusDistributionReport {
@@ -750,10 +756,12 @@ export interface AssetDistributionRow {
   groups: AssetDistributionGroup[]
   asset_count: number
   by_operational_status: {
-    active: number
+    ready_for_field: number
     under_maintenance: number
     down: number
-    inactive: number
+    scraped: number
+    under_inspection: number
+    lih: number
   }
   by_asset_kind: { standalone: number; package: number; component: number }
   booked_count: number

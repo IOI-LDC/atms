@@ -123,18 +123,15 @@ export function useDashboardKpis() {
   })
 
   /**
-   * Operational status, one row per state, always all four — a state showing 0
+   * Operational status, one row per state, always all six — a state showing 0
    * is information, not noise, so these are never filtered out.
-   *
-   * Withdrawal and its sub-statuses (disposed, scrapped, lost in hole, …) are
-   * owned by the ERP and are deliberately not surfaced here.
    */
   const operationalStatusRows = computed<StatusRow[]>(() => {
     const h = kpis.value?.asset_health
     if (!h) return []
 
     return [
-      { key: 'active', label: 'Active', count: h.by_status.active, tone: 'active' },
+      { key: 'ready_for_field', label: 'Ready for Field', count: h.by_status.ready_for_field, tone: 'active' },
       {
         key: 'under_maintenance',
         label: 'Under Maintenance',
@@ -142,7 +139,14 @@ export function useDashboardKpis() {
         tone: 'warning',
       },
       { key: 'down', label: 'Down', count: h.by_status.down, tone: 'critical' },
-      { key: 'inactive', label: 'Retired', count: h.by_status.inactive, tone: 'muted' },
+      { key: 'scraped', label: 'Scraped', count: h.by_status.scraped, tone: 'muted' },
+      {
+        key: 'under_inspection',
+        label: 'Under Inspection',
+        count: h.by_status.under_inspection,
+        tone: 'warning',
+      },
+      { key: 'lih', label: 'Lost in Hole', count: h.by_status.lih, tone: 'critical' },
     ]
   })
 

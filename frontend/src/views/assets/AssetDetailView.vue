@@ -813,10 +813,13 @@ watch(
               <Select v-model="draft.operational_status">
                 <SelectTrigger id="edit-op-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="under_maintenance">Under Maintenance</SelectItem>
-                  <SelectItem value="down">Down</SelectItem>
-                  <SelectItem value="inactive">Retired</SelectItem>
+                  <SelectItem
+                    v-for="value in ['ready_for_field', 'under_maintenance', 'down', 'scraped', 'under_inspection', 'lih']"
+                    :key="value"
+                    :value="value"
+                  >
+                    {{ operationalStatusLabel(value) }}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
