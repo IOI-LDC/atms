@@ -6,9 +6,12 @@ use Illuminate\Database\Migrations\Migration;
 return new class extends Migration
 {
     /**
-     * The removed test locations, re-created verbatim on rollback. History
-     * rows referencing them stay broken after a rollback — the FK link cannot
-     * be restored because the original rows are gone.
+     * The removed locations, re-created on rollback with their names, types,
+     * codes, and descriptions. MB/MBA/MBB existed only in the live DB (manual,
+     * DB-only data — never in a committed seeder); the rest were seeded. A
+     * rollback restores those attributes only — not ids, timestamps,
+     * is_active, or parent_id — so history rows referencing them stay broken:
+     * the FK link cannot be restored because the original rows are gone.
      *
      * @var array<int, array{name: string, type: string, code: string, description: string}>
      */
@@ -30,6 +33,12 @@ return new class extends Migration
     {
         // Assets already point at Tajoura Base; history rows pointing at the
         // removed locations cascade-delete, and from_location_id nulls via FK.
+        //
+        // The product requirement is that Tajoura Base is the ONLY location:
+        // this blanket delete intentionally removes any other row present when
+        // the migration runs — including admin-created or future locations,
+        // not just the 11 known test rows. Only the 11 known locations are
+        // restored on rollback (down()).
         Location::where('code', '!=', 'TJB')->delete();
     }
 

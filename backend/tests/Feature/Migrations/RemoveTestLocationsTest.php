@@ -98,6 +98,11 @@ class RemoveTestLocationsTest extends TestCase
             $this->assertDatabaseHas('locations', ['code' => $code]);
         }
         $this->assertDatabaseHas('locations', ['code' => 'TJB']);
+
+        // Pin names/types so a regression to the legacy `workshop_yard` type
+        // (or similar) would be caught.
+        $this->assertDatabaseHas('locations', ['code' => 'WS', 'type' => 'workshop']);
+        $this->assertDatabaseHas('locations', ['code' => 'WSY', 'type' => 'yard']);
     }
 
     private function migration(): Migration

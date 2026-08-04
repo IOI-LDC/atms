@@ -149,7 +149,7 @@ function handleSave() {
         <div class="sheet-form">
           <div class="form-field">
             <Label for="loc-name">Name <span class="field-required">*</span></Label>
-            <Input id="loc-name" v-model="name" placeholder="E.g. Workshop, Rig A…" />
+            <Input id="loc-name" v-model="name" placeholder="E.g. Warehouse, Rig…" />
           </div>
 
           <div class="form-field">
@@ -166,7 +166,7 @@ function handleSave() {
 
           <div class="form-field">
             <Label for="loc-code">Code <span class="field-required">*</span></Label>
-            <Input id="loc-code" v-model="code" maxlength="3" placeholder="E.g. WS, RA…" />
+            <Input id="loc-code" v-model="code" maxlength="3" placeholder="E.g. WH, RG…" />
           </div>
 
           <div class="form-field">
