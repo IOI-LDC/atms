@@ -3,7 +3,62 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-03 (latest)
+## Session — 2026-08-04 (latest)
+
+### ✅ Done — four requirements implemented and verified
+
+All four requirements captured this session are now **implemented, migrated,
+and verified** (docs updated in `docs/PRODUCT.md`, `docs/API.md`,
+`docs/README.md`, and the user manual):
+
+1. **User provisioning — direct creation (the decision below is implemented).**
+   `POST /admin/users` + the frontend Create User dialog create users directly
+   (name, email, role); account starts with a random password and
+   `is_active: false`; an activation email with a one-time link lets the
+   recipient set their own password. Email must belong to `@ldc.com.ly`
+   (case-insensitive; allowlist config `atms.allowed_email_domains`, env
+   `ATMS_ALLOWED_EMAIL_DOMAINS`, plumbed through compose.yaml to api/queue/
+   scheduler). Employee-directory infra (EmployeeDirectorySource contract,
+   employee endpoints/UI) removed; employee model/table remain as legacy data.
+   Tests updated.
+2. **Asset location at Tajoura Base.** New location "Tajoura Base" (code `TJB`,
+   type `yard`); all assets relocated via migration; asset-movement history
+   recorded.
+3. **Operational status vocabulary.** DB values renamed `active` →
+   `ready_for_field`, `inactive` → `scraped`; new `under_inspection` and `lih`;
+   six values total (Ready for Field, Under Maintenance, Down, Under
+   Inspection, Scraped, Lost in Hole). WO close/cancel asset-status choice:
+   `down` | `ready_for_field` (pre-seeded to `ready_for_field`). Migrations
+   effective on VPS via deploy.sh; frontend labels and tests updated.
+4. **Meter-reading delta.** WO "Record meter reading" form enters the delta
+   (amount operated since the last reading); Total (current meter reading)
+   auto-calculates as `last reading + delta`, shown read-only; stored
+   `reading_value` remains the absolute total. Edit dialog still edits the
+   total.
+
+### Historical context — the 2026-08-04 requirements capture
+
+**User provisioning decision: no SharePoint directory, direct creation.**
+Original plan: connect to LDC SharePoint employee list as the user directory
+for provisioning. Decision: **set aside** (implemented 2026-08-04). The
+SharePoint transport was never implemented (stubbed to throw), and the CSV
+export is a development aid, not a production source.
+
+The adopted approach: Administrator creates users directly by entering name,
+email, and role. The email must belong to `@ldc.com.ly` (case-insensitive, with
+an allowlist config for exceptions). The system creates the account with a
+random password and `is_active: false`, then sends an activation email to the
+given address. The recipient proves mailbox ownership by clicking the
+activation link and setting their own password — that is the verification.
+
+The Tajoura Base relocation and the operational-status changes were captured
+earlier the same day as pending work (including an open question about DB
+values vs display labels); both were implemented with DB-level migrations as
+listed under "Done" above.
+
+---
+
+## Session — 2026-08-03
 
 ### Admin table visual fixes: centered-header alignment + wider Template columns
 

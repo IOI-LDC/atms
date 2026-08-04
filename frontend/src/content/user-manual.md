@@ -506,7 +506,7 @@ booking).
 
 | Field | Enum | Question It Answers | Values |
 |---|---|---|---|
-| `operational_status` | `OperationalStatus` | **Is the asset working right now?** | `active`, `under_maintenance`, `down`, `inactive` |
+| `operational_status` | `OperationalStatus` | **Is the asset working right now?** | `ready_for_field`, `under_maintenance`, `down`, `under_inspection`, `scraped`, `lih` |
 | `maintenance_status` | `MaintenanceStatus` | **Is the asset in the maintenance program?** | `enrolled`, `withdrawn` |
 | `maintenance_sub_status` | `MaintenanceSubStatus` | **Where is it in the program lifecycle?** | `installed`, `ready`, `lih`, `dbr`, `disposed`, `scrapped`, `other` |
 | `is_booked` | boolean (derived) | **Is it reserved for a future job?** | `true` (an active booking covers today), `false` (no active booking) |
@@ -518,13 +518,13 @@ And a fifth dimension for the asset record itself:
 | `is_active` | boolean | **Does the asset record exist in the active registry?** `true` = active, `false` = deactivated (hidden from lists, new actions blocked) |
 
 **Why four separate statuses?** Each answers a different operational question:
-- An asset can be `operational_status = active` (working fine) while
+- An asset can be `operational_status = ready_for_field` (working fine) while
   `maintenance_status = enrolled` (in the program, being monitored by PM rules).
 - It can be `operational_status = under_maintenance` (currently in the workshop)
   while `is_booked = true` (reserved for a job next week — booking survives
   maintenance events).
 - It can be `maintenance_status = withdrawn` (removed from the program) while
-  `operational_status = active` (still working, just not tracked by PM).
+  `operational_status = ready_for_field` (still working, just not tracked by PM).
 - `is_active = false` overrides everything — a deactivated asset is effectively
   invisible to all workflows regardless of any other status.
 
@@ -906,7 +906,7 @@ a booking is never overwritten, only superseded by a new one or ended.
 - Booking does **not** gate any maintenance workflow. A booked asset can still
   have MRs created, WOs opened, and PM triggered against it.
 - Booking is completely independent of both operational status and maintenance
-  status. A booked asset can be active, under maintenance, or down.
+  status. A booked asset can be Ready for Field, Under Maintenance, or Down.
 
 **Overlap detection:** the system rejects a new or edited booking that overlaps
 an existing **active** booking on the same asset. When that happens, the form
@@ -1063,17 +1063,19 @@ question: **is the asset working right now?**
 This is distinct from maintenance status (is it enrolled in the program?) and
 booking (is it reserved?). Operational status describes the asset's **current
 functional state** — whether it is available for use, currently being repaired,
-broken and awaiting repair, or permanently retired from service.
+broken and awaiting repair, under inspection, scrapped, or lost in hole.
 
-Operational status is defined by the `App\Enums\OperationalStatus` enum with four
+Operational status is defined by the `App\Enums\OperationalStatus` enum with six
 values:
 
 | DB Value | Display Label | Meaning |
 |---|---|---|
-| `active` | **Active** | The asset is fully operational and available for normal use. |
+| `ready_for_field` | **Ready for Field** | The asset is fully operational and available for normal use. |
 | `under_maintenance` | **Under Maintenance** | The asset is currently in the workshop being serviced. Work is in progress. |
 | `down` | **Down** | The asset has a known fault or failure and is not operational. It is waiting to be repaired. |
-| `inactive` | **Retired** | The asset has been permanently retired, decommissioned, or removed from the operational pool. It will not be used again. |
+| `under_inspection` | **Under Inspection** | The asset has been sent to a third party for inspection. |
+| `scraped` | **Scraped** | The asset has been permanently scrapped, decommissioned, or removed from the operational pool. It will not be used again. |
+| `lih` | **Lost in Hole** | The asset is physically inaccessible (e.g., downhole equipment that cannot be retrieved). |
 
 #### How Operational Status Changes
 
@@ -1090,8 +1092,8 @@ The `ApplyWorkOrderAssetStatusTransition` action runs at these lifecycle points:
 |---|---|---|
 | **Corrective MR approved** → WO created | `down` | A corrective request means someone reported a fault — the asset is now confirmed as faulty. **Skip if** the asset is already `under_maintenance` (e.g., a concurrent PM is in progress). **Preventive MRs do not trigger this** — a scheduled service does not mean the asset was broken. |
 | **WO started** (`open` → `in_progress`) | `under_maintenance` | Work has begun in the workshop. The asset is now being actively serviced. **Always applied** — this transition is not conditional. |
-| **WO closed** (`completed` → `closed`) | Caller-chosen — `active` (default) or `down` | The closer decides the asset's next status: **pre-seeded to `active`** (work done — back in service); switch to `down` only if the repair did not restore it. **Never touches** an `inactive` (retired) asset. |
-| **WO cancelled** | Caller-chosen | When cancelling a WO, the user must decide: is the asset still faulty? Choose `down` if the fault remains, or `active` if the WO was a false alarm. |
+| **WO closed** (`completed` → `closed`) | Caller-chosen — `ready_for_field` (default) or `down` | The closer decides the asset's next status: **pre-seeded to `ready_for_field`** (work done — back in service); switch to `down` only if the repair did not restore it. **Never touches** a `scraped` asset. |
+| **WO cancelled** | Caller-chosen | When cancelling a WO, the user must decide: is the asset still faulty? Choose `down` if the fault remains, or `ready_for_field` if the WO was a false alarm. |
 
 ##### Manual Override
 
@@ -1127,7 +1129,7 @@ Maintenance Managers, and Service users. In practice, status changes almost
 always happen through a WO, so there is usually a WO that explains *why* the
 status changed. The WO-driven paths are:
 1. Automated WO lifecycle transitions (approve → down, start → under_maintenance,
-   close → caller-chosen, defaulting to `active`; cancel → caller-chosen).
+   close → caller-chosen, defaulting to `ready_for_field`; cancel → caller-chosen).
 2. Manual override through the WO's "Update Asset Status" action.
 
 #### How Operational Status Differs from Other Status Fields
@@ -1149,36 +1151,36 @@ This is a common point of confusion. Here is the complete distinction:
 > is created and the asset is automatically set to `operational_status = down`
 > (a fault was reported). The Technician starts the WO → asset becomes
 > `under_maintenance`. During the WO, the Technician discovers a worn bearing and
-> replaces it. The Manager closes the WO, confirming the pre-selected **Active**
-> (back in service) → `operational_status = active`.
+> replaces it. The Manager closes the WO, confirming the pre-selected **Ready for
+> Field** (back in service) → `operational_status = ready_for_field`.
 >
 > Throughout this entire process, `maintenance_status` remained `enrolled` (the
 > asset never left the maintenance program) and `is_booked` may have been `true`
 > the whole time (booking survives maintenance events — the Operations team still
 > expects this motor for a job next week).
 
-#### Retired — The Terminal Operational State
+#### Scraped — The Terminal Operational State
 
-`operational_status = inactive` is the only terminal operational state. It means
+`operational_status = scraped` is the only terminal operational state. It means
 the asset has been permanently removed from service:
 
-- It appears in the registry but with a clear **Retired** badge.
+- It appears in the registry but with a clear **Scraped** badge.
 - It cannot have new Maintenance Requests created against it.
 - It cannot have new Work Orders created against it.
 - PM rules stop evaluating it.
 - All historical records (MRs, WOs, readings, attachments) are preserved.
 
-**How an asset becomes retired:**
-- A user sets `inactive` via the WO "Update Asset Status" action during a
+**How an asset becomes scraped:**
+- A user sets `scraped` via the WO "Update Asset Status" action during a
   decommissioning WO.
 - The automated WO lifecycle transitions will **never** set an asset to
-  `inactive` — this must be a deliberate human decision.
+  `scraped` — this must be a deliberate human decision.
 - The close-time status choice (like every automated transition) **never
-  touches** an `inactive` asset — the system will never accidentally
-  reactivate a retired asset.
+  touches** a `scraped` asset — the system will never accidentally
+  undo a scrapping decision.
 
-**How to reactivate an inactive asset:**
-- Set the status to `active` via a WO's "Update Asset Status" action.
+**How to undo a scraped status:**
+- Set the status to `ready_for_field` via a WO's "Update Asset Status" action.
 - This requires a deliberate decision — the system will not do it automatically.
 
 #### Operational Status vs. Maintenance Status — Why Both Exist
@@ -1190,15 +1192,15 @@ started, and closed. It reflects what's happening *right now*.
 decision about whether the asset participates in the maintenance program.
 
 An asset can be:
-- `operational_status = active` AND `maintenance_status = enrolled` — working,
+- `operational_status = ready_for_field` AND `maintenance_status = enrolled` — working,
   being monitored by PM (normal state).
 - `operational_status = under_maintenance` AND `maintenance_status = enrolled` —
   in the workshop, but still in the program. PM rules still watch it but won't
   fire because there's an active WO.
-- `operational_status = active` AND `maintenance_status = withdrawn` — working
+- `operational_status = ready_for_field` AND `maintenance_status = withdrawn` — working
   fine, but the organization decided to stop tracking it for maintenance (perhaps
   it's being sold or transferred).
-- `operational_status = inactive` AND `maintenance_status = withdrawn` — retired
+- `operational_status = scraped` AND `maintenance_status = withdrawn` — scrapped
   and removed from the program entirely.
 
 ---
@@ -1268,10 +1270,11 @@ explanatory empty state ("No failures yet", "None closed"), never zero.
 
 ### 6.4 Asset Status & By Location
 
-- **Asset status** lists all four operational states — Active, Under Maintenance,
-  Down, Retired — with counts. **Booked** appears below a separator: it is a
-  different axis, not a fifth state, and deliberately does not sum with the rows
-  above it (an asset can be Booked and Under Maintenance at once).
+- **Asset status** lists all six operational states — Ready for Field, Under
+  Maintenance, Down, Under Inspection, Scraped, Lost in Hole — with counts.
+  **Booked** appears below a separator: it is a different axis, not a seventh
+  state, and deliberately does not sum with the rows above it (an asset can be
+  Booked and Under Maintenance at once).
 - **By location** shows the six locations holding the most assets, with
   proportional bars and counts.
 
@@ -1709,7 +1712,7 @@ Work Orders follow a strict lifecycle with five states, defined by the
 | `open` → `cancelled` | Admin/Manager | `cancellation_reason` required |
 | `in_progress` → `completed` | Assigned user, Admin/Manager | All required WO Form fields must be filled. Asset `operational_status` and location unchanged — stays `under_maintenance` until close or cancel. |
 | `in_progress` → `cancelled` | Admin/Manager | `cancellation_reason` required |
-| `completed` → `closed` | Admin/Manager | **Side effects run** (see Section 8.5). Asset `operational_status` set to the closer's choice — `active` (default) or `down`; never touches `inactive`. |
+| `completed` → `closed` | Admin/Manager | **Side effects run** (see Section 8.5). Asset `operational_status` set to the closer's choice — `ready_for_field` (default) or `down`; never touches `scraped`. |
 | `completed` → `cancelled` | Admin/Manager | `cancellation_reason` required. Asset `operational_status` set to the caller-chosen value — applied only when the cancel payload carries `asset_status`; otherwise the asset is left untouched. |
 
 ### 8.2 Work Order Assignment
@@ -1790,15 +1793,15 @@ a WO is closed (all in one database transaction):
 - All WO fields, parts, readings, and attachments permanently locked.
 
 **2. Asset Operational Status Updated:**
-- Asset's `operational_status` → the closer's choice, **pre-seeded to `active`**
-  (the work is done — the asset should be operational again). The closer switches
-  to `down` only when the repair did not restore the asset; a new MR should then
-  follow.
-- **Never touches** an `inactive` (retired) asset — closing a WO cannot
-  reactivate or re-downgrade a retirement decision.
-- An API call without `asset_status` behaves as before: `active`.
+- Asset's `operational_status` → the closer's choice, **pre-seeded to
+  `ready_for_field`** (the work is done — the asset should be operational again).
+  The closer switches to `down` only when the repair did not restore the asset; a
+  new MR should then follow.
+- **Never touches** a `scraped` asset — closing a WO cannot undo a scrapping
+  decision.
+- An API call without `asset_status` behaves as before: `ready_for_field`.
 - This means: closing a WO on a `down`/`under_maintenance` asset with the
-  default choice → `active`; choosing `down` keeps it out of service.
+  default choice → `ready_for_field`; choosing `down` keeps it out of service.
 
 **3. PM Baseline Reset (if the WO originated from a Preventive MR):**
 - The `AssetPmAssignment` that generated the PM MR has its baseline reset:
@@ -1836,7 +1839,8 @@ and affected fields.
 2. A Maintenance Manager or Administrator opens the WO.
 3. They review: work notes, parts used, readings updated, final asset status.
 4. For corrective WOs, they confirm or revise whether this was a real failure.
-5. They confirm the asset's status after close — pre-selected to **Active**; they switch to **Down** only if the repair did not restore the asset.
+5. They confirm the asset's status after close — pre-selected to **Ready for
+   Field**; they switch to **Down** only if the repair did not restore the asset.
 6. They select "Close Work Order" and confirm.
 7. The WO becomes `closed` — permanently immutable.
 
@@ -1854,8 +1858,8 @@ Manager only. A required reason must be provided. Cancellation is available from
 - WO status → `cancelled` (terminal, read-only).
 - `cancellation_reason` and `cancelled_at` recorded.
 - Asset `operational_status` set to a caller-chosen value: `down` (the fault
-  still exists, a new MR will be needed) or `active` (the WO was a false alarm,
-  the asset was never actually faulty). The choice is applied only when the
+  still exists, a new MR will be needed) or `ready_for_field` (the WO was a false
+  alarm, the asset was never actually faulty). The choice is applied only when the
   cancel payload carries `asset_status` — the UI always sends it, but an API
   call without it leaves the asset untouched.
 
@@ -2011,8 +2015,8 @@ final closure, with a required audit reason.
 
 **Why does closing a WO ask for the asset's next status?**
 Closing means the work is finished and reviewed, so the dialog defaults to
-**Active** — the asset is presumed back in service. The closer switches it to
-**Down** only if the repair did not restore the asset; a new Corrective MR
+**Ready for Field** — the asset is presumed back in service. The closer switches
+it to **Down** only if the repair did not restore the asset; a new Corrective MR
 should then follow — this keeps the audit trail clear: one WO closed it,
 another MR documents the remaining fault.
 
@@ -2040,7 +2044,8 @@ The "All Assets" tab displays the full asset registry with search and filters.
 
 **Columns:** asset tag, name (with serial, size, and maintenance-category badges),
 category, kind badge (Asset / Package / Component), operational status badge
-(Active / Under Maintenance / Down / Retired), current location. Maintenance
+(Ready for Field / Under Maintenance / Down / Under Inspection / Scraped / Lost
+in Hole), current location. Maintenance
 status is not shown in the table — with the register effectively always
 `enrolled`, the badge carried no information; it stays on the asset detail
 page.
@@ -2132,7 +2137,7 @@ Meter readings are stored in the `asset_meter_readings` table:
 |---|---|---|
 | `asset_id` | FK → assets | The asset this reading belongs to. |
 | `usage_reading_type_id` | FK → `usage_reading_types` | What kind of reading this is (hours, kilometers, etc.). |
-| `reading_value` | decimal(12,2) | The numeric reading value. |
+| `reading_value` | decimal(12,2) | The absolute meter total. When recorded from a Work Order, the form enters a delta and the total is derived as `last reading + delta` (see below). |
 | `reading_at` | datetime | When the reading was taken (the timestamp on the meter). |
 | `source` | string | Always `user` (manually entered) or `manual`. |
 | `entered_by_user_id` | FK → users | Who recorded the reading. |
@@ -2185,6 +2190,24 @@ supporting readings when creating MRs without those readings immediately
 affecting PM schedules. A Technician or Manager must review and confirm the
 reading before it becomes "official." This prevents accidental or incorrect
 readings from corrupting PM schedules.
+
+#### Recording a Reading From a Work Order — Delta Entry
+
+On a Work Order, the "Record meter reading" form asks for the **delta** — the
+amount the meter has operated **since the last reading** (e.g. "50" = 50 hours
+since the last recorded reading) — not the meter's absolute total.
+
+- The form shows the **last recorded reading** as the base, with its date and a
+  "confirmed" / "not yet confirmed" marker.
+- The **Total (current meter reading)** is auto-calculated as
+  `last reading + delta` and displayed read-only — it cannot be typed over. With
+  no prior reading for the selected type, the entered delta *is* the total.
+- The stored `reading_value` is always that **absolute total**, so reading
+  history and PM calculations keep working with absolute values. The delta is an
+  entry convenience, not a stored field.
+- A negative delta is rejected — meter totals only increase.
+- The **Edit** dialog still edits the absolute total directly; the delta entry
+  applies only when recording a new reading from the WO form.
 
 #### Monotonic Enforcement — Why Readings Can Only Go Up
 
@@ -3071,14 +3094,20 @@ system configuration, and master data.
 
 **Employee Directory:**
 
-- **Import Employees:** Administrator imports employees from the client's
-  SharePoint List into a local employee directory. This is a CSV import
-  operation.
-- **View Employees:** List of imported employees with their details.
-- **Provision User:** Select an imported employee → assign one fixed role →
-  system sends an activation link. Provisioning creates a user account linked to
-  the employee record. Importing an employee does not automatically grant
-  application access — provisioning is the explicit step that creates a user.
+The external employee directory is **not** used. There is no import, no sync,
+and no employee list — Administrators create users directly, and the legacy
+employee records are not user accounts.
+
+**Create User:**
+
+- **Create User:** Administrator enters the person's **name, email, and role**
+  directly. The email must belong to the `@ldc.com.ly` domain (case-insensitive,
+  with an allowlist config for exceptions). The account is created with a random
+  password and `is_active: false`, and an **activation email** is sent to the
+  given address — the recipient proves mailbox ownership by clicking the
+  activation link and setting their own password. That activation is the
+  verification step that the person is an LDC employee with a valid LDC mailbox;
+  importing a SharePoint employee is not required and cannot be done.
 
 **User Management:**
 
@@ -3336,7 +3365,7 @@ question it answers; click a card to open the report.
 | R-7 | PM Compliance | On-time PM completion percentage by rule, asset, location, and period. |
 | R-8 | Overdue PM | PMs past due and not closed, by aging bucket. |
 | R-9 | PM Coverage / Gaps | Active assets with no active PM assignment. |
-| R-10A | Operational Status Distribution | Fleet split across operational states — Active, Under Maintenance, Down, Retired. |
+| R-10A | Operational Status Distribution | Fleet split across operational states — Ready for Field, Under Maintenance, Down, Under Inspection, Scraped, Lost in Hole. |
 | R-13 | Asset Booking / Availability | Booked vs freely available assets, by location. |
 | R-14 | WO Backlog / Aging | Open and in-progress work orders by age bucket and priority. |
 | R-15 | Workload by Technician | Assigned vs completed work orders and average duration per technician (operational workload only — never performance appraisal or labour costing). |
@@ -3458,10 +3487,12 @@ functional. It is driven by Work Order lifecycle events. See Section 5.9.
 
 | DB Value | Display Label | Meaning |
 |---|---|---|
-| `active` | **Active** | Fully operational and available for normal use. |
+| `ready_for_field` | **Ready for Field** | Fully operational and available for normal use. |
 | `under_maintenance` | **Under Maintenance** | Currently in the workshop being serviced. Work is in progress. |
 | `down` | **Down** | Has a known fault or failure. Not operational. Awaiting repair. |
-| `inactive` | **Retired** | Permanently retired, decommissioned, or removed from the operational pool. |
+| `under_inspection` | **Under Inspection** | Sent to a third party for inspection. |
+| `scraped` | **Scraped** | Permanently scrapped, decommissioned, or removed from the operational pool. |
+| `lih` | **Lost in Hole** | Physically inaccessible (e.g., downhole equipment that cannot be retrieved). |
 
 ### Maintenance Sub-Statuses
 
@@ -3556,8 +3587,7 @@ assembly hierarchy and which maintenance sub-statuses are available.
 | Trigger manual ERP sync           | Yes   | Yes     | No                | No        | No              |
 | Manage ERP sync settings          | Yes   | No      | No                | No        | No              |
 | Manage users                      | Yes   | No      | No                | No        | No              |
-| Import employees                  | Yes   | No      | No                | No        | No              |
-| Provision employees as users      | Yes   | No      | No                | No        | No              |
+| Create users (name, email, role)   | Yes   | No      | No                | No        | No              |
 | Manage locations / master data    | Yes   | No      | No                | No        | No              |
 | Manage company settings           | Yes   | No      | No                | No        | No              |
 | View technical audit logs         | Yes   | No      | No                | No        | No              |

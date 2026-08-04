@@ -158,6 +158,66 @@ template globally.
   2026-07-28). Only an explicit answer clears the gate, so a closed record never
   reads as though a check was deliberately answered when nobody looked at it.
 
+### User provisioning
+
+Users are created directly by an Administrator, not sourced from an external
+employee directory. The original plan to connect to the LDC SharePoint employee
+list was set aside: the SharePoint transport was never implemented and the CSV
+export is a development aid, not a production source.
+
+To create a user, the Administrator enters the person's name, email, and role.
+The email must belong to the `@ldc.com.ly` domain (case-insensitive, with an
+allowlist config for exceptional domains). The system creates the account with
+a random password and `is_active: false`, then sends an activation email to the
+given address. The recipient proves mailbox ownership by clicking the activation
+link and setting their own password — that is the verification that the person
+is an LDC employee with a valid LDC mailbox. No directory sync, import, or
+SharePoint integration is required.
+
+Once activated, the Administrator can edit the user's name/email/role, reset
+their password, or deactivate/reactivate the account. An Administrator cannot
+perform these actions on their own account.
+
+### Operational status
+
+Every asset carries an `operational_status` answering "is the asset working
+right now?" — distinct from maintenance status and booking state. There are six
+values:
+
+| DB value | Label |
+|---|---|
+| `ready_for_field` | Ready for Field |
+| `under_maintenance` | Under Maintenance |
+| `down` | Down |
+| `under_inspection` | Under Inspection |
+| `scraped` | Scraped |
+| `lih` | Lost in Hole |
+
+`ready_for_field` and `scraped` were renamed from the former `active` and
+`inactive` values; `under_inspection` (asset sent to a third party) and `lih`
+(physically inaccessible, e.g. downhole) are new.
+
+Operational status is driven primarily by Work Order events: approving a
+corrective MR sets `down`, starting work sets `under_maintenance`, and closing
+or cancelling a WO asks the closer for the asset's next status. The close/cancel
+choice is limited to `down` or `ready_for_field` (pre-seeded to
+`ready_for_field`), and a `scraped` asset is never touched. Any value — including
+`under_inspection` and `scraped` — can be set deliberately via the WO "Update
+Asset Status" action or the asset edit form; `scraped` is terminal and requires
+an explicit human decision.
+
+### Meter readings
+
+Meter readings are absolute, cumulative totals — monotonically non-decreasing
+per asset and reading type once confirmed. On the WO "Record meter reading"
+form, the operator enters the **delta**: the amount the meter has operated since
+the last recorded reading (e.g. 50 hours). The **Total** (current meter reading)
+is auto-calculated as `last reading + delta` and shown read-only; the stored
+`reading_value` is that absolute total, so history and PM calculations keep
+working with absolute values. With no prior reading for the type, the entered
+delta is the total itself. A negative delta is rejected. The edit dialog still
+edits the absolute total directly.
+
 ## Notifications
 
 ATMS notifies by email only. There is no in-app notification centre, no digest, and

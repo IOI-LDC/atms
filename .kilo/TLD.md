@@ -16,6 +16,8 @@
 
 | Team | Task | Started |
 |---|---|---|
+| Full-stack | ✅ **User provisioning redesign — drop SharePoint directory, direct user creation with activation email.** **DONE 2026-08-04:** `POST /admin/users` + Create User dialog (name, email, role); activation email; @ldc.com.ly allowlist (`ATMS_ALLOWED_EMAIL_DOMAINS`); employee-directory infrastructure removed (EmployeeDirectorySource, employee endpoints/UI); tests updated. | 2026-08-04 |
+| Full-stack | ✅ **Asset location at Tajoura Base TJB + operational status changes.** **DONE 2026-08-04:** location "Tajoura Base" (code TJB, type yard) created and all assets relocated via migration with movement history; OperationalStatus DB values renamed (active→ready_for_field, inactive→scraped) plus new under_inspection and lih — six statuses total; WO close/cancel choice down \| ready_for_field; migrations effective on VPS via deploy.sh. | 2026-08-04 |
 | Full-stack | **Reports — CSV export part-done (D-010), UI complete for what exists.** Mechanism built (`CsvReportStreamer` + `ReportCsvColumns`, `?format=csv` on existing endpoints, UTF-8 BOM, Tripoli dates, true streaming) and wired to **3 of 21** reports: R-1, R-2, R-22 — each now has a working **Export CSV** button. **Remaining 18 are backend-only work:** 10 cursor reports need a `stream` closure beside their paginator + a column map; 8 aggregate reports need only a column map. Add the button to a report **only after** its endpoint honours `format=csv`, or it downloads JSON under a .csv name. Then R2/R3 once LDC defines them (🔵 #5). | 2026-08-01 |
 
 ---

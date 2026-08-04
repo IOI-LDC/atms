@@ -52,6 +52,13 @@ route's controller in `backend/`; tests are the contract for edge cases.
 | GET | `/assets/{asset}/maintenance-history` | Derived maintenance read model. |
 | GET / POST | `/assets/{asset}/attachments` | Asset attachment list/upload. |
 
+Asset `operational_status` vocabulary (six values): `ready_for_field` ("Ready
+for Field"), `under_maintenance` ("Under Maintenance"), `down` ("Down"),
+`under_inspection` ("Under Inspection"), `scraped` ("Scraped"), and `lih` ("Lost
+in Hole"). WO close/cancel accept only `down` or `ready_for_field` for the
+asset's next status (pre-seeded to `ready_for_field`); a `scraped` asset is
+never touched by those transitions.
+
 ## Maintenance and work orders
 
 | Method | Endpoint | Notes |
@@ -67,7 +74,7 @@ route's controller in `backend/`; tests are the contract for edge cases.
 | GET / PATCH | `/work-orders/{workOrder}` | Detail and permitted execution update. |
 | POST | `/work-orders/{workOrder}/assign`, `/start`, `/complete`, `/close`, `/cancel` | State transitions; close/cancel remain Manager/Admin actions. |
 | POST / DELETE | `/work-orders/{workOrder}/parts` | Add a part line; remove it using `/parts/{partLine}`. |
-| POST | `/work-orders/{workOrder}/asset-status` | Set permitted post-work asset status. |
+| POST | `/work-orders/{workOrder}/asset-status` | Set permitted post-work asset status. On close/cancel the choice is limited to `down` \| `ready_for_field` (see the vocabulary note under Dashboard and assets). |
 | GET | `/work-orders/{workOrder}/form` | Read attached WO form. |
 | PATCH | `/work-orders/{workOrder}/form/fields` | Atomic bulk save of captured form values — the write path behind the checklist's Save button. Body `{ fields: [{ id, pre_value?, post_value?, notes? }] }`; partial in both directions (send only changed fields, and an absent slot key keeps its stored value). Any validation failure or duplicate id rejects the whole batch with `422`; an id not belonging to this form (typically dropped by a template sync since the form was opened) rejects it with `409`. Returns the updated form, so no re-fetch is needed. One audit entry per save. |
 | PATCH | `/work-orders/{workOrder}/form/fields/{field}` | Update a single captured form value. Retained alongside the bulk route. |
@@ -96,14 +103,16 @@ route's controller in `backend/`; tests are the contract for edge cases.
 
 ## Admin endpoints
 
-Administrators manage company settings, users, employees, ERP parts sync, audit
+Administrators manage company settings, users, ERP parts sync, audit
 logs, locations, master data, maintenance categories, API clients, usage-reading
 types, and WO-form templates beneath `/admin/…`. The full endpoints are:
 
 - `GET/PATCH /admin/company-settings`
-- user list/detail/update, reset-password, deactivate, and reactivate under
+- user create/list/detail/update, reset-password, deactivate, and reactivate under
   `/admin/users`
-- employee list/import/provisioning under `/admin/employees`
+- `POST /admin/users` creates a user directly (name, email, role); the activation
+  email is sent to the given address. The SharePoint employee directory is not
+  used — see [PRODUCT.md](PRODUCT.md).
 - `GET /admin/erp/sync-jobs` and `POST /admin/erp/sync-parts`
 - `GET /admin/audit-logs`
 - location and master-data CRUD under `/admin/locations` and `/admin/master-data`

@@ -15,7 +15,13 @@ This directory is the current operating manual for ATMS. Start here; do not use
 
 ## Current snapshot
 
-**Last documentation verification:** 2026-08-01 (Maintenance Category routing key
+**Last documentation verification:** 2026-08-04 (four requirements implemented
+and verified: direct user provisioning with activation email and the
+`@ldc.com.ly` allowlist replacing the SharePoint employee directory; asset
+relocation to Tajoura Base (TJB); the six-value operational-status vocabulary
+(`ready_for_field`/`scraped` renames plus new `under_inspection` and `lih`
+states); and delta-based meter reading entry with an auto-calculated Total on
+Work Orders. Maintenance Category routing key
 implemented and verified across product, API, engineering, frontend, and operations
 summaries; report dimensions last verified 2026-07-30; notification behaviour last
 verified 2026-07-25; other areas last verified 2026-07-13)
