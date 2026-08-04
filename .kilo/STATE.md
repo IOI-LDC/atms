@@ -36,6 +36,32 @@ and verified** (docs updated in `docs/PRODUCT.md`, `docs/API.md`,
    `reading_value` remains the absolute total. Edit dialog still edits the
    total.
 
+### PM reading-trigger parking — decided and implemented (same day, later session)
+
+Investigation of why SN M40-800-0051 raised no PM verified two compounding
+gaps: (1) meter readings can only be recorded from the Work Order page —
+nowhere else in the UI; (2) the reading-verification endpoint
+(`POST /assets/{asset}/meter-readings/{reading}/confirm`) exists and is
+tested, but **no UI ever calls it** and nothing auto-confirms — so confirmed
+readings never exist and the reading dimension of `reading` /
+`date_or_reading` PM rules can never fire.
+
+**Decision (user-approved): park reading-based PM triggers, date-only PM.**
+Implemented as a frontend-only change: `TRIGGER_OPTIONS` in
+`PmRuleForm.vue` reduced to the Calendar option, so new PM rules can only be
+created date-based. Nothing deleted — backend contract, calculator reading
+logic, and existing rules' `interval_reading` / `usage_reading_type_id`
+stay intact; existing `date_or_reading` rules keep working on their date
+side. Re-enablement: restore the two `TRIGGER_OPTIONS` entries once the LDC
+Job Management system feeds per-job asset usage (operating hours, km, depth)
+into ATMS and a verify path exists. Plan:
+`docs/plans/2026-08-04-pm-reading-trigger-parking.md`. See 🟠 D-014.
+
+Open for LDC (WO-close baseline reset policy — current behavior unchanged
+until answered): whether the L1–L4 cascade reset on preventive WO close is
+wanted, and whether corrective WO closure should also reset PM baselines
+(today only preventive WO closure does).
+
 ### Historical context — the 2026-08-04 requirements capture
 
 **User provisioning decision: no SharePoint directory, direct creation.**
