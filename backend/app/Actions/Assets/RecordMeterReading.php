@@ -18,7 +18,8 @@ class RecordMeterReading
         ?int $enteredByUserId = null,
         ?int $maintenanceRequestId = null,
         ?string $notes = null,
-        ?int $workOrderId = null
+        ?int $workOrderId = null,
+        ?float $enteredDelta = null
     ): AssetMeterReading {
         $logger = app(AuditLogger::class);
         $before = [];
@@ -28,6 +29,9 @@ class RecordMeterReading
             'asset_id' => $asset->id,
             'usage_reading_type_id' => $readingType->id,
             'reading_value' => $readingValue,
+            // What the operator typed, when they entered a delta rather than an
+            // absolute. Informational only — `reading_value` stays authoritative.
+            'entered_delta' => $enteredDelta,
             'reading_at' => $readingAt,
             'source' => $source,
             'entered_by_user_id' => $enteredByUserId,

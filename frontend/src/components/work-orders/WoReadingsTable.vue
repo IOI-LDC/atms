@@ -24,7 +24,8 @@ const emit = defineEmits<{ edit: [reading: AssetMeterReading]; remove: [id: numb
     <thead class="detail-table-head">
       <tr>
         <th>Reading</th>
-        <th>Value</th>
+        <th>Entered</th>
+        <th>Total</th>
         <th>Read at</th>
         <th>Status</th>
         <th v-if="canManage"></th>
@@ -35,7 +36,14 @@ const emit = defineEmits<{ edit: [reading: AssetMeterReading]; remove: [id: numb
         <td class="detail-table-cell">
           {{ types.find((t) => t.id === r.usage_reading_type_id)?.name ?? 'Meter reading' }}
         </td>
-        <td class="detail-table-cell">{{ r.reading_value }}</td>
+        <!-- What the operator typed. Null for readings entered as an absolute
+             (imports, API clients) and for any reading edited afterwards, since
+             the edit dialog takes a total and the delta stops matching it. -->
+        <td class="detail-table-cell">
+          <template v-if="r.entered_delta != null">+{{ r.entered_delta }}</template>
+          <span v-else class="detail-table-remove">—</span>
+        </td>
+        <td class="detail-table-cell table-cell-primary">{{ r.reading_value }}</td>
         <td class="detail-table-cell">{{ fmtDate(r.reading_at) }}</td>
         <td class="detail-table-cell">
           <span v-if="r.confirmed_at">Confirmed</span>

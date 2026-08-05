@@ -49,7 +49,7 @@ class WorkOrderController extends Controller
         // Only load the (relatively heavy) form relations for roles that can
         // see the form — avoids 2-3 wasted queries for Logistics/Requester,
         // matching the Resource's $canSeeForm gate.
-        $loads = ['asset', 'asset.currentLocation', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments'];
+        $loads = ['asset', 'asset.currentLocation', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments', 'meterSnapshots.readingType'];
         $canSeeForm = $request->user()->hasRole(RoleCode::ADMINISTRATOR)
             || $request->user()->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $request->user()->hasRole(RoleCode::TECHNICIAN);
@@ -154,6 +154,10 @@ class WorkOrderController extends Controller
         $validated = $request->validate([
             'is_failure' => ['nullable', 'boolean'],
             'asset_status' => ['nullable', 'string', Rule::in(['down', 'ready_for_field'])],
+            // Set when the closer declares a preventive service was performed
+            // alongside this job. The action verifies the assignment belongs to
+            // this work order's asset and is active (409 otherwise).
+            'serviced_pm_assignment_id' => ['nullable', 'integer', 'exists:asset_pm_assignments,id'],
         ]);
 
         $assetStatus = isset($validated['asset_status'])
@@ -166,6 +170,7 @@ class WorkOrderController extends Controller
                 $request->user()->id,
                 array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null,
                 $assetStatus,
+                $validated['serviced_pm_assignment_id'] ?? null,
             );
 
             return response()->json(['message' => 'Work order closed.', 'data' => $wo]);

@@ -24,6 +24,10 @@ class AssetMeterReadingController extends Controller
         $validated = $request->validate([
             'usage_reading_type_id' => ['required', 'exists:usage_reading_types,id'],
             'reading_value' => ['required', 'numeric'],
+            // What the operator typed when entering a delta rather than an absolute.
+            // Informational: `reading_value` is still the authoritative total, and
+            // nothing in PM evaluation or reporting reads this.
+            'entered_delta' => ['nullable', 'numeric'],
             'reading_at' => ['required', 'date'],
             'source' => ['required', 'string', 'in:user,manual'],
             'notes' => ['nullable', 'string'],
@@ -56,7 +60,8 @@ class AssetMeterReadingController extends Controller
             $request->user()->id,
             null,
             $validated['notes'] ?? null,
-            $validated['work_order_id'] ?? null
+            $validated['work_order_id'] ?? null,
+            isset($validated['entered_delta']) ? (float) $validated['entered_delta'] : null
         );
 
         return response()->json(['message' => 'Meter reading recorded.', 'data' => $reading], 201);
@@ -89,6 +94,9 @@ class AssetMeterReadingController extends Controller
 
         $validated = $request->validate([
             'reading_value' => ['required', 'numeric'],
+            // Sent when the edit was made in delta terms — the caller has already
+            // resolved it to the absolute above, and this keeps the two in step.
+            'entered_delta' => ['nullable', 'numeric'],
             'reading_at' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
         ]);
@@ -109,7 +117,8 @@ class AssetMeterReadingController extends Controller
                 $readingType,
                 (float) $validated['reading_value'],
                 Carbon::parse($validated['reading_at']),
-                $validated['notes'] ?? null
+                $validated['notes'] ?? null,
+                isset($validated['entered_delta']) ? (float) $validated['entered_delta'] : null
             );
 
             return response()->json(['message' => 'Meter reading updated.', 'data' => $reading]);

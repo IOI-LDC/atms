@@ -3,7 +3,144 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-04 (latest)
+## Session — 2026-08-05 (latest)
+
+### ✅ Done — four requirements: Repair/Service vocabulary, stored delta, meter snapshot, service-on-repair
+
+**1. Repair vs Service vocabulary (display only).** `mrTypeLabel` in `displayHelpers.ts`
+now returns **Repair / Service** instead of Corrective / Preventive — one edit, five
+display sites (MR list Type column + filter, MR detail subtitle, asset maintenance
+history, WO detail subtitle). `PM Rules (Service)` on the Admin tab, the asset PM card,
+and its empty-state cross-reference. `New / Create Maintenance Request (Repair)` on the
+create sheet and dialog.
+
+⚠️ **The nav and list titles are deliberately unchanged.** The Maintenance Requests list
+holds **both** kinds — its own subtitle says "corrective and preventive" and the Type
+filter offers both — so bracketing the title would misdescribe half its rows, and
+`PmRuleDetailView`'s "Generated Maintenance Requests" are *entirely* preventive. The
+vocabulary belongs on the per-row Type value, which is where it now lives. Domain terms
+(`corrective`/`preventive`, `MrType`, the API, the DB) are untouched. Audit-log filter
+labels were also left alone — they name backend event families, not workflow.
+
+**2. `asset_meter_readings.entered_delta`.** The WO form takes a delta and posts the
+computed absolute; the delta was previously discarded, so a wrong total could not be
+traced to a mistyped delta versus a bad base. Now stored, nullable, informational —
+nothing in PM evaluation, the guards, or reporting reads it. `UpdateMeterReading`
+**clears it when `reading_value` changes**, because the edit dialog takes an absolute and
+a stale delta would silently stop matching.
+
+**3. `work_order_meter_snapshots`.** *"Usage since the last service"* was already
+derivable (`latest confirmed reading − last_triggered_reading`) and is now surfaced as
+`usage_since_last_service` on `AssetPmAssignmentResource`. *"Since the last repair"* had
+**no data behind it at all** — `work_orders` never recorded a meter position. Closing now
+snapshots the asset's meter **per reading type**.
+
+⚠️ **Per type, not two columns on `work_orders`.** Three types are live (Operating Hours,
+Kilometer Driven, Depth) and assets already carry readings for all three; a single column
+pair would capture hours and silently lose the rest for the same job. Snapshots are
+immutable — deliberately *not* recomputed when a source reading is later edited, because
+they record what the meter was understood to read at close.
+
+**4. Service declared on a repair work order.** `CloseWorkOrder` takes an optional
+`serviced_pm_assignment_id`: the asset was in for a repair, a level was due, the team did
+both. Resets that schedule's date and reading baselines, cascades to lower levels through
+the existing `resetLowerLevelAssignments`, and **cancels any pending PM request** for it
+so nobody approves a second work order for finished work.
+
+This is a **model extension**, not a flag: the existing PM branch only fires when the
+source request carries a `pm_rule_id`, and a repair has none. The suppression is written
+with `decision_type = 'performed_under_repair'` rather than `cancelled`, and its window is
+derived from the *new* baseline — so PM compliance reads it as work done elsewhere, not a
+skipped service. `CancelMaintenanceRequest` gained an optional `$decisionType` (defaults
+to `cancelled`; single existing caller unaffected).
+
+**Ordering inside `CloseWorkOrder` is now load-bearing in three places** — confirm
+readings → declared service → snapshot, all *before* the PM block's two
+latest-confirmed-reading queries. Rearranging any of it breaks something silently.
+
+**Performance note:** `usage_since_last_service` initially added a *second*
+`latestConfirmedReading()` query per serialized row — `readingProgress` already made one.
+Memoised on the model. Bulk callers should still preload via `PmEvaluationBatch`.
+
+**Verified:** full suite **1073 passed** (was 1059; +14 new). Pint clean across 20 files.
+`vue-tsc` clean apart from the pre-existing `tsconfig.app.json` `baseUrl` deprecation
+(confirmed pre-existing by stashing). Workers restarted. Live end-to-end against the real
+schema inside a rolled-back transaction: WO closed, 2 of 2 readings confirmed,
+`entered_delta` 160 kept, snapshots for both Operating Hours and Kilometer Driven, PM
+baseline reset to 2400, pending PM request cancelled citing the WO number, suppression
+`performed_under_repair`. Dev DB re-checked unchanged afterwards.
+
+⚠️ **A full-suite run took 4780s during this session — CPU starvation, not code.** The
+host was at load ~12–30 under ~35 `Qoder.app` processes; the same tests ran in 9.43s once
+scheduled. Do not chase this as a performance regression.
+
+**Still deferred:** D-015 (requester MR readings — blocked on delta-vs-absolute), D-016
+(cancel-dialog opt-in), D-017 (user manual), D-018 (first-reading delta bug — unfixed and
+still the most damaging of the four).
+
+## Session — 2026-08-04
+
+### ✅ Done — closing a work order now confirms its readings (follows the parking below)
+
+The parking decision below stopped reading-based PM rules from being *created*.
+It did not fix the underlying gap: every reading recorded still had **no path to
+`confirmed_at`, ever**. Readings kept accumulating in a state nothing could use —
+not PM, not R-20 Meter Reading Progression, not the Asset Usage report (both
+count confirmed readings only, so both are permanently empty).
+
+**Decision: verification is a by-product of the work order lifecycle, not a
+button.** A manual "Verify" button was designed, reviewed, and rejected. Closing
+a work order is Administrator / Maintenance Manager only (`WorkOrderPolicy::close`)
+and the technician who took the reading cannot do it — so close is a genuine
+second pair of eyes. A button would be clicked by the same person who entered the
+value, and a step nobody's job description covers is a step that never happens.
+**Do not reopen this as "add a Verify button".**
+
+Built:
+
+- **`app/Actions/Assets/ConfirmWorkOrderReadings.php`** — confirms a work order's
+  unverified readings via the existing `ConfirmMeterReading`, **oldest-first**,
+  catching `DomainException` per row and continuing. Returns `{confirmed, skipped}`.
+- **`CloseWorkOrder`** calls it immediately after the status transition, **before**
+  the PM-assignment block.
+- 8 feature tests in `tests/Feature/WorkOrders/CloseWorkOrderConfirmsReadingsTest.php`.
+  Full suite **1059 passed**. Pint clean. `meter_reading.confirm_skipped` added to
+  `auditColumns.ts` so skips are filterable in the audit viewer.
+
+Three properties any future change must preserve:
+
+1. **Ascending `reading_at` order is load-bearing.** `ConfirmMeterReading` rejects a
+   reading dated earlier than the latest confirmed one in its series, so confirming
+   newest-first would make each reading strand the one below it.
+2. **A failed guard must skip, never abort.** A data-quality problem cannot be
+   allowed to block an operational transition — one out-of-order reading must not
+   stop a manager closing a work order. Safe because `ConfirmMeterReading` opens its
+   own `DB::transaction`, which nests as a **savepoint**; the rollback unwinds one
+   reading, not the close. Flatten that nesting and every skip becomes a full
+   rollback.
+3. **Placement before the PM block, not after.** `CloseWorkOrder` has **two**
+   latest-confirmed-reading queries — the assignment's own baseline, and a second
+   inside `resetLowerLevelAssignments()`. Confirming first means both see the
+   readings confirmed by this same close. Moving the call later to "tighten" the
+   diff breaks the lower-level PM reset silently.
+
+**Deferred deliberately** (see 🟠 D-015/D-016/D-017 in TLD for triggers):
+requester meter-reading entry on the MR create form (backend already accepts
+`meter_reading`, frontend never sends it); the cancel-dialog opt-in that would let
+a manager verify readings on a cancelled WO; the user-manual rewrite. Agreed rules
+if they are picked up: rejected/cancelled MRs and pending MRs leave readings
+unverified permanently, and readings on an MR get `work_order_id` backfilled at
+approval rather than the confirm rule widening to an OR.
+
+**Known defect, not fixed here — first reading is seeded as a delta.**
+`useWorkOrderDetail.ts` `draftTotal` computes `base ? base.value + delta : delta`,
+so with no prior reading for that asset+type **the entered delta silently becomes
+the absolute total**. An operator typing "8" (hours since last service) records a
+lifetime meter value of 8 when the dial reads 1240. With 8 readings across 4 of
+400 assets, essentially every reading in the near future is a first reading. The
+failure is quiet — the reading dimension simply never reaches its threshold and
+the calendar dimension carries on — which is why it has not surfaced. Fix before
+the Job Management feed lands. See 🟠 D-018.
 
 ### ✅ Done — four requirements implemented and verified
 

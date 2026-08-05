@@ -43,7 +43,9 @@ export function subjectTypeLabel(subjectType: string | null | undefined): string
   }
 
   // FQCN form: keep only the class basename (App\Models\PmRule → PmRule).
-  let base = subjectType.includes('\\') ? (subjectType.split('\\').pop() ?? subjectType) : subjectType
+  let base = subjectType.includes('\\')
+    ? (subjectType.split('\\').pop() ?? subjectType)
+    : subjectType
 
   if (base.includes('_')) {
     // snake_case morph alias → title-cased words.
@@ -147,6 +149,7 @@ export const auditEventGroups: AuditEventGroup[] = [
     'meter_reading.recorded',
     'meter_reading.updated',
     'meter_reading.confirmed',
+    'meter_reading.confirm_skipped',
     'meter_reading.deleted',
   ]),
   literalGroup('Attachment', ['attachment.uploaded', 'attachment.soft_deleted']),

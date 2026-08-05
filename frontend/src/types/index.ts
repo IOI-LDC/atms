@@ -190,6 +190,16 @@ export interface AssetMeterReading {
   confirmed_by_user_id: number | null
   confirmed_at: string | null
   notes: string | null
+  /** What the operator typed when entering a delta. Null for absolutes and edits. */
+  entered_delta?: string | null
+}
+
+/** The asset's meter position, per type, captured when a work order closed. */
+export interface WorkOrderMeterSnapshot {
+  usage_reading_type_id: number
+  reading_type: { id: number; name: string; unit: string } | null
+  reading_value: number
+  reading_at: string | null
 }
 
 export interface AssetLocationHistoryItem {
@@ -317,6 +327,8 @@ export interface WorkOrder {
   has_attachments?: number // Admin/Manager/Tech
   maintenance_request?: WorkOrderMaintenanceRequestRef | null
   form?: WoFormInstance | null // Admin/Manager/Tech — present when the WO has an attached form
+  /** Meter position when this job closed. Present on the detail endpoint once closed. */
+  meter_snapshots?: WorkOrderMeterSnapshot[]
 }
 
 // ── WO Forms ──────────────────────────────────────────────────────────────────
@@ -432,6 +444,8 @@ export interface AssetPmAssignment {
   asset?: AssetRef
   last_triggered_date: string | null
   last_triggered_reading: number | null
+  /** Meter usage since this schedule was last serviced. Null = not measurable. */
+  usage_since_last_service: number | null
   next_due_date: string | null
   next_due_reading: number | null
   progress_percentage: number | null

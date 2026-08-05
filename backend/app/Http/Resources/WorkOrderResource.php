@@ -107,6 +107,19 @@ class WorkOrderResource extends JsonResource
             'is_failure' => $this->maintenanceRequest?->is_failure,
         ]);
 
+        // Where the meter stood when this job closed — the reference point for
+        // "usage since the last repair". Only present once closed.
+        $data['meter_snapshots'] = $this->whenLoaded('meterSnapshots', fn () => $this->meterSnapshots->map(fn ($s) => [
+            'usage_reading_type_id' => $s->usage_reading_type_id,
+            'reading_type' => $s->relationLoaded('readingType') ? [
+                'id' => $s->readingType?->id,
+                'name' => $s->readingType?->name,
+                'unit' => $s->readingType?->unit,
+            ] : null,
+            'reading_value' => (float) $s->reading_value,
+            'reading_at' => $s->reading_at?->toIso8601String(),
+        ])->values());
+
         return $data;
     }
 }

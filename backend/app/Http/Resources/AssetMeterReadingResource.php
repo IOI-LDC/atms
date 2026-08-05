@@ -14,6 +14,9 @@ class AssetMeterReadingResource extends JsonResource
             'asset_id' => $this->asset_id,
             'usage_reading_type_id' => $this->usage_reading_type_id,
             'reading_value' => $this->reading_value,
+            // What the operator typed, when they entered a delta instead of a total.
+            // Null for absolutes, imports, and readings edited after entry.
+            'entered_delta' => $this->entered_delta,
             'reading_at' => $this->reading_at?->toIso8601String(),
             'source' => $this->source,
             'work_order_id' => $this->work_order_id,

@@ -30,6 +30,10 @@ class AssetPmAssignmentResource extends JsonResource
             'asset' => $this->whenLoaded('asset', fn () => new AssetIdentityResource($this->asset)),
             'last_triggered_date' => $this->last_triggered_date?->toDateString(),
             'last_triggered_reading' => $this->last_triggered_reading ? (float) $this->last_triggered_reading : null,
+            // Usage accumulated since this schedule was last serviced — the answer
+            // to "how many hours since the last service". Derived, not stored:
+            // both operands already exist, so a column would only add drift.
+            'usage_since_last_service' => $this->usageSinceLastService(),
             'next_due_date' => $this->nextDueDate($rule),
             'next_due_reading' => $this->nextDueReading($rule),
             'progress_percentage' => $this->progressPercentage($rule),

@@ -166,7 +166,7 @@ async function confirmToggle() {
 <template>
   <div class="data-card">
     <div class="data-card-header">
-      <h2 class="data-card-title">PM Rules</h2>
+      <h2 class="data-card-title">PM Rules (Service)</h2>
       <div class="filter-actions">
         <Button variant="outline" size="sm" @click="toggleInactive">
           {{ showInactive ? 'Show Active Only' : 'Show Inactive' }}
@@ -192,6 +192,7 @@ async function confirmToggle() {
             <th>Schedule</th>
             <th>Status</th>
             <th>Last Triggered</th>
+            <th>Since Service</th>
             <th>Next Due</th>
             <th></th>
           </tr>
@@ -219,6 +220,18 @@ async function confirmToggle() {
                   ? String(a.last_triggered_reading)
                   : fmtDate(a.last_triggered_date)
               }}
+            </td>
+            <!-- Usage accumulated since this schedule was last serviced. Em-dash
+                 rather than 0 when unknown: no baseline, no confirmed reading, or
+                 a date-only schedule all mean "not measured", not "just done". -->
+            <td class="detail-table-cell">
+              <template v-if="a.usage_since_last_service != null">
+                {{ a.usage_since_last_service.toLocaleString()
+                }}<span v-if="a.rule.usage_reading_type">
+                  {{ a.rule.usage_reading_type.unit }}</span
+                >
+              </template>
+              <span v-else class="detail-table-remove">—</span>
             </td>
             <td class="detail-table-cell">
               {{
@@ -279,7 +292,7 @@ async function confirmToggle() {
             </SelectContent>
           </Select>
           <p v-if="templates.length === 0" class="form-help">
-            No active templates available. Create one under Admin → PM Rules.
+            No active templates available. Create one under Admin → PM Rules (Service).
           </p>
           <p v-else-if="assignableCount === 0" class="form-help">
             Every active template is already assigned to this asset. Use "Show Inactive" above to

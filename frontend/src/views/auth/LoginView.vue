@@ -79,14 +79,14 @@ async function handleSubmit() {
             <article class="auth-workflow-source">
               <span class="auth-workflow-source-icon"><ClipboardList /></span>
               <span class="auth-workflow-copy">
-                <strong>Corrective MR</strong>
+                <strong>Repair MR</strong>
                 <small>User-submitted issue with an optional meter reading</small>
               </span>
             </article>
             <article class="auth-workflow-source">
               <span class="auth-workflow-source-icon"><CalendarClock /></span>
               <span class="auth-workflow-copy">
-                <strong>Preventive MR</strong>
+                <strong>Service MR</strong>
                 <small>System-generated from a date or meter trigger</small>
               </span>
             </article>

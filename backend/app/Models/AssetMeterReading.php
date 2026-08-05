@@ -14,6 +14,7 @@ class AssetMeterReading extends Model
         'asset_id',
         'usage_reading_type_id',
         'reading_value',
+        'entered_delta',
         'reading_at',
         'source',
         'entered_by_user_id',
@@ -26,6 +27,7 @@ class AssetMeterReading extends Model
 
     protected $casts = [
         'reading_value' => 'decimal:2',
+        'entered_delta' => 'decimal:2',
         'reading_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'deleted_at' => 'datetime',

@@ -71,6 +71,15 @@ class WorkOrder extends Model
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    /**
+     * The asset's meter position, per reading type, captured when this work order
+     * closed. Empty for anything not yet closed.
+     */
+    public function meterSnapshots(): HasMany
+    {
+        return $this->hasMany(WorkOrderMeterSnapshot::class);
+    }
+
     public function workOrderForm(): HasOne
     {
         return $this->hasOne(WorkOrderForm::class);

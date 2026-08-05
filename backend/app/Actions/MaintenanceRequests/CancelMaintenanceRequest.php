@@ -11,14 +11,23 @@ use Illuminate\Support\Facades\DB;
 
 class CancelMaintenanceRequest
 {
+    /**
+     * @param  string  $decisionType  How the suppression should read in reporting.
+     *                                Defaults to 'cancelled' — a decision to skip
+     *                                this occurrence. `CloseWorkOrder` passes
+     *                                'performed_under_repair' when the service was
+     *                                actually done under another work order, so PM
+     *                                compliance does not count it as a skip.
+     */
     public function execute(
         MaintenanceRequest $maintenanceRequest,
         int $cancelledByUserId,
         string $reason,
         ?string $suppressedUntilDate = null,
-        ?string $suppressedUntilReading = null
+        ?string $suppressedUntilReading = null,
+        string $decisionType = 'cancelled'
     ): MaintenanceRequest {
-        return DB::transaction(function () use ($maintenanceRequest, $cancelledByUserId, $reason, $suppressedUntilDate, $suppressedUntilReading) {
+        return DB::transaction(function () use ($maintenanceRequest, $cancelledByUserId, $reason, $suppressedUntilDate, $suppressedUntilReading, $decisionType) {
             $logger = app(AuditLogger::class);
             $locked = MaintenanceRequest::where('id', $maintenanceRequest->id)->lockForUpdate()->first();
             $before = $locked->toArray();
@@ -39,7 +48,7 @@ class CancelMaintenanceRequest
                     $locked,
                     $locked->pmRule,
                     $cancelledByUserId,
-                    'cancelled',
+                    $decisionType,
                     $suppressedUntilDate,
                     $suppressedUntilReading,
                     $reason

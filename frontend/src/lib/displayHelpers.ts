@@ -61,8 +61,16 @@ export function priorityPickerLabel(opt: { value: string; label: string }): stri
   return opt.value === 'critical' ? `${opt.label} — immediate attention required` : opt.label
 }
 
+/**
+ * Repair vs Service — the user-facing vocabulary for a request's type.
+ *
+ * The domain terms stay `corrective` / `preventive` in the API, the DB, and the
+ * `MrType` union; only the label changes. This is where the distinction is made
+ * legible, rather than on the list title — the Maintenance Requests list holds
+ * both kinds, so a bracketed heading there would misdescribe half its rows.
+ */
 export function mrTypeLabel(t: string): string {
-  return t === 'preventive' ? 'Preventive' : 'Corrective'
+  return t === 'preventive' ? 'Service' : 'Repair'
 }
 
 /** Failure classification label (corrective MRs only). null = not yet reviewed. */

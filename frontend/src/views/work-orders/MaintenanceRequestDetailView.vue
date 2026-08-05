@@ -187,7 +187,7 @@ watch(
                 >
               </div>
               <p class="detail-command-subtitle">
-                {{ mrTypeLabel(record.type) }} maintenance request · {{ record.asset.name }}
+                {{ mrTypeLabel(record.type) }} request · {{ record.asset.name }}
               </p>
             </div>
 
@@ -303,7 +303,7 @@ watch(
 
                 <!-- Preventive trigger info (role-gated by presence) -->
                 <div v-if="record.is_preventive" class="detail-section">
-                  <h3 class="detail-section-title">Preventive trigger</h3>
+                  <h3 class="detail-section-title">Service trigger</h3>
                   <div class="detail-grid">
                     <div v-if="record.triggered_by_date" class="detail-field">
                       <span class="detail-field-label">Triggered by date</span>
@@ -368,8 +368,8 @@ watch(
               </div>
               <div class="data-card-content">
                 <p v-if="isTerminal && canUploadAttachment" class="detail-note">
-                  This request is {{ record.status.replace('_', ' ') }} — its details are locked, but
-                  attachments can still be added.
+                  This request is {{ record.status.replace('_', ' ') }} — its details are locked,
+                  but attachments can still be added.
                 </p>
                 <div v-if="attachmentsLoading" class="loading-state">Loading attachments…</div>
                 <div v-else-if="attachments.length === 0" class="empty-state">No attachments.</div>

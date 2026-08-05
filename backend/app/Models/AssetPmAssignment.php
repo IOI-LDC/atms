@@ -116,18 +116,58 @@ class AssetPmAssignment extends Model
             ->exists();
     }
 
-    public function latestConfirmedReading(): ?AssetMeterReading
+    /**
+     * Meter usage accumulated since this schedule was last serviced.
+     *
+     * Null when the schedule is not reading-based, when the asset has no confirmed
+     * reading, or when no baseline has been set yet — all three mean "not known"
+     * rather than zero, and a zero would read as "serviced just now".
+     */
+    public function usageSinceLastService(): ?float
     {
-        $readingTypeId = $this->pmRule?->usage_reading_type_id;
-
-        if (! $readingTypeId) {
+        if ($this->last_triggered_reading === null) {
             return null;
         }
 
-        return AssetMeterReading::where('asset_id', $this->asset_id)
-            ->where('usage_reading_type_id', $readingTypeId)
-            ->whereNotNull('confirmed_at')
-            ->orderByDesc('reading_at')
-            ->first();
+        $latest = $this->latestConfirmedReading();
+
+        if (! $latest) {
+            return null;
+        }
+
+        return round((float) $latest->reading_value - (float) $this->last_triggered_reading, 2);
+    }
+
+    /**
+     * Memoised per instance: AssetPmAssignmentResource asks for this twice while
+     * serialising one row — once for reading progress, once for usage since the
+     * last service — and the resource is rendered for every assignment in a list.
+     * Without the cache that is two queries per row instead of one.
+     *
+     * Callers that need it across many assignments at once should still preload
+     * through PmEvaluationBatch rather than relying on this.
+     */
+    private ?AssetMeterReading $latestConfirmedReadingCache = null;
+
+    private bool $latestConfirmedReadingLoaded = false;
+
+    public function latestConfirmedReading(): ?AssetMeterReading
+    {
+        if ($this->latestConfirmedReadingLoaded) {
+            return $this->latestConfirmedReadingCache;
+        }
+
+        $readingTypeId = $this->pmRule?->usage_reading_type_id;
+
+        $this->latestConfirmedReadingLoaded = true;
+        $this->latestConfirmedReadingCache = $readingTypeId
+            ? AssetMeterReading::where('asset_id', $this->asset_id)
+                ->where('usage_reading_type_id', $readingTypeId)
+                ->whereNotNull('confirmed_at')
+                ->orderByDesc('reading_at')
+                ->first()
+            : null;
+
+        return $this->latestConfirmedReadingCache;
     }
 }

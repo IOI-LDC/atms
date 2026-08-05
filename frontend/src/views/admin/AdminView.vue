@@ -18,7 +18,7 @@ const activeTab = computed(() => {
 
 const tabs = [
   { key: 'lists', label: 'Lists & Dropdowns', to: '/admin/lists' },
-  { key: 'pm-rules', label: 'PM Rules', to: '/admin/pm-rules' },
+  { key: 'pm-rules', label: 'PM Rules (Service)', to: '/admin/pm-rules' },
   { key: 'wo-forms', label: 'WO Forms', to: '/admin/wo-forms' },
   { key: 'users', label: 'Users & Access', to: '/admin/users' },
 ]

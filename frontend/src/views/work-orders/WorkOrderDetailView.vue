@@ -25,6 +25,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -122,6 +123,9 @@ const {
   closeLoading,
   closeIsFailure,
   closeAssetStatus,
+  serviceDeclared,
+  servicedAssignmentId,
+  serviceAssignmentOptions,
   openClose,
   doClose,
   cancelOpen,
@@ -161,6 +165,10 @@ const {
   editReadingOpen,
   editReadingLoading,
   editReadingDraft,
+  editReadingBase,
+  editReadingIsDelta,
+  editReadingTotal,
+  editReadingDeltaNegative,
   openEditReading,
   doEditReading,
   deleteReadingTarget,
@@ -225,6 +233,28 @@ const cancelAssetStatusStr = computed({
   get: () => cancelAssetStatus.value ?? undefined,
   set: (v: string | undefined) => {
     cancelAssetStatus.value = v === 'down' || v === 'ready_for_field' ? v : null
+  },
+})
+// Edit-reading delta round-trips through a string (mirrors readingValueStr).
+const editReadingDeltaStr = computed({
+  get: () =>
+    editReadingDraft.value.enteredDelta !== null ? String(editReadingDraft.value.enteredDelta) : '',
+  set: (v: string) => {
+    editReadingDraft.value.enteredDelta = v === '' ? null : Number(v)
+  },
+})
+// Unit of the edited reading's type, for the delta and total displays.
+const editReadingUnitSuffix = computed(() => {
+  const unit = readingTypes.value.find(
+    (t) => t.id === editReadingDraft.value.usage_reading_type_id,
+  )?.unit
+  return unit ? ` ${unit}` : ''
+})
+// Close: the declared-service picker round-trips through a string (mirrors readingTypeIdStr).
+const servicedAssignmentIdStr = computed({
+  get: () => (servicedAssignmentId.value !== null ? String(servicedAssignmentId.value) : undefined),
+  set: (v: string | undefined) => {
+    servicedAssignmentId.value = v ? Number(v) : null
   },
 })
 // Close: failure re-classification (corrective-origin WOs only). boolean|null <-> string.
@@ -378,7 +408,7 @@ watch(
                 >
               </div>
               <p class="detail-command-subtitle">
-                {{ originTypeLabel ?? 'Corrective' }} work order · {{ record.asset.name }}
+                {{ originTypeLabel ?? 'Repair' }} work order · {{ record.asset.name }}
               </p>
             </div>
 
@@ -628,6 +658,24 @@ watch(
               <div class="data-card-content">
                 <div v-if="readingsLoading" class="loading-state">Loading readings…</div>
                 <template v-else>
+                  <!-- Where the meter stood when this job closed. This is the
+                       reference point every later "usage since the last repair"
+                       figure is measured against, so it is worth stating plainly
+                       rather than leaving to be inferred from the rows below. -->
+                  <div v-if="record?.meter_snapshots?.length" class="reading-group">
+                    <p class="reading-group-title">Meter at close</p>
+                    <ul class="reading-snapshot-list">
+                      <li v-for="s in record.meter_snapshots" :key="s.usage_reading_type_id">
+                        <span class="reading-snapshot-label">{{
+                          s.reading_type?.name ?? 'Meter'
+                        }}</span>
+                        <span class="reading-snapshot-value">
+                          {{ s.reading_value.toLocaleString() }} {{ s.reading_type?.unit ?? '' }}
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+
                   <!-- Readings taken on this work order, kept apart from the
                        asset's earlier history so the table cannot be read as
                        though all of it belongs to this job. -->
@@ -971,12 +1019,43 @@ watch(
             asset.
           </p>
         </div>
+        <div v-if="serviceAssignmentOptions.length > 0" class="form-field">
+          <label class="checkbox-field">
+            <Checkbox id="wo-close-service" v-model="serviceDeclared" />
+            <span>A service was also performed</span>
+          </label>
+          <p class="form-help">
+            Tick this when a due service was carried out while the asset was in for this job. It
+            resets that schedule and withdraws any service request already raised for it.
+          </p>
+        </div>
+        <div v-if="serviceDeclared && serviceAssignmentOptions.length > 0" class="form-field">
+          <Label for="wo-close-service-level"
+            >Service performed <span class="field-required">*</span></Label
+          >
+          <Select v-model="servicedAssignmentIdStr">
+            <SelectTrigger id="wo-close-service-level"
+              ><SelectValue placeholder="Which service was carried out?"
+            /></SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="a in serviceAssignmentOptions" :key="a.id" :value="String(a.id)">
+                {{ a.rule.name }}<template v-if="a.pm_status === 'due'"> — due</template>
+                <template v-else-if="a.pm_status === 'soon'"> — due soon</template>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="form-help">Choosing a higher level also resets the levels beneath it.</p>
+        </div>
         <DialogFooter>
           <Button variant="outline" :disabled="closeLoading" @click="closeOpen = false"
             >Back</Button
           >
           <Button
-            :disabled="closeLoading || (isCorrectiveOrigin && closeIsFailure === null)"
+            :disabled="
+              closeLoading ||
+              (isCorrectiveOrigin && closeIsFailure === null) ||
+              (serviceDeclared && servicedAssignmentId === null)
+            "
             @click="doClose"
           >
             {{ closeLoading ? 'Closing…' : 'Close Work Order' }}
@@ -1010,7 +1089,9 @@ watch(
               ><SelectValue placeholder="Is the asset operational again?"
             /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="ready_for_field">Ready for Field — false alarm, asset is fine</SelectItem>
+              <SelectItem value="ready_for_field"
+                >Ready for Field — false alarm, asset is fine</SelectItem
+              >
               <SelectItem value="down">Down — still faulty</SelectItem>
             </SelectContent>
           </Select>
@@ -1115,7 +1196,9 @@ watch(
           </Select>
         </div>
         <div class="form-field">
-          <Label for="wo-reading-value">Used since last reading <span class="field-required">*</span></Label>
+          <Label for="wo-reading-value"
+            >Used since last reading <span class="field-required">*</span></Label
+          >
           <Input
             id="wo-reading-value"
             v-model="readingValueStr"
@@ -1380,9 +1463,40 @@ watch(
             }}
           </p>
         </div>
-        <div class="form-field">
-          <Label for="wo-reading-edit-value">Value <span class="field-required">*</span></Label>
+        <!-- A reading entered as a delta is corrected as a delta: the operator gets
+             back the number they typed, not a total they may never have seen. -->
+        <div v-if="editReadingIsDelta" class="form-field">
+          <Label for="wo-reading-edit-delta"
+            >Amount since previous reading <span class="field-required">*</span></Label
+          >
+          <Input id="wo-reading-edit-delta" v-model="editReadingDeltaStr" type="number" />
+          <p class="form-help">
+            Previous reading {{ editReadingBase?.toLocaleString() }}{{ editReadingUnitSuffix }}.
+          </p>
+        </div>
+        <div v-if="editReadingIsDelta && editReadingDeltaNegative" class="form-field">
+          <div class="reading-warning" role="alert">
+            <TriangleAlert class="reading-warning-icon" aria-hidden="true" />
+            <span>The amount since the last reading cannot be negative.</span>
+          </div>
+        </div>
+        <div v-if="editReadingIsDelta && editReadingTotal != null" class="form-field">
+          <p class="detail-field-label">Total (current meter reading)</p>
+          <p class="reading-total-display">
+            <b>{{ editReadingTotal.toLocaleString() }}{{ editReadingUnitSuffix }}</b>
+          </p>
+        </div>
+        <!-- No delta recorded, or no earlier reading to measure from: edit the
+             absolute. Falling back rather than treating the delta as the total,
+             which is what seeds a wrong odometer on a first reading. -->
+        <div v-if="!editReadingIsDelta" class="form-field">
+          <Label for="wo-reading-edit-value"
+            >Total meter reading <span class="field-required">*</span></Label
+          >
           <Input id="wo-reading-edit-value" v-model="editReadingValueStr" type="number" />
+          <p class="form-help">
+            This is the absolute meter total, not the amount since the last reading.
+          </p>
         </div>
         <div class="form-field">
           <Label for="wo-reading-edit-at">Read at</Label>
@@ -1408,7 +1522,13 @@ watch(
             >Back</Button
           >
           <Button
-            :disabled="editReadingLoading || editReadingDraft.value == null"
+            :disabled="
+              editReadingLoading ||
+              editReadingDeltaNegative ||
+              (editReadingIsDelta
+                ? editReadingDraft.enteredDelta == null
+                : editReadingDraft.value == null)
+            "
             @click="doEditReading"
           >
             {{ editReadingLoading ? 'Saving…' : 'Save Changes' }}

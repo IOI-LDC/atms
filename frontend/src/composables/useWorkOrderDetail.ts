@@ -3,6 +3,8 @@ import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
 import { useLocations } from '@/composables/useLocations'
+import { fetchList } from '@/lib/dataTableSource'
+import { mrTypeLabel } from '@/lib/displayHelpers'
 import type {
   WorkOrder,
   WorkOrderPart,
@@ -80,13 +82,14 @@ export function useWorkOrderDetail() {
     () => record.value?.maintenance_request?.is_preventive === false,
   )
   // The WO payload embeds `is_preventive` but not `type`; derive the display label
-  // from it. null when no MR is linked.
-  const originTypeLabel = computed<'Preventive' | 'Corrective' | null>(() => {
+  // from it. null when no MR is linked. Routed through `mrTypeLabel` so the
+  // Repair/Service vocabulary has one source of truth.
+  const originTypeLabel = computed<string | null>(() => {
     const mr = record.value?.maintenance_request
     if (!mr) {
       return null
     }
-    return mr.is_preventive ? 'Preventive' : 'Corrective'
+    return mrTypeLabel(mr.is_preventive ? 'preventive' : 'corrective')
   })
 
   // Lifecycle stepper model for the command bar. `cancelled` is off the linear
@@ -232,6 +235,28 @@ export function useWorkOrderDetail() {
   // Caller-chosen asset status on close, pre-seeded to 'ready_for_field' (back in service);
   // 'down' keeps the asset out of service. Sent to the API as `asset_status`.
   const closeAssetStatus = ref<'ready_for_field' | 'down'>('ready_for_field')
+
+  // ── Service declared on a repair ──────────────────────────────────────────
+  // The asset was in the workshop for a repair, a service level happened to be
+  // due, and the team did both. Declaring it here resets that schedule's date and
+  // reading baselines and retires any service request already raised for it.
+  const serviceDeclared = ref(false)
+  const servicedAssignmentId = ref<number | null>(null)
+  const serviceAssignments = ref<AssetPmAssignment[]>([])
+  const serviceAssignmentsLoading = ref(false)
+
+  // Due schedules first — due-ness is what prompts the declaration in the first
+  // place, so it should not be buried under schedules that are not yet relevant.
+  const serviceAssignmentOptions = computed(() =>
+    [...serviceAssignments.value]
+      .filter((a) => a.is_active)
+      .sort((a, b) => {
+        const rank = (s: string) => (s === 'due' ? 0 : s === 'soon' ? 1 : 2)
+        const byStatus = rank(a.pm_status) - rank(b.pm_status)
+        if (byStatus !== 0) return byStatus
+        return (a.rule.maintenance_level ?? '').localeCompare(b.rule.maintenance_level ?? '')
+      }),
+  )
   const cancelOpen = ref(false)
   const cancelLoading = ref(false)
   const cancelReason = ref('')
@@ -338,15 +363,67 @@ export function useWorkOrderDetail() {
     id: number | null
     usage_reading_type_id: number | null
     value: number | null
+    /** The delta this reading was recorded with. Editable — see editReadingIsDelta. */
+    enteredDelta: number | null
     readAt: string
     notes: string
   }>({
     id: null,
     usage_reading_type_id: null,
     value: null,
+    enteredDelta: null,
     readAt: new Date().toISOString().slice(0, 10),
     notes: '',
   })
+  // ── Editing in delta terms ────────────────────────────────────────────────
+  // A technician at the machine often knows only what the meter has moved since
+  // the last reading, not its lifetime total — so a reading entered as a delta is
+  // corrected as a delta, and the absolute is recomputed from it.
+  //
+  // The base is the reading immediately *before* this one in its own series, not
+  // the latest: editing the second of five readings must not measure from the
+  // fifth. Soft-deleted rows never arrive from the endpoint, so they cannot skew it.
+  const editReadingBase = computed<number | null>(() => {
+    const d = editReadingDraft.value
+    if (d.id == null || d.usage_reading_type_id == null) return null
+
+    const target = assetReadings.value.find((r) => r.id === d.id)
+    if (!target) return null
+
+    const earlier = assetReadings.value
+      .filter((r) => r.usage_reading_type_id === d.usage_reading_type_id && r.id !== d.id)
+      .filter((r) => {
+        const byDate = (r.reading_at ?? '').localeCompare(target.reading_at ?? '')
+        return byDate !== 0 ? byDate < 0 : r.id < target.id
+      })
+      .sort((a, b) => {
+        const byDate = (b.reading_at ?? '').localeCompare(a.reading_at ?? '')
+        return byDate !== 0 ? byDate : b.id - a.id
+      })[0]
+
+    return earlier ? Number(earlier.reading_value) : null
+  })
+
+  // True when this reading was entered as a delta and still has a base to measure
+  // from. Without a base the delta *is* the total, which is the trap that seeds a
+  // wrong odometer — so the dialog falls back to editing the absolute instead.
+  const editReadingIsDelta = computed<boolean>(
+    () => editReadingDraft.value.enteredDelta != null && editReadingBase.value != null,
+  )
+
+  // Absolute that will be saved when editing in delta terms.
+  const editReadingTotal = computed<number | null>(() => {
+    if (!editReadingIsDelta.value) return null
+    const delta = editReadingDraft.value.enteredDelta
+    if (delta == null) return null
+    return Math.round((editReadingBase.value! + delta) * 100) / 100
+  })
+
+  // A negative delta can never be valid — meter totals only increase.
+  const editReadingDeltaNegative = computed<boolean>(
+    () => editReadingIsDelta.value && (editReadingDraft.value.enteredDelta ?? 0) < 0,
+  )
+
   const deleteReadingTarget = ref<number | null>(null)
   const deleteReadingLoading = ref(false)
 
@@ -595,7 +672,29 @@ export function useWorkOrderDetail() {
     // The asset is presumed back in service; the closer changes it to 'down'
     // only when the repair did not restore it.
     closeAssetStatus.value = 'ready_for_field'
+    serviceDeclared.value = false
+    servicedAssignmentId.value = null
     closeOpen.value = true
+    void loadServiceAssignments()
+  }
+
+  /**
+   * The asset's active service schedules, for the "a service was also performed"
+   * picker. Loaded when the close dialog opens rather than with the work order —
+   * most closes never open the picker.
+   */
+  async function loadServiceAssignments() {
+    if (!record.value) return
+    serviceAssignmentsLoading.value = true
+    try {
+      serviceAssignments.value = await fetchList<AssetPmAssignment>(
+        `/assets/${record.value.asset.id}/pm-assignments`,
+      )
+    } catch {
+      serviceAssignments.value = []
+    } finally {
+      serviceAssignmentsLoading.value = false
+    }
   }
   async function doClose() {
     if (!record.value) return
@@ -606,11 +705,20 @@ export function useWorkOrderDetail() {
       // sent for corrective-origin WOs when a value is chosen — never null,
       // which would clobber the review-time classification. The key is omitted
       // entirely for PM WOs and when unset.
-      const payload: { is_failure?: boolean; asset_status: 'ready_for_field' | 'down' } = {
+      const payload: {
+        is_failure?: boolean
+        asset_status: 'ready_for_field' | 'down'
+        serviced_pm_assignment_id?: number
+      } = {
         asset_status: closeAssetStatus.value,
       }
       if (isCorrectiveOrigin.value && closeIsFailure.value !== null) {
         payload.is_failure = closeIsFailure.value
+      }
+      // Only sent when the closer both ticked the box and picked a schedule —
+      // the backend resets baselines off this, so a stray id is not harmless.
+      if (serviceDeclared.value && servicedAssignmentId.value !== null) {
+        payload.serviced_pm_assignment_id = servicedAssignmentId.value
       }
       await api.post(`/work-orders/${record.value.id}/close`, payload)
       toast.success('Work order closed.')
@@ -713,6 +821,10 @@ export function useWorkOrderDetail() {
       await api.post(`/assets/${record.value.asset.id}/meter-readings`, {
         usage_reading_type_id: readingDraft.value.typeId,
         reading_value: draftTotal.value,
+        // What the operator actually typed. The total above is derived from it,
+        // so without this the entry is unrecoverable — a wrong total could not be
+        // traced to a mistyped delta rather than a bad base.
+        entered_delta: readingDraft.value.value,
         reading_at: readingDraft.value.readAt,
         source: 'manual',
         notes: readingDraft.value.notes || null,
@@ -771,6 +883,7 @@ export function useWorkOrderDetail() {
       id: r.id,
       usage_reading_type_id: r.usage_reading_type_id,
       value: r.reading_value == null ? null : Number(r.reading_value),
+      enteredDelta: r.entered_delta == null ? null : Number(r.entered_delta),
       readAt: (r.reading_at ?? '').slice(0, 10),
       notes: r.notes ?? '',
     }
@@ -780,12 +893,21 @@ export function useWorkOrderDetail() {
 
   async function doEditReading() {
     if (!record.value || editReadingDraft.value.id === null) return
+    if (editReadingDeltaNegative.value) return
+    // Delta edits resolve to an absolute here; the API stores both so the figure
+    // the operator typed stays recoverable. Absolute edits send no delta, which
+    // tells the backend to clear any stale one.
+    const isDelta = editReadingIsDelta.value
+    const value = isDelta ? editReadingTotal.value : editReadingDraft.value.value
+    if (value == null) return
+
     editReadingLoading.value = true
     try {
       await api.patch(
         `/assets/${record.value.asset.id}/meter-readings/${editReadingDraft.value.id}`,
         {
-          reading_value: editReadingDraft.value.value,
+          reading_value: value,
+          entered_delta: isDelta ? editReadingDraft.value.enteredDelta : null,
           reading_at: editReadingDraft.value.readAt,
           notes: editReadingDraft.value.notes || null,
         },
@@ -1019,6 +1141,10 @@ export function useWorkOrderDetail() {
     closeLoading,
     closeIsFailure,
     closeAssetStatus,
+    serviceDeclared,
+    servicedAssignmentId,
+    serviceAssignmentOptions,
+    serviceAssignmentsLoading,
     openClose,
     doClose,
     cancelOpen,
@@ -1061,6 +1187,10 @@ export function useWorkOrderDetail() {
     editReadingOpen,
     editReadingLoading,
     editReadingDraft,
+    editReadingBase,
+    editReadingIsDelta,
+    editReadingTotal,
+    editReadingDeltaNegative,
     openEditReading,
     doEditReading,
     deleteReadingTarget,

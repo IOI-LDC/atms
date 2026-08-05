@@ -256,8 +256,8 @@ const identityFilters = useIdentityFilters(
   >
     <SheetContent side="right" class="create-sheet">
       <SheetHeader class="create-sheet-header">
-        <SheetTitle>New Maintenance Request</SheetTitle>
-        <SheetDescription>Submit a corrective maintenance request for an asset.</SheetDescription>
+        <SheetTitle>New Maintenance Request (Repair)</SheetTitle>
+        <SheetDescription>Submit a repair request for an asset.</SheetDescription>
       </SheetHeader>
       <div class="create-sheet-body">
         <div class="form-field">
@@ -334,9 +334,9 @@ const identityFilters = useIdentityFilters(
   <Dialog v-model:open="confirmCreateOpen">
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Create Maintenance Request</DialogTitle>
+        <DialogTitle>Create Maintenance Request (Repair)</DialogTitle>
         <DialogDescription>
-          Submit a corrective request for <strong>{{ selectedAsset?.label }}</strong> with
+          Submit a repair request for <strong>{{ selectedAsset?.label }}</strong> with
           <strong>{{ createPriority }}</strong> priority?
           <template v-if="attachFiles.length > 0">
             {{ attachFiles.length }} file{{ attachFiles.length !== 1 ? 's' : '' }} will be
