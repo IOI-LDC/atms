@@ -11,6 +11,7 @@ import type {
   Assignee,
   Attachment,
   AssetMeterReading,
+  AssetPmAssignment,
   Location,
   MissingField,
   WoFormFieldValue,
