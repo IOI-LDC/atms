@@ -3,7 +3,186 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-05 (latest)
+## Session — 2026-08-15 (latest — record corrected; no design has ever been agreed)
+
+### ⚠️ Status vocabulary — TRUE RECORD (corrected with the user; supersedes all earlier drafts)
+
+Earlier session records (2026-08-07 and 2026-08-14) contained false claims:
+that a design was "AGREED" on 2026-08-14 then "reopened" because
+`disposition_status` duplicated `maintenance_sub_status`, and that the user
+agreed to drop Need Inspection. **None of that happened.** No design has ever
+been agreed. Nothing is implemented.
+
+**True record of LDC's requests (confirmed by the user 2026-08-15):**
+
+- LDC requested: **At the Rig, Need Assembly, Missing Parts, Need Inspection
+  (rename of Under Inspection), Need Maintenance (rename of Under
+  Maintenance), LIH, DBR.** LDC could not explain the workflow intent behind
+  any of them. LIH and DBR have no decided home yet.
+- **Scrapped replaces Disposed — final.** Disposed is not used.
+- **Inspections:** first raised by LDC in the week of 2026-08-07; user
+  decision: excluded from Phase 1, moved to a dedicated **Phase 1.5** with its
+  own estimate.
+- The 2026-07-31 "withdrawal is ERP-owned / never surfaced, counted or
+  reported" decision is **REVERSED**: LIH / DBR / Scrapped must be visible,
+  filterable and reportable. Code still implements the old decision — known
+  discrepancy until the vocabulary design ships.
+- Rename history that actually happened: `inactive` → display-only "Retired"
+  (2026-08-02) → `scraped` (2026-08-04); proposed `retired` abandoned.
+- All MR/WO data is test data, wiped at handover; assets reset to
+  `ready_for_field`.
+
+Full record: `docs/plans/2026-08-07-operational-status-vocabulary.md`
+(rewritten as the true record; earlier AI drafts marked false and superseded).
+Next: a fresh design proposal, starting from this record.
+
+### 📋 Doc audit follow-up (2026-08-15)
+
+The 2026-08-14 doc audit deferred ROADMAP / REQUIREMENTS / README updates
+(D-019) on the false premise that a design had been agreed. D-019 stays
+superseded with a corrected trigger: update those files when a design is
+actually agreed.
+
+## Session — 2026-08-07 (proposal never accepted — see corrected record in the latest session above)
+
+### 🗣️ Discussion only — no code written. LDC's status-vocabulary requests, diagnosed
+
+LDC has now sent **multiple separate requests** to add or rename asset status values
+("At the Rig", "Need Assembly", "Missing Parts", "Under Inspection" → "Need Inspection",
+"Under Maintenance" → "Need Maintenance", plus **LIH and DBR**; **Scrapped replaces
+Disposed — final**), cannot explain the workflow intent behind any of them, and more are
+expected. This session was spent working out what they are actually asking for.
+**Nothing was implemented.** A draft implementation plan exists outside the repo; only
+the documentation and tracker entries below were committed to the project.
+
+⚠️ **Correction (2026-08-15):** the original text below listed only five requests and
+attributed LIH / DBR / Scrapped / Disposed to internal or ERP vocabulary. The user has
+confirmed LDC requested LIH and DBR as well. See the corrected record in the latest
+session above.
+
+#### ⛔ The finding that should govern the response: ATMS is essentially unused
+
+Measured live on 2026-08-07 against **400 assets**:
+
+| | |
+|---|---|
+| PM rules / PM assignments / preventive MRs | **0 / 0 / 0** |
+| Maintenance requests, all time | 4 |
+| Work orders, all time | 3 |
+| Attachments | 2 |
+| Locations | **1** (Tajoura Base, `yard`) — so fleet utilisation reads 0% deployed |
+| Assets | 397 `ready_for_field`, 2 `down`, 1 `scraped` |
+
+The preventive-maintenance system — rules, assignments, the daily 06:00 evaluation, the
+auto-created MRs, the level cascade — has **never been configured once**. Caveat against
+overstating: the repo's first commit is 2026-07-31, so the system is about a week old.
+
+**Compounding cause:** the All Assets table has six columns (tag, name, category, kind,
+operational status, location) and **none of them shows a pending MR or an open WO** — the
+list does not even fetch that data. LDC is looking at 400 rows with no visibility into the
+maintenance pipeline, so they asked for a status label to mark what needs work.
+
+**Every value they requested already has a home — for the five Need-*/location labels.**
+Need Maintenance / Need Inspection / Need Assembly are **maintenance requests**; At the
+Rig is a **location** (`LocationType::RIG` exists and `AssetDeployment` buckets it as
+DEPLOYED/earning — there are simply no rig locations created). None of them is new
+information. An earlier claim in this session that four of the values recorded something
+nothing else captured was **wrong** — the MR is that record, with a raiser, date,
+description, priority, approval step and audit trail. ⚠️ **Correction (2026-08-15):**
+this block originally also claimed Lost in Hole and Scraped "already had homes" here,
+implying they were not LDC requests. The user has confirmed LDC requested LIH and DBR;
+their homes are **not yet decided**.
+
+#### ❌ PROPOSAL — never accepted by the user (kept for reference only)
+
+1. **Split the axis by owner.** `operational_status` stays ATMS-owned and workflow-driven
+   (4 values: `ready_for_field`, `under_maintenance`, `down`, `retired` — renamed from
+   `scraped`). A new `disposition_status` is LDC-owned and hand-set. Renaming the existing
+   column was rejected: ATMS writes `under_maintenance` to mean *work is running now*,
+   while LDC's "Need Maintenance" means *awaiting service* — different states.
+2. **`disposition_status` values live in `master_data_items`** (`group_key = 'asset_statuses'`),
+   editable in Admin › Lists & Dropdowns. The generic admin CRUD, the `/list-options/{group}`
+   read path and the `LIST_GROUPS` registry already exist and have a single consumer today,
+   so request #9 costs a form submission instead of a deploy. **This is the main reason the
+   change is worth making** — the vocabulary has already been renamed three times in five days.
+3. **`retired` assets are disabled, not hidden,** in the MR/WO asset picker.
+4. **One resolved Status, never two on screen.** Operational while a work order is open,
+   disposition otherwise; every screen, report and export reads the resolved value. Without
+   this the two columns visibly disagree — and the dominant path is worse than random: every
+   closed repair leaves a stale "Need Maintenance" behind. The WO close dialog therefore
+   also captures Status, next to the existing "Asset status after close".
+5. **Nothing computes on `disposition_status`** — no KPI, no utilisation, no workflow guard.
+   Availability stays `ready_for_field / total` on the operational axis. A stale annotation
+   is tolerable; a stale number on a dashboard is not.
+6. **Need Maintenance / Need Inspection / Need Assembly are dropped** from the seed list.
+   Each is a maintenance request, and answering it with a label is what keeps LDC out of the
+   workflow. Seed is states only: Ready for Field, At the Rig, Missing Parts, Lost in Hole,
+   Scraped. ⚠️ **Correction (2026-08-15):** the claim that the user agreed to drop Need
+   Inspection explicitly is **false — never agreed**. Need Inspection is in LDC's
+   confirmed vocabulary.
+7. **P2-010 (single open WO per asset) is un-deferred** and in scope with this work.
+
+#### 🟠 Deferred — P2-011, third-party inspection certificates
+
+LDC's inspection request, restated properly by the user: inspections are done by third
+parties who issue a certificate carrying its own expiry / next-due date. Two shapes were
+considered.
+
+- **Shape A — zero development, available today.** A date-trigger PM rule (e.g. 365 days)
+  on a maintenance category. Due → MR auto-created → WO → third party inspects →
+  certificate uploaded as a WO attachment → close stamps the next due date. Attachments are
+  already polymorphic and `POST /assets/{id}/attachments` is live.
+- **Shape B — `asset_certificates` record.** Chosen, and deferred to Phase 2 as **P2-011**.
+  Carries the certificate's own `expires_on`, because PM derives next-due as
+  `last_triggered_date + interval_days` and a certificate's validity is *printed on the
+  document* — a 6-month certificate issued after a marginal pass would still be scheduled
+  at 12 months.
+
+**Trigger for P2-011: LDC runs one date-based PM rule end to end.** Building a certificate
+register for an organisation that has configured zero PM rules is building for a user who
+has not shown up yet; Shape A is the test, and it costs nothing.
+
+#### 📋 Recorded this session
+
+- `.kilo/TLD.md` — **P2-011** added to the Phase 2 table.
+- `docs/FUTURE_SCOPE.md` — inspection certificates added to Phase 2, with the PM distinction.
+- `docs/PRODUCT.md` — the operational-status section now says `under_inspection` carries no
+  certificate, issuer or expiry, and points at P2-011.
+- `docs/ROADMAP.md` — new external dependency: LDC PM adoption, with the measured figures.
+
+`docs/API.md:57` and `docs/README.md:29` were **left alone deliberately** — they describe
+the six-value vocabulary as it exists in code today, which nothing has yet changed.
+
+#### ⚠️ Open
+
+- The reduced disposition seed list (states only) needs final confirmation.
+- **Proposed, not agreed: add "Pending MR" and "Open WO" columns + filters to All Assets.**
+  This answers "what needs maintenance?" with accountable data, is smaller than the
+  disposition column, and addresses the gap that actually produced LDC's requests.
+- Does the P2-010 guard block on `completed` as well as `open`/`in_progress`?
+- Whether R-10A is relabelled as work-order state or retired once Status is resolved.
+
+#### 🐛 Defects surfaced, not yet fixed
+
+- **`asset.is_active` does not gate the MR/WO path at all.** A deactivated asset can still
+  have an MR raised, a WO approved, started and closed. `CloseWorkOrder`'s
+  `skipIfCurrent: [SCRAPED]` is therefore the *only* protection against a close resurrecting
+  a retired asset — which is why `retired` survives as the 4th operational value.
+- **`maintenance_priorities` is half-wired.** It is admin-editable via `master_data_items`,
+  but `MaintenanceRequestController.php:45,67` validates it with a hardcoded
+  `in:low,medium,high,critical`, so an admin can add a priority that MR creation then
+  rejects. Any new admin-managed list must validate against the table, not a literal.
+- **`SetWorkOrderAssetStatus` accepts every operational value with no guard**, letting any
+  assignee hand-set a column that is meant to be machine-owned.
+- **`user-manual.md:863` contradicts the old 2026-07-31 ERP-ownership decision** by
+  presenting Disposed as ATMS-owned. That old decision has been **reversed** (2026-08-15):
+  LIH / DBR / Scrapped must be visible, filterable and reportable — so the manual's
+  wording is the correct direction; the code still excludes them until the vocabulary
+  design ships.
+
+---
+
+## Session — 2026-08-05
 
 ### ✅ Done — four requirements: Repair/Service vocabulary, stored delta, meter snapshot, service-on-repair
 
@@ -926,14 +1105,14 @@ Components renamed to stop the placeholder confusion recurring:
 data-driven segment widths so no feature file carries an inline style. Empty
 states are written copy ("No failures yet"), never an em-dash.
 
-**⛔ SCOPE RULE (user decision 2026-07-31): withdrawal is ERP territory.**
-`maintenance_status = withdrawn` and every `maintenance_sub_status`
-(`lih`, `dbr`, `disposed`, `scrapped`, `other`, `installed`, `ready`) are owned and
-managed in the ERP. **ATMS must not surface, count, or report them** — do not add a
-"Withdrawn" axis, a disposal count, or a sub-status breakdown to any dashboard or
-report. `by_maintenance_status` was built and then **removed** for this reason.
-The `maintenance_status = enrolled` filter stays as an internal population guard
-(withdrawn assets are excluded from ATMS metrics); it is never displayed.
+**⚠️ SCOPE RULE — REVERSED 2026-08-15.** The 2026-07-31 decision that withdrawal is
+ERP territory — `maintenance_status = withdrawn` and every `maintenance_sub_status`
+(`lih`, `dbr`, `disposed`, `scrapped`, `other`, `installed`, `ready`) "must never be
+surfaced, counted, or reported" — is **wrong**. LDC requested LIH / DBR and Scrapped
+as vocabulary they want to use: they **must be visible, filterable and reportable**.
+The code still implements the old decision (a `by_maintenance_status` key was built
+and removed; R-10B / R-11 dropped from the catalogue) — that is a known discrepancy
+to be resolved when the vocabulary design ships. Do not re-assert the old rule.
 
 **Asset status card = plain count rows** (user decision, after two rejected bar
 treatments). Four operational rows — **Active, Under Maintenance, Down, Inactive,
@@ -962,11 +1141,13 @@ The earlier catalogue-driven index is now `/reports-verification` +
 `ReportsVerificationView.vue` (admin-only, disposable). Same rename treatment as
 the dashboard; do not add a third.
 
-**⛔ Two catalogue entries REMOVED, not deferred (2026-07-31):** R-10B Maintenance
-Lifecycle Status Distribution and R-11 Lost / Decommissioned Assets both reported
-on `withdrawn` + its sub-statuses (LIH, DBR, Disposed, Scrapped) — ERP territory.
-They were labelled "deferred to Phase 2", which told the next session to build them
-eventually. Gone, with a comment in `useReportCatalog.ts` explaining why.
+**Two catalogue entries REMOVED (2026-07-31), under a decision now REVERSED
+(2026-08-15):** R-10B Maintenance Lifecycle Status Distribution and R-11 Lost /
+Decommissioned Assets both reported on `withdrawn` + its sub-statuses (LIH, DBR,
+Disposed, Scrapped). They were removed under the (wrong) "ERP territory" rule —
+that rule is reversed: LIH / DBR / Scrapped must be visible, filterable and
+reportable. Restoring these two entries is part of the pending vocabulary design.
+They stay removed in code for now.
 ⚠️ **R-12 Spare / Rotor Pool correctly stays deferred** — it uses `installed`/`ready`,
 which are *enrolled* sub-statuses tied to the Phase 2 asset-assembly model, not
 withdrawal. Catalogue is now 20 entries: 19 available, 2 deferred (R-5, R-12).
