@@ -167,10 +167,11 @@ this is the agreed direction; the implementation plan is the next step.
    - Behavioral risk: none beyond the guard — no workflow *writes* the
      three removed values; the only *reader* is the `CloseWorkOrder`
      SCRAPED skip-guard, which is removed with them.
-   - Data risk: trivial — live data is 397 `ready_for_field`, 2 `failure`
-     (after the `down` rename), 1 `scraped`, 0 `under_inspection`, 0 `lih`;
-     the single `scraped` row is migrated before the enum case is removed;
-     all MR/WO data is test data wiped at handover.
+   - Data risk: trivial — live data is 397 `ready_for_field`, 2 `down`
+     (→ `failure` via the rename migration), 1 `scraped`, 0
+     `under_inspection`, 0 `lih`; the single `scraped` row is migrated
+     before the enum case is removed; all MR/WO data is test data wiped at
+     handover.
    - Consumer drift: KPI `by_status`, R-10A, Asset Distribution, R-1,
      filters and the WO "Update status" dialog must ship in the same
      backend+frontend release (PHP enum removal is compile-time enforced
