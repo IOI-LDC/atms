@@ -43,9 +43,9 @@ route's controller in `backend/`; tests are the contract for edge cases.
 | GET | `/assets/by-tag` | Find asset by printed tag. |
 | POST | `/assets/{asset}/suggest-tag` | Generate a proposed asset tag. |
 | GET | `/assets/{asset}/meter-readings` | Reading history. |
-| POST | `/assets/{asset}/meter-readings` | Record a reading. |
-| PATCH / DELETE | `/assets/{asset}/meter-readings/{reading}` | Update/delete only while policy and reading state permit. |
-| POST | `/assets/{asset}/meter-readings/{reading}/confirm` | Confirm a reading; lower confirmed values are rejected. |
+| POST | `/assets/{asset}/meter-readings` | Record a reading. Accepts optional `entered_delta` — what the operator typed when the WO form takes an amount-since-last-reading rather than a total. Informational: `reading_value` stays the authoritative absolute, and nothing in PM evaluation or reporting reads the delta. |
+| PATCH / DELETE | `/assets/{asset}/meter-readings/{reading}` | Update/delete only while policy and reading state permit. PATCH also accepts `entered_delta`, so a reading entered as a delta can be corrected as that same delta with the caller resolving the absolute. Sending no delta while changing `reading_value` **clears** any stored one, rather than leaving a figure that no longer matches. |
+| POST | `/assets/{asset}/meter-readings/{reading}/confirm` | Confirm a reading; lower or earlier-dated values than the latest confirmed are rejected with 409. **No UI calls this route** — confirmation happens as a side effect of closing a work order (see `/work-orders/{workOrder}/close`). Kept for machine clients and as the mechanism that close reuses. |
 | GET | `/assets/{asset}/location-history` | Direct-update history. |
 | POST | `/assets/{asset}/location` | Direct Phase 1 location change: `location_id` required; `reason` and `notes` optional. |
 | POST | `/assets/{asset}/book`, `/assets/{asset}/unbook` | Booking lifecycle. |
@@ -68,11 +68,12 @@ never touched by those transitions.
 | GET / PATCH | `/maintenance-requests/{maintenanceRequest}` | Detail and pending-request update. |
 | POST | `/maintenance-requests/{maintenanceRequest}/approve` | Manager/Admin approval; atomically creates WO. |
 | POST | `/maintenance-requests/{maintenanceRequest}/reject` | Rejection; PM requests require appropriate suppression context. |
-| POST | `/maintenance-requests/{maintenanceRequest}/cancel` | Cancellation; PM requests create suppression context. |
+| POST | `/maintenance-requests/{maintenanceRequest}/cancel` | Cancellation; PM requests create suppression context. `decision_type` is `cancelled` for an ordinary cancellation, or `performed_under_repair` when a work-order close retires the request because the service was actually carried out — compliance reporting must not read the second as a skipped service. |
 | GET / POST | `/maintenance-requests/{maintenanceRequest}/attachments` | MR attachment list/upload. |
 | GET | `/work-orders` | Cursor list with supported filters. |
-| GET / PATCH | `/work-orders/{workOrder}` | Detail and permitted execution update. |
+| GET / PATCH | `/work-orders/{workOrder}` | Detail and permitted execution update. Detail also returns `meter_snapshots` — the asset's meter position per reading type at close, the reference point for "usage since this job". Empty until closed. |
 | POST | `/work-orders/{workOrder}/assign`, `/start`, `/complete`, `/close`, `/cancel` | State transitions; close/cancel remain Manager/Admin actions. |
+| POST | `/work-orders/{workOrder}/close` | Body: optional `is_failure` (corrective-origin only), `asset_status`, and `serviced_pm_assignment_id`. **Closing confirms the readings taken on this work order** (oldest-first; a reading still failing a monotonicity guard is skipped and audited as `meter_reading.confirm_skipped`, never fatal) and snapshots the asset's meter position per reading type. `serviced_pm_assignment_id` declares that a preventive service was performed alongside the job: it resets that assignment's date and reading baselines, cascades to lower levels, and cancels any pending PM request for it — **409** if the assignment is inactive or belongs to another asset. |
 | POST / DELETE | `/work-orders/{workOrder}/parts` | Add a part line; remove it using `/parts/{partLine}`. |
 | POST | `/work-orders/{workOrder}/asset-status` | Set permitted post-work asset status. On close/cancel the choice is limited to `down` \| `ready_for_field` (see the vocabulary note under Dashboard and assets). |
 | GET | `/work-orders/{workOrder}/form` | Read attached WO form. |
@@ -85,7 +86,7 @@ never touched by those transitions.
 
 | Method | Endpoint | Notes |
 |---|---|---|
-| GET / POST | `/pm-rules` | Rule-template list/create. |
+| GET / POST | `/pm-rules` | Rule-template list/create. The API still accepts all three `trigger_type` values, but the UI offers **date only** — reading-based triggers are parked until the Job Management feed supplies usage (D-014). Existing `reading` / `date_or_reading` rules keep working on their date dimension. |
 | GET / PATCH | `/pm-rules/{pmRule}` | Rule detail/update. |
 | POST | `/pm-rules/{pmRule}/deactivate`, `/reactivate` | Template lifecycle. |
 | GET | `/pm-rules/{pmRule}/assignments` | Assignment read model. |

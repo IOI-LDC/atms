@@ -15,16 +15,21 @@ This directory is the current operating manual for ATMS. Start here; do not use
 
 ## Current snapshot
 
-**Last documentation verification:** 2026-08-04 (four requirements implemented
-and verified: direct user provisioning with activation email and the
+**Last documentation verification:** 2026-08-05 (meter-reading work: closing a work
+order now confirms the readings taken on it — there is no manual verify action and
+none is intended; `entered_delta` stores what the operator typed and is what the
+edit form gives back; `work_order_meter_snapshots` records the asset's meter
+position per reading type at close; and a repair work order can declare that a
+preventive service was performed alongside it. UI vocabulary distinguishes
+**Repair** from **Service** on the request Type value. Reading-based PM triggers
+remain parked — new rules are date-only until the Job Management feed exists.
+Earlier and still current: direct user provisioning with activation email and the
 `@ldc.com.ly` allowlist replacing the SharePoint employee directory; asset
 relocation to Tajoura Base (TJB); the six-value operational-status vocabulary
-(`ready_for_field`/`scraped` renames plus new `under_inspection` and `lih`
-states); and delta-based meter reading entry with an auto-calculated Total on
-Work Orders. Maintenance Category routing key
-implemented and verified across product, API, engineering, frontend, and operations
-summaries; report dimensions last verified 2026-07-30; notification behaviour last
-verified 2026-07-25; other areas last verified 2026-07-13)
+(`ready_for_field`/`scraped` renames plus new `under_inspection` and `lih` states);
+Maintenance Category routing key. Report dimensions last verified 2026-07-30;
+notification behaviour last verified 2026-07-25; other areas last verified
+2026-07-13)
 
 - **What the project is:** ATMS is LDC's operational asset-maintenance system. It
   manages assets, maintenance requests, work orders, preventive maintenance,

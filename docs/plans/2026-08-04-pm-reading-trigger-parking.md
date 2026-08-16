@@ -1,6 +1,12 @@
 # PM Reading-Trigger Parking Plan (Date-Only PM Until Job Management Feeds Meter Readings)
 
-> **Status:** APPROVED 2026-08-04 — implementation in progress.
+> **Status:** IMPLEMENTED and verified 2026-08-04 (commit `30ea987`). `TRIGGER_OPTIONS`
+> in `PmRuleForm.vue` offers the calendar option only; the edit path renders the trigger
+> read-only so existing `date_or_reading` rules still open. See the re-enablement
+> procedure below — note that one of its original blockers is gone (closing a work order
+> now confirms readings, 2026-08-04) while a new one has appeared: **D-018**, where a
+> first reading entered as a delta is stored as the absolute total, must be fixed before
+> reading-based triggers are unparked.
 
 **Goal:** Park (disable without deleting) meter-reading-based PM triggers in the PM Rules UI so preventive maintenance runs on calendar dates only, until a future LDC Job Management system feeds real asset usage (operating hours, kilometers, depth, …) into ATMS.
 

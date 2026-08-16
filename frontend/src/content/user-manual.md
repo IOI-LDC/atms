@@ -219,12 +219,14 @@ The Administrator has full access to every part of the system.
   pending MR, cancel any pending MR, approve or reject MRs, assign Work Orders,
   edit execution details on non-terminal WOs (all changes audited), mark
   completed WOs, close completed WOs, cancel non-closed WOs with required
-  reason, record and confirm meter readings, update asset operational status via
-  WO.
+  reason, record meter readings (closing the WO confirms them), update asset
+  operational status via WO.
 - **Assembly Operations:** Install, remove, and swap components. Change asset
   kind. Directly set parent asset relationships outside of a Work Order. Create
   MRs for child components from the parent WO screen.
-- **PM Rules:** Create, edit, deactivate, and reactivate PM rule templates.
+- **PM Rules (Service):** Create, edit, deactivate, and reactivate PM rule
+  templates. The screen is labelled "PM Rules (Service)" to distinguish scheduled
+  servicing from repair work.
   Assign templates to assets. Evaluate, deactivate, and reactivate assignments.
 - **System Management:** Manage locations and master data items, manage company
   settings and display timezone, manage ERP sync settings and trigger manual
@@ -246,13 +248,13 @@ workflow.
   any pending MR, approve MRs (creating Work Orders), reject MRs with a reason,
   assign and reassign Work Orders to active Technicians or Maintenance Managers, edit execution details
   on non-terminal WOs (all changes audited), mark WOs as completed, close
-  completed WOs, cancel non-closed WOs with required reason, record and confirm
-  meter readings, update asset operational status via WO.
+  completed WOs, cancel non-closed WOs with required reason, record meter readings
+  (closing the WO confirms them), update asset operational status via WO.
 - **Assembly Operations:** Same as Administrator — install, remove, swap
   components, change asset kind, set parent relationships, create MRs for child
   components from parent WO screen.
-- **PM Rules:** Assign templates to assets and evaluate, deactivate, or
-  reactivate assignments — all managed from the **Asset Detail → PM Rules**
+- **PM Rules (Service):** Assign templates to assets and evaluate, deactivate, or
+  reactivate assignments — all managed from the **Asset Detail → PM Rules (Service)**
   section. **PM rule template creation and editing is Administrator-only by
   design;** Managers work with assignments rather than the template library.
 - **ERP Sync:** Trigger manual ERP parts sync runs. Cannot change ERP connection
@@ -279,8 +281,8 @@ The Technician executes assigned Work Orders in the field.
 - **Maintenance Workflow:** Create corrective MRs, update their own pending
   corrective MRs, view their assigned Work Orders, start assigned WOs (moves
   from `open` to `in_progress`), update execution details on assigned WOs before
-  completion, add parts to assigned WOs from the SM catalogue, record and
-  confirm meter readings, mark their assigned WOs as completed, update asset
+  completion, add parts to assigned WOs from the SM catalogue, record meter
+  readings, mark their assigned WOs as completed, update asset
   operational status through an assigned non-terminal WO.
 - **Assembly Operations:** Install, remove, and swap components as part of
   executing an assigned non-terminal Work Order.
@@ -327,7 +329,7 @@ Movement) frontend. Within ATMS, Logistics has a focused set of capabilities.
 - Approve, reject, or cancel any Maintenance Request.
 - View, execute, or close Work Orders.
 - Manage PM rules or assignments.
-- Confirm meter readings (can only submit unverified readings).
+- Record meter readings.
 - View the Parts catalogue (Parts Management is not visible to Logistics in MVP).
 - Manage users, locations definitions, master data, or company settings.
 - View technical audit logs.
@@ -347,7 +349,8 @@ history, and attachments.
   creating a MR. View asset maintenance history, location history, and
   attachments. View mapped ERP reference fields.
 - **Meter Readings:** Submit unverified meter readings as supporting information
-  (when creating a MR or from an asset record). Cannot confirm readings.
+  (when creating a MR or from an asset record). Nobody confirms readings by hand —
+  see §9.4.
 - **Assembly History:** View assembly history for components where they have
   view access.
 - **Dashboard:** View the operational dashboard.
@@ -361,7 +364,7 @@ history, and attachments.
 - Create or edit assets.
 - Book or unbook assets.
 - Manage PM rules or assignments.
-- Confirm meter readings.
+- Record meter readings against a Work Order.
 - Access the Admin, Settings, Locations, or Parts Management sections.
 
 ---
@@ -524,8 +527,11 @@ And a fifth dimension for the asset record itself:
   maintenance events).
 - It can be `maintenance_status = withdrawn` (removed from the program) while
   `operational_status = ready_for_field` (still working, just not tracked by PM).
-- `is_active = false` overrides everything — a deactivated asset is effectively
-  invisible to all workflows regardless of any other status.
+- `is_active = false` takes the asset out of ATMS: hidden from
+  non-Admin/Manager views, excluded from reports and KPIs, and blocked from
+  bookings, meter readings and location changes. ⚠️ **Known defect being
+  fixed:** it does not yet gate MR/WO creation, approval, assignment or
+  start — see the status-vocabulary plan.
 
 For detailed explanations, see:
 - **Section 5.4** — Asset Maintenance Status (`maintenance_status` and `maintenance_sub_status`)
@@ -1549,10 +1555,27 @@ The Maintenance Requests page has four tabs, shown/hidden by role:
 
 | Tab                  | Visible To     | Content                                                                           |
 | -------------------- | -------------- | --------------------------------------------------------------------------------- |
-| **New Request**      | Everyone       | Side-sheet form for creating a new Corrective MR.                                 |
+| **New Request**      | Everyone       | Side-sheet form for creating a new repair request, titled "New Maintenance Request (Repair)". |
 | **My Requests**      | Everyone       | All MRs created by the current user.                                              |
 | **Pending Approval** | Admin, Manager | All MRs with status `pending_review`. Row actions: Approve, Reject, Cancel, Edit. |
 | **All Requests**     | Admin, Manager | Every MR regardless of status, with search and filters.                           |
+
+#### Repair vs Service — reading the Type column
+
+Every request list carries a **Type** column with one of two values:
+
+| Type | Meaning |
+|---|---|
+| **Repair** | Something is wrong and someone reported it. Created by a person from the New Request tab. Corrective work. |
+| **Service** | Scheduled maintenance the system raised because a PM schedule came due. Nobody types these in. Preventive work. |
+
+Both kinds live in the same list, which is why the page keeps the neutral title
+"Maintenance Requests" — filter or sort by **Type** to separate them. The same
+wording appears on the request and Work Order detail screens, and the PM template
+screen is labelled **PM Rules (Service)** for the same reason.
+
+*(In the API and the database these remain `corrective` and `preventive`; only the
+on-screen wording differs.)*
 
 ### 7.5 Maintenance Request Detail (Drill-Down)
 
@@ -1745,7 +1768,8 @@ During `in_progress`, the assigned Technician can:
 - **Add parts used** — select parts from the SM catalogue and record quantities.
   This submits a part-request into SM's ordering workflow.
 - **Remove parts** — delete part lines that were added in error.
-- **Record readings** — submit and confirm meter readings against the asset.
+- **Record readings** — submit meter readings against the asset. They stay
+  unverified until a Manager closes the Work Order, which confirms them.
 - **Update asset operational status** — set the asset's `operational_status`
   through the WO-scoped endpoint (`POST /api/work-orders/{wo}/asset-status`).
 - **Perform assembly operations** — install, remove, or swap components as part
@@ -1803,14 +1827,42 @@ a WO is closed (all in one database transaction):
 - This means: closing a WO on a `down`/`under_maintenance` asset with the
   default choice → `ready_for_field`; choosing `down` keeps it out of service.
 
-**3. PM Baseline Reset (if the WO originated from a Preventive MR):**
-- The `AssetPmAssignment` that generated the PM MR has its baseline reset:
+**3. Meter Readings Confirmed:**
+- Every unverified reading recorded on this Work Order is confirmed, **oldest
+  first**, and stamped with the closer as the confirmer.
+- A reading that fails a monotonic constraint is **skipped and audited** — the
+  closure still succeeds. See §9.4 for what to do about a skipped reading.
+- This is the only way a reading becomes confirmed; there is no verify button.
+
+**4. Service Declared on a Repair (optional):**
+- If the closer ticks **"A service was also performed"** and picks a schedule, that
+  schedule is treated as serviced by this job.
+- This covers the workshop case: the asset came in for a repair, a service level
+  happened to be due, and the team did both while it was stripped down.
+- The picker lists the asset's active schedules with the currently-due ones marked,
+  since due-ness is what prompts the declaration.
+- Choosing a higher level also resets the levels beneath it (see step 6).
+- Any PM request already raised for that schedule is **cancelled**, citing this Work
+  Order — so nobody approves a second job for work that is finished. It is recorded
+  as *performed*, not skipped, so PM compliance figures stay honest.
+
+**5. PM Baseline Reset (if the WO originated from a Preventive MR, or a service
+was declared in step 4):**
+- The `AssetPmAssignment` has its baseline reset:
   - `last_triggered_date` = today (the closure date)
-  - `last_triggered_reading` = latest confirmed reading at closure time
+  - `last_triggered_reading` = latest confirmed reading at closure time — which
+    **includes any reading confirmed in step 3**, since confirmation runs first
 - This restarts the PM interval — the next due date/reading is calculated from
   this new baseline.
 
-**4. Cumulative Maintenance Cascade (if applicable):**
+**6. Meter Position Snapshotted:**
+- The asset's current meter value is recorded per reading type as an immutable
+  snapshot against this Work Order.
+- This is what lets ATMS answer "how many hours since the last repair" — the
+  equivalent figure for services already came from the PM baseline.
+- The snapshot is never recalculated, even if a reading is later corrected.
+
+**7. Cumulative Maintenance Cascade (if applicable):**
 - If the closed WO's PM rule has a standard level (`L1`-`L4`), all
   **lower-level** active assignments on the **same asset** also have their
   baselines
@@ -1819,7 +1871,7 @@ a WO is closed (all in one database transaction):
   MR the day after an L3 overhaul).
 - Custom free-text levels are independent and do not cascade.
 
-**5. Failure Classification Review (corrective WOs only):**
+**8. Failure Classification Review (corrective WOs only):**
 - On close, the Manager may revise the originating Maintenance Request's
   `is_failure` classification. The Technician has now physically inspected the
   asset, so this is the ground-truth moment — e.g. an MR approved as a failure
@@ -1831,18 +1883,23 @@ a WO is closed (all in one database transaction):
   removes that MR from reliability metrics.
 - Preventive WOs are never failure-classified and skip this step entirely.
 
-**6. Audit Log Entry:** The closure is recorded with the closing user, timestamp,
-and affected fields.
+**9. Audit Log Entry:** The closure is recorded with the closing user, timestamp,
+and affected fields. Skipped readings and any declared service are recorded too.
 
 **Closure steps for the Manager:**
 1. The WO must be in `completed` status — the Technician has submitted all work.
 2. A Maintenance Manager or Administrator opens the WO.
 3. They review: work notes, parts used, readings updated, final asset status.
+   **Check the readings now** — closing confirms them permanently, and a confirmed
+   reading can no longer be edited or deleted.
 4. For corrective WOs, they confirm or revise whether this was a real failure.
 5. They confirm the asset's status after close — pre-selected to **Ready for
    Field**; they switch to **Down** only if the repair did not restore the asset.
-6. They select "Close Work Order" and confirm.
-7. The WO becomes `closed` — permanently immutable.
+6. If a service was carried out alongside this job, they tick **"A service was also
+   performed"** and select which schedule. Due schedules are marked in the list.
+   Leave it unticked if only the repair was done.
+7. They select "Close Work Order" and confirm.
+8. The WO becomes `closed` — permanently immutable.
 
 Only Administrators and Maintenance Managers can close WOs. Technicians complete
 the work but cannot close — this separation ensures a second set of eyes reviews
@@ -2102,11 +2159,17 @@ Clicking an asset row opens the full-page Asset Detail screen.
 
 **Content:**
 
+> ⚠️ **2026-08-16 design note:** this Phase 2 section predates the
+> vocabulary agreement — `installed`/`ready` will be **derived from
+> `parent_asset_id`** and the sub-status disposition labels below are
+> deprecated. Text is kept as the pre-design wording until P2-001 planning.
+
 - Component list with PM status indicators (green 🟢 / yellow 🟡 / red 🔴).
 - **Install Component** action — side sheet to search and select a spare
-  component (must be enrolled with sub-status `ready`, `parent_asset_id IS NULL`).
+  component (must be enrolled with no parent — `parent_asset_id IS NULL`).
 - **Remove Component** action — dialog with reason field and post-removal
-  disposition (`ready`, or a Withdrawn sub-status: `dbr`, `disposed`, `scrapped`).
+  disposition (back to ready, or withdrawn — sub-status disposition labels
+  are deprecated per the 2026-08-16 design).
 - **Swap Component** action — remove old + install new in one atomic operation.
 - **"Create MR for Component"** action — available for yellow/red components on
   parent WO screen (Admin/Manager only).
@@ -2174,22 +2237,42 @@ When a reading is first submitted (`POST /api/assets/{asset}/meter-readings`):
 - Unverified readings do **not** update the asset's current meter value
 - Unverified readings are **not** used by PM evaluation
 
-**Phase 2: Confirmed**
+**Phase 2: Confirmed — happens when the Work Order closes**
 
-When a reading is confirmed (`POST /api/assets/{asset}/meter-readings/{id}/confirm`):
-- `confirmed_by_user_id` is set to the confirmer
-- `confirmed_at` is set to the current timestamp
+Readings are **not** confirmed by hand. There is no "Confirm" button anywhere in
+ATMS. A reading becomes confirmed as a side effect of closing the Work Order it was
+recorded on:
+
+- `confirmed_by_user_id` is set to whoever closed the Work Order
+- `confirmed_at` is set to the closure timestamp
 - The reading becomes **immutable** — it can no longer be edited or deleted
-- **Who can confirm:** Administrator, Maintenance Manager, Technician (NOT
-  Requester, NOT Logistics)
 - Confirmed readings update the asset's current meter value
 - Confirmed readings feed into PM evaluation and due-date calculation
 
-**Why two phases?** The unverified → confirmed flow allows Requesters to submit
-supporting readings when creating MRs without those readings immediately
-affecting PM schedules. A Technician or Manager must review and confirm the
-reading before it becomes "official." This prevents accidental or incorrect
-readings from corrupting PM schedules.
+**Why closure, and not a button?** Closing a Work Order is an Administrator or
+Maintenance Manager action, and the Technician who took the reading cannot perform
+it. So the close is a genuine second pair of eyes. A "verify" button would be
+clicked by the same person who entered the value, which reviews nothing — and a step
+that belongs to nobody's job never gets done. Tying confirmation to closure means it
+always happens, at the moment someone accountable signs off on the work.
+
+**Readings on a Work Order that never closes stay unverified permanently.** That
+covers a cancelled Work Order, and a reading attached to a request that was rejected
+or cancelled. This is intended: the job was not signed off, so the reading was never
+vouched for.
+
+#### What Happens to Readings at Closure
+
+When the Work Order closes, every unverified reading recorded on it is confirmed
+**oldest first**. The order matters: a reading dated earlier than one already
+confirmed cannot itself be confirmed, so working newest-first would strand every
+older reading behind it.
+
+If a reading still fails one of the constraints below — for example it is dated
+before a reading already confirmed from elsewhere — it is **skipped and recorded in
+the audit log**, and the Work Order still closes. A data-quality problem never blocks
+an operational transition; a Manager is not held up by a mistyped reading. A skipped
+reading simply remains unverified and can be deleted or corrected.
 
 #### Recording a Reading From a Work Order — Delta Entry
 
@@ -2203,11 +2286,20 @@ since the last recorded reading) — not the meter's absolute total.
   `last reading + delta` and displayed read-only — it cannot be typed over. With
   no prior reading for the selected type, the entered delta *is* the total.
 - The stored `reading_value` is always that **absolute total**, so reading
-  history and PM calculations keep working with absolute values. The delta is an
-  entry convenience, not a stored field.
+  history and PM calculations keep working with absolute values.
+- **The delta you typed is also stored**, and shown in the readings table under
+  **Entered** beside the **Total**. Keeping it means a wrong total can be traced to
+  a mistyped delta rather than a bad starting figure.
 - A negative delta is rejected — meter totals only increase.
-- The **Edit** dialog still edits the absolute total directly; the delta entry
-  applies only when recording a new reading from the WO form.
+- **You edit what you entered.** Open **Edit** on a reading recorded as a delta and
+  you get that same delta back, with the Total recalculated as you change it. This
+  matters for Technicians who can see how much the meter has moved but not its
+  lifetime total. A reading entered as an absolute is edited as an absolute.
+
+> ⚠️ **First reading for an asset:** with no earlier reading to add to, the number
+> you type becomes the meter's absolute total. If the machine already reads 3,200
+> hours, enter **3,200** — not the hours since it was last serviced. Getting this
+> wrong sets the asset's odometer too low, and nothing will flag it.
 
 #### Monotonic Enforcement — Why Readings Can Only Go Up
 
@@ -2243,13 +2335,24 @@ confirmed reading. Instead:
 3. Enter the reading value and reading date/time.
 4. Submit. The reading is created in **unverified** state.
 
-#### Confirming a Reading
+#### Getting a Reading Confirmed
 
-1. Open the asset's meter readings list. Unverified readings show an
-   "Unverified" indicator.
-2. Click "Confirm" on the unverified reading.
-3. The system validates the monotonic constraints.
-4. On success, the reading becomes confirmed and feeds into PM evaluation.
+There is nothing to click. A reading is confirmed when the Work Order it was
+recorded on is closed by an Administrator or Maintenance Manager — see
+[What Happens to Readings at Closure](#what-happens-to-readings-at-closure) above.
+
+If a reading is still showing **Unverified** and you expected otherwise, one of
+these is true:
+
+- The Work Order it belongs to has not been closed yet.
+- The Work Order was **cancelled** rather than closed, so nothing confirmed it.
+- The reading was never attached to a Work Order — for example it came in with a
+  request that was rejected or cancelled.
+- It was skipped at closure because it failed a constraint below. Check the audit
+  log; the skip is recorded with the reason.
+
+The first is a matter of waiting. The rest are permanent — such a reading stays
+unverified, and does not count toward PM.
 
 #### How Meter Readings Feed PM Evaluation
 
@@ -2261,8 +2364,9 @@ when checking if a reading-triggered PM rule is due. Specifically:
   matching reading type.
 - If no confirmed reading exists, the PM rule will **never** fire — the system
   cannot determine due-ness without a usage baseline.
-- This is why it's critical to regularly record and confirm readings for assets
-  with reading-based PM rules.
+- Readings become confirmed when the Work Order they were recorded on closes, so
+  an asset only accumulates confirmed readings as it accumulates maintenance. This
+  sparseness is exactly why reading-based triggers are parked (§12.3).
 
 #### Key Rules Summary
 
@@ -2273,9 +2377,11 @@ when checking if a reading-triggered PM rule is due. Specifically:
 - Only confirmed readings affect PM evaluation and asset current meter values.
 - Corrections to confirmed readings require a new valid (higher) reading with
   explanatory notes.
-- Readings submitted during Corrective MR creation are unverified by default
-  (even from Admin/Manager/Technician — the MR submission endpoint creates
-  unverified readings; confirmation is a separate step).
+- **Confirmation is never a manual step.** It happens when the Work Order the
+  reading was recorded on closes. A reading that never belongs to a closing Work
+  Order stays unverified permanently.
+- A reading that fails a constraint at closure is skipped and audited; the Work
+  Order still closes.
 - Soft-deleted readings are preserved in the database with `deleted_at` set but
   excluded from all queries and lists.
 
@@ -2547,7 +2653,7 @@ assign it to as many assets as you need. Changing the template does not
 automatically change existing assignments, but new assignments will use the
 updated schedule.
 
-Templates are managed exclusively by **Administrators** from the Admin → PM Rules
+Templates are managed exclusively by **Administrators** from the Admin → PM Rules (Service)
 tab. Maintenance Managers can assign templates to assets and manage assignments,
 but cannot create or edit the templates themselves.
 
@@ -2557,7 +2663,7 @@ but cannot create or edit the templates themselves.
 |---|---|---|
 | **Name** | string (required) | A descriptive label, e.g. "Motor 500-hr Inspection" |
 | **Description** | text (optional) | Notes about the purpose and scope of this PM |
-| **Trigger Type** | enum (`date`, `reading`, `date_or_reading`) | How the system decides this PM is due (see Section 12.3) |
+| **Trigger Type** | enum (`date`, `reading`, `date_or_reading`) | How the system decides this PM is due (see Section 12.3). Only `date` is selectable when creating a rule — the two reading-based types are parked. Existing rules keep their stored value, shown read-only when editing. |
 | **Interval Days** | integer | For `date` and `date_or_reading` triggers: the calendar interval in days |
 | **Interval Reading** | decimal | For `reading` and `date_or_reading` triggers: the usage increment (e.g. 500 hours) |
 | **Reading Type** | FK → `usage_reading_types` | For `reading` and `date_or_reading` triggers: which meter to watch (e.g. "Operating Hours") |
@@ -2582,6 +2688,15 @@ WO). This prevents deactivating a template while maintenance work is in flight.
 The trigger type is the core logic of a PM rule. It determines when the system
 considers the asset due for service. There are three types, defined by the
 `PmTriggerType` enum.
+
+> ⚠️ **Only Calendar (date-based) can be selected today.** The two reading-based
+> types below are **parked**: they remain in the system and existing rules that use
+> them keep working on their date dimension, but they cannot be chosen when creating
+> a rule. Meter readings currently only reach ATMS through Work Orders, which is too
+> sparse a source to schedule maintenance from — an asset that never breaks never
+> gets a reading. They will be restored once the LDC Job Management system feeds
+> per-job asset usage into ATMS. The two sections below describe how they behave
+> when re-enabled.
 
 #### Date-Based (`date`)
 
@@ -2612,9 +2727,10 @@ hour-meter reading reaches or exceeds 1,500 hours.
 **Important:** Reading-based triggers only work if the asset has confirmed meter
 readings. If no confirmed reading exists for the specified reading type, the PM
 will **never** fire — the calculator returns "not due." This is intentional: the
-system cannot determine due-ness without a usage baseline. Ensure Technicians
-regularly record and confirm meter readings for assets with reading-based PM
-rules.
+system cannot determine due-ness without a usage baseline. Readings are confirmed
+only when the Work Order they were recorded on closes, so a well-behaved asset that
+never needs repair accumulates no confirmed readings at all — which is why this
+trigger type is currently parked.
 
 **When to use:** Maintenance that depends on actual wear — oil changes by
 mileage, component replacement by operating hours, filter changes by cycle count.
@@ -2630,7 +2746,8 @@ if either one fires, the PM is due.
 the PM fires based on reading. If the motor sits idle for 6 months without
 reaching 500 hours, the PM fires based on date.
 
-**When to use:** The most common trigger type for operational equipment. Ensures
+**When to use:** *(Parked — not currently selectable.)* Once re-enabled, the natural
+choice for operational equipment. Ensures
 service happens at a reasonable interval regardless of whether the asset is used
 heavily (reading triggers first) or sits idle (date triggers first).
 
@@ -2649,7 +2766,7 @@ actionable schedule for a real piece of equipment.
 
 Assignments are managed by **Administrators and Maintenance Managers** from:
 - **Asset Detail → PM Assignments** (per-asset view)
-- **Admin → PM Rules** (per-template view)
+- **Admin → PM Rules (Service)** (per-template view)
 
 #### Creating an Assignment
 
@@ -2851,6 +2968,17 @@ effectively deferred until the suppression window expires.
 | `date_or_reading` — only reading fired | Only `suppressed_until_reading` needed |
 | `date_or_reading` — both fired | Both suppression boundaries required |
 
+#### Suppression Decision Types
+
+A suppression records *why* the occurrence was set aside, and the reason matters for
+compliance reporting:
+
+| Decision | Meaning |
+|---|---|
+| `rejected` | A Manager reviewed the PM request and declined it. |
+| `cancelled` | The PM request was cancelled before conversion. |
+| `performed_under_repair` | The service was **actually carried out**, under a repair Work Order whose closer declared it (§8.5, step 4). The request was retired because the work is done, not skipped — compliance figures must not count it against the schedule. |
+
 #### Design Rationale
 
 Suppression is a **deferral**, not a permanent skip. The next occurrence will fire
@@ -2874,6 +3002,12 @@ reactivated assignment from being blocked by old suppression windows.
 When a Maintenance Manager closes a Preventive Maintenance Work Order, the system
 resets the baseline for that assignment. This is how the interval restarts —
 "you just did the 500-hr service, so the next one is due in another 500 hours."
+
+A baseline is also reset when a Manager closes a **repair** Work Order and declares
+that a service was performed alongside it (§8.5, step 4). The effect is identical:
+the schedule restarts from that closure, and the cascade below applies just the
+same. This exists because a due service is often carried out opportunistically while
+the asset is already in the workshop for a repair.
 
 #### Direct Reset (the Rule That Just Closed)
 
@@ -2951,7 +3085,7 @@ This example follows a Mud Motor through its first PM cycle.
 
 #### Phase 1: Administrator Creates the Template
 
-1. Navigate to **Admin → PM Rules** tab.
+1. Navigate to **Admin → PM Rules (Service)** tab.
 2. Click **Create Rule**.
 3. Fill in the form:
    - **Name:** "Motor 500-hr PM"
@@ -3046,8 +3180,9 @@ until the asset is re-enrolled).
 For reading-based triggers, the `PmDueCalculator` requires a confirmed meter
 reading. If an asset has never had a reading of the required type confirmed, the
 PM will **never** fire. This protects against false triggers on assets with
-unknown usage. Ensure baseline readings are recorded when assigning reading-based
-rules.
+unknown usage. Since readings are confirmed only at Work Order closure, and
+reading-based triggers are parked (§12.3), this applies to existing rules rather
+than newly created ones.
 
 #### One Active Chain Per Rule+Asset
 
@@ -3422,9 +3557,11 @@ remaining reports are JSON-only until their endpoints implement CSV.
 
 ### 16.6 What Is Not Reported
 
-- **Withdrawal is ERP-owned.** Assets with `maintenance_status = withdrawn` and
-  their sub-statuses (Lost in Hole, DBR, Disposed, Scrapped) are not surfaced,
-  counted, or reported anywhere in ATMS.
+- **Withdrawal and sub-statuses are excluded from reports today** — the
+  2026-07-31 "ERP-owned" rationale is superseded (2026-08-16): the
+  vocabulary design drops LIH/DBR/Scrapped entirely and
+  `is_active`/`withdrawn` carry the meaning. Report changes ship with the
+  vocabulary work.
 - Deferred ideas (downtime/availability history, spare/rotor pool) are hidden
   from the catalogue until their source data or phase dependency exists.
 
@@ -3576,7 +3713,7 @@ assembly hierarchy and which maintenance sub-statuses are available.
 | Install / remove / swap component | Yes   | Yes     | Yes (assigned WO) | No        | No              |
 | Create MR for child component     | Yes   | Yes     | No                | No        | No              |
 | Record meter reading              | Yes   | Yes     | Yes               | No        | Unverified only |
-| Confirm meter reading             | Yes   | Yes     | Yes               | No        | No              |
+| Confirm meter reading †           | —     | —       | —                 | —         | —               |
 | View parts catalogue              | Yes   | Yes     | Yes               | No        | No              |
 | Update local part fields          | Yes   | Yes     | No                | No        | No              |
 | View raw ERP payload              | Yes   | No      | No                | No        | No              |
@@ -3593,6 +3730,10 @@ assembly hierarchy and which maintenance sub-statuses are available.
 | View technical audit logs         | Yes   | No      | No                | No        | No              |
 | Manage API clients                | Yes   | No      | No                | No        | No              |
 | Update asset location             | Yes   | Yes     | No                | Yes       | No              |
+
+† **Nobody confirms readings by hand.** Confirmation happens automatically when a
+Work Order is closed, which is an Administrator/Maintenance Manager action — so the
+capability belongs to "Close Work Order", not to a permission of its own. See §9.4.
 
 ---
 

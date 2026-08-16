@@ -91,6 +91,17 @@ feature tests for externally visible behavior.
   defaults to a seeded `UNCLASSIFIED` category, so an asset the ERP created with no
   category is a visible, countable state rather than a null that no screen shows.
 - ATMS owns operational maintenance data and current direct location updates.
+- **`work_order_meter_snapshots` is an immutable historical record.** It is written
+  only by `SnapshotWorkOrderMeterReadings`, once, as a work order closes: one row
+  per reading type holding the asset's meter position at that moment. It is
+  deliberately **not** recomputed when a source reading is later edited or deleted —
+  it records what the meter was understood to read at close, which is what "usage
+  since that job" has to measure against. Stored per type rather than as a column
+  pair on `work_orders` because three reading types are live (Operating Hours,
+  Kilometer Driven, Depth) and assets carry readings for several of them.
+- **`asset_meter_readings.entered_delta` is informational, never authoritative.**
+  `reading_value` remains the single source of truth for what the meter says;
+  nothing in PM evaluation, the monotonicity guards, or reporting reads the delta.
 - ERP integration is parts-focused. Do not reintroduce asset ERP sync or mock ERP
   services without an explicit product decision.
 - UTC is stored; the current display timezone defaults to `Africa/Tripoli`.

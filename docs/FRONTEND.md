@@ -89,6 +89,23 @@ These are not style preferences — each one shipped a defect.
   neither warns nor throws; the label simply stops working and the field loses its
   accessible name. Check the id against the control it names, especially when the
   control lives inside a child component.
+- **Disambiguating vocabulary belongs on the row, not the page title.** "Repair" and
+  "Service" are rendered by `mrTypeLabel` in `displayHelpers.ts` (one function, five
+  display sites) — deliberately *not* bracketed onto the Maintenance Requests nav or
+  page heading, because that list holds both kinds and the PM rule detail page's
+  "Generated Maintenance Requests" are entirely preventive. A bracketed title would
+  have misdescribed half the rows. `corrective` / `preventive` remain the domain
+  terms in the API, the DB, and `MrType`; only the label changed.
+- **A parked option must still render for records that already use it.**
+  `TRIGGER_OPTIONS` in `PmRuleForm.vue` offers date only, but the edit path shows the
+  trigger as read-only text rather than a `Select`, so an existing
+  `date_or_reading` rule opens correctly instead of binding to an empty dropdown.
+  Removing an option from a list is never sufficient on its own.
+- **A config-level TypeScript error stops the whole build.** `vue-tsc --build` exits
+  at the first error in `tsconfig.app.json` without checking a single file, so a
+  familiar-looking "pre-existing" line can mask every real error underneath it. One
+  shipped this way. A clean type-check means **zero output**, not one recognised
+  error.
 
 ## Feature structure
 

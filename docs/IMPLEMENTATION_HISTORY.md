@@ -108,3 +108,67 @@ anything. PM evaluation cost is now flat in the number of assignments.
 - Follow-up: the two pre-existing WO form templates migrated deactivated with no
   categories and required manual reassignment; PM rule "L3 Maintenance Motors" lost
   its coverage to a defect fixed the same day and needs re-assigning.
+
+## 2026-08-04 — Reading-based PM triggers parked; PM is date-only
+
+New PM rules can only be created with a `date` trigger. The `reading` and
+`date_or_reading` options were removed from the rule form because nothing in the
+system could satisfy them: readings could only be recorded on the Work Order page,
+and no UI ever confirmed one, so the reading dimension of a rule could never fire.
+Nothing was deleted — the API, `PmDueCalculator`, and existing rules' reading
+configuration are untouched, and existing `date_or_reading` rules keep running on
+their date dimension.
+
+- Requirement: tracker item D-014
+- Changed: `TRIGGER_OPTIONS` in `PmRuleForm.vue` (frontend only); the edit path
+  renders the trigger read-only so existing rules still open correctly
+- Verified: frontend type-check clean; existing `date_or_reading` rules confirmed
+  to open and save unchanged
+- Follow-up: re-enable once the LDC Job Management system feeds per-job asset
+  usage into ATMS — and after D-018 (below) is fixed
+
+## 2026-08-04 — Closing a work order confirms its meter readings
+
+Meter-reading confirmation is a by-product of the work-order lifecycle rather than
+a task of its own. Closing confirms every unverified reading taken on that work
+order, oldest-first; a reading that still fails a monotonicity guard is skipped and
+audited as `meter_reading.confirm_skipped` rather than blocking the close. There is
+no manual verify action in the UI and none is intended: closing is an
+Administrator/Maintenance Manager action that the technician who took the reading
+cannot perform, so the close is the second pair of eyes.
+
+- Requirement: not an R-### requirement — arose from investigating why reading-based
+  PM never fired
+- Changed: new `ConfirmWorkOrderReadings` action, called by `CloseWorkOrder` before
+  its PM branch; new `meter_reading.confirm_skipped` audit event
+- Verified: 1059 backend tests pass; Pint clean; exercised against the live
+  development database inside a rolled-back transaction — out-of-order readings all
+  confirmed, an impossible one skipped, the close still succeeded
+
+## 2026-08-05 — Repair/Service vocabulary, stored delta, meter snapshots, service-on-repair
+
+Four changes shipped together. (1) The UI distinguishes **Repair** from **Service**
+on the request Type value rather than on list titles, since the request list holds
+both kinds. (2) `asset_meter_readings.entered_delta` stores the figure the operator
+typed, so a wrong total can be traced to a mistyped delta rather than a bad base,
+and a technician who knows only the delta can correct their own entry. (3)
+`work_order_meter_snapshots` records the asset's meter position per reading type at
+close, which is what makes "usage since the last repair" answerable — "since the
+last service" was already derivable and is now surfaced. (4) A repair work order can
+declare that a preventive service was performed alongside it, resetting that
+schedule's baselines and retiring the PM request already raised for it with
+suppression `performed_under_repair`.
+
+- Requirement: not R-### requirements — direct product requests
+- Changed: two migrations (`work_order_meter_snapshots`, `entered_delta`);
+  `CloseWorkOrder` gained a declared-service branch and a snapshot step;
+  `CancelMaintenanceRequest` gained an optional decision type; `mrTypeLabel` in the
+  frontend now renders Repair/Service
+- Verified: 1073 backend tests (3302 assertions) pass; Pint clean across 20 files;
+  frontend type-check clean; exercised end-to-end against the live development
+  schema in a rolled-back transaction — readings confirmed, delta preserved,
+  snapshots written for two reading types, PM baseline reset, pending PM request
+  cancelled citing the work order
+- Follow-up: D-018 — with no prior reading for a type, the entered delta is stored
+  as the absolute total, seeding a wrong odometer. Silent, and must be fixed before
+  reading-based PM is unparked

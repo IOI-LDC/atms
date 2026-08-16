@@ -67,9 +67,15 @@ an authorization rule.
   Maintenance Managers assign, deactivate, reactivate, and evaluate templates for
   individual assets. Category/type auto-application is not supported.
 - PM triggers are `date`, `reading`, or `date_or_reading`. Confirmed readings are
-  the only readings used by reading-based PM calculations.
-- Meter confirmations reject values lower than the last confirmed value. A future
-  reset, if approved, must be a separate audited workflow.
+  the only readings used by reading-based PM calculations. **New rules can only be
+  created as `date`** — reading-based triggers are parked in the UI until the LDC
+  Job Management system feeds per-job asset usage into ATMS. Existing
+  `date_or_reading` rules keep running on their date dimension.
+- Meter confirmations reject values lower than, or dated earlier than, the last
+  confirmed value. When confirmation runs as part of closing a work order, such a
+  reading is **skipped and audited**, never fatal — a data-quality problem must not
+  block an operational transition. A future reset, if approved, must be a separate
+  audited workflow.
 - Assets use `enrolled` or `withdrawn` maintenance status. Operational status is
   distinct; do not conflate either with booking state.
 - Booking is independent of maintenance workflow. A location change or asset
@@ -105,6 +111,13 @@ attachments, and WO-form values. A completed WO is reviewed and closed by an
 Administrator or Maintenance Manager. Closing updates the derived maintenance
 history; it does not create a second editable history record.
 
+Closing also **confirms the meter readings taken on that work order**, records the
+asset's meter position per reading type as an immutable snapshot, and — where the
+closer declares it — registers a preventive service performed alongside the job.
+That last case covers the repair shop: the asset was in for a repair, a service
+level happened to be due, and the team did both; the declaration resets that
+schedule's baselines and retires the PM request already raised for it.
+
 ### Preventive maintenance
 
 A PM rule is a reusable template. It has no operational effect until assigned to a
@@ -127,13 +140,24 @@ that chain finishes.
 For a due PM occurrence, rejection or cancellation records suppression boundaries
 so the scheduler does not recreate the same occurrence. Date-triggered, reading-
 triggered, and `date_or_reading` rules require the matching suppression dimensions.
+A suppression written because the service was actually performed under another work
+order carries `performed_under_repair` rather than `cancelled`, so compliance
+reporting does not count a completed service as a skipped one.
+
 PM baseline updates occur on WO closure using the assignment, not by altering the
-template globally.
+template globally. That is normally the closure of the preventive WO the occurrence
+generated — but a **repair** WO can also reset a baseline when the closer declares
+the service was performed during it.
 
 ### Readings, locations, bookings, and forms
 
-- Requesters may submit supporting readings; their readings remain unconfirmed.
-  Administrators, Maintenance Managers, and Technicians may confirm them.
+- **Nobody confirms readings by hand.** A reading is recorded unverified and becomes
+  confirmed when the work order it was taken on is closed. Closing is an
+  Administrator/Maintenance Manager action and the technician who took the reading
+  cannot do it, so the close is the second pair of eyes — a verify button clicked by
+  the person who entered the value would not be. Readings never attached to a work
+  order that closes — from a rejected or cancelled request, or a cancelled WO —
+  stay unverified permanently, and that is intended.
 - Confirmed readings are append-only and monotonically non-decreasing per asset and
   reading type. A valid correction is a new reading, not editing history.
 - Phase 1 location update is a direct action that writes a location-history row.
@@ -206,6 +230,16 @@ choice is limited to `down` or `ready_for_field` (pre-seeded to
 Asset Status" action or the asset edit form; `scraped` is terminal and requires
 an explicit human decision.
 
+`under_inspection` records only that the asset is away being inspected. It
+carries no certificate, issuer, or expiry date, so ATMS cannot say when an
+inspection falls due or has lapsed. **Phase 1.5 (third-party inspection
+certificates) is cancelled (2026-08-16)**: for LDC, "inspection" means PM —
+an inspection form attached to the WO with the executed PM marked (see
+`docs/plans/2026-08-07-operational-status-vocabulary.md` §7 RQ1/RQ2).
+Until the vocabulary work ships, a recurring inspection is modelled as an
+ordinary date-based PM rule, with the certificate uploaded as an
+attachment on the work order that closes it.
+
 ### Meter readings
 
 Meter readings are absolute, cumulative totals — monotonically non-decreasing
@@ -214,9 +248,22 @@ form, the operator enters the **delta**: the amount the meter has operated since
 the last recorded reading (e.g. 50 hours). The **Total** (current meter reading)
 is auto-calculated as `last reading + delta` and shown read-only; the stored
 `reading_value` is that absolute total, so history and PM calculations keep
-working with absolute values. With no prior reading for the type, the entered
-delta is the total itself. A negative delta is rejected. The edit dialog still
-edits the absolute total directly.
+working with absolute values. A negative delta is rejected.
+
+**The entered delta is stored too**, as `entered_delta`. Without it a wrong total
+could not be traced to a mistyped delta rather than a bad base, and a technician
+who only knows what the meter has moved could not correct their own entry. It is
+informational — nothing in PM evaluation, the monotonicity guards, or reporting
+reads it. A reading entered as a delta is **edited as that same delta**, with the
+total recomputed from the reading immediately before it in its own series; a
+reading entered as an absolute is edited as an absolute, which clears any stale
+delta.
+
+⚠️ **With no prior reading for the type, the entered delta becomes the total.** An
+operator typing "50" meaning fifty hours since last service seeds a lifetime meter
+value of 50. The failure is silent — the reading dimension simply never reaches its
+threshold — and it must be fixed before reading-based PM is unparked. Tracked as
+D-018.
 
 ## Notifications
 
