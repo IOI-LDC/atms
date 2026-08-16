@@ -143,6 +143,12 @@ retired equipment back into the pool.
   That is an ops activation step, not a release gate — the rule simply never
   fires while the only location is a yard. Once those locations exist, moving an
   asset to one sets the status automatically.
-- **Release 4c** drops the now-unread `maintenance_sub_status` and `erp_status`
-  columns. It is an ordinary `deploy.sh` release and should wait until 4b has
-  been running cleanly for a few days.
+- **Release 4c** drops the now-unread **`erp_status`** column only. Ordinary
+  `deploy.sh` release, once 4b has run cleanly for a few days.
+
+  **`maintenance_sub_status` is deliberately retained.** Its readers were removed
+  in 4b — nothing writes or serves it — but the column stays until Phase 2
+  Assembly is specified. The recorded design (🟠 P2-001) derives `installed` /
+  `ready` from `parent_asset_id`, which needs no stored sub-status, but the
+  column holds 400 NULLs and costs nothing to keep. Dropping it early buys
+  nothing and would have to be undone if that spec changes its mind.
