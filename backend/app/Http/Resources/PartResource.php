@@ -16,6 +16,10 @@ class PartResource extends JsonResource
 
         $data = [
             'id' => $this->id,
+            // The "No." column in LDC's parts workbook and the code the
+            // Maintenance team actually quotes. Visible to every role (RQ4);
+            // it identifies the part, unlike the sync metadata below.
+            'erp_part_code' => $this->erp_part_code,
             'part_number' => $this->part_number,
             'name' => $this->name,
             'description' => $this->description,
@@ -39,7 +43,6 @@ class PartResource extends JsonResource
 
         // Admin-only, for integration troubleshooting — see AssetResource.
         if ($isAdmin) {
-            $data['erp_part_code'] = $this->erp_part_code;
             $data['erp_raw_data'] = $this->erp_raw_data;
         }
 

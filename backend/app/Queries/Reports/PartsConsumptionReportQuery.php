@@ -60,6 +60,7 @@ class PartsConsumptionReportQuery
         $grouped = (clone $base)
             ->selectRaw('work_order_parts.part_id as part_id')
             ->selectRaw('parts.name as part_name')
+            ->selectRaw('parts.erp_part_code as erp_part_code')
             ->selectRaw('parts.part_number as part_number')
             ->selectRaw('parts.unit_of_measure as unit_of_measure')
             ->selectRaw('parts.size_inches as part_size_inches')
@@ -75,6 +76,7 @@ class PartsConsumptionReportQuery
             ->groupBy([
                 'work_order_parts.part_id',
                 'parts.name',
+                'parts.erp_part_code',
                 'parts.part_number',
                 'parts.unit_of_measure',
                 'parts.size_inches',

@@ -183,6 +183,10 @@ watch(
               <div class="detail-card-content">
                 <div class="detail-grid">
                   <div class="detail-field">
+                    <span class="detail-field-label">ERP Part Code</span>
+                    <p class="detail-field-value">{{ record.erp_part_code ?? '—' }}</p>
+                  </div>
+                  <div class="detail-field">
                     <span class="detail-field-label">Part Number</span>
                     <p class="detail-field-value">{{ record.part_number ?? '—' }}</p>
                   </div>
@@ -341,6 +345,19 @@ watch(
           <div v-if="editError" class="error-state" role="alert">{{ editError }}</div>
 
           <div class="form-grid">
+            <div class="form-field">
+              <Label for="edit-part-code">ERP Part Code</Label>
+              <!-- readonly, not disabled: ERP owns the value, but people still
+                   need to read and copy it while editing the rest. -->
+              <Input
+                id="edit-part-code"
+                :model-value="record?.erp_part_code ?? '—'"
+                readonly
+                tabindex="-1"
+              />
+              <p class="form-help">Set by the ERP sync — not editable here.</p>
+            </div>
+
             <div class="form-field">
               <Label for="edit-part-name">Name <span class="field-required">*</span></Label>
               <Input id="edit-part-name" v-model="draft.name" placeholder="Part name" />

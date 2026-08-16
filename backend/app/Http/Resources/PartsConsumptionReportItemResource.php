@@ -32,6 +32,7 @@ class PartsConsumptionReportItemResource extends JsonResource
             'part' => [
                 'id' => (int) $this->part_id,
                 'name' => $this->part_name,
+                'erp_part_code' => $this->erp_part_code,
                 'part_number' => $this->part_number,
                 'unit_of_measure' => $this->unit_of_measure,
                 'size' => $partSize?->format(),

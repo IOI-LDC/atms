@@ -3,7 +3,66 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — Phase 1 SHIPPED: unified asset-eligibility guard)
+## Session — 2026-08-16 (latest — Phase 2 SHIPPED: RQ4, `erp_part_code` everywhere)
+
+**1092 tests green, type-check clean, build clean, Pint clean.**
+
+`erp_part_code` — the "No." column in LDC's parts workbook and the code the
+Maintenance team actually quotes — is now visible to **every role**, searchable,
+and present on every part surface. It was Admin-only and deliberately withheld.
+
+**Backend:** `PartResource` moves it out of the admin block into the base shape
+(`erp_raw_data` stays admin-only — that is integration troubleshooting, not
+identity); `PartIdentityResource` gains it; `PartIndexQuery` searches it.
+
+**Frontend:** new first badge in `PartIdentityBadges` (`identity-badge-part-code`,
+sharing the mono treatment), a dedicated sortable **"Part No."** column, a detail
+field, a read-only field in the edit sheet, the combobox placeholder, and the Add
+Part dialog widened to `dialog-md`.
+
+### Two cleanups the plan didn't name
+
+1. **`WorkOrderPartResource` merged `erp_part_code` on top of the identity
+   shape** precisely because the identity resource withheld it, with a comment
+   saying "the ERP code must not reappear in any of them" — the exact opposite
+   of RQ4. The merge is now redundant and gone; the WO part line gets the code
+   from the shared shape (verified live: line 289 → `"erp_part_code":"1054"`).
+   Same story in `types/index.ts`, where `WorkOrderPart.part` intersected
+   `PartIdentity & { erp_part_code }`.
+2. **The consumption report builds its nested part by hand**, not through
+   `PartIdentityResource` — a grouped `selectRaw`/`groupBy` query feeding
+   `PartsConsumptionReportItemResource`. Adding the field to the resource was
+   not enough; the column had to be added to both the select and the GROUP BY.
+   Worth remembering: that report's part shape only *looks* like the shared one.
+
+### A fourth test pinned the old behaviour
+
+The plan named three test files; there was a fourth —
+`IdentitySearchTest::test_part_search_ignores_the_erp_code`, now
+`..._matches_the_erp_code`. Grep for behaviour, not just the files a plan lists.
+
+### Data note
+
+Only **3 of 734** parts carry both `erp_part_code` and `part_number`; 731 have
+the ERP code alone. That is why the two code badges share one mono treatment
+instead of competing for distinction — they are effectively one slot.
+
+### Verified against live data, not just tests
+
+A real technician (`Mohamed.Aldeeb@ldc.com.ly`) searching `7HF` now matches on
+the code and receives `erp_part_code: "7HF 400ML"`, with `erp_raw_data` still
+hidden — the privilege boundary held while the identity field opened up.
+
+### Next
+
+Phase 3 (stock decrement). Its plan text already carries the F1 correction
+(keep `numeric|min:0.01` alongside the precision regex, or `quantity: 0`
+creates a phantom consumption line) and F3 (the `float` → `string` signature
+change on `RecordWorkOrderPart::execute`).
+
+---
+
+## Session — 2026-08-16 (Phase 1 SHIPPED: unified asset-eligibility guard)
 
 **First code of the status-vocabulary work. 1092 tests green (3348 assertions),
 Pint clean on all 12 touched files.**

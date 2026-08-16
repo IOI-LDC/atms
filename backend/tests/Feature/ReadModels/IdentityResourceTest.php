@@ -149,14 +149,13 @@ class IdentityResourceTest extends TestCase
         // JSON renders 4.0 as 4, so compare loosely on the numeric value.
         $this->assertEquals(4.0, $embed['available_quantity']);
 
-        // The WO part line is the one place erp_part_code survives: the printable
-        // Part Request carries it so the warehouse can look the item up in ERP.
-        // It stays absent from PartIdentityResource itself, so it cannot reappear
-        // in part dropdowns, lists or cards — asserted below.
+        // RQ4: erp_part_code now travels with every part identity, so the
+        // printable Part Request gets it from the shared shape rather than a
+        // local merge in WorkOrderPartResource.
         $this->assertSame('P-001', $embed['erp_part_code']);
     }
 
-    public function test_the_shared_part_identity_still_hides_the_erp_code(): void
+    public function test_the_shared_part_identity_carries_the_erp_code_for_every_role(): void
     {
         $part = $this->part();
 
@@ -166,7 +165,9 @@ class IdentityResourceTest extends TestCase
             ->json('data.0');
 
         $this->assertSame('Adjustable Serv Kit', $embed['name']);
-        $this->assertArrayNotHasKey('erp_part_code', $embed);
+        // Was Admin-only and deliberately hidden. RQ4 reversed that: it is the
+        // "No." column LDC works from, so a technician picking a part sees it.
+        $this->assertSame('P-001', $embed['erp_part_code']);
     }
 
     public function test_missing_values_are_null_rather_than_absent(): void

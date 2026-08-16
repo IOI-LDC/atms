@@ -25,9 +25,11 @@ import { fmtDate } from '@/lib/displayHelpers'
  * genuine overflow page the column headers now repeat but the asset band does
  * not — an acceptable trade at ~25 lines per page.
  *
- * `erp_part_code` IS printed, on the part lines only — the warehouse needs it to
- * look items up in ERP. This is a deliberate exception to the rule that ERP codes
- * stay out of printed forms; `erp_asset_code` still appears nowhere.
+ * `erp_part_code` is printed on the part lines — the warehouse looks items up by
+ * it. This was once an exception to a blanket "ERP codes stay out of printed
+ * forms" rule; RQ4 retired that rule for the part code specifically, since it is
+ * the identifier LDC's team actually quotes. `erp_asset_code` still appears
+ * nowhere: it is an internal ERP key, which the part code is not.
  */
 const route = useRoute()
 const router = useRouter()

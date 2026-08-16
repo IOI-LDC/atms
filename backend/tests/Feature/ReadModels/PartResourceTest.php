@@ -86,8 +86,10 @@ class PartResourceTest extends TestCase
         $this->assertArrayNotHasKey('erp_status', $data);
         $this->assertArrayNotHasKey('erp_last_synced_at', $data);
         $this->assertArrayHasKey('name', $data);
-        // ERP identifiers are Admin-only — they must not reach ordinary users.
-        $this->assertArrayNotHasKey('erp_part_code', $data);
+        // RQ4: `erp_part_code` is the "No." column LDC actually works from, so
+        // every role sees it. `erp_raw_data` and the sync metadata stay
+        // privileged — those are integration troubleshooting, not identity.
+        $this->assertArrayHasKey('erp_part_code', $data);
     }
 
     public function test_available_quantity_is_exposed_to_part_users(): void
@@ -205,10 +207,12 @@ class PartResourceTest extends TestCase
         $upper->assertStatus(200);
         $this->assertContains('Motor Pump 12kW', collect($upper->json('data'))->pluck('name'));
 
-        // The ERP part code is deliberately NOT searchable — supplier Part
-        // Number replaces it as the code maintenance users actually know.
+        // RQ4: the ERP part code IS searchable — it is the code LDC types.
+        // Lowercase term against an uppercase stored code, so this doubles as
+        // the case-insensitivity check for the new column.
         $byCode = $this->actingAs($admin)->getJson('/api/parts?search=pc-mtr');
         $byCode->assertStatus(200);
-        $this->assertNotContains('Motor Pump 12kW', collect($byCode->json('data'))->pluck('name'));
+        $this->assertContains('Motor Pump 12kW', collect($byCode->json('data'))->pluck('name'));
+        $this->assertNotContains('Seal Kit', collect($byCode->json('data'))->pluck('name'));
     }
 }

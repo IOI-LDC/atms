@@ -8,6 +8,10 @@ import type { PartIdentity } from '@/types'
  * separately (a page heading, a link) so the badges can still follow it.
  * {@link PartIdentity} renders this alongside the name, keeping badge markup in
  * one place.
+ *
+ * Badge order is deliberate: ERP part code first (the "No." LDC quotes), then
+ * the supplier part number. Two codes side by side are easy to confuse, so the
+ * one people actually use leads.
  */
 withDefaults(
   defineProps<{
@@ -23,10 +27,18 @@ withDefaults(
   <span
     v-if="
       part &&
-      (part.part_number || part.size || part.maintenance_category || (showStock && part.available_quantity <= 0))
+      (part.erp_part_code ||
+        part.part_number ||
+        part.size ||
+        part.maintenance_category ||
+        (showStock && part.available_quantity <= 0))
     "
     class="identity-badges"
   >
+    <!-- First: the code LDC works from, so it reads before the supplier's. -->
+    <span v-if="part.erp_part_code" class="identity-badge identity-badge-part-code">
+      {{ part.erp_part_code }}
+    </span>
     <span v-if="part.part_number" class="identity-badge identity-badge-part-number">
       {{ part.part_number }}
     </span>

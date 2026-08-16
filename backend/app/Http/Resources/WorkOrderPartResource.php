@@ -11,16 +11,11 @@ class WorkOrderPartResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            // The shared identity shape plus erp_part_code, which the printable
-            // Part Request carries so the warehouse can look the item up in ERP.
-            //
-            // Merged in here rather than added to PartIdentityResource on
-            // purpose: that resource backs every part dropdown, list and card,
-            // and the ERP code must not reappear in any of them.
-            'part' => $this->part ? array_merge(
-                (new PartIdentityResource($this->part))->toArray($request),
-                ['erp_part_code' => $this->part->erp_part_code],
-            ) : null,
+            // Plain shared identity. This used to merge `erp_part_code` on top,
+            // because PartIdentityResource withheld it and the printable Part
+            // Request needed it for the warehouse. RQ4 put the code in the
+            // shared shape, so the merge became a no-op and is gone.
+            'part' => $this->part ? new PartIdentityResource($this->part) : null,
             'quantity' => (float) $this->quantity,
             'notes' => $this->notes,
         ];

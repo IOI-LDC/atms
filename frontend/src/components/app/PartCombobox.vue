@@ -151,7 +151,7 @@ function onListKeydown(event: KeyboardEvent) {
         <Input
           :id="inputId"
           v-model="displayQuery"
-          placeholder="Search by name, part number, size or category…"
+          placeholder="Search by code, name, part number, size or category…"
           autocomplete="off"
           class="combobox-input"
           @focus="onFocus"

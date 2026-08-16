@@ -964,8 +964,11 @@
   line-height: 1.4;
 }
 
-/* Serial number and supplier part number are codes — mono. */
+/* Serial number, ERP part code and supplier part number are codes — mono.
+   The two part codes share a treatment on purpose: only 3 of 734 parts carry
+   both, so they read as one "code" slot rather than two competing ones. */
 .identity-badge-serial,
+.identity-badge-part-code,
 .identity-badge-part-number {
   font-family: var(--font-mono);
   background: color-mix(in oklab, var(--info) 14%, transparent);

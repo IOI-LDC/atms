@@ -118,6 +118,8 @@ export interface AssetIdentity {
 export interface PartIdentity {
   id: number
   name: string
+  /** The "No." column from LDC's parts workbook — the code the team quotes. */
+  erp_part_code: string | null
   part_number: string | null
   unit_of_measure: string | null
   size: string | null
@@ -231,9 +233,9 @@ export interface MaintenanceHistoryItem {
 
 export interface Part {
   id: number
-  /** Admin-only — absent for every other role. Never rendered or searched. */
-  erp_part_code?: string
-  /** Supplier part number — the code maintenance users actually know. */
+  /** The "No." column from LDC's parts workbook — the code the team quotes. */
+  erp_part_code: string | null
+  /** Supplier part number — a second code, from the supplier rather than ERP. */
   part_number: string | null
   name: string
   description: string | null
@@ -283,12 +285,12 @@ export interface MaintenanceRequest {
 export interface WorkOrderPart {
   id: number
   /**
-   * The shared part identity plus `erp_part_code`, which only the printable
-   * Part Request renders — the warehouse needs it to look the item up in ERP.
-   * It is deliberately absent from `PartIdentity` itself so it cannot reappear
-   * in dropdowns, lists or cards.
+   * The plain shared identity. This used to intersect an extra `erp_part_code`
+   * because `PartIdentity` withheld it and only the printable Part Request
+   * needed it; RQ4 moved the code into the shared shape, so the intersection
+   * was redundant.
    */
-  part: PartIdentity & { erp_part_code: string | null }
+  part: PartIdentity
   quantity: number
   notes: string | null
 }

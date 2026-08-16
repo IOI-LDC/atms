@@ -130,9 +130,13 @@ class IdentitySearchTest extends TestCase
         $this->assertContains('Serv Kit', $this->partNames($term));
     }
 
-    public function test_part_search_ignores_the_erp_code(): void
+    /**
+     * RQ4 reversed this: the ERP part code is the "No." LDC types when looking
+     * a part up, so search that ignored it missed the most obvious query.
+     */
+    public function test_part_search_matches_the_erp_code(): void
     {
-        $this->assertNotContains('Serv Kit', $this->partNames('PC-888'));
+        $this->assertContains('Serv Kit', $this->partNames('PC-888'));
     }
 
     public function test_search_is_case_insensitive_across_the_new_fields(): void

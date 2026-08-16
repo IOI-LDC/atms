@@ -1112,7 +1112,8 @@ watch(
 
     <!-- Add part -->
     <Dialog v-model:open="addPartOpen">
-      <DialogContent>
+      <!-- Wider: part rows now carry an extra code badge and wrapped awkwardly. -->
+      <DialogContent class="dialog-md">
         <DialogHeader>
           <DialogTitle>Add part to request</DialogTitle>
           <DialogDescription

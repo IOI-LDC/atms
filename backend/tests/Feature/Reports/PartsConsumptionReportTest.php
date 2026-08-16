@@ -170,6 +170,7 @@ class PartsConsumptionReportTest extends TestCase
             'name' => 'Mud Motor',
         ]);
         $part = $this->createPart('Rotor', 'EA', [
+            'erp_part_code' => 'PC-555',
             'part_number' => 'PN-555',
             'size_inches' => '6 3/4"',
             'maintenance_category_id' => $category->id,
@@ -201,10 +202,11 @@ class PartsConsumptionReportTest extends TestCase
         $this->assertSame('9 5/8"', $row['asset_size']);
         $this->assertSame('9.62500', $row['asset_size_inches']);
 
-        // ERP part code is removed from the contract.
+        // RQ4: the code lives on the nested part identity, never as a flat
+        // top-level key — the report's own columns stay the report's contract.
         $this->assertArrayNotHasKey('part_code', $row);
         $this->assertArrayNotHasKey('erp_part_code', $row);
-        $this->assertArrayNotHasKey('erp_part_code', $row['part']);
+        $this->assertSame('PC-555', $row['part']['erp_part_code']);
         // FA Subclass is ERP-owned and must not appear in a report contract.
         $this->assertArrayNotHasKey('fa_subclass_code', $row);
         $this->assertArrayNotHasKey('asset_class', $row);

@@ -9,16 +9,20 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * The one shape every embedded part reference uses.
  *
  * Backs the shared `PartIdentity` frontend component: the name as plain text
- * followed by value-only badges for supplier Part Number, Size and Maintenance
- * Category, plus an out-of-stock badge derived from `available_quantity`.
- * A missing value yields no badge.
+ * followed by value-only badges for the ERP part code, supplier Part Number,
+ * Size and Maintenance Category, plus an out-of-stock badge derived from
+ * `available_quantity`. A missing value yields no badge.
  *
  * `available_quantity` is the ERP snapshot, not a live ATMS balance — recording
  * consumption never decrements it. It travels here because the part picker
  * disables a zero-quantity option and `RecordWorkOrderPart` rejects one.
  *
- * `erp_part_code` is intentionally absent, for the same reason as
- * `erp_asset_code` on {@see AssetIdentityResource}.
+ * `erp_part_code` travels here too (RQ4, 2026-08-16). It was previously
+ * Admin-only and deliberately withheld, on the same reasoning as
+ * `erp_asset_code` on {@see AssetIdentityResource} — but the two are not
+ * alike in practice: the asset code is an internal ERP key, while the part
+ * code is the "No." column LDC's Maintenance team works from and quotes to
+ * the warehouse. Withholding it made the picker harder to use, not safer.
  *
  * Requires `maintenanceCategory` to be eager-loaded.
  */
@@ -31,6 +35,7 @@ class PartIdentityResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'erp_part_code' => $this->erp_part_code,
             'part_number' => $this->part_number,
             'unit_of_measure' => $this->unit_of_measure,
             'size' => $this->size_inches?->format(),

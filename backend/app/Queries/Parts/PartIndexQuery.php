@@ -66,14 +66,16 @@ class PartIndexQuery
             // supported driver. Plain LIKE is case-sensitive on PostgreSQL;
             // ILIKE is not valid on SQLite. See ticket: case-sensitive search.
             //
-            // Covers what the identity package shows — name, supplier Part
-            // Number, size, Maintenance Category. `erp_part_code` is
-            // deliberately NOT searchable.
+            // Covers what the identity package shows — ERP part code, name,
+            // supplier Part Number, size, Maintenance Category. The ERP code
+            // joined this list with RQ4: it is the code LDC types when looking
+            // a part up, so excluding it made search miss the obvious query.
             $raw = $request->input('search');
             $term = '%'.strtolower($raw).'%';
 
             $query->where(function ($q) use ($raw, $term) {
                 $q->whereRaw('LOWER(name) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(erp_part_code) LIKE ?', [$term])
                     ->orWhereRaw('LOWER(part_number) LIKE ?', [$term])
                     ->orWhereHas('maintenanceCategory', fn ($c) => $c->whereRaw('LOWER(name) LIKE ?', [$term]));
 
