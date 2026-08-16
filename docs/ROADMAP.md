@@ -25,8 +25,12 @@ belongs in [REQUIREMENTS.md](REQUIREMENTS.md), not here.
 ## Next step
 
 Confirm and record the current UAT/deployment state. After that administrative
-confirmation, the next product action is to approve or reject R-001 in
-[REQUIREMENTS.md](REQUIREMENTS.md). Do not begin Phase 2 or Phase 3 work implicitly.
+confirmation, the next product actions are: (1) implement the agreed
+status-vocabulary design and RQ1–RQ4 once LDC answers the open questions —
+recorded order: the `is_active` MR/WO gating fix, then RQ4 (see
+[docs/plans/2026-08-07-operational-status-vocabulary.md](plans/2026-08-07-operational-status-vocabulary.md));
+(2) approve or reject R-001 in [REQUIREMENTS.md](REQUIREMENTS.md). Do not
+begin Phase 2 or Phase 3 work implicitly.
 
 ## External dependencies
 

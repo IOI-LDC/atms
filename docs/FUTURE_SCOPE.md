@@ -13,6 +13,13 @@ MAINTENANCE:
 This file records agreed direction only. Nothing here is implemented or part of
 current ATMS acceptance criteria unless a change explicitly promotes it.
 
+## Phase 1.5 — Inspection management (CANCELLED 2026-08-16)
+
+⛔ Cancelled 2026-08-16: "Inspection" for LDC means PM — not third-party
+certificates. The certificate register (P2-011) is dropped. Inspection
+becomes a WO form + attachment with the executed PM marked (see
+`docs/plans/2026-08-07-operational-status-vocabulary.md` §7, RQ1/RQ2).
+
 ## Phase 2 — Advanced asset operations
 
 - Asset assembly: parent/component relationships, install/remove/swap history,

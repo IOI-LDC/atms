@@ -3,15 +3,16 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-15 (latest — record corrected; no design has ever been agreed)
+## Session — 2026-08-15/16 (latest — record corrected 2026-08-15; design agreed 2026-08-16)
 
 ### ⚠️ Status vocabulary — TRUE RECORD (corrected with the user; supersedes all earlier drafts)
 
 Earlier session records (2026-08-07 and 2026-08-14) contained false claims:
 that a design was "AGREED" on 2026-08-14 then "reopened" because
 `disposition_status` duplicated `maintenance_sub_status`, and that the user
-agreed to drop Need Inspection. **None of that happened.** No design has ever
-been agreed. Nothing is implemented.
+agreed to drop Need Inspection. **None of that happened.** No design was
+agreed before the 2026-08-15 record correction — the final design below
+was agreed **2026-08-16**. Nothing is implemented.
 
 **True record of LDC's requests (confirmed by the user 2026-08-15):**
 
@@ -21,12 +22,16 @@ been agreed. Nothing is implemented.
   any of them. LIH and DBR have no decided home yet.
 - **Scrapped replaces Disposed — final.** Disposed is not used.
 - **Inspections:** first raised by LDC in the week of 2026-08-07; user
-  decision: excluded from Phase 1, moved to a dedicated **Phase 1.5** with its
-  own estimate.
+  decision: excluded from Phase 1, moved to a dedicated **Phase 1.5** with
+  its own estimate. **Phase 1.5 cancelled 2026-08-16** — "Inspection" for
+  LDC means PM: a WO form + attachment with the executed PM marked (see
+  the design list below and the plan doc §7 RQ1/RQ2).
 - The 2026-07-31 "withdrawal is ERP-owned / never surfaced, counted or
-  reported" decision is **REVERSED**: LIH / DBR / Scrapped must be visible,
-  filterable and reportable. Code still implements the old decision — known
-  discrepancy until the vocabulary design ships.
+  reported" decision is **superseded** (2026-08-16): LIH / DBR / Scrapped
+  are dropped from the vocabulary entirely — `is_active`/`withdrawn` carry
+  the meaning, and categorical LIH/DBR/Scrapped reporting needs a
+  distinguishing source that does not exist (open item). Code still
+  implements the old decision.
 - Rename history that actually happened: `inactive` → display-only "Retired"
   (2026-08-02) → `scraped` (2026-08-04); proposed `retired` abandoned.
 - All MR/WO data is test data, wiped at handover; assets reset to
@@ -34,7 +39,60 @@ been agreed. Nothing is implemented.
 
 Full record: `docs/plans/2026-08-07-operational-status-vocabulary.md`
 (rewritten as the true record; earlier AI drafts marked false and superseded).
-Next: a fresh design proposal, starting from this record.
+
+**Design — final agreement (2026-08-16, after the LDC meeting; supersedes
+the 2026-08-15 8-value draft; nothing implemented):**
+
+1. Labels are **informational only** — the single automatic write is the
+   reset-to-default on WO close.
+2. **`assets.condition_status`** (UI "Condition", group
+   `asset_conditions`, admin-editable) holds **3 values: `need_assembly`,
+   `missing_parts`, `need_inspection`**, plus an explicit **default
+   (proposed `normal`)** — deactivation-protected, backfilled over NULLs.
+   **Reset-on-close:** WO close → condition resets to default; cancel does
+   NOT reset; warn the closer when `need_inspection` and no PM was marked
+   completed (RQ1). "Need Maintenance" has no label — the MR is its
+   record. LIH/DBR/Scrapped have no label home — `is_active = false`
+   (Admin-set) is the out-of-ATMS control; its MR/WO gating fix must
+   cover the preventive approval path and let an open WO finish, not
+   start.
+3. **`operational_status` becomes a 4-value machine axis:**
+   `ready_for_field`, `under_maintenance`, `failure` (**renamed from
+   `down`** — LDC reads "down" as waiting-for-parts, which is the
+   `missing_parts` condition; "failure" names the fault), **`at_the_field`**
+   (auto-set on rig/well_site location change via `UpdateAssetLocation`).
+   WO start → `under_maintenance` + move to workshop/yard; WO close →
+   **always `ready_for_field`** (still-broken → new MR → `failure`); WO
+   cancel → caller choice (unchanged); corrective MR approval → `failure`
+   (unchanged); MR approval may optionally move the asset to a
+   yard/workshop ("Tajoura Base") or keep current (pins pending).
+   `scraped`/`lih` leave the axis with no replacement; `under_inspection`
+   → `condition_status.need_inspection`. Conditions: migrate the 1
+   `scraped` row; backend+frontend deploy together; the `is_active`
+   MR/WO gating fix is the replacement safety net for the removed
+   close-guard.
+4. **`assets.erp_status` removed** — dead weight (all rows default
+   `'active'`; nothing reads it; ERP import writes `is_active` directly).
+   Drop column + fillable + frontend display/type/manual. `erp_raw_data`/
+   `erp_last_synced_at` stay; parts keep their own.
+5. **`maintenance_sub_status` deprecated** — all disposition values die
+   (no label home); `installed`/`ready` become **derived from
+   `parent_asset_id`** at P2-001. No code change now (0 rows, no readers);
+   column dropped with the label field or P2-001.
+6. **Phase 1.5 cancelled** — inspection = PM (WO form + attachment +
+   executed-PM marking, RQ1/RQ2). P2-011 and its ROADMAP gate removed.
+7. **Four additional LDC requests (2026-08-16) captured in the plan doc
+   §7:** RQ1 mark L1/L2/L3 PM during a WO (**cumulative ladder settled —
+   L3 ⊇ L2 ⊇ L1**; mid-WO vs close-time still open); RQ2 attachment at WO
+   completion (backend already permits; no reopen needed); RQ3 parts CSV
+   download + qty-update upload (`ImportPartsCommand` lineage; qty
+   ownership open, lean: locally owned); RQ4 show `erp_part_code`
+   everywhere (full file plan in the plan doc).
+8. **Open:** `at_the_field` precedence/leaving rules; MR-approval location
+   pins; P2-001 parent-not-tracked edge case; R-10B/R-11 restoration
+   scope.
+
+Nothing implemented — implementation plan is the next step.
 
 ### 📋 Doc audit follow-up (2026-08-15)
 
