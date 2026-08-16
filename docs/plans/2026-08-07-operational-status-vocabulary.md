@@ -29,9 +29,8 @@ Rename history that actually happened in code: `inactive` → display-only
 
 Inspections were first raised by LDC in the week of 2026-08-07. **User
 decision:** excluded from Phase 1; inspection management moved to a
-dedicated **Phase 1.5** with its own estimate (see `docs/FUTURE_SCOPE.md`
-and `.kilo/TLD.md` P2-011). **(Cancelled 2026-08-16 — inspection means PM;
-see §5.7.)**
+dedicated **Phase 1.5** with its own estimate. **(Cancelled 2026-08-16 —
+inspection means PM; see §5.7.)**
 
 ## 2. What was wrong in earlier drafts (do not trust)
 
@@ -63,7 +62,10 @@ see §5.7.)**
   `scraped` asset.
 - `maintenance_status`: `enrolled` / `withdrawn`, Admin/Manager hand-set.
   `withdrawn` gates MR create (422), WO assignment (409), MR approval (409)
-  and PM evaluation.
+  and PM evaluation **via the scheduled job** (`AssetPmAssignment::scopeEvaluable`).
+  Direct/manual PM evaluation (`EvaluatePmRule`, the evaluate-all endpoint)
+  checks neither `maintenance_status` nor `is_active` — both paths are
+  covered by the gating fix in §6.
 - `maintenance_sub_status` (7 values): `installed`, `ready`, `lih`, `dbr`,
   `disposed`, `scrapped`, `other`. Admin/Manager hand-set only; no workflow
   writes it. All 400 assets currently NULL. Note: `disposed` is dropped from
@@ -139,9 +141,9 @@ this is the agreed direction; the implementation plan is the next step.
      placement writes `current_location_id` independently, so the rule
      needs a shared helper on both paths). Aligns 1:1 with
      `AssetDeployment::DEPLOYED`. ⚠️ **Data prerequisite:** only 1 location
-     exists (Tajoura Base, yard) and 396/400 assets have no location — the
-     rule is inert until LDC creates rig/well_site locations and places
-     assets on them.
+     exists (Tajoura Base, yard) — all 400 assets sit on it and no
+     rig/well_site location has been created, so the rule is inert until
+     LDC creates rig/well_site locations.
    - WO start → `under_maintenance` (forced, unchanged) and physically
      moves the asset to a workshop/yard — `at_the_field` and
      `under_maintenance` cannot coexist.
@@ -165,8 +167,9 @@ this is the agreed direction; the implementation plan is the next step.
    Removal risks and conditions (verified against code and data):
 
    - Behavioral risk: none beyond the guard — no workflow *writes* the
-     three removed values; the only *reader* is the `CloseWorkOrder`
-     SCRAPED skip-guard, which is removed with them.
+     three removed values; the only *workflow-level* reader is the
+     `CloseWorkOrder` SCRAPED skip-guard, which is removed with them (the
+     KPI/report readers are listed under Consumer drift below).
    - Data risk: trivial — live data is 397 `ready_for_field`, 2 `down`
      (→ `failure` via the rename migration), 1 `scraped`, 0
      `under_inspection`, 0 `lih`; the single `scraped` row is migrated
@@ -199,7 +202,9 @@ this is the agreed direction; the implementation plan is the next step.
    home remains; `installed`/`ready` are **derived from `parent_asset_id`**
    when P2-001 builds assembly (strict bijection per
    `docs/_archive/2026-07-13/legacy/atms/01-product/ASSET_STATUS.md` rule
-   6: installed ⇔ parent set, ready ⇔ parent NULL). No code change now —
+   6: installed ⇔ parent set, ready ⇔ parent NULL — **component/package
+   kinds only**; standalone assets never show installed/ready; pin at
+   P2-001 design). No code change now —
    0 rows; the only readers are display/validation surfaces (AssetResource
    serialization, `AssetController` validation, the `AssetDetailView`
    picker) and no workflow decision reads it — those surfaces are removed
@@ -215,7 +220,7 @@ this is the agreed direction; the implementation plan is the next step.
 
    | LDC value | Home |
    |---|---|
-   | At the Rig | `operational_status.at_the_field` (auto on rig/well_site location change) |
+   | At the Rig | `operational_status.at_the_field` (auto when the location is rig/well_site — changes and initial placement) |
    | Need Maintenance | the MR pipeline (pending MR = the need; approval → `failure`) |
    | Need Assembly | `condition_status.need_assembly` |
    | Missing Parts | `condition_status.missing_parts` |
@@ -233,12 +238,15 @@ to `failure` (LDC reads "down" as waiting-for-parts, which is
 `missing_parts`); Scrapped has no automatic effect — `is_active = false`
 (Admin-set) is the out-of-ATMS control and its MR/WO gating fix must cover
 MR create, **approval (corrective and preventive)**, WO assignment **and
-WO start**, while letting an open WO be finished, not started; WO close
-always `ready_for_field`; WO cancel keeps caller choice; `at_the_field` set
-on rig/well_site location change; MR approval optionally moves the asset to
-a yard/workshop location; Phase 1.5 cancelled (inspection = PM); the PM
-level ladder is **cumulative — L3 ⊇ L2 ⊇ L1** (user, 2026-08-16; matches
-the existing close-cascade).
+WO start**, plus **direct/manual PM evaluation** (`EvaluatePmRule` and the
+evaluate-all endpoint — today they check neither status), while letting an
+open WO be finished, not started; WO close
+always `ready_for_field`; WO cancel keeps caller choice; `at_the_field`
+set when the location is rig/well_site (location changes **and** initial
+placement); MR approval optionally moves the asset to a yard/workshop
+location; Phase 1.5 cancelled (inspection = PM); the PM level ladder is
+**cumulative — L3 ⊇ L2 ⊇ L1** (user, 2026-08-16; matches the existing
+close-cascade).
 
 **Open, with recorded recommendations (pending user/LDC confirmation):**
 
@@ -278,8 +286,9 @@ means all three. The existing machinery already implements this:
 (resets date + reading baselines **for the marked level and everything
 below it**, cancels pending PM requests; `decision_type =
 'performed_under_repair'`). Levels are already data, not code:
-`pm_rules.maintenance_level` is a free string column, and the rule form
-offers L1–L4 plus a custom level — future levels need no schema change.
+`pm_rules.maintenance_level` is a string column (`varchar(10)`), and the
+rule form offers L1–L4 plus a custom level — future levels need no schema
+change.
 
 Design consequence: the marking UI is a **single "highest level performed"
 picker**, not a multi-select — listing the asset's active PM assignments
@@ -288,8 +297,9 @@ labeled by level.
 Deep dive still required:
 
 - "While they work" — mid-WO entry vs close-time marking.
-- Cascade ordering must stay generic (numeric level comparison), not
-  hardcoded to L1–L4, so future levels keep cascading.
+- Cascade ordering must **become generic** (numeric level comparison) —
+  today `CloseWorkOrder` hardcodes L1–L4 matches (`:279`) — so future
+  levels keep cascading.
 - The inspection form (RQ2) is the attachment carrier.
 
 ### RQ2 — Attachment at WO completion (related to RQ1)

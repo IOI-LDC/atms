@@ -59,8 +59,11 @@ the 2026-08-15 8-value draft; nothing implemented):**
 3. **`operational_status` becomes a 4-value machine axis:**
    `ready_for_field`, `under_maintenance`, `failure` (**renamed from
    `down`** — LDC reads "down" as waiting-for-parts, which is the
-   `missing_parts` condition; "failure" names the fault), **`at_the_field`**
-   (auto-set on rig/well_site location change via `UpdateAssetLocation`).
+    `missing_parts` condition; "failure" names the fault), **`at_the_field`**
+    (auto-set when the asset's location is a rig/well_site — applied by
+    `UpdateAssetLocation` **and** `CreateAsset` initial placement; ⚠️
+    prerequisite: only 1 location exists (yard) — inert until LDC creates
+    rig/well_site locations).
    WO start → `under_maintenance` + move to workshop/yard; WO close →
    **always `ready_for_field`** (still-broken → new MR → `failure`); WO
    cancel → caller choice (unchanged); corrective MR approval → `failure`
@@ -72,15 +75,20 @@ the 2026-08-15 8-value draft; nothing implemented):**
    MR/WO gating fix is the replacement safety net for the removed
    close-guard.
 4. **`assets.erp_status` removed** — dead weight (all rows default
-   `'active'`; nothing reads it; ERP import writes `is_active` directly).
+   `'active'`; no workflow logic reads it — serialized in
+   `AssetResource.php:53`, seeded by `MaintenanceRequestDemoSeeder.php:62`,
+   both included in the removal; ERP import writes `is_active` directly).
    Drop column + fillable + frontend display/type/manual. `erp_raw_data`/
    `erp_last_synced_at` stay; parts keep their own.
 5. **`maintenance_sub_status` deprecated** — all disposition values die
    (no label home); `installed`/`ready` become **derived from
-   `parent_asset_id`** at P2-001. No code change now (0 rows, no readers);
-   column dropped with the label field or P2-001.
+   `parent_asset_id`** at P2-001 (component/package kinds only — standalone
+   assets never show installed/ready). No code change now (0 rows; readers
+   are display/validation only — `AssetResource.php:38`,
+   `AssetController.php:59`, the `AssetDetailView` picker — removed with
+   the column); column dropped with the label field or P2-001.
 6. **Phase 1.5 cancelled** — inspection = PM (WO form + attachment +
-   executed-PM marking, RQ1/RQ2). P2-011 and its ROADMAP gate removed.
+   executed-PM marking, RQ1/RQ2). P2-011 and its TLD trigger removed.
 7. **Four additional LDC requests (2026-08-16) captured in the plan doc
    §7:** RQ1 mark L1/L2/L3 PM during a WO (**cumulative ladder settled —
    L3 ⊇ L2 ⊇ L1**; mid-WO vs close-time still open); RQ2 attachment at WO
@@ -89,17 +97,20 @@ the 2026-08-15 8-value draft; nothing implemented):**
    ownership open, lean: locally owned); RQ4 show `erp_part_code`
    everywhere (full file plan in the plan doc).
 8. **Open:** `at_the_field` precedence/leaving rules; MR-approval location
-   pins; P2-001 parent-not-tracked edge case; R-10B/R-11 restoration
-   scope.
+   pins; P2-001 parent-not-tracked edge case. **Settled with recorded
+   recommendations (plan §6.5):** R-10B not restorable (data source
+   deprecated); R-11 only as a simplified withdrawn count if LDC asks.
 
 Nothing implemented — implementation plan is the next step.
 
-### 📋 Doc audit follow-up (2026-08-15)
+### 📋 Doc audit follow-up (2026-08-16)
 
 The 2026-08-14 doc audit deferred ROADMAP / REQUIREMENTS / README updates
-(D-019) on the false premise that a design had been agreed. D-019 stays
-superseded with a corrected trigger: update those files when a design is
-actually agreed.
+(D-019) on the false premise that a design had been agreed. **D-019 is
+reopened (2026-08-16)** — a design is now agreed. Partially done: ROADMAP
+"Next step" synced and the four LDC-blocking questions registered as
+ROADMAP external dependencies. The remaining registry entries and the
+README verification-date refresh land with the vocabulary release.
 
 ## Session — 2026-08-07 (proposal never accepted — see corrected record in the latest session above)
 
@@ -206,7 +217,10 @@ has not shown up yet; Shape A is the test, and it costs nothing.
 - `docs/FUTURE_SCOPE.md` — inspection certificates added to Phase 2, with the PM distinction.
 - `docs/PRODUCT.md` — the operational-status section now says `under_inspection` carries no
   certificate, issuer or expiry, and points at P2-011.
-- `docs/ROADMAP.md` — new external dependency: LDC PM adoption, with the measured figures.
+- `docs/ROADMAP.md` — ~~new external dependency: LDC PM adoption, with the
+  measured figures.~~ ⚠️ **Correction (2026-08-16): no such row exists in
+  ROADMAP at any revision — this claim came from the same 2026-08-14
+  session that fabricated the "AGREED" design.**
 
 `docs/API.md:57` and `docs/README.md:29` were **left alone deliberately** — they describe
 the six-value vocabulary as it exists in code today, which nothing has yet changed.
@@ -636,8 +650,9 @@ applied through `UpdateAssetLocation` inside the same transaction with reason
 > unrecognised** location type counts as "must choose", matching
 > `AssetDeployment`'s habit of surfacing unclassified rather than absorbing it.
 
-> ⚠️ **Live-data consequence the user must plan for: 396 of 400 assets have no
-> location at all.** So in practice *every* work order start hits the dialog
+> ⚠️ **Live-data consequence noted at the time: 396 of 400 assets had no
+> location.** *(Resolved 2026-08-04 — the TJB relocation placed all 400 at
+> Tajoura Base.)* So in practice *every* work order start hits the dialog
 > today, not just the rig edge case. That is the guard working as designed — it
 > is how location data starts getting populated — but it is a workflow change
 > for every technician, not a rare prompt. Revisit only if LDC pushes back.
@@ -1275,8 +1290,9 @@ them. Findings from reading the schema against those requirements:
 (deployed ÷ eligible, excluding down/under-maintenance) belongs on the dashboard;
 the windowed **rate** (asset-days deployed ÷ asset-days eligible, reconstructed
 from `asset_location_histories.effective_at`) belongs in reports.
-⚠️ **Blocked on data: 396 of 400 assets have `current_location_id = NULL`** and
-only 5 movement rows exist, so utilisation reads ~0% until location data is
+⚠️ **Blocked on data at the time: 396 of 400 assets had `current_location_id = NULL`**
+*(resolved 2026-08-04 — the TJB relocation placed all 400)* and only 5
+movement rows existed, so utilisation read ~0% until location data was
 captured.
 
 **Proper Booking — REQUIRED (decided 2026-07-31, redesigned 2026-07-31 as separate table).** `is_booked` is a bare boolean toggled by `ToggleAssetBooking`, but Operations book **up to three months ahead** for future jobs. Today ATMS cannot say what a booking is *for*, *when* it runs, or *who* committed the asset, and cannot detect overlaps. "Booked but still on yard" therefore carries **no** signal — it is the normal state for most of a booking's life.

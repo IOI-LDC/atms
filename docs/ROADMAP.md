@@ -39,6 +39,10 @@ begin Phase 2 or Phase 3 work implicitly.
 | ERP parts API | Page name and sample payload/field mapping | Parts sync quality and future SM work. |
 | ERP consumption write-back | Confirm supported BC warehouse transaction and contract | Required before Phase 3 SM consumption write-back. |
 | Asset ownership | Confirm whether ATMS remains the operational source for asset reference data or an ERP-sync design is revived | Do not reintroduce asset sync without this decision. |
+| Status vocabulary — `at_the_field` rules | LDC answers: precedence when a `failure` asset moves to a rig; status when leaving the field | Gates the 4-value operational axis slice (recorded recommendations: keep `failure`; `ready_for_field` only from `at_the_field`; no write on workshop moves). |
+| Status vocabulary — MR-approval location choice | LDC answers: which locations are offered, the default, and whether preventive approvals participate | Gates the MR-approval location option (recommendations: any active yard/workshop; default keep-current; both approval types). |
+| RQ1 — PM marking flow | LDC answers: mark during the WO or at completion | Gates RQ1 (the cumulative L3 ⊇ L2 ⊇ L1 ladder is already settled). |
+| RQ3 — parts quantity ownership | LDC answers: is the uploaded CSV the official stock source | Gates the RQ3 upload (recommendation: yes — CSV locally owns `available_quantity`; ERP sync never overwrites). |
 | Official SPA hostname | Confirm the permanent LDC subdomain. The SPA is hosted at `https://atms.inova.krd` for now, which is what `FRONTEND_URL` should be set to on the deployed backend; treat it as provisional. | Email deep links point wherever `FRONTEND_URL` says, so the value must be revisited when the permanent host is issued. |
 | Exchange Application Access Policy | LDC IT restricts the notification Entra application to `notification@ldc.com.ly` | Required before enabling production email; today the credential can send as any tenant mailbox. |
 
