@@ -171,6 +171,7 @@ class ShowWorkOrderFormTest extends TestCase
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $this->assertEquals(WorkOrderStatus::CLOSED, $wo->fresh()->status);

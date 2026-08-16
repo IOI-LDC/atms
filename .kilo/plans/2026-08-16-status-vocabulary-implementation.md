@@ -35,9 +35,9 @@
 - ERP-refresh interleave (recorded rule for the action docblocks): restore adds the stored line quantity unconditionally; a concurrent ERP refresh between record and remove means the local balance is stale, not corrupted — the next `SyncParts` overwrites (ERP is the authority, Q6).
 - D3 Manual "Update status" picker **excludes `at_the_field`** (it is location-derived only) — frontend + `setAssetStatus` validation.
 - D4 Mid-WO PM marking is **staged**: recorded during the WO, persisted at close, discarded on cancel (confirm with user before Phase 6).
-- D5 RQ2 attachment is **required at completion** (recommended; confirm with user in Phase 5).
+- D5 ✅ **ANSWERED 2026-08-16 — required at CLOSE, not at completion** (the user corrected the recommendation). Any attachment satisfies it; uploads stay open through `completed`.
 
-**Still open / activation steps:** D4/D5 confirmation; `normal` default-name confirmation (before 4a seeding); LDC creates rig/well_site locations (ops activation — NOT a release gate).
+**Still open / activation steps:** `normal` default-name confirmation (before 4a seeding); LDC creates rig/well_site locations (ops activation — NOT a release gate).
 
 ---
 
@@ -171,7 +171,7 @@
 
 ---
 
-## Phase 5 — RQ2: attachment at completion (BLOCKED on D5 confirmation)
+## Phase 5 — RQ2: attachment before close ✅ SHIPPED 2026-08-16
 - **D5 is a precondition**, and confirming it needs a second answer: **what counts as the qualifying attachment.** "At least one attachment on the WO" is satisfied by any file already there — a photo uploaded at start — so it does not express what design §5.7/§7 RQ2 means (*the inspection form*). Expressing that needs a marker: an attachment category/type, or the RQ1 PM mark as the carrier. Pin this in the D5 conversation, not in review.
 - If "required at completion" is confirmed, add a backend gate in `CompleteWorkOrder.php:19` (completion currently checks only status/auth/form completeness at `:25-40`) — apply the agreed qualifying-attachment definition, return a specified 409 with message, and test a DIRECT API completion without one. If not confirmed, make the UI step optional and skip the gate.
 - UI: complete dialog attach step; backend upload unchanged (`AttachmentPolicy.php:50` verified).

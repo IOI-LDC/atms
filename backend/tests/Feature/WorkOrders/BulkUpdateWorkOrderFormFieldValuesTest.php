@@ -319,6 +319,7 @@ class BulkUpdateWorkOrderFormFieldValuesTest extends TestCase
         [$wo, $fields] = $this->buildAssignedFormWorkOrder();
 
         $this->actingAs($this->tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $this->actingAs($this->manager)->patchJson("/api/work-orders/{$wo->id}/form/fields", [
@@ -332,6 +333,7 @@ class BulkUpdateWorkOrderFormFieldValuesTest extends TestCase
         [$wo, $fields] = $this->buildAssignedFormWorkOrder();
 
         $this->actingAs($this->tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($this->tech)->patchJson("/api/work-orders/{$wo->id}/form/fields", [
             'fields' => [['id' => $fields[0]->id, 'post_value' => '1']],

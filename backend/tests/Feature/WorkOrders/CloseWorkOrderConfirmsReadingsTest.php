@@ -77,6 +77,7 @@ class CloseWorkOrderConfirmsReadingsTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'Done',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         return $wo->fresh();
     }
@@ -301,6 +302,7 @@ class CloseWorkOrderConfirmsReadingsTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->reading($asset, $type, 2150, '2026-08-01 08:00:00', $wo);
 

@@ -258,6 +258,7 @@ class PmWorkflowTest extends TestCase
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $assignment->refresh();
@@ -495,6 +496,7 @@ class PmWorkflowTest extends TestCase
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $assignment->refresh();
@@ -649,6 +651,7 @@ class PmWorkflowTest extends TestCase
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $a1->refresh();

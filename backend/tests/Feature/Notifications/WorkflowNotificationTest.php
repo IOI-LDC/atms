@@ -198,6 +198,7 @@ class WorkflowNotificationTest extends TestCase
         $this->actingAs($this->tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'Fixed the leak',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         Notification::assertSentOnDemand(WorkOrderCompletedNotification::class,
             function (WorkOrderCompletedNotification $notification) {
@@ -217,6 +218,7 @@ class WorkflowNotificationTest extends TestCase
             'completed_at' => now(),
             'completed_by_user_id' => $this->tech->id,
         ]);
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 

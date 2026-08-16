@@ -178,6 +178,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'Handled by manager',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->assertEquals(WorkOrderStatus::COMPLETED, $wo->fresh()->status);
     }
 
@@ -280,6 +281,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'Repair completed successfully',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $wo = $wo->fresh();
         $this->assertEquals(WorkOrderStatus::COMPLETED, $wo->status);
@@ -299,6 +301,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'Done',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($tech)->patchJson("/api/work-orders/{$wo->id}", [
             'description' => 'Attempt after completion',
@@ -317,6 +320,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'Done',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
@@ -336,11 +340,13 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $this->actingAs($manager)->patchJson("/api/work-orders/{$wo->id}", ['description' => 'x'])->assertForbidden();
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/start")->assertStatus(409);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'x'])->assertStatus(409);
+        $this->attachToWorkOrder($wo);
     }
 
     public function test_manager_cancels_open_work_order_with_reason(): void
@@ -398,6 +404,7 @@ class WorkOrderLifecycleTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/start")->assertStatus(409);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'x'])->assertStatus(409);
+        $this->attachToWorkOrder($wo);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertStatus(409);
     }
 
@@ -421,6 +428,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")
@@ -514,6 +522,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/parts", [
             'part_id' => $part->id,
@@ -589,9 +598,11 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Again'])
             ->assertStatus(409);
+        $this->attachToWorkOrder($wo);
     }
 
     public function test_unassigned_technician_cannot_complete(): void
@@ -607,6 +618,7 @@ class WorkOrderLifecycleTest extends TestCase
 
         $this->actingAs($tech2)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Hijack'])
             ->assertForbidden();
+        $this->attachToWorkOrder($wo);
     }
 
     public function test_close_overrides_corrective_mr_is_failure(): void
@@ -624,6 +636,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'No fault found',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
             'is_failure' => false,
@@ -648,6 +661,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'Done',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         // No is_failure in payload — the review-time value (true) must persist.
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
@@ -685,6 +699,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", [
             'completion_notes' => 'PM done',
         ])->assertOk();
+        $this->attachToWorkOrder($wo);
 
         // Even if a client sends is_failure, PM WOs must never be classified.
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
@@ -704,6 +719,7 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", ['user_id' => $tech->id])->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start")->assertOk();
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
     }
 
     // `test_close_with_asset_status_down_keeps_asset_down` was removed in 4b:

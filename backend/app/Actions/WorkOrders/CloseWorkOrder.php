@@ -62,6 +62,29 @@ class CloseWorkOrder
                 throw new DomainException('Only completed work orders can be closed.');
             }
 
+            // RQ2 (confirmed with the user 2026-08-16): a work order cannot be
+            // closed until it carries the paperwork — typically the completed
+            // inspection form as a PDF or spreadsheet.
+            //
+            // Deliberately gated at CLOSE and not at completion. Completion is
+            // the technician saying the physical work is finished, often from a
+            // yard or a rig where uploading a file is awkward; closing is the
+            // manager signing it off. Putting the gate here lets the technician
+            // finish, upload afterwards, and still be the one who supplies the
+            // evidence — which is why uploads stay open on a COMPLETED work
+            // order (see AttachmentPolicy::uploadToWorkOrder).
+            //
+            // Any attachment satisfies it. ATMS has no notion of "the inspection
+            // form" specifically — that would need an attachment category that
+            // does not exist — so this checks presence, not kind. Stated so a
+            // future reader does not mistake it for a stricter rule.
+            if (! $locked->attachments()->exists()) {
+                throw new DomainException(
+                    'This work order has no attachments. Upload the completed form or supporting '
+                    .'document before closing it.'
+                );
+            }
+
             $before = $workOrder->toArray();
             $locked->update([
                 'status' => WorkOrderStatus::CLOSED,

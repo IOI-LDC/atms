@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\MaintenanceRequestStatus;
 use App\Enums\RoleCode;
+use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
 use App\Models\Attachment;
 use App\Models\MaintenanceRequest;
@@ -47,8 +48,26 @@ class AttachmentPolicy
         return $maintenanceRequest->created_by === $user->id;
     }
 
+    /**
+     * Uploads stay open through COMPLETED and close only when the work order
+     * does.
+     *
+     * That ordering is the point of RQ2: closing requires an attachment, so the
+     * window between "the technician says the work is done" and "the manager
+     * signs it off" is exactly when the paperwork arrives. Locking uploads at
+     * completion would leave the person who did the job unable to supply the
+     * evidence the close demands.
+     *
+     * Closed and cancelled are terminal — the user manual has always said a
+     * closed work order's attachments are locked, and until 2026-08-16 nothing
+     * enforced it.
+     */
     public function uploadToWorkOrder(User $user, WorkOrder $workOrder): bool
     {
+        if (in_array($workOrder->status, [WorkOrderStatus::CLOSED, WorkOrderStatus::CANCELLED], true)) {
+            return false;
+        }
+
         if ($user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
             return true;
         }

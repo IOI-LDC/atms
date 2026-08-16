@@ -379,6 +379,7 @@ class InactiveAssetGuardTest extends TestCase
         $this->actingAs($manager)
             ->postJson("/api/work-orders/{$wo->id}/complete")
             ->assertOk();
+        $this->attachToWorkOrder($wo);
 
         $this->actingAs($manager)
             ->postJson("/api/work-orders/{$wo->id}/close")

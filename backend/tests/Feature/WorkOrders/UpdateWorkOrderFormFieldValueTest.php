@@ -145,6 +145,7 @@ class UpdateWorkOrderFormFieldValueTest extends TestCase
 
         // Close the WO (terminal) so updateExecution returns false for everyone.
         $this->actingAs($this->tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
+        $this->attachToWorkOrder($wo);
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $this->assertEquals(WorkOrderStatus::CLOSED, $wo->fresh()->status);

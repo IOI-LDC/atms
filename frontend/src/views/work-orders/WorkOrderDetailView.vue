@@ -85,6 +85,8 @@ const {
   lifecycleSteps,
   requiredFieldStatus,
   canEdit,
+  canUploadAttachment,
+  hasAttachment,
   canAssign,
   canStart,
   canComplete,
@@ -831,7 +833,7 @@ watch(
               <div class="data-card-header">
                 <h2 class="data-card-title">Attachments</h2>
                 <div class="detail-card-actions">
-                  <Button v-if="canEdit" size="sm" variant="outline" @click="openUpload"
+                  <Button v-if="canUploadAttachment" size="sm" variant="outline" @click="openUpload"
                     >Upload…</Button
                   >
                 </div>
@@ -1019,6 +1021,10 @@ watch(
           the job did not restore the asset, cancel the work order instead — that is where the
           still-faulty choice lives.
         </p>
+        <p v-if="!hasAttachment" class="form-error">
+          This work order has no attachments. Upload the completed form or supporting document
+          before closing it — close, then reopen this dialog.
+        </p>
         <div v-if="serviceAssignmentOptions.length > 0" class="form-field">
           <label class="checkbox-field">
             <Checkbox id="wo-close-service" v-model="serviceDeclared" />
@@ -1053,6 +1059,7 @@ watch(
           <Button
             :disabled="
               closeLoading ||
+              !hasAttachment ||
               (isCorrectiveOrigin && closeIsFailure === null) ||
               (serviceDeclared && servicedAssignmentId === null)
             "
