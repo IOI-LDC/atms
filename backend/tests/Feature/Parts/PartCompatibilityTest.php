@@ -324,12 +324,12 @@ class PartCompatibilityTest extends TestCase
         ]);
     }
 
-    private function addPart(WorkOrder $workOrder, Part $part): TestResponse
+    private function addPart(WorkOrder $workOrder, Part $part, string|int|float $quantity = 1): TestResponse
     {
         return $this->actingAs($this->admin())
             ->postJson("/api/work-orders/{$workOrder->id}/parts", [
                 'part_id' => $part->id,
-                'quantity' => 1,
+                'quantity' => $quantity,
             ]);
     }
 
@@ -382,13 +382,136 @@ class PartCompatibilityTest extends TestCase
             ->assertJsonPath('message', 'That part is inactive and cannot be requested.');
     }
 
-    public function test_recording_consumption_does_not_decrement_the_erp_snapshot(): void
+    // ── Stock movement (Q6, 2026-08-16) ───────────────────────────────────────
+    //
+    // Recording a part on a work order now decrements `available_quantity`.
+    // This used to be an untouched ERP snapshot. LDC chose to keep ERP as the
+    // quantity authority *and* have consumption decrement locally, so the
+    // number stays honest between ERP refreshes — see 🟠 D-020 for the day the
+    // weekly sync starts overwriting it again.
+    //
+    // Arithmetic happens in PostgreSQL against the numeric column, never in PHP
+    // floats: `work_order_parts.quantity` is decimal:2 and
+    // `parts.available_quantity` is decimal:3, so a float round-trip would
+    // drift. Every assertion below compares the exact stored string.
+
+    public function test_recording_consumption_decrements_available_quantity(): void
     {
         $asset = $this->asset($this->motor->id, '6 3/4');
-        $part = $this->part('snapshot', $this->motor->id, '6 3/4', qty: 5);
+        $part = $this->part('consumed', $this->motor->id, '6 3/4', qty: 5);
 
         $this->addPart($this->workOrderFor($asset), $part)->assertCreated();
 
+        $this->assertSame('4.000', $part->refresh()->available_quantity);
+    }
+
+    public function test_fractional_quantity_round_trips_exactly(): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('fractional', $this->motor->id, '6 3/4', qty: 5);
+        $workOrder = $this->workOrderFor($asset);
+
+        $lineId = $this->addPart($workOrder, $part, '1.5')->assertCreated()->json('data.id');
+        $this->assertSame('3.500', $part->refresh()->available_quantity);
+
+        $this->actingAs($this->admin())
+            ->deleteJson("/api/work-orders/{$workOrder->id}/parts/{$lineId}")
+            ->assertOk();
+
         $this->assertSame('5.000', $part->refresh()->available_quantity);
+    }
+
+    public function test_removing_a_part_restores_available_quantity(): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('restored', $this->motor->id, '6 3/4', qty: 10);
+        $workOrder = $this->workOrderFor($asset);
+
+        $lineId = $this->addPart($workOrder, $part, 2)->assertCreated()->json('data.id');
+        $this->assertSame('8.000', $part->refresh()->available_quantity);
+
+        $this->actingAs($this->admin())
+            ->deleteJson("/api/work-orders/{$workOrder->id}/parts/{$lineId}")
+            ->assertOk();
+
+        $this->assertSame('10.000', $part->refresh()->available_quantity);
+    }
+
+    public function test_requesting_more_than_available_is_rejected(): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('short', $this->motor->id, '6 3/4', qty: 2);
+
+        $this->addPart($this->workOrderFor($asset), $part, 3)
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Insufficient stock: only 2.000 available.');
+
+        $this->assertSame('2.000', $part->refresh()->available_quantity);
+        $this->assertDatabaseCount('work_order_parts', 0);
+    }
+
+    /** The boundary is inclusive — taking the last of the stock is legitimate. */
+    public function test_requesting_exactly_the_available_quantity_is_allowed(): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('exact', $this->motor->id, '6 3/4', qty: 2);
+
+        $this->addPart($this->workOrderFor($asset), $part, 2)->assertCreated();
+
+        $this->assertSame('0.000', $part->refresh()->available_quantity);
+    }
+
+    /**
+     * Validation failures, not stock failures. Over-precision, zero and
+     * negative are all 422 — distinct from the 409 above, because the request
+     * is malformed rather than unsatisfiable.
+     *
+     * Zero matters more than it looks: a bare precision regex would accept it,
+     * it would clear the stock guard (`0 > available` is false), and it would
+     * create a work-order part line that consumes nothing — a phantom row in
+     * the consumption report.
+     *
+     * @return array<string, array{string|int|float}>
+     */
+    public static function invalidQuantityProvider(): array
+    {
+        return [
+            'three decimals' => ['1.005'],
+            'zero' => [0],
+            'zero with decimals' => ['0.00'],
+            'negative' => [-1],
+        ];
+    }
+
+    #[DataProvider('invalidQuantityProvider')]
+    public function test_invalid_quantity_is_rejected_as_validation(string|int|float $quantity): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('precision', $this->motor->id, '6 3/4', qty: 5);
+
+        $this->addPart($this->workOrderFor($asset), $part, $quantity)
+            ->assertStatus(422);
+
+        $this->assertSame('5.000', $part->refresh()->available_quantity);
+        $this->assertDatabaseCount('work_order_parts', 0);
+    }
+
+    /**
+     * Two concurrent requests for the last unit: the row lock must serialise
+     * them so the second sees the decremented stock and is refused, rather than
+     * both reading 1 and driving the balance negative.
+     */
+    public function test_concurrent_requests_cannot_oversell_the_last_unit(): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('contended', $this->motor->id, '6 3/4', qty: 1);
+
+        $this->addPart($this->workOrderFor($asset), $part, 1)->assertCreated();
+        $this->addPart($this->workOrderFor($asset), $part, 1)
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'That part is out of stock and cannot be requested.');
+
+        $this->assertSame('0.000', $part->refresh()->available_quantity);
+        $this->assertDatabaseCount('work_order_parts', 1);
     }
 }

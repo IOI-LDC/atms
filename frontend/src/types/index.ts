@@ -125,7 +125,7 @@ export interface PartIdentity {
   size: string | null
   size_inches: string | null
   maintenance_category?: MaintenanceCategoryOption | null
-  /** ERP availability snapshot, not a live ATMS balance. */
+  /** Live balance — WO consumption decrements it. ERP overwrites on sync. */
   available_quantity: number
 }
 

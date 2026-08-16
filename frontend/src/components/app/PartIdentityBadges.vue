@@ -16,7 +16,7 @@ import type { PartIdentity } from '@/types'
 withDefaults(
   defineProps<{
     part: PartIdentity | null | undefined
-    /** Show the out-of-stock badge when the ERP snapshot is zero. */
+    /** Show the out-of-stock badge when the available balance is zero. */
     showStock?: boolean
   }>(),
   { showStock: false },

@@ -3,7 +3,77 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — Phase 2 SHIPPED: RQ4, `erp_part_code` everywhere)
+## Session — 2026-08-16 (latest — Phase 3 SHIPPED: parts stock decrement/restore)
+
+**1101 tests green, type-check + build clean, Pint clean.**
+
+Recording a part on a work order now subtracts `available_quantity`; removing
+the line adds it back (Q6). It was previously an untouched ERP snapshot.
+
+### Precision is the whole design here
+
+`work_order_parts.quantity` is `decimal:2`, `parts.available_quantity` is
+`decimal:3`. A float round-trip between them drifts, so:
+
+- `RecordWorkOrderPart::execute` takes `string $quantity`, **not `float`** — the
+  controller's `(float)` cast is gone. A string in, a string bound to SQL.
+- Both stock writes are raw prepared SQL against the numeric column:
+  `UPDATE parts SET available_quantity = available_quantity ± ? WHERE id = ?`.
+  No PHP arithmetic touches a balance.
+- Removal restores the **stored line quantity**, never a caller-supplied value.
+- Validation is `['required', 'numeric', 'min:0.01', 'regex:/^\d+(\.\d{1,2})?$/']`.
+  **Both rules are load-bearing.** The regex caps precision; `min:0.01` caps
+  magnitude. Drop the latter and `quantity: 0` validates, clears the stock
+  guard (`0 > available` is false), and creates a line that consumes nothing —
+  a phantom row in the consumption report.
+
+**One deliberate float:** the insufficient-stock comparison in
+`guardPartIsRequestable`. `bcmath` and `gmp` are **not installed** in the
+container, and adding a PHP extension to serve one comparison is not a trade
+worth making. A single comparison of two ≤3-decimal values is exact in a
+double (scaled, they are far inside 2^53). The rule that matters — no PHP
+arithmetic on a stored balance — is intact.
+
+### Concurrency
+
+`RecordWorkOrderPart` locks the **part row** (`lockForUpdate`) before reading
+the balance the guard checks, so two requests for the last unit serialise and
+the second is refused rather than both reading the same stock. Pinned by
+`test_concurrent_requests_cannot_oversell_the_last_unit`.
+
+### Audit
+
+Both `record_work_order_part` and `delete_work_order_part` now carry
+`available_quantity_before` / `_after` plus `part_id` in the audit metadata —
+a stock mutation with no trail is not acceptable.
+
+### Verified against live data, not just tests
+
+In a rolled-back transaction against the real database: part `SKC-S` at 4.000
+→ record `1.50` → **2.500** → remove → **4.000**, with both audit rows
+carrying the before/after pair. Exact fractional round-trip, no drift.
+
+### ⚠️ This is interim honesty, not a ledger
+
+ERP stays the quantity authority (Q6). `SyncParts` overwrites
+`available_quantity` wholesale and `SyncErpPartsJob` runs weekly, so every
+local movement is discarded on the next run once `LDC_ERP_PARTS_API` is
+configured. Tracked as 🟠 **D-020** with exactly that trigger. Do not "fix"
+the overwrite, and do not mistake this for inventory.
+
+### One more test pinned the old contract
+
+`IdentityResourceTest` asserted `available_quantity` stayed 4.0 after a WO
+consumed 2. It now expects 2.0. That test was documenting "never decrements".
+
+### Next
+
+Phase 4 — the vocabulary release (4a additive → 4b switch + coordinated FE →
+4c column drops). Phase 1 was its only gate and is done.
+
+---
+
+## Session — 2026-08-16 (Phase 2 SHIPPED: RQ4, `erp_part_code` everywhere)
 
 **1092 tests green, type-check clean, build clean, Pint clean.**
 

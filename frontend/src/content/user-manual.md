@@ -1037,14 +1037,20 @@ triggered by an Admin or Manager.
 - Display ERP reference fields (part code, status) as read-only data.
 - Update local operational fields: `name`, `description`, `unit_of_measure`,
   `category`, `is_active` (Admin/Manager only).
+- **Adjust `available_quantity` as parts are consumed.** Recording a part on a
+  work order subtracts its quantity; removing that line adds it back. This keeps
+  the figure — and the Parts Consumption report — honest between ERP refreshes.
 
 **What ATMS cannot do with parts:**
 
 - Edit ERP-owned fields: `erp_part_id`, `erp_part_code`, `erp_status`,
   `erp_raw_data`, `erp_last_synced_at`. These are managed exclusively by the ERP
   sync process.
-- Manage stock quantities, inventory, valuation, or warehouse operations — all
-  owned by SM.
+- Own stock as a ledger. **ERP remains the quantity authority**: the scheduled
+  sync overwrites `available_quantity` wholesale, discarding local movements
+  since the last run. ATMS consumption keeps the number accurate *between*
+  refreshes; it is not an inventory system.
+- Manage inventory valuation or warehouse operations — owned by SM.
 - View raw ERP payloads (Administrator only).
 
 ### 5.8 Asset Location Data Ownership

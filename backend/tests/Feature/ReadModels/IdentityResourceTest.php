@@ -146,8 +146,11 @@ class IdentityResourceTest extends TestCase
         $this->assertSame('A77-M6-22-SK', $embed['part_number']);
         $this->assertSame('9 5/8"', $embed['size']);
         $this->assertSame('Motor', $embed['maintenance_category']['name']);
-        // JSON renders 4.0 as 4, so compare loosely on the numeric value.
-        $this->assertEquals(4.0, $embed['available_quantity']);
+        // Stock started at 4 and this work order consumed 2, so the identity
+        // reports 2 — since Q6 (2026-08-16) `available_quantity` is a live
+        // balance that consumption decrements, not an untouched ERP snapshot.
+        // JSON renders 2.0 as 2, so compare loosely on the numeric value.
+        $this->assertEquals(2.0, $embed['available_quantity']);
 
         // RQ4: erp_part_code now travels with every part identity, so the
         // printable Part Request gets it from the shared shape rather than a

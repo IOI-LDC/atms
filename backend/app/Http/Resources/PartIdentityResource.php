@@ -13,9 +13,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * Size and Maintenance Category, plus an out-of-stock badge derived from
  * `available_quantity`. A missing value yields no badge.
  *
- * `available_quantity` is the ERP snapshot, not a live ATMS balance — recording
- * consumption never decrements it. It travels here because the part picker
- * disables a zero-quantity option and `RecordWorkOrderPart` rejects one.
+ * `available_quantity` is a live balance: recording a part on a work order
+ * decrements it and removing the line restores it (Q6, 2026-08-16). ERP remains
+ * the authority and `SyncParts` still overwrites the column wholesale, so treat
+ * this as accurate between refreshes rather than as a ledger. It travels here
+ * because the part picker disables a zero-quantity option and
+ * `RecordWorkOrderPart` rejects one.
  *
  * `erp_part_code` travels here too (RQ4, 2026-08-16). It was previously
  * Admin-only and deliberately withheld, on the same reasoning as

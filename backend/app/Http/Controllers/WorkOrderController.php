@@ -207,7 +207,12 @@ class WorkOrderController extends Controller
 
         $validated = $request->validate([
             'part_id' => ['required', 'exists:parts,id'],
-            'quantity' => ['required', 'numeric', 'min:0.01'],
+            // Both rules are load-bearing. The regex caps precision at the 2
+            // decimals `work_order_parts.quantity` stores, so nothing is
+            // silently rounded between the line and the stock write; `min:0.01`
+            // caps magnitude, without which "0" would validate, clear the stock
+            // guard and create a line that consumes nothing.
+            'quantity' => ['required', 'numeric', 'min:0.01', 'regex:/^\d+(\.\d{1,2})?$/'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -215,7 +220,8 @@ class WorkOrderController extends Controller
             $partLine = $action->execute(
                 $workOrder->id,
                 $validated['part_id'],
-                (float) $validated['quantity'],
+                // Passed as a string on purpose — see RecordWorkOrderPart.
+                (string) $validated['quantity'],
                 $request->user()->id,
                 $validated['notes'] ?? null
             );
