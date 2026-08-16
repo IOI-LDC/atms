@@ -7,7 +7,7 @@ use App\Models\Asset;
 use App\Models\Booking;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
-use DomainException;
+use App\Support\Assets\AssetWorkEligibility;
 use Illuminate\Support\Facades\DB;
 
 class CreateAssetBooking
@@ -17,9 +17,11 @@ class CreateAssetBooking
      */
     public function execute(Asset $asset, User $user, array $data): Booking
     {
-        if (! $asset->is_active) {
-            throw new DomainException('Cannot book an inactive asset.');
-        }
+        // Both axes, not just `is_active`. `Asset::booted` auto-releases active
+        // bookings when an asset is withdrawn *or* deactivated — checking only
+        // one here let a withdrawn asset be re-booked the moment after its own
+        // bookings were released, so the two halves of one rule disagreed.
+        AssetWorkEligibility::guard($asset, 'create a booking');
 
         $from = $data['booked_from'];
         $until = $data['booked_until'];

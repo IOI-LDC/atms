@@ -171,18 +171,21 @@ class ListOptionControllerTest extends TestCase
      * (`/api/admin/maintenance-categories`, covered in MaintenanceCategoryTest),
      * NOT through the generic master-data endpoint.
      *
-     * `/admin/master-data/{groupKey}` takes an arbitrary group key, so it
-     * answers for this name too — but it writes to `master_data_items`, an
-     * unrelated table, and cannot reach the vocabulary. This pins that.
+     * `/admin/master-data/{groupKey}` used to accept any group key, so it
+     * answered for this name too and merely wrote to the wrong table. Since 4a a
+     * managed-group allowlist rejects it outright. Both halves are asserted: the
+     * 404, and — regardless of the reason — that no category was created.
      */
     public function test_master_data_endpoint_does_not_write_to_maintenance_categories(): void
     {
         $this->actingAs($this->createUser(RoleCode::ADMINISTRATOR))
             ->postJson('/api/admin/master-data/maintenance_categories', [
                 'value' => 'SMUGGLED', 'label' => 'Smuggled',
-            ]);
+            ])
+            ->assertNotFound();
 
         $this->assertFalse(MaintenanceCategory::where('code', 'SMUGGLED')->exists());
+        $this->assertDatabaseMissing('master_data_items', ['group_key' => 'maintenance_categories']);
 
         $this->actingAs($this->createUser(RoleCode::ADMINISTRATOR))
             ->postJson('/api/list-options/maintenance_categories', ['code' => 'X', 'name' => 'X'])

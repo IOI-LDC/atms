@@ -69,6 +69,12 @@ return new class extends Migration
             ->where('condition_status', self::DEFAULT_VALUE)
             ->update(['condition_status' => null]);
 
-        DB::table('master_data_items')->where('group_key', self::GROUP)->delete();
+        // Scoped to the four values seeded above. A bare group delete would also
+        // take any condition an Admin added since, which is neither this
+        // migration's to remove nor recoverable.
+        DB::table('master_data_items')
+            ->where('group_key', self::GROUP)
+            ->whereIn('value', array_column(self::VALUES, 'value'))
+            ->delete();
     }
 };

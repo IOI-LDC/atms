@@ -115,10 +115,16 @@ class MasterDataController extends Controller
 
         // Mirrors the Unclassified-category guard: the default is what automatic
         // resets resolve to, so deactivating it would leave those writes with
-        // nothing to write. Change the default first, then retire this row.
+        // nothing to write.
+        //
+        // The message deliberately does not say "make another value the default
+        // first" — no endpoint accepts `is_default`, so that would send an Admin
+        // looking for a control that does not exist. Renaming is the one thing
+        // they *can* do here, so that is what it offers. Moving the default is
+        // 🟠 D-023, triggered the day LDC wants a reset target other than Normal.
         if ($item->is_default && ($validated['is_active'] ?? true) === false) {
             throw ValidationException::withMessages([
-                'is_active' => "\"{$item->label}\" is the default for this list and cannot be deactivated. Make another value the default first.",
+                'is_active' => "\"{$item->label}\" is the default for this list and cannot be deactivated. Rename it if the wording is wrong.",
             ]);
         }
 

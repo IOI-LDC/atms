@@ -3,6 +3,7 @@
 namespace Tests\Feature\Assets;
 
 use App\Enums\BookingStatus;
+use App\Enums\MaintenanceStatus;
 use App\Enums\RoleCode;
 use App\Models\Asset;
 use App\Models\Booking;
@@ -204,9 +205,14 @@ class AssetBookingTest extends TestCase
             ->assertCreated();
     }
 
-    // ── Inactive asset ──────────────────────────────────────────────────────────
+    // ── Ineligible asset ────────────────────────────────────────────────────────
+    //
+    // Booking goes through the shared `AssetWorkEligibility` guard, so both axes
+    // block and each says which one. Withdrawn used to pass here: `Asset::booted`
+    // releases an asset's bookings the moment it is withdrawn, and nothing then
+    // stopped the next request re-booking it.
 
-    public function test_cannot_book_an_inactive_asset(): void
+    public function test_cannot_book_a_deactivated_asset(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $asset = $this->createAsset(['is_active' => false]);
@@ -214,7 +220,42 @@ class AssetBookingTest extends TestCase
         $this->actingAs($admin)
             ->postJson("/api/assets/{$asset->id}/bookings", $this->bookingPayload())
             ->assertStatus(409)
-            ->assertJsonPath('message', 'Cannot book an inactive asset.');
+            ->assertJsonPath('message', 'Cannot create a booking for a deactivated asset.');
+    }
+
+    public function test_cannot_book_an_asset_withdrawn_from_maintenance(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset(['maintenance_status' => MaintenanceStatus::WITHDRAWN]);
+
+        $this->actingAs($admin)
+            ->postJson("/api/assets/{$asset->id}/bookings", $this->bookingPayload())
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Cannot create a booking for an asset withdrawn from maintenance.');
+    }
+
+    /**
+     * The hole the withdrawn axis closes, end to end: withdrawing an asset
+     * releases its bookings, and the release must stick.
+     */
+    public function test_withdrawing_an_asset_releases_its_booking_and_it_cannot_be_rebooked(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $asset = $this->createAsset();
+
+        $this->actingAs($admin)
+            ->postJson("/api/assets/{$asset->id}/bookings", $this->bookingPayload())
+            ->assertCreated();
+
+        $asset->update(['maintenance_status' => MaintenanceStatus::WITHDRAWN]);
+
+        $this->assertSame(BookingStatus::RELEASED, Booking::where('asset_id', $asset->id)->sole()->status);
+
+        $this->actingAs($admin)
+            ->postJson("/api/assets/{$asset->id}/bookings", $this->bookingPayload())
+            ->assertStatus(409);
+
+        $this->assertSame(1, Booking::where('asset_id', $asset->id)->count());
     }
 
     // ── Cancel ──────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ namespace Tests\Feature\Parts;
 
 use App\Enums\RoleCode;
 use App\Models\Asset;
+use App\Models\AuditLog;
 use App\Models\MaintenanceCategory;
 use App\Models\MaintenanceRequest;
 use App\Models\Part;
@@ -435,6 +436,52 @@ class PartCompatibilityTest extends TestCase
             ->assertOk();
 
         $this->assertSame('10.000', $part->refresh()->available_quantity);
+    }
+
+    /**
+     * The audit trail is the only record of how a balance *moved*. The part line
+     * stores the quantity taken, but not the stock either side of it, so a
+     * disputed count is only reconstructible from these two keys. Pinned as
+     * exact decimal strings rather than merely asserted present — a float
+     * creeping into either one is precisely the drift D2 exists to prevent.
+     */
+    public function test_stock_movement_is_recorded_in_the_audit_trail(): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('audited', $this->motor->id, '6 3/4', qty: 5);
+        $workOrder = $this->workOrderFor($asset);
+
+        $lineId = $this->addPart($workOrder, $part, '1.5')->assertCreated()->json('data.id');
+
+        $recorded = AuditLog::where('event', 'record_work_order_part')->sole();
+        $this->assertSame($part->id, $recorded->metadata['part_id']);
+        $this->assertSame('5.000', $recorded->metadata['available_quantity_before']);
+        $this->assertSame('3.500', $recorded->metadata['available_quantity_after']);
+
+        $this->actingAs($this->admin())
+            ->deleteJson("/api/work-orders/{$workOrder->id}/parts/{$lineId}")
+            ->assertOk();
+
+        $removed = AuditLog::where('event', 'delete_work_order_part')->sole();
+        $this->assertSame($part->id, $removed->metadata['part_id']);
+        $this->assertSame('3.500', $removed->metadata['available_quantity_before']);
+        $this->assertSame('5.000', $removed->metadata['available_quantity_after']);
+    }
+
+    /**
+     * A rejected line must leave no trace: no stock movement, and no audit row
+     * claiming one. The guard throws before the insert, so this pins that the
+     * transaction really did roll back rather than leaving a half-record.
+     */
+    public function test_a_rejected_line_records_no_stock_movement(): void
+    {
+        $asset = $this->asset($this->motor->id, '6 3/4');
+        $part = $this->part('guarded', $this->motor->id, '6 3/4', qty: 2);
+
+        $this->addPart($this->workOrderFor($asset), $part, 5)->assertStatus(409);
+
+        $this->assertSame('2.000', $part->refresh()->available_quantity);
+        $this->assertSame(0, AuditLog::where('event', 'record_work_order_part')->count());
     }
 
     public function test_requesting_more_than_available_is_rejected(): void

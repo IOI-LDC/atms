@@ -40,6 +40,12 @@ class AssetWorkEligibility
     /**
      * Throw unless new work may start against $asset.
      *
+     * @param  ?Asset  $asset  null passes deliberately. Several callers hold an
+     *                         optional asset — a work order raised against no
+     *                         asset, a maintenance request still unassigned —
+     *                         and "no asset" is not an ineligible one. Callers
+     *                         that require an asset enforce that themselves,
+     *                         through validation, before reaching this guard.
      * @param  string  $verb  the action being attempted, phrased to follow
      *                        "Cannot " and precede " for …" — e.g.
      *                        "assign a work order", "update location".

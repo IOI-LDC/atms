@@ -17,3 +17,6 @@ session-*.md
 *.csv
 !backend/database/data/assets.csv
 !backend/database/data/parts-migration-source.csv
+
+# Editor-local agent settings (per-machine, not shared)
+.qoder/

@@ -3,7 +3,90 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — Phase 4a SHIPPED: additive vocabulary schema)
+## Session — 2026-08-16 (latest — review hardening, pre-4b)
+
+**1130 tests green (was 1108), Pint clean.** No feature work: this closes the
+findings of an independent review of Phases 0–4a. That review found **zero
+critical issues and no scope creep**, and every claim in it that was checked
+against the source held — the first review of this work of which that is true.
+
+### Why this is one commit, not the three the review proposed
+
+The review recommended three test-only commits. Three of its "Minor" items were
+**real defects rather than missing proof**, and each is a few lines sitting in
+code 4b builds directly on. Shipping tests around known defects is the wrong
+trade when fixing them is cheaper than describing them.
+
+### Defects fixed
+
+- **The impossible instruction.** Deactivating a default master-data row
+  returned *"Make another value the default first."* No endpoint accepts
+  `is_default` — it appears exactly once in `app/Http/`, as a read — so an Admin
+  following that instruction hits a dead end. The message now offers the repair
+  that does exist (renaming). Promoting a different row is **🟠 D-023**, and its
+  trigger is the day LDC wants a reset target other than Normal. This mattered
+  more than it looked: 4b's close-reset resolves through `defaultFor()`.
+- **A rollback that destroyed data while claiming not to.** The
+  `asset_conditions` seed `down()` was commented *"Clear only what this
+  migration set"* and then deleted the whole group, taking any condition an
+  Admin had added. Now scoped to the four seeded values.
+- **The booking axis hole.** `Asset::booted` releases an asset's active bookings
+  when it is withdrawn *or* deactivated, but `CreateAssetBooking` only checked
+  `is_active`. So an asset could be withdrawn — watching its bookings release —
+  and immediately re-booked, and that booking stuck. The two halves of one rule
+  disagreed. Booking now goes through `AssetWorkEligibility`, making it the 9th
+  surface on the shared guard. ⚠️ **API change:** the deactivated-axis message
+  changed from `Cannot book an inactive asset.` to `Cannot create a booking for
+  a deactivated asset.`
+- **`ToggleAssetBooking` deleted.** Dead twice over: zero references anywhere
+  (unrouted, uncalled, untested), and it wrote `is_booked`, which is a derived
+  accessor on `Asset`, not a column. It would never have worked if it had been
+  reachable.
+
+### Test gaps closed
+
+- **Stock-movement audit payloads.** `record_work_order_part` and
+  `delete_work_order_part` both write `available_quantity_before`/`_after`, and
+  nothing asserted them — verified only by hand against the live DB in the
+  Phase 3 session. Now pinned as exact decimal strings, because a float creeping
+  into either key is precisely the drift D2 exists to prevent. A companion test
+  pins that a *rejected* line writes no audit row at all.
+- **`MasterDataItemTest`** (new) — the allowlist 404, `value` immutability, the
+  default-row protection, and role authorization. None of the three guards is
+  visible from the response shape, so a refactor could have dropped any of them
+  with the suite still green.
+- **`AssetConditionDefaultTest`** (new) — default resolution on **both** creation
+  paths (API and ERP import), explicit pass-through, and the no-active-default
+  case writing null rather than a guessed string.
+
+### Worth knowing for next time
+
+`seed_maintenance_priorities` **skips the testing connection by design** ("tests
+own their own fixtures"), while the 4a `asset_conditions` seed runs everywhere
+because condition behaviour depends on the vocabulary existing. A test that
+assumes a group is pre-seeded will pass for one and fail for the other. The
+managed-group test creates its own fixture so it is indifferent to which
+convention a group follows.
+
+### Housekeeping
+
+`.qoder/settings.local.json` untracked and the directory gitignored (per-machine
+editor state); the stale premise in `ListOptionControllerTest` corrected — it
+described the pre-allowlist behaviour and now asserts the 404 outright; TLD's
+long row no longer calls the `normal` default "proposed" when STATE and the 4a
+seed both record it confirmed.
+
+### State
+
+Phases 0–4a shipped and reviewed. **4b is next and every input to it is now
+resolved** — D6 confirmed (WO-start location moves must not stamp
+`need_inspection`). The missing rig/well_site locations are an **ops activation
+step, not a release gate**: the rule stays inert until LDC creates them.
+Building 4b and deploying it are separate decisions.
+
+---
+
+## Session — 2026-08-16 (Phase 4a SHIPPED: additive vocabulary schema)
 
 **1108 tests green, type-check clean, Pint clean. `operational_status` values
 are UNCHANGED — that is 4a's defining property.**
