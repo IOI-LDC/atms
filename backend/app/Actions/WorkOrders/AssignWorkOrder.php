@@ -2,13 +2,12 @@
 
 namespace App\Actions\WorkOrders;
 
-use App\Enums\MaintenanceStatus;
-use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Notifications\WorkOrders\WorkOrderAssignedNotification;
 use App\Services\Audit\AuditLogger;
+use App\Support\Assets\AssetWorkEligibility;
 use App\Support\FrontendUrl;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -20,9 +19,7 @@ class AssignWorkOrder
     {
         $asset = $workOrder->asset;
 
-        if ($asset && $asset->maintenance_status === MaintenanceStatus::WITHDRAWN) {
-            throw new DomainException('Cannot assign a work order for an inactive asset.');
-        }
+        AssetWorkEligibility::guard($asset, 'assign a work order');
 
         return DB::transaction(function () use ($workOrder, $assignToUserId, $assignedByUserId) {
             $logger = app(AuditLogger::class);

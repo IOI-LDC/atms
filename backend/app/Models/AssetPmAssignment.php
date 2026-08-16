@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Enums\MaintenanceRequestStatus;
-use App\Enums\MaintenanceStatus;
 use App\Enums\PmAssignmentOrigin;
 use App\Enums\WorkOrderStatus;
+use App\Support\Assets\AssetWorkEligibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -70,7 +70,13 @@ class AssetPmAssignment extends Model
 
     /**
      * The population a PM evaluation considers: an active assignment, on an
-     * active rule, for an asset still enrolled in maintenance.
+     * active rule, for an asset that may still receive new work.
+     *
+     * Asset eligibility is delegated to {@see AssetWorkEligibility::scope()} so
+     * this set cannot drift from the guard the request paths use. It used to
+     * check `maintenance_status` alone, which left the scheduled job raising PM
+     * requests for deactivated assets that every hand-written entry point
+     * refused — and `is_active = false` is now the only "out of ATMS" control.
      *
      * `UpcomingPmReportQuery` mirrors this set — keep the two in step.
      *
@@ -81,7 +87,7 @@ class AssetPmAssignment extends Model
         $query
             ->where('asset_pm_assignments.is_active', true)
             ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
-            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', MaintenanceStatus::ENROLLED));
+            ->whereHas('asset', fn ($q) => AssetWorkEligibility::scope($q));
     }
 
     /**

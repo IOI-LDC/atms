@@ -10,6 +10,7 @@ use App\Models\MaintenanceRequest;
 use App\Services\Audit\AuditLogger;
 use App\Services\Pm\PmDueCalculator;
 use App\Services\Pm\PmEvaluationBatch;
+use App\Support\Assets\AssetWorkEligibility;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -35,6 +36,11 @@ class EvaluatePmRule
             if (! $locked->is_active || ! $locked->pmRule?->is_active) {
                 throw new DomainException('Inactive PM assignments cannot be evaluated.');
             }
+
+            // The scheduler filters this population out through
+            // AssetWorkEligibility::scope() on scopeEvaluable; the direct and
+            // evaluate-all paths reach an assignment by id, so they check here.
+            AssetWorkEligibility::guard($locked->asset, 'evaluate preventive maintenance');
 
             if ($locked->hasActiveChain()) {
                 throw new DomainException('PM assignment already has an active maintenance chain.');

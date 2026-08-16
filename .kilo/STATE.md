@@ -3,7 +3,71 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — implementation plan reviewed ×3; Phase 0 doc hygiene done)
+## Session — 2026-08-16 (latest — Phase 1 SHIPPED: unified asset-eligibility guard)
+
+**First code of the status-vocabulary work. 1092 tests green (3348 assertions),
+Pint clean on all 12 touched files.**
+
+### What shipped
+
+`app/Support/Assets/AssetWorkEligibility.php` — one guard, both axes
+(`maintenance_status = withdrawn` and `is_active = false`), replacing four
+hand-rolled inline checks that had drifted apart. Two entry points:
+
+- `guard(?Asset, string $verb)` for row checks — throws `DomainException` with
+  a **cause-distinct** message ("…for an asset withdrawn from maintenance." vs
+  "…for a deactivated asset."). The old wording said "inactive asset" for a
+  *withdrawn* asset, which named the wrong switch.
+- `scope(Builder)` for population checks — used by the PM scheduler, the
+  evaluate-all batch, and R-1.
+
+Eight surfaces now go through it: MR create (422), MR approve corrective +
+preventive (409), WO assign (409), WO start (409, new), direct PM evaluation
+(409, new), evaluate-all batch, `scopeEvaluable` (the scheduler), and asset
+location change.
+
+### Two things worth knowing
+
+1. **The scheduler was the real hole.** `AssetPmAssignment::scopeEvaluable`
+   filtered on `maintenance_status` only, and both `EvaluatePmRulesJob` and
+   `EvaluatePmAssignmentsJob` inherit it — so the daily 06:00 job kept raising
+   PM requests for deactivated assets long after every hand-written entry point
+   refused them. A fix covering only the MR/WO paths would have looked
+   complete. `UpcomingPmReportQuery` (R-1) was mirrored in the same change:
+   it forecasts what the scheduler will raise, so a divergence there predicts
+   work that never arrives.
+2. **`AssetLocationController` was an undocumented eighth surface** — a
+   hand-rolled `is_active` check returning **422** with its own wording, and no
+   `withdrawn` check at all. Now the shared guard at **409** (precondition
+   failure on an existing resource, matching the house pattern). No test pinned
+   the old behaviour. **Frontend is unaffected**: `ApiError.validationErrors`
+   requires status 422 *and* an `errors` key, and that response never had
+   `errors`, so both old and new fall through to `e.message` identically.
+
+### API contract changes (small, but real)
+
+- `POST /assets/{id}/location` on an ineligible asset: **422 → 409**.
+- Three guard messages changed wording. `MaintenanceStatusGuardTest`'s three
+  assertions were updated, and its test names went `test_inactive_asset_*` →
+  `test_withdrawn_asset_*` — they always tested the withdrawn axis, and
+  "inactive" is now a different, real axis.
+
+### Not done here
+
+Phase 1 is a **start** guard, never a **finish** guard — complete, close and
+cancel are deliberately untouched, and two tests pin that an asset deactivated
+mid-repair can still have its work order completed, closed and cancelled.
+Stranding open work helps nobody.
+
+### Next
+
+Phase 2 (RQ4 — expose `erp_part_code`), then Phase 3 (stock decrement, which
+needs the F1/F3 corrections already written into the plan). Phase 4 is now
+unblocked — Phase 1 was its only gate.
+
+---
+
+## Session — 2026-08-16 (implementation plan reviewed ×3; Phase 0 doc hygiene done)
 
 **Nothing in `app/`, `frontend/src/` or `database/` changed. This session
 produced an execution plan and corrected the docs it depends on.**

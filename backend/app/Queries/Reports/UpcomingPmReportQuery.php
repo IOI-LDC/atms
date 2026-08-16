@@ -3,19 +3,20 @@
 namespace App\Queries\Reports;
 
 use App\Enums\MaintenanceRequestStatus;
-use App\Enums\MaintenanceStatus;
 use App\Enums\PmTriggerType;
 use App\Enums\WorkOrderStatus;
 use App\Models\AssetPmAssignment;
 use App\Models\MaintenanceRequest;
 use App\Models\WorkOrder;
+use App\Support\Assets\AssetWorkEligibility;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 /**
  * R-1: upcoming date-triggered PM schedule. Loads eligible assignments
- * (mirrors EvaluatePmRulesJob: active assignment + active rule + enrolled
- * asset, date-triggered only), then projects next_due from the calculator's
+ * (mirrors EvaluatePmRulesJob: active assignment + active rule + an asset that
+ * passes AssetWorkEligibility, date-triggered only), then projects next_due
+ * from the calculator's
  * null-policy (never-triggered = due-now, excluded from the forward window).
  * Chain status is resolved in bulk (3 queries: pending MRs + active WOs +
  * eager-loaded MR relation) to avoid the N+1 of
@@ -36,7 +37,10 @@ class UpcomingPmReportQuery
         $assignments = AssetPmAssignment::where('is_active', true)
             ->whereHas('pmRule', fn ($q) => $q->where('is_active', true)
                 ->whereIn('trigger_type', [PmTriggerType::DATE, PmTriggerType::DATE_OR_READING]))
-            ->whereHas('asset', fn ($q) => $q->where('maintenance_status', MaintenanceStatus::ENROLLED))
+            // Mirrors AssetPmAssignment::scopeEvaluable's asset filter through the
+            // same helper: this report predicts what the scheduler will raise, so
+            // if the two populations diverge it forecasts work that never comes.
+            ->whereHas('asset', fn ($q) => AssetWorkEligibility::scope($q))
             ->when($filters['pm_rule_id'] ?? null, fn ($q, $v) => $q->where('pm_rule_id', $v))
             ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->whereHas('asset', fn ($aq) => $aq->where('current_location_id', $v)))
             ->with(['asset.currentLocation', 'asset.maintenanceCategory', 'pmRule'])

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\WorkOrder;
 use App\Notifications\WorkOrders\WorkOrderStartedNotification;
 use App\Services\Audit\AuditLogger;
+use App\Support\Assets\AssetWorkEligibility;
 use App\Support\FrontendUrl;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,11 @@ class StartWorkOrder
             if ($locked->assigned_to_user_id === null) {
                 throw new DomainException('Work order must be assigned before starting.');
             }
+
+            // Starting is starting new work, so the asset must still be eligible
+            // for it — checked before the location move below, which would
+            // otherwise relocate an asset whose work order cannot begin.
+            AssetWorkEligibility::guard($locked->asset, 'start a work order');
 
             $assignee = User::find($locked->assigned_to_user_id);
             if (! $assignee || ! $assignee->isWorkOrderAssignee()) {

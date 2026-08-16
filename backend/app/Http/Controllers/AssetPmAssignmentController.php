@@ -11,6 +11,7 @@ use App\Models\Asset;
 use App\Models\AssetPmAssignment;
 use App\Models\PmRule;
 use App\Services\Pm\PmEvaluationRunner;
+use App\Support\Assets\AssetWorkEligibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -145,6 +146,9 @@ class AssetPmAssignmentController extends Controller
         AssetPmAssignment::query()
             ->where('asset_pm_assignments.is_active', true)
             ->whereHas('pmRule', fn ($q) => $q->where('is_active', true))
+            // Same asset-eligibility filter the scheduler applies, so pressing
+            // this button cannot raise requests the nightly job would not.
+            ->whereHas('asset', fn ($q) => AssetWorkEligibility::scope($q))
             ->with('pmRule')
             ->chunkById(200, function ($assignments) use ($runner, $userId, &$evaluated, &$generated) {
                 $result = $runner->run($assignments, $userId);

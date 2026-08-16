@@ -6,7 +6,6 @@ use App\Actions\WorkOrders\ApplyWorkOrderAssetStatusTransition;
 use App\Actions\WorkOrders\AssignWorkOrder;
 use App\Actions\WorkOrders\SnapshotFormTemplateIntoWorkOrder;
 use App\Enums\MaintenanceRequestStatus;
-use App\Enums\MaintenanceStatus;
 use App\Enums\OperationalStatus;
 use App\Enums\WorkOrderStatus;
 use App\Models\BusinessNumberSequence;
@@ -15,6 +14,7 @@ use App\Models\User;
 use App\Models\WorkOrder;
 use App\Notifications\MaintenanceRequests\MaintenanceRequestApprovedNotification;
 use App\Services\Audit\AuditLogger;
+use App\Support\Assets\AssetWorkEligibility;
 use App\Support\FrontendUrl;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +26,9 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
     {
         $asset = $maintenanceRequest->asset;
 
-        if ($asset && $asset->maintenance_status === MaintenanceStatus::WITHDRAWN) {
-            throw new DomainException('Cannot approve a maintenance request for an inactive asset.');
-        }
+        // Covers preventive approvals too: a PM request raised before the asset
+        // left the programme can still be sitting in the queue afterwards.
+        AssetWorkEligibility::guard($asset, 'approve a maintenance request');
 
         return DB::transaction(function () use ($maintenanceRequest, $approvedByUserId, $assignToUserId, $isFailure) {
             $logger = app(AuditLogger::class);

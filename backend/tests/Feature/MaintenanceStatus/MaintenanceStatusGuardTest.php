@@ -66,7 +66,14 @@ class MaintenanceStatusGuardTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_inactive_asset_rejects_corrective_mr_creation(): void
+    // ── Withdrawal blocks new work ────────────────────────────────────────────
+    //
+    // These cover the `maintenance_status` axis only. The `is_active` axis and
+    // the full surface list live in `tests/Feature/Assets/InactiveAssetGuardTest`
+    // — both axes run through `AssetWorkEligibility`, so the messages below are
+    // deliberately cause-specific and must stay that way.
+
+    public function test_withdrawn_asset_rejects_corrective_mr_creation(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $asset = $this->createAsset(MaintenanceStatus::WITHDRAWN);
@@ -76,10 +83,10 @@ class MaintenanceStatusGuardTest extends TestCase
             'priority' => 'high',
             'description' => 'Should fail',
         ])->assertStatus(422)
-            ->assertJsonPath('message', 'Cannot create a maintenance request for an inactive asset.');
+            ->assertJsonPath('message', 'Cannot create a maintenance request for an asset withdrawn from maintenance.');
     }
 
-    public function test_inactive_asset_rejects_wo_assignment(): void
+    public function test_withdrawn_asset_rejects_wo_assignment(): void
     {
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $tech = $this->createUser(RoleCode::TECHNICIAN);
@@ -106,10 +113,10 @@ class MaintenanceStatusGuardTest extends TestCase
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/assign", [
             'user_id' => $tech->id,
         ])->assertStatus(409)
-            ->assertJsonPath('message', 'Cannot assign a work order for an inactive asset.');
+            ->assertJsonPath('message', 'Cannot assign a work order for an asset withdrawn from maintenance.');
     }
 
-    public function test_inactive_asset_rejects_mr_approval(): void
+    public function test_withdrawn_asset_rejects_mr_approval(): void
     {
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
         $asset = $this->createAsset(MaintenanceStatus::WITHDRAWN);
@@ -126,7 +133,7 @@ class MaintenanceStatusGuardTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/maintenance-requests/{$mr->id}/approve", ['is_failure' => true])
             ->assertStatus(409)
-            ->assertJsonPath('message', 'Cannot approve a maintenance request for an inactive asset.');
+            ->assertJsonPath('message', 'Cannot approve a maintenance request for an asset withdrawn from maintenance.');
     }
 
     // ── Legacy input rejected (shims removed) ──────────────────────────────────

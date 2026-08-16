@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Assets\UpdateAssetLocation;
 use App\Models\Asset;
 use App\Models\Location;
+use App\Support\Assets\AssetWorkEligibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -21,8 +22,14 @@ class AssetLocationController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        if (! $asset->is_active) {
-            return response()->json(['message' => 'Cannot update location for an inactive asset.'], 422);
+        // Was a hand-rolled `is_active` check returning 422. It now goes through
+        // the shared guard so both axes block and the message names the cause;
+        // 409 matches the house pattern for a precondition failure on an
+        // existing resource, and lines this route up with the other entry points.
+        try {
+            AssetWorkEligibility::guard($asset, 'update location');
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
         }
 
         $location = Location::findOrFail($validated['location_id']);
