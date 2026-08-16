@@ -1,7 +1,7 @@
 # RQ1 — PM level marking during a work order (mini-spec)
 
-**Status: draft for decision.** Phase 6 is gated on this document existing and
-being agreed (🟠 D-022). Nothing here is built.
+**Status: AGREED 2026-08-16 — Phase 6 is executable.** The 🟠 D-022 gate is
+discharged: all five §4 decisions are confirmed. Nothing here is built yet.
 
 Resolves the deep dive the design left open: *"while they work" — mid-WO entry
 vs close-time marking*, plus the cascade generalisation and the persistence
@@ -174,21 +174,20 @@ otherwise marking one looks like it did nothing.
 
 ---
 
-## 4. Decisions I need from you
+## 4. Decisions — ALL FIVE CONFIRMED (user, 2026-08-16)
 
-These are the gate. I have a recommendation for each and will proceed on them if
-you'd rather not litigate every one.
+The user declined to litigate these individually and accepted every
+recommendation as written. Recorded here so the reasoning is not reopened.
 
-1. **Staged, or applied immediately?** *Recommend staged* (§3.1). This is D4 and
+1. ✅ **Staged.** *(was: recommend staged)* (§3.1). This is D4 and
    it is the only genuinely load-bearing choice here.
-2. **One mark per work order, or several?** *Recommend one* — the ladder is
+2. ✅ **One mark per work order.** *(was: recommend one)* — the ladder is
    cumulative, so a second mark can only be redundant or contradictory.
-3. **Close payload vs staged mark on conflict.** *Recommend the payload wins,
-   audited* (§3.3).
-4. **Can a technician clear a mark after marking it?** *Recommend yes*, same
+3. ✅ **Close payload wins, audited.** *(was: recommend the payload wins)* (§3.3).
+4. ✅ **Yes, a technician may clear their own mark**, same
    permission as setting it. The alternative traps a mistake until a manager is
    found.
-5. **Does a custom-level mark warrant a warning at close?** *Recommend no* — it
+5. ✅ **No warning for a custom-level mark.** *(was: recommend no)* — it
    is a legitimate thing to record; it just cascades to nothing, and the UI says
    so at the point of choosing.
 
