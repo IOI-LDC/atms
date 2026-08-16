@@ -3,7 +3,35 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — Release 4b SHIPPED: the vocabulary switch)
+## Session — 2026-08-16 (latest — Q7 answered: R-11 cancelled)
+
+**LDC answered Q7: No.** They do not want a withdrawn / out-of-service assets
+report. **Phase 8 is cancelled, not deferred** — it contained R-11 and nothing
+else — and 🟠 D-021 is retired without code having been written for it.
+
+**Every LDC question on the vocabulary programme is now closed.** What remains
+is internal: D5 (is an attachment required at completion, and what counts as the
+qualifying one), the Phase 6 and Phase 7 mini-specs, and deploying 4b.
+
+**Why the reasoning is worth keeping.** A plain count of deactivated assets was
+always trivial. The version LDC might one day actually want — grouped by *why*
+the asset left (lost in hole / damaged beyond repair / scrapped / disposed) — is
+**not recoverable from the data**. Those labels had no home in the agreed
+vocabulary, `maintenance_sub_status` never held a value (400/400 NULL), and
+nothing records a reason at deactivation. Reviving that report means adding a
+withdrawal-reason field and populating it going forward; every already-retired
+asset would carry no reason at all. Record this before it is rediscovered as a
+surprise mid-build.
+
+Also on 4c: **`maintenance_sub_status` is now retained, not dropped** (`f45c11a`).
+Phase 2 Assembly derives `installed`/`ready` from `parent_asset_id` per 🟠 P2-001,
+so it should not be needed — but the column is 400 NULLs with no readers left,
+and dropping it early buys nothing while being awkward to undo. 4c is
+`erp_status` only.
+
+---
+
+## Session — 2026-08-16 (Release 4b SHIPPED: the vocabulary switch)
 
 **1181 tests green (was 1132), Pint clean, vue-tsc clean, SPA builds.** This is
 the breaking half of the vocabulary rollout, and the only release in the

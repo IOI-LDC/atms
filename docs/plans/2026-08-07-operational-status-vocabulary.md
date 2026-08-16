@@ -265,12 +265,15 @@ close-cascade).
 4. P2-001 edge case: leaning — parent-as-asset-row (decide at P2-001
    design).
 5. Reporting: R-10B not restorable (its data source is deprecated);
-   R-11 only as a simplified withdrawn-assets count if LDC wants it —
-   **this is the one item still gated on Q7, which is unanswered**;
-   categorical LIH/DBR/Scrapped reporting needs a distinguishing source
-   (e.g. a withdrawal-reason value) — none exists today. `condition_status`
-   joins R-1 and the Asset Distribution report + CSV as a filter/dimension
-   **in the vocabulary release itself** (not deferred behind Q7).
+   **R-11 is cancelled — LDC answered Q7 "No" on 2026-08-16**: they do not
+   want a withdrawn / out-of-service report. Recorded rather than dropped
+   because the reason matters if it is ever revived: categorical
+   LIH/DBR/Scrapped reporting needs a distinguishing source (e.g. a
+   withdrawal-reason value), and none exists today — the agreed vocabulary
+   gives those labels no home, so the field would have to be added and
+   populated going forward before such a report is possible.
+   `condition_status` joins R-1 and the Asset Distribution report + CSV as a
+   filter/dimension **in the vocabulary release itself**.
 
 **Implementation order (recorded):** 1) the `is_active` MR/WO/PM gating fix
 (live defect, independent of LDC answers, prerequisite for removing

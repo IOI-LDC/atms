@@ -22,7 +22,7 @@
 | Q4 | MR approval offers **Tajoura Base**; default keep-current | Phase 4b Task 4.6 (was missing in v1) |
 | Q5 | PM marking **during work AND at completion**; cumulative L3 ⊇ L2 ⊇ L1 | Phase 6 (mid-WO semantics defined below) |
 | Q6 | **ERP is the quantity authority**; CSV updates interim; **recording a part on a WO decrements quantity** | Phase 3 + Phase 7 + TLD 🟠 trigger |
-| Q7 | **UNANSWERED** — withdrawn report | Gates only R-11 |
+| Q7 | **NO** (answered 2026-08-16) — LDC does not want a withdrawn/out-of-service report | **Phase 8 cancelled**; R-11 not built |
 | Q8 | `erp_part_code` is the only business identifier; **keep the table PK as the internal key** for ERP sync and CSV upload | Phase 7: export/upload resolve by `parts.id`; `erp_part_id` = ERP correlation only |
 
 **Decisions made in this revision (record, implement):**
@@ -37,7 +37,7 @@
 - D4 Mid-WO PM marking is **staged**: recorded during the WO, persisted at close, discarded on cancel (confirm with user before Phase 6).
 - D5 RQ2 attachment is **required at completion** (recommended; confirm with user in Phase 5).
 
-**Still open / activation steps:** Q7; D4/D5 confirmation; `normal` default-name confirmation (before 4a seeding); LDC creates rig/well_site locations (ops activation — NOT a release gate).
+**Still open / activation steps:** D4/D5 confirmation; `normal` default-name confirmation (before 4a seeding); LDC creates rig/well_site locations (ops activation — NOT a release gate).
 
 ---
 
@@ -162,7 +162,7 @@
 - **Manual override (D3/D7):** `setAssetStatus` validation + WO dialog allow `ready_for_field | under_maintenance | failure` (never `at_the_field`); cancel validation uses `Rule::in(['failure', 'ready_for_field'])`, NOT `Rule::enum` (which would accept all four). Asset create/update (`AssetController.php:57,113`) get the same three-value subset.
 - **Condition API contract (concrete tasks, not implied):** `AssetController` validates `condition_status` via `Rule::in` resolved from **active** `asset_conditions` rows; `AssetResource` exposes `condition_status` + its label; `ListOptionController.php:24` gains the `asset_conditions` group (currently hardcoded groups only); frontend `useListOptions.ts` gains `loadAssetConditions()`; `MasterDataItem` gets `is_default` in fillable + boolean cast (4a). Tests: picker serves seeded labels, inactive labels excluded, default resolution, close reset, cancel preservation, warning behavior.
 - **Consumer manifest (floor list — regenerate from `rg` immediately before 4b implementation):** `CloseWorkOrder.php:59-64` guard removal + docblocks `:18-21`, `ApplyWorkOrderAssetStatusTransition.php:18-21`, `AssetHealthKpiQuery.php:51-55` (`by_status.down → by_status.failure` — API contract rename, in release notes), `AssetUtilisationQuery.php:129` (DOWN), `AssetDistributionReportQuery.php:138-141,217-220` (`down_count → failure_count`), `OperationalStatusDistributionReportQuery.php:9`, `AssetStatusReportQuery.php:25`, `ReportCsvColumns.php:64-71` + `ReportCsvExportTest.php`, `AssetController.php:59,115` (+ maintenance_sub_status validation removal), `AssetResource.php:38`, `Asset.php:33,56` fillable/cast, frontend `types`, `displayHelpers`, `assetColumns`, `AssetDetailView` (status 4 + condition picker fed by list options; sub-status picker removed), `WorkOrderDetailView` close dialog (no choice + warning), `useWorkOrderDetail.ts:236` payload types, `reportOptions`, R-1/Asset Distribution views, `DashboardView.vue`, `AssetStatusReport.vue`, `useDashboardKpis`, `useLists.ts:21-40` (`asset_conditions` LIST_GROUPS entry — otherwise no Admin UI), user manual (enumerate: `:511, :1102, :1148-1150, :1171-1195` "scraped is terminal" subsection, `:1735-1740, :1821-1825, :1918`, glossary `:3624-3640`), `docs/API.md:55-59` **and `:78`** (the `/work-orders/{workOrder}/asset-status` row also says "limited to `down` | `ready_for_field`" — two stale spots, not one), `docs/PRODUCT.md:207`.
-- **Reporting (mandatory in this release, not Phase 8):** `condition_status` as filter + dimension in R-1, Asset Distribution, and CSV exports. Only R-11 stays behind Q7; R-10B stays removed.
+- **Reporting (mandatory in this release, not Phase 8):** `condition_status` as filter + dimension in R-1, Asset Distribution, and CSV exports. R-11 is cancelled (Q7 = No) and R-10B stays removed.
 - Tests: full sweep — the five v1-named files PLUS `AssetUtilisationTest.php`, `AssetStatusReportTest.php`, `ReportCsvExportTest.php`, `StartWorkOrderLocationTest.php`, `RenameOperationalStatusValuesTest.php:50,75` (comment or migrate the raw `scraped` assertion), contract tests for the renamed API keys.
 
 **Release 4c — legacy removal (after 4b is verified live):**
@@ -183,7 +183,18 @@ Execute only after a mini-spec (with user) resolves: the staged-record model/tab
 ## Phase 7 — RQ3: parts CSV down/up (DESIGN GATE — not executable as written)
 Execute only after a mini-spec pins: export route/controller + exact CSV columns (`parts.id`, `erp_part_code`, name, quantity, …) + error contract; upload route/request/action + UI + tests. Q8 semantics pinned: **live ERP matching still uses external `erp_part_id`; ATMS relationships and CSV uploads use `parts.id`.** Ownership: ERP authority; overwrite trigger recorded 🟠 (Phase 3).
 
-## Phase 8 — R-11 (after Q7): simplified withdrawn count if LDC says yes. Nothing else lives here.
+## Phase 8 — CANCELLED (Q7 answered "No", 2026-08-16)
+
+LDC does not want a withdrawn / out-of-service report, so R-11 is not built and
+this phase has no remaining content.
+
+If it is ever revived, the constraint that killed the interesting version still
+holds: a report **grouped by reason** (lost in hole / damaged beyond repair /
+scrapped / disposed) is not recoverable from asset data. Those labels had no
+home in the agreed vocabulary, so a withdrawal-reason field has to be added and
+populated going forward *before* such a report is possible — and existing
+retired assets would carry no reason at all. A plain count of deactivated assets
+remains trivially buildable at any time.
 
 ---
 
