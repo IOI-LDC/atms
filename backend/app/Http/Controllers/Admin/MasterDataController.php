@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class MasterDataController extends Controller
 {
@@ -65,6 +66,8 @@ class MasterDataController extends Controller
     public function indexMasterData(string $groupKey): JsonResponse
     {
         Gate::authorize('manage', MasterDataItem::class);
+        $this->guardManagedGroup($groupKey);
+
         $items = MasterDataItem::where('group_key', $groupKey)->orderBy('sort_order')->get();
 
         return response()->json(['data' => $items]);
@@ -73,10 +76,17 @@ class MasterDataController extends Controller
     public function storeMasterDataItem(Request $request, string $groupKey): JsonResponse
     {
         Gate::authorize('manage', MasterDataItem::class);
+        $this->guardManagedGroup($groupKey);
 
         $validated = $request->validate([
-            'value' => ['required', 'string'],
-            'label' => ['required', 'string'],
+            'value' => [
+                'required', 'string', 'max:64',
+                // Stored values are referenced by other tables, so they follow
+                // the house convention rather than free text.
+                'regex:/^[a-z][a-z0-9_]*$/',
+                Rule::unique('master_data_items', 'value')->where('group_key', $groupKey),
+            ],
+            'label' => ['required', 'string', 'max:255'],
             'sort_order' => ['integer'],
             'is_active' => ['boolean'],
         ]);
@@ -91,17 +101,39 @@ class MasterDataController extends Controller
     public function updateMasterDataItem(Request $request, MasterDataItem $item): JsonResponse
     {
         Gate::authorize('manage', MasterDataItem::class);
+        $this->guardManagedGroup($item->group_key);
 
+        // `value` is deliberately absent: it is what other tables store, so
+        // editing it orphans every record pointing at the old string
+        // (`assets.condition_status`, `maintenance_requests.priority`). Renaming
+        // is what `label` is for — that is the half users actually read.
         $validated = $request->validate([
-            'value' => ['string'],
-            'label' => ['string'],
+            'label' => ['string', 'max:255'],
             'sort_order' => ['integer'],
             'is_active' => ['boolean'],
         ]);
 
+        // Mirrors the Unclassified-category guard: the default is what automatic
+        // resets resolve to, so deactivating it would leave those writes with
+        // nothing to write. Change the default first, then retire this row.
+        if ($item->is_default && ($validated['is_active'] ?? true) === false) {
+            throw ValidationException::withMessages([
+                'is_active' => "\"{$item->label}\" is the default for this list and cannot be deactivated. Make another value the default first.",
+            ]);
+        }
+
         $item->update($validated);
 
         return response()->json(['data' => $item]);
+    }
+
+    /**
+     * The route takes the group key as a free string, so an unknown one would
+     * otherwise silently create a vocabulary nothing reads.
+     */
+    private function guardManagedGroup(string $groupKey): void
+    {
+        abort_unless(in_array($groupKey, MasterDataItem::MANAGED_GROUPS, true), 404);
     }
 
     public function indexUsageReadingTypes(): JsonResponse

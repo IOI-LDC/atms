@@ -4,6 +4,7 @@ namespace App\Actions\Assets;
 
 use App\Enums\OperationalStatus;
 use App\Models\Asset;
+use App\Models\MasterDataItem;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -22,6 +23,11 @@ class CreateAsset
                 'model' => $data['model'] ?? null,
                 'manufacturer' => $data['manufacturer'] ?? null,
                 'operational_status' => $data['operational_status'] ?? OperationalStatus::READY_FOR_FIELD->value,
+                // Resolved from the vocabulary, not hardcoded — Admins own which
+                // value is the default. Null only if the group is missing entirely,
+                // which the 4a seed rules out on any migrated database.
+                'condition_status' => $data['condition_status']
+                    ?? MasterDataItem::defaultFor(MasterDataItem::ASSET_CONDITIONS)?->value,
                 'current_location_id' => $data['current_location_id'] ?? null,
                 'is_active' => true,
             ]);

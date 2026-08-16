@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AssetKind;
+use App\Enums\BookingStatus;
 use App\Enums\MaintenanceStatus;
 use App\Enums\MaintenanceSubStatus;
 use App\Enums\OperationalStatus;
@@ -31,6 +32,10 @@ class Asset extends Model
         'is_active',
         'maintenance_status',
         'maintenance_sub_status',
+        // Hand-set label vocabulary (`asset_conditions` master data). A plain
+        // string, not an enum cast: LDC adds and renames these through the Admin
+        // UI, and a cast would make every query touching an unrecognised row throw.
+        'condition_status',
         'asset_kind',
         'asset_tag',
         'asset_tag_generated_at',
@@ -70,7 +75,7 @@ class Asset extends Model
 
             if ($shouldRelease) {
                 $asset->bookings()->active()->update([
-                    'status' => \App\Enums\BookingStatus::RELEASED,
+                    'status' => BookingStatus::RELEASED,
                     'cancelled_at' => now(),
                 ]);
             }

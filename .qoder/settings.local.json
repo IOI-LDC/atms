@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --no-pager log --oneline -8 && echo --- && git --no-pager show --stat --oneline 950ca0b | head -30)",
+      "Bash(ls backend/app/Support/Assets/ backend/tests/Feature/Assets/ 2>/dev/null; git --no-pager diff --stat 61930de~1..9c0714a | tail -5)",
+      "Bash(git rev-parse dbe218d 9c0714a && git --no-pager log --oneline dbe218d..9c0714a)",
+      "Bash(for sha in 950ca0b 61930de 90f0a59 9c0714a; do echo \"=== $sha ===\"; git show --stat --oneline $sha | head -50; done)"
+    ]
+  }
+}

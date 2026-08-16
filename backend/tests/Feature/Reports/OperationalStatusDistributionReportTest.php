@@ -52,7 +52,14 @@ class OperationalStatusDistributionReportTest extends TestCase
         $this->getJson('/api/reports/asset-status-distribution')->assertUnauthorized();
     }
 
-    public function test_returns_all_six_statuses_with_zero_for_missing(): void
+    /**
+     * The contract is "every status the enum defines, zero-filled" — not a
+     * fixed count. Deriving the expectation from the enum keeps this honest
+     * across the vocabulary transition, where 4a widens the set and 4b narrows
+     * it again; a hardcoded list would just need rewriting at each step while
+     * asserting less.
+     */
+    public function test_returns_every_defined_status_with_zero_for_missing(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $this->createAsset(['operational_status' => OperationalStatus::READY_FOR_FIELD]);
@@ -60,12 +67,17 @@ class OperationalStatusDistributionReportTest extends TestCase
         $this->createAsset(['operational_status' => OperationalStatus::DOWN]);
 
         $json = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
+        $counts = $this->counts($json['items']);
 
         $this->assertSame(3, $json['summary']['total']);
         $this->assertSame(
-            ['ready_for_field' => 2, 'under_maintenance' => 0, 'down' => 1, 'scraped' => 0, 'under_inspection' => 0, 'lih' => 0],
-            $this->counts($json['items'])
+            array_map(fn (OperationalStatus $s) => $s->value, OperationalStatus::cases()),
+            array_keys($counts),
+            'Every enum case must appear, in declaration order.',
         );
+        $this->assertSame(2, $counts['ready_for_field']);
+        $this->assertSame(1, $counts['down']);
+        $this->assertSame(0, $counts['under_maintenance']);
     }
 
     public function test_scraped_operational_status_is_shown_not_hidden(): void
@@ -126,10 +138,13 @@ class OperationalStatusDistributionReportTest extends TestCase
 
         $json = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
 
+        $counts = $this->counts($json['items']);
+
         $this->assertSame(0, $json['summary']['total']);
         $this->assertSame(
-            ['ready_for_field' => 0, 'under_maintenance' => 0, 'down' => 0, 'scraped' => 0, 'under_inspection' => 0, 'lih' => 0],
-            $this->counts($json['items'])
+            array_map(fn (OperationalStatus $s) => $s->value, OperationalStatus::cases()),
+            array_keys($counts),
         );
+        $this->assertSame([0], array_values(array_unique($counts)), 'An empty register is all zeros.');
     }
 }

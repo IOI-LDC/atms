@@ -3,7 +3,79 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — Phase 3 SHIPPED: parts stock decrement/restore)
+## Session — 2026-08-16 (latest — Phase 4a SHIPPED: additive vocabulary schema)
+
+**1108 tests green, type-check clean, Pint clean. `operational_status` values
+are UNCHANGED — that is 4a's defining property.**
+
+4a is the additive half of the vocabulary rollout: it is safe to run against a
+live database with the **old code still deployed**, and safe to roll back. The
+value migration and the enum narrowing belong to **4b**, behind the downtime
+cutover.
+
+### What shipped
+
+- **`OperationalStatus` now holds 8 cases** — the 4 agreed values
+  (`ready_for_field`, `under_maintenance`, `failure`, `at_the_field`) *plus* the
+  4 legacy ones, below a divider. Both sets must coexist during 4a: the enum has
+  to deserialize the `down`/`scraped` rows still in the table while accepting
+  the new values. `current()` and `legacy()` expose the two sets so pickers can
+  offer only what survives 4b.
+- **`assets.condition_status`** — nullable string with an index, no enum cast
+  (LDC renames these through the Admin UI; a cast would throw on an unrecognised
+  row).
+- **`master_data_items.is_default`** + a **partial unique index**
+  `UNIQUE (group_key) WHERE is_default`. That index is what makes
+  `MasterDataItem::defaultFor()` deterministic — without it two rows could claim
+  the flag and the resolved default would be planner luck.
+- **Vocabulary seeded**: Normal (default) → Need Assembly → Missing Parts →
+  Need Inspection, and all 400 assets backfilled to `normal`.
+- **Creation paths resolve the default** rather than hardcoding it — `CreateAsset`
+  and `ImportErpAssetsCommand` (which caches it once per run). The workbook
+  import only *updates* existing assets, so it needed nothing.
+- **`MasterDataController` hardened**: group allowlist (404 on anything not in
+  `MANAGED_GROUPS`), `value` is now **immutable** on update — it is what
+  `assets.condition_status` and `maintenance_requests.priority` store, so
+  editing it orphans records; renaming is what `label` is for. The default row
+  cannot be deactivated, mirroring the Unclassified-category guard.
+
+### The default's name
+
+`normal` / "Normal" — confirmed with the user before seeding, because 4a makes
+stored values immutable and every asset carries it. Three of the four values are
+LDC's own words; this is the one ATMS had to invent. "Need Maintenance" is
+deliberately **not** a condition — a pending MR already records that need, and a
+hand-set duplicate could disagree with it. Pinned by a test.
+
+### R-10A widened, and its test now derives from the enum
+
+Adding two cases broke `OperationalStatusDistributionReportTest`, which
+hardcoded a six-key list. The report's real contract is "every status the enum
+defines, zero-filled", so the test now derives its expectation from
+`OperationalStatus::cases()`. It will survive 4b's narrowing without another
+rewrite — and asserts more, not less.
+
+### Reversibility proven, not assumed
+
+Rolled back both migrations against the live dev database (400 assets intact,
+both columns dropped), then re-applied — vocabulary and backfill restored,
+`operational_status` still 397 `ready_for_field` / 2 `down` / 1 `scraped`
+throughout. `StatusVocabularyTest` additionally pins up-twice idempotency, that
+a re-run cannot flatten a deliberately chosen condition, and that `down()`
+clears only the backfill.
+
+### Next — 4b, and it needs a maintenance window
+
+4b is the breaking half: the value migration (`down` → `failure`; the `scraped`
+row → `ready_for_field` + `is_active = false`), narrowing the enum to 4, the Q1
+location gate, the Q2 field-exit rule, close-reset, Task 4.6 (MR-approval
+location), and a coordinated frontend release. Its cutover sequence is written
+into the plan — build without starting, drain, migrate from a one-off
+new-image container, start, smoke, documented abort path.
+
+---
+
+## Session — 2026-08-16 (Phase 3 SHIPPED: parts stock decrement/restore)
 
 **1101 tests green, type-check + build clean, Pint clean.**
 

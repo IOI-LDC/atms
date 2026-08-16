@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Asset;
+use App\Models\MasterDataItem;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -25,8 +26,16 @@ class ImportErpAssetsCommand extends Command
 
     private array $uniqueNames = [];
 
+    /**
+     * Resolved once per run rather than per row — the vocabulary cannot change
+     * mid-import, and this runs across hundreds of rows.
+     */
+    private ?string $defaultCondition = null;
+
     public function handle(): int
     {
+        $this->defaultCondition = MasterDataItem::defaultFor(MasterDataItem::ASSET_CONDITIONS)?->value;
+
         $path = $this->argument('file') ?? base_path('../docs/sm/01-product/erp_assets_dump.csv');
 
         if (! file_exists($path)) {
@@ -152,7 +161,11 @@ class ImportErpAssetsCommand extends Command
             'serial_number' => $serialNo !== '' ? $serialNo : null,
             'fa_subclass_code' => trim($row['faSubclassCode'] ?? '') ?: null,
             'manufacturer' => trim($row['vendorNo'] ?? '') ?: null,
+            // ERP tells us maintenance vs available and nothing about location,
+            // so `at_the_field` cannot be derived here — it is written when the
+            // asset is moved to a rig or well site, not on import.
             'operational_status' => $underMaintenance ? 'under_maintenance' : 'ready_for_field',
+            'condition_status' => $this->defaultCondition,
             'is_active' => ! $inactive,
             'maintenance_status' => 'enrolled',
             'asset_kind' => 'asset',

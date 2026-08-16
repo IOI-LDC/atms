@@ -6,7 +6,8 @@ use App\Enums\OperationalStatus;
 use App\Models\Asset;
 
 /**
- * R-10A: count of assets per operational_status (always all six values,
+ * R-10A: count of assets per operational_status (always every value the enum
+ * defines — the set widens in release 4a and narrows again in 4b,
  * filling 0 for any with no assets). `include_inactive` controls only
  * soft-deactivated (is_active=false) assets — the default excludes them.
  */
