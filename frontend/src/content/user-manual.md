@@ -1028,10 +1028,11 @@ triggered by an Admin or Manager.
 
 **What ATMS can do with parts:**
 
-- Read parts from SM tables to populate Work Order part-request forms.
+- Read parts from SM tables to populate Work Order part forms.
 - Display ERP reference fields (part code, status) as read-only data.
 - Update local operational fields: `name`, `description`, `unit_of_measure`,
-  `category`, `is_active` (Admin/Manager only).
+  maintenance category, size, `available_quantity`, `is_active`
+  (Admin/Manager only).
 - **Adjust `available_quantity` as parts are consumed.** Recording a part on a
   work order subtracts its quantity; removing that line adds it back. This keeps
   the figure — and the Parts Consumption report — honest between ERP refreshes.
@@ -1848,6 +1849,10 @@ During `in_progress`, the assigned Technician can:
 
 **After completion** (`completed` status):
 
+- Before submitting completion, the Technician attaches the **executed PM /
+  inspection form** (or equivalent evidence) as a WO attachment when the job
+  covered a service — the completed form travels with the work order that
+  executed it.
 - Technician execution fields, parts, readings, and attachments are locked.
 - The Technician can no longer edit the WO.
 - Only Admin or Manager can close or cancel the WO.
@@ -1864,15 +1869,20 @@ During `in_progress`, the assigned Technician can:
 Parts used on a WO are selected from the SM parts catalogue:
 
 1. From the WO detail screen, the Technician (or Admin/Manager) opens the "Add Part" form.
-2. They search and select a part from the SM catalogue.
-3. They enter the quantity used.
-4. The part line is recorded against the WO.
+2. They search and select a part — searchable by **Part No.** (the ERP part
+   code), name, or supplier part number.
+3. They enter the quantity used (two-decimal precision).
+4. The part line is recorded against the WO and the part's **available stock is
+   decremented** immediately. A line that would take stock below zero is
+   rejected.
 
-This creates an operational usage record. The part-request submission flows into
-SM's order/stock workflow for fulfilment.
+Parts can be added or removed at any time before the WO is closed. Removing a
+line **restores** the stock it consumed. After closure, part lines are
+permanently locked and stock is final for that job.
 
-Parts can be added or removed at any time before the WO is closed. After
-closure, part lines are permanently locked.
+Stock between ERP refreshes is consumption-adjusted only; the ERP sync remains
+the quantity authority and overwrites `available_quantity` wholesale on each
+run (Section 10).
 
 ### 8.5 Work Order Closure — Side Effects
 
@@ -1884,6 +1894,21 @@ a WO is closed (all in one database transaction):
 - WO status → `closed` (permanently immutable).
 - `closed_at` timestamp set.
 - All WO fields, parts, readings, and attachments permanently locked.
+
+**0. Precondition — the work order must carry an attachment:**
+- A work order **cannot be closed** until at least one file is attached to it —
+  normally the completed inspection form or job sheet (PDF or spreadsheet).
+  Attempting to close without one is refused, and nothing is changed.
+- The requirement sits on **close, not completion**. The technician marks the
+  work finished when the physical job is done, then uploads the paperwork; the
+  manager cannot sign it off until it is there. Uploading stays available to the
+  assigned technician *and* to Admin/Manager for the whole of that window.
+- Once the work order is closed (or cancelled) its attachments are locked.
+- **Cancelling needs no attachment** — a job that never happened has no
+  paperwork to show.
+- Any attachment satisfies the rule. ATMS does not distinguish "the inspection
+  form" from a photograph, so this is a check that *something* was filed, not
+  that the right thing was.
 
 **2. Asset Operational Status Updated:**
 - Asset's `operational_status` → **always `ready_for_field`**. The work is done,
@@ -1912,16 +1937,17 @@ a WO is closed (all in one database transaction):
 - This is the only way a reading becomes confirmed; there is no verify button.
 
 **4. Service Declared on a Repair (optional):**
-- If the closer ticks **"A service was also performed"** and picks a schedule, that
-  schedule is treated as serviced by this job.
+- If the closer ticks **"A service was also performed"** and picks the **highest
+  PM level performed**, that level — and every level beneath it — is treated as
+  serviced by this job. Levels are cumulative: an L3 service covers L2 and L1.
 - This covers the workshop case: the asset came in for a repair, a service level
   happened to be due, and the team did both while it was stripped down.
 - The picker lists the asset's active schedules with the currently-due ones marked,
   since due-ness is what prompts the declaration.
-- Choosing a higher level also resets the levels beneath it (see step 6).
-- Any PM request already raised for that schedule is **cancelled**, citing this Work
-  Order — so nobody approves a second job for work that is finished. It is recorded
-  as *performed*, not skipped, so PM compliance figures stay honest.
+- Any PM request already raised for a covered schedule is **cancelled**, citing
+  this Work Order — so nobody approves a second job for work that is finished. It
+  is recorded as *performed under repair*, not skipped, so PM compliance figures
+  stay honest.
 
 **5. PM Baseline Reset (if the WO originated from a Preventive MR, or a service
 was declared in step 4):**
@@ -1974,8 +2000,9 @@ and affected fields. Skipped readings and any declared service are recorded too.
    Field**. There is no alternative on close — a job that did not restore the
    asset is cancelled instead.
 6. If a service was carried out alongside this job, they tick **"A service was also
-   performed"** and select which schedule. Due schedules are marked in the list.
-   Leave it unticked if only the repair was done.
+   performed"** and select the **highest PM level performed** — lower levels are
+   covered automatically. Due schedules are marked in the list. Leave it unticked
+   if only the repair was done.
 7. They select "Close Work Order" and confirm.
 8. The WO becomes `closed` — permanently immutable.
 
@@ -2148,12 +2175,12 @@ determine the work should not have been done, was done on the wrong asset, or is
 otherwise invalid. Cancellation from `completed` provides an escape path before
 final closure, with a required audit reason.
 
-**Why does closing a WO ask for the asset's next status?**
-Closing means the work is finished and reviewed, so the dialog defaults to
-**Ready for Field** — the asset is presumed back in service. The closer switches
-cancel it instead if the repair did not restore the asset; a new Corrective MR
-should then follow — this keeps the audit trail clear: one WO closed it,
-another MR documents the remaining fault.
+**Why does closing a WO always return the asset to Ready for Field?**
+Closing means the work is finished and reviewed — the asset is presumed back in
+service, so no choice is offered. A job that did not restore the asset is
+**cancelled**, not closed: cancellation keeps the still-faulty option, and a new
+Corrective MR should then follow. This keeps the audit trail clear — one WO
+closed it, another MR documents the remaining fault.
 
 **Why does a corrective MR approval set the asset to `failure`?**
 When someone reports a fault and a Manager approves the resulting MR, the system
@@ -2188,7 +2215,8 @@ page.
 
 - **Add Asset** — Admin/Manager only. Opens create form (side sheet). Required
   fields: name, description, category, serial number, model, manufacturer,
-  operational status, asset maintenance status, asset tag (suggested, editable).
+  operational status, asset maintenance status, Condition (defaults to Normal),
+  asset tag (suggested, editable).
 - **Edit Asset** — Admin/Manager only. Opens edit form per row.
 
 **For Requesters:** When a Requester views the Assets section (through the
@@ -2206,7 +2234,7 @@ Clicking an asset row opens the full-page Asset Detail screen.
 **Sections (implemented as tabs or sections within the detail page):**
 
 - **Overview** — name, tag, description, category, serial, model, manufacturer,
-  asset kind, parent asset (if component), maintenance status and sub-status,
+  asset kind, parent asset (if component), maintenance status, Condition,
   operational status.
 - **ERP Reference Data** — mapped ERP fields (read-only reference). Raw ERP
   payload visible to Administrator only.
@@ -2236,17 +2264,13 @@ Clicking an asset row opens the full-page Asset Detail screen.
 
 **Content:**
 
-> ⚠️ **2026-08-16 design note:** this Phase 2 section predates the
-> vocabulary agreement — `installed`/`ready` will be **derived from
-> `parent_asset_id`** and the sub-status disposition labels below are
-> deprecated. Text is kept as the pre-design wording until P2-001 planning.
-
 - Component list with PM status indicators (green 🟢 / yellow 🟡 / red 🔴).
+  A component's assembly state is **derived** from its parent link: Installed
+  when `parent_asset_id` is set, Ready when it is not (Section 5.2).
 - **Install Component** action — side sheet to search and select a spare
   component (must be enrolled with no parent — `parent_asset_id IS NULL`).
-- **Remove Component** action — dialog with reason field and post-removal
-  disposition (back to ready, or withdrawn — sub-status disposition labels
-  are deprecated per the 2026-08-16 design).
+- **Remove Component** action — dialog with reason field; the component comes
+  out Ready (spare), or is withdrawn from the maintenance program.
 - **Swap Component** action — remove old + install new in one atomic operation.
 - **"Create MR for Component"** action — available for yellow/red components on
   parent WO screen (Admin/Manager only).
@@ -2507,8 +2531,9 @@ include:
 
 The Parts Management section provides a view of the SM (Store Management) parts
 catalogue. Parts displayed in ATMS originate from the ERP system and are synced
-into SM tables. ATMS reads this data for display and Work Order part-request
-forms but does **not** manage inventory, stock levels, or purchasing.
+into SM tables. ATMS reads this data for display and Work Order part recording,
+tracks consumption-adjusted quantities between ERP refreshes, but does **not**
+manage inventory valuation, purchasing, or warehouse execution.
 
 **Sidebar:** Tabbed Group — visible to Admin, Manager, Technician.
 
@@ -2535,36 +2560,47 @@ Parts in ATMS have two categories of fields with different ownership:
 | `name` | Human-readable part name (may be updated locally for operational clarity). |
 | `description` | Additional notes or usage instructions. |
 | `unit_of_measure` | The unit used when recording quantities (e.g. "each", "meter", "liter"). |
-| `category` | User-defined grouping for filtering and search. |
-| `is_active` | Whether the part is available for selection in WO part-request forms. Inactive parts are hidden from pickers. |
+| `maintenance_category_id` | The Maintenance Category the part belongs to, for filtering and search. |
+| `size_inches` | The part's nominal size in inches (displayed as the O&G fractional form, e.g. `6 3/4"`). |
+| `available_quantity` | Stock on hand. Adjusted automatically by WO consumption and editable directly (see 10.4a). **ERP remains the quantity authority** — each sync overwrites it wholesale. |
+| `is_active` | Whether the part is available for selection on WO part forms. Inactive parts are hidden from pickers. |
 
 This split reflects the design principle: **ERP data is reference only.** Users
 should not feel they are editing official ERP master records. The ERP sync
 process is the single source of truth for ERP-owned fields; ATMS may only
 augment with operational context.
 
-### 10.1 All Parts Tab
+### 10.1 Parts Reference
 
-Displays the SM parts catalogue with search and filters.
-
-**Visible to:** Admin, Manager, Technician.
-
-**Columns:** ERP part code, part name, unit of measure, ERP status, category.
-Row action: link to part detail.
-
-Inventory quantities, stock valuation, and warehouse operations are not visible
-in ATMS — those belong to the SM subsystem.
-
-### 10.2 Part Request Tab
-
-A convenience link into the SM (Store Management) subsystem's "New Request"
-flow. Allows users to order parts from the SM catalogue without leaving the ATMS
-system.
+The Parts section is a single **Parts Reference** list — the ERP-synced spare
+parts catalogue with search and filters. There are no tabs.
 
 **Visible to:** Admin, Manager, Technician.
 
-This is a cross-subsystem integration point. The actual part-request form and
-ordering workflow are owned by SM.
+**Columns:**
+
+| Column | Content |
+|---|---|
+| **Part No.** | The ERP part code (`erp_part_code`) — the code the team quotes. Sortable and searchable. |
+| **Name** | The part identity: name, plus supplier part number, size, and maintenance category where present. |
+| **Unit** | Unit of measure. |
+| **Qty** | Available quantity. Parts at zero or below show an **Out of stock** badge. |
+| **Status** | Active / Inactive. |
+
+**Toolbar filters:** Part Number (free text), Size (dropdown), and Maintenance
+Category (dropdown) filter the list. The identity renders as one package, so
+these filters live in the toolbar rather than as column headers.
+
+Stock valuation and warehouse operations are not visible in ATMS — those belong
+to the SM subsystem and the ERP.
+
+### 10.2 Part Requests
+
+There is no separate part-request screen. The **Part Request** is a printable
+page opened from the Work Order detail (`/work-orders/:workOrderId/part-request`)
+— the interim paper process the warehouse works from. It lists the parts
+recorded on that WO, each identified by **Part No.** (the ERP part code).
+Consuming a part on a WO is what moves stock (Section 8.4).
 
 ### 10.3 Part Detail (Drill-Down)
 
@@ -2572,8 +2608,9 @@ ordering workflow are owned by SM.
 
 **Sections:**
 
-- ERP reference data (part code, status — read only).
-- Local fields (name, description, unit, category) — editable by Admin/Manager.
+- ERP reference data (part code, ERP status — read only).
+- Local fields (name, description, unit, maintenance category, size, available
+  quantity, active status) — editable by Admin/Manager.
 - ERP raw data — visible to Administrator only.
 - Attachments — datasheets, fitting instructions, safety sheets, compatibility
   notes, usage instructions.
@@ -2587,9 +2624,11 @@ a scheduled or manually triggered sync process:
 - **Frequency:** Weekly, every Monday at 03:00 Africa/Tripoli timezone.
 - **Scope:** All parts in the ERP catalogue are synced into SM tables.
 - **Behavior:** New parts are inserted. Existing parts (matched on `erp_part_id`)
-  have their ERP-owned fields updated. Local fields (`name`, `description`,
-  `unit_of_measure`, `category`) are **never** overwritten by the ERP sync — they
-  are preserved as edited in ATMS.
+  have their ERP-owned fields — **and `available_quantity`** — updated. The ERP
+  is the quantity authority, so each sync overwrites stock wholesale, discarding
+  local consumption movements since the last run. Local enrichment fields
+  (`name`, `description`, `unit_of_measure`, maintenance category, size) are
+  **never** overwritten — they are preserved as edited in ATMS.
 - **Concurrency:** Overlap prevention ensures only one sync runs at a time.
 
 **Manual Sync:**
@@ -2612,10 +2651,31 @@ a scheduled or manually triggered sync process:
 Each sync run shows start/end timestamps, status, and error details (if any).
 
 **Design rationale — why local fields survive ERP sync:** The ERP is the
-authority for part identity (code, status). But operational staff in ATMS may
-need to rename a part for clarity or add usage notes. Overwriting local edits on
-every sync would erase this operational context. The sync updates ERP-owned
-fields only, preserving local enrichments.
+authority for part identity (code, status) and for quantities. But operational
+staff in ATMS may need to rename a part for clarity or add usage notes.
+Overwriting local edits on every sync would erase this operational context. The
+sync updates ERP-owned fields only, preserving local enrichments.
+
+### 10.4a Stock Corrections — Parts CSV Download and Quantity Upload
+
+Between ERP refreshes, the quantities in ATMS are consumption-adjusted only
+(Section 8.4). When a physical stock check shows the numbers are wrong — a
+miscount, a missing issue, a part used outside a Work Order — an Administrator
+can correct them in bulk:
+
+1. **Download the parts CSV** from the Parts section. The file lists the
+   catalogue — **Part No.**, name, and current available quantity — so it can
+   be reconciled offline against a physical count.
+2. **Correct the quantities** in the downloaded file.
+3. **Upload the file back.** Each row's quantity is applied to the matching
+   part (matched on Part No.). Rows that do not match, or carry invalid
+   quantities, are reported rather than applied.
+
+This is an **interim, Administrator-only process**. It corrects the local
+figure; it does not write back to the ERP, and the next ERP sync will overwrite
+the quantities again with whatever the ERP holds. The permanent fix is the ERP
+quantity feed itself — until that contract is confirmed, the CSV round-trip
+keeps the Parts Reference trustworthy.
 
 ## 11. Locations
 
@@ -2651,6 +2711,23 @@ history, and update its physical location.
 7. A location change does **not** release an active booking — bookings survive moves (see Section 5.5).
 8. A "View Location History" link per row navigates to the asset's location
    history drill-down.
+
+**Moves are gated by operational status** (Section 5.9):
+
+- **Ready for Field** assets may be moved anywhere. Moving one to a rig or well
+  site flips its status to **At the Field**.
+- **At the Field** assets may only be moved back to yard/building locations —
+  which flips the status back to **Ready for Field** and sets Condition to
+  **Need Inspection**.
+- **Failure** and **Under Maintenance** assets cannot be moved by hand — the
+  move is refused with a conflict error. They travel through the maintenance
+  workflow (e.g. the work-location step when a Work Order starts), not through
+  this tab.
+- Deactivated and withdrawn assets cannot be moved at all.
+
+Currently the register holds one operational location (Tajoura Base), so the
+field-entry rules are in place but inert — they take effect as soon as rig /
+well-site locations are added.
 
 **Important:** This is a direct location update — no approval chain. The formal
 AM movement workflow (submit → approve → confirm arrival) takes place in the AM
@@ -3245,13 +3322,13 @@ The cycle is complete. The system is now watching for the next interval.
 
 ### 12.11 Important Rules and Edge Cases
 
-#### Asset Must Be Enrolled
+#### Asset Must Be Enrolled and Active
 
-Scheduled PM evaluation only runs against assets with
-`maintenance_status = enrolled`. Withdrawn assets are excluded from the
-scheduled job. ⚠️ The direct
-single-assignment and evaluate-all endpoints do not yet enforce this rule; the
-status-vocabulary plan includes both in the independent gating fix.
+PM evaluation only runs against assets that pass the unified work-eligibility
+guard — `maintenance_status = enrolled` **and** `is_active = true`. This holds
+on **every evaluation path**: the daily scheduled job, direct single-assignment
+evaluation, and evaluate-all. Withdrawn or deactivated assets are skipped
+everywhere.
 
 #### No Confirmed Reading = No Reading-Based PM
 
@@ -3346,6 +3423,10 @@ Manage the configurable dropdown values used across the system:
   requests.
 - **Maintenance Categories** — the ATMS-owned categories that route WO Forms
   and PM rules; an asset always carries one (Section 5.1).
+- **Asset Conditions** — the Condition labels an asset can carry between jobs
+  (Section 5.10). Values can be added, renamed, and deactivated; the value
+  marked as the **default** (Normal) is protected, because Work Order closure
+  resets every asset's Condition to it.
 - **Usage Reading Types** — the meter types available for asset readings
   (Section 9.4).
 
@@ -3570,8 +3651,8 @@ question it answers; click a card to open the report.
 | ID | Report | What it shows |
 | --- | --- | --- |
 | R-1 | Upcoming PM Schedule | Assets with a PM due in the next 30 days. |
-| R-1B | Assets Status Report | The asset register — tag, name, type, status, location, assignee, and dates. The only listing report in the catalogue; filterable and exportable. Filters: location, operational status, asset kind, booked, and a date range (`updated_at` by default, `created_at` optional). "Assigned To" is the Technician on the asset's open work order. |
-| R-2 | Asset Distribution | How assets spread across location, maintenance category, or size, with status, kind, and booked breakdowns. Groupable by `location`, `maintenance_category`, or `size`. |
+| R-1B | Assets Status Report | The asset register — tag, name, type, status, Condition, location, assignee, and dates. The only listing report in the catalogue; filterable and exportable. Filters: location, operational status, Condition, asset kind, booked, and a date range (`updated_at` by default, `created_at` optional). "Assigned To" is the Technician on the asset's open work order. |
+| R-2 | Asset Distribution | How assets spread across location, maintenance category, or size, with status, Condition, kind, and booked breakdowns. Groupable by `location`, `maintenance_category`, or `size`. |
 | R-3 | MTBF / Failure Rate by dimension | Where classified failures concentrate — by asset, maintenance category, size, or location. |
 | R-4 | MTTR by dimension | Repair turnaround by asset, maintenance category, size, or technician. |
 | R-6 | Bad-Actor / Breakdown Analysis | Which assets, maintenance categories, sizes, or locations have the most confirmed failures. |
@@ -3635,11 +3716,10 @@ remaining reports are JSON-only until their endpoints implement CSV.
 
 ### 16.6 What Is Not Reported
 
-- **Withdrawal and sub-statuses are excluded from reports today** — the
-  2026-07-31 "ERP-owned" rationale is superseded (2026-08-16): the
-  vocabulary design drops LIH/DBR/Scrapped entirely and
-  `is_active`/`withdrawn` carry the meaning. Report changes ship with the
-  vocabulary work.
+- **Withdrawn and deactivated assets are excluded from fleet and status
+  reports.** Reports describe the active, enrolled fleet; `is_active = false`
+  and `maintenance_status = withdrawn` carry "out of service" and "left the
+  program" respectively, and there are no further disposition labels to report.
 - Deferred ideas (downtime/availability history, spare/rotor pool) are hidden
   from the catalogue until their source data or phase dependency exists.
 
@@ -3684,16 +3764,14 @@ drill-down layer for the dashboard's headline numbers.
 
 ### Asset Maintenance Status
 
-| Parent State (`value`)                               | Sub-Status  | Applies To                            | PM Eligible |
-| ---------------------------------------------------- | ----------- | ------------------------------------- | ----------- |
-| **Enrolled** (`enrolled`) — "In maintenance program" | _(none)_    | `asset_kind = asset` (standalone)     | Yes         |
-| **Enrolled** (`enrolled`)                            | `installed` | `asset_kind = component` or `package` | Yes         |
-| **Enrolled** (`enrolled`)                            | `ready`     | `asset_kind = component` or `package` | Yes         |
-| **Withdrawn** (`withdrawn`)                          | `lih`       | Any                                   | No          |
-| **Withdrawn** (`withdrawn`)                          | `dbr`       | Any                                   | No          |
-| **Withdrawn** (`withdrawn`)                          | `disposed`  | Any                                   | No          |
-| **Withdrawn** (`withdrawn`)                          | `scrapped`  | Any                                   | No          |
-| **Withdrawn** (`withdrawn`)                          | `other`     | Any                                   | No          |
+| State | Display Label | PM Eligible |
+| ---------------------------------------------------- | ----------- | ----------- |
+| **Enrolled** (`enrolled`) | "In maintenance program" | Yes |
+| **Withdrawn** (`withdrawn`) | "Withdrawn" | No |
+
+There are no sub-statuses (see "Maintenance Sub-Statuses (removed)" below).
+Assembly position is a derived state — Installed when `parent_asset_id` is
+set, Ready when it is not (Section 5.2).
 
 ### Asset Operational Status
 
@@ -3734,9 +3812,11 @@ is what a work-order close resets each asset to.
 ### Maintenance Sub-Statuses (removed)
 
 > **Removed in August 2026.** Sub-statuses carried no business logic and
-> duplicated information that now lives elsewhere: assembly state is a
-> **Condition**, and "this asset has left the fleet" is a deactivation. The table
-> below is kept only so older records and exports can still be read.
+> duplicated information that now lives elsewhere: the installed/ready
+> distinction is a **derived assembly state** (from `parent_asset_id`, Section
+> 5.2), and "this asset has left the fleet" is a deactivation
+> (`is_active = false`). The table below is kept only so older records and
+> exports can still be read.
 
 Some sub-statuses were only available for specific asset kinds.
 
@@ -3750,21 +3830,20 @@ Some sub-statuses were only available for specific asset kinds.
 | `scrapped` | **Scrapped** | Any (withdrawn only) | Dismantled, sold for scrap, or otherwise removed from the operational pool. |
 | `other` | **Other** | Any (withdrawn only) | Any other reason, with a free-text note for context. |
 
-> Sub-statuses carry no business logic — "Lost in Hole" does not block PM
-> evaluation (the Withdrawn parent state already does that). They are purely
-> informational labels for categorization and reporting.
+> None of these values is written any more. Withdrawal itself is the gate for
+> PM evaluation; an asset that has left the fleet permanently is deactivated.
 
 
 ### Asset Kinds
 
 Each asset in ATMS carries an `asset_kind` that determines its role in the
-assembly hierarchy and which maintenance sub-statuses are available.
+assembly hierarchy and whether it has a derived assembly state.
 
-| Kind          | DB Value      | Can Have Parent? | Can Have Children? | Enrolled Sub-Statuses     | Typical Example                    |
+| Kind          | DB Value      | Can Have Parent? | Can Have Children? | Assembly State (derived) | Typical Example                    |
 | ------------- | ------------- | ---------------- | ------------------ | ------------------------- | ---------------------------------- |
 | **Asset**     | `asset`       | No               | No                 | *(none)*                  | Standalone pump, generator         |
-| **Package**   | `package`     | Yes              | Yes                | `installed`, `ready`      | Motor, Power Section               |
-| **Component** | `component`   | Yes              | No                 | `installed`, `ready`      | Radial Bearing, Sensor             |
+| **Package**   | `package`     | Yes              | Yes                | Installed / Ready         | Motor, Power Section               |
+| **Component** | `component`   | Yes              | No                 | Installed / Ready         | Radial Bearing, Sensor             |
 
 > See Section 5.2 for the full definition of each asset kind, including
 > `parent_asset_id` consistency rules, decision guidance for choosing the right
@@ -3813,6 +3892,7 @@ assembly hierarchy and which maintenance sub-statuses are available.
 | Change asset kind                 | Yes   | Yes     | No                | No        | No              |
 | Set parent_asset_id (outside WO)  | Yes   | Yes     | No                | No        | No              |
 | Change asset maintenance status   | Yes   | Yes     | No                | No        | No              |
+| Set asset Condition label         | Yes   | Yes     | No                | No        | No              |
 | Book / unbook asset               | Yes   | Yes     | No                | No        | No              |
 | Install / remove / swap component | Yes   | Yes     | Yes (assigned WO) | No        | No              |
 | Create MR for child component     | Yes   | Yes     | No                | No        | No              |
@@ -3861,8 +3941,9 @@ assembly hierarchy. Defined by the `App\Enums\AssetKind` PHP enum with three
 values: `asset` (standalone, indivisible leaf — no parent, no children),
 `package` (can both contain children and be installed in a parent), and
 `component` (can be installed in a parent but cannot have children). The kind
-also controls which enrolled maintenance sub-statuses are available: standalone
-assets have none, while packages and components use `installed` / `ready`. Only
+also determines whether the asset has a derived assembly state: standalone
+assets have none, while packages and components are Installed when
+`parent_asset_id` is set and Ready when it is not. Only
 Administrator and Maintenance Manager may change an asset's kind. For full
 details, see Section 5.2.
 
@@ -3894,9 +3975,10 @@ or underperforming assets. A CM Request is created manually by a user.
 **Component:** An asset that can be installed inside a parent. Defined by
 `asset_kind = component` or `package`.
 
-**Confirmed reading:** A meter reading that has been verified by Admin, Manager,
-or Technician. Only confirmed readings update current meter values and
-participate in PM calculations.
+**Confirmed reading:** A meter reading confirmed as a side effect of closing the
+Work Order it was recorded on — there is no manual confirm button, and the
+closer (Admin/Manager) is stamped as the confirmer. Only confirmed readings
+update current meter values and participate in PM calculations.
 
 **Cumulative maintenance:** When a higher-level PM WO closes, the baselines of
 lower-level PM assignments on the same asset are reset. Applies to standard
@@ -3910,14 +3992,36 @@ from ERP (via SM) but does not write back.
 `is_failure = yes`) created during the rolling 90-day window, displayed as a
 count and a per-day average. One of the reliability metrics on the Dashboard.
 
-**Withdrawn (asset maintenance status, `withdrawn`):** The asset is not in active
-maintenance service. CM creation, MR approval/WO creation, WO assignment, and
-scheduled PM evaluation are blocked. Direct/manual PM evaluation still has a
-known gating gap recorded in the status-vocabulary plan. (Renamed from the former
+**Ready for Field (`ready_for_field`):** Operational status: the asset is
+serviceable and available for deployment. The default for active assets and
+the status every closed Work Order returns its asset to. See Section 5.9.
+
+**Under Maintenance (`under_maintenance`):** Operational status: the asset is
+in active workshop care on an open Work Order. Set automatically when a WO
+starts; it cannot be picked manually. See Section 5.9.
+
+**Failure (`failure`):** Operational status: the asset has a confirmed fault.
+Set automatically when a corrective MR is approved; a manual status pick for
+Manager and above. See Section 5.9.
+
+**At the Field (`at_the_field`):** Operational status derived from location —
+the asset sits at a rig or well site. It is never manually selectable; moving
+the asset out of a field location removes it. See Section 5.9.
+
+**Condition (`condition_status`):** An informational label describing an
+asset's physical state (e.g. Normal, Need Assembly, Missing Parts, Need
+Inspection). It never blocks any workflow and resets to the default on Work
+Order closure. See Section 5.10.
+
+**Withdrawn (asset maintenance status, `withdrawn`):** The asset has left the
+maintenance program. CM creation, MR approval, WO assignment and start,
+bookings, and PM evaluation on every path (scheduled, direct, and evaluate-all)
+are blocked; active bookings are auto-released. (Renamed from the former
 "Inactive".)
 
-**Installed (`installed`):** A sub-status indicating a component is currently
-installed in a parent (`parent_asset_id` is set).
+**Installed:** A derived assembly state indicating a component is currently
+installed in a parent (`parent_asset_id` is set). Not a stored status — it is
+derived from the assembly link. See Section 5.2.
 
 **KPI (Key Performance Indicator):** A quantifiable metric that measures
 operational performance. The Dashboard displays six KPIs in two groups:
@@ -3975,8 +4079,9 @@ request that was rejected or cancelled. Defines `suppressed_until_date` and/or
 **Microsoft Graph `sendMail`:** The production email transport used for account
 activation and password-reset emails.
 
-**Ready (`ready`):** A sub-status indicating a component is fully maintained and
-available for installation (`parent_asset_id` is null). A spare.
+**Ready:** A derived assembly state indicating a component is fully maintained
+and available for installation (`parent_asset_id` is null). A spare. Not a
+stored status — it is derived from the assembly link. See Section 5.2.
 
 **Reports:** The read-only operational reporting section (Section 16): a
 catalogue of live reports grouped by theme, each with on-screen filters and some
