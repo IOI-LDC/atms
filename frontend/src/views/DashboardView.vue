@@ -45,7 +45,7 @@ onMounted(() => loadLocations({ group_by: ['location'] }))
 
 const initialLoading = computed(() => dashLoading.value && kpiLoading.value)
 
-const downCount = computed(() => kpis.value?.asset_health.by_status.down ?? 0)
+const failureCount = computed(() => kpis.value?.asset_health.by_status.failure ?? 0)
 const overduePmCount = computed(() => dashData.value?.summary.overdue_pm_assignments ?? 0)
 const pendingMrCount = computed(() => dashData.value?.summary.pending_maintenance_requests ?? 0)
 
@@ -112,11 +112,11 @@ const locationMax = computed(() =>
         <!-- ── Needs attention ──────────────────────────────────────── -->
         <div class="dash-grid">
           <div class="dash-card dash-attn dash-span-4">
-            <span class="dash-dot" :class="{ 'dash-dot-critical': downCount > 0 }"></span>
+            <span class="dash-dot" :class="{ 'dash-dot-critical': failureCount > 0 }"></span>
             <span class="dash-attn-body">
-              <span class="dash-attn-value">{{ downCount }}</span>
+              <span class="dash-attn-value">{{ failureCount }}</span>
               <span class="dash-attn-label">
-                {{ downCount === 1 ? 'asset down' : 'assets down' }}
+                {{ failureCount === 1 ? 'asset down' : 'assets down' }}
               </span>
             </span>
             <RouterLink class="dash-attn-link" to="/assets">View</RouterLink>

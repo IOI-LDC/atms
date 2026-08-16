@@ -233,9 +233,10 @@ export function useWorkOrderDetail() {
   // from the linked MR's current value so the reviewer sees the prior decision. Sent
   // to the API as `is_failure`.
   const closeIsFailure = ref<boolean | null>(null)
-  // Caller-chosen asset status on close, pre-seeded to 'ready_for_field' (back in service);
-  // 'down' keeps the asset out of service. Sent to the API as `asset_status`.
-  const closeAssetStatus = ref<'ready_for_field' | 'down'>('ready_for_field')
+  // Non-blocking notices the API returns with a close — e.g. the asset was
+  // flagged Need Inspection. Shown on the page after the dialog closes; never a
+  // reason to keep the work order open.
+  const closeWarnings = ref<string[]>([])
 
   // ── Service declared on a repair ──────────────────────────────────────────
   // The asset was in the workshop for a repair, a service level happened to be
@@ -261,8 +262,9 @@ export function useWorkOrderDetail() {
   const cancelOpen = ref(false)
   const cancelLoading = ref(false)
   const cancelReason = ref('')
-  // Caller-chosen asset status on cancel: 'down' (still faulty) | 'ready_for_field' (false alarm).
-  const cancelAssetStatus = ref<'down' | 'ready_for_field' | null>(null)
+  // Caller-chosen asset status on cancel: 'failure' (still faulty) | 'ready_for_field'
+  // (false alarm). Close has no equivalent — it always returns the asset to service.
+  const cancelAssetStatus = ref<'failure' | 'ready_for_field' | null>(null)
 
   // ── Parts state ──────────────────────────────────────────────────────────
   const addPartOpen = ref(false)
@@ -670,9 +672,9 @@ export function useWorkOrderDetail() {
     // Seed the toggle with the prior review-time decision so the reviewer can
     // confirm or override it after physical inspection.
     closeIsFailure.value = record.value?.maintenance_request?.is_failure ?? null
-    // The asset is presumed back in service; the closer changes it to 'down'
-    // only when the repair did not restore it.
-    closeAssetStatus.value = 'ready_for_field'
+    // No asset-status choice here since 4b: closing always returns the asset to
+    // service. A job that did not restore it is cancelled, not closed.
+    closeWarnings.value = []
     serviceDeclared.value = false
     servicedAssignmentId.value = null
     closeOpen.value = true
@@ -701,18 +703,13 @@ export function useWorkOrderDetail() {
     if (!record.value) return
     closeLoading.value = true
     try {
-      // `asset_status` is always sent — the closer decides the asset's next
-      // operational status (pre-seeded to ready_for_field). `is_failure` is only
-      // sent for corrective-origin WOs when a value is chosen — never null,
-      // which would clobber the review-time classification. The key is omitted
-      // entirely for PM WOs and when unset.
+      // `is_failure` is only sent for corrective-origin WOs when a value is
+      // chosen — never null, which would clobber the review-time
+      // classification. The key is omitted entirely for PM WOs and when unset.
       const payload: {
         is_failure?: boolean
-        asset_status: 'ready_for_field' | 'down'
         serviced_pm_assignment_id?: number
-      } = {
-        asset_status: closeAssetStatus.value,
-      }
+      } = {}
       if (isCorrectiveOrigin.value && closeIsFailure.value !== null) {
         payload.is_failure = closeIsFailure.value
       }
@@ -721,7 +718,11 @@ export function useWorkOrderDetail() {
       if (serviceDeclared.value && servicedAssignmentId.value !== null) {
         payload.serviced_pm_assignment_id = servicedAssignmentId.value
       }
-      await api.post(`/work-orders/${record.value.id}/close`, payload)
+      const response = await api.post<{ warnings?: string[] }>(
+        `/work-orders/${record.value.id}/close`,
+        payload,
+      )
+      closeWarnings.value = response.warnings ?? []
       toast.success('Work order closed.')
       closeOpen.value = false
       await load(record.value.id, { silent: true })
@@ -1141,7 +1142,7 @@ export function useWorkOrderDetail() {
     closeOpen,
     closeLoading,
     closeIsFailure,
-    closeAssetStatus,
+    closeWarnings,
     serviceDeclared,
     servicedAssignmentId,
     serviceAssignmentOptions,

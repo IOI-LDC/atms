@@ -149,31 +149,33 @@ class WorkOrderController extends Controller
 
         // Optional ground-truth override: on close the manager may revise the
         // MR's is_failure after inspecting the asset. Absent = keep existing value.
-        // The manager also decides the asset's next operational status; absent
-        // falls back to READY_FOR_FIELD (the pre-picker behaviour).
+        //
+        // `asset_status` is gone (2026-08-16): close always returns the asset to
+        // `ready_for_field`, and a job that did not fix the asset is cancelled
+        // rather than closed. The choice lives on cancel.
         $validated = $request->validate([
             'is_failure' => ['nullable', 'boolean'],
-            'asset_status' => ['nullable', 'string', Rule::in(['down', 'ready_for_field'])],
             // Set when the closer declares a preventive service was performed
             // alongside this job. The action verifies the assignment belongs to
             // this work order's asset and is active (409 otherwise).
             'serviced_pm_assignment_id' => ['nullable', 'integer', 'exists:asset_pm_assignments,id'],
         ]);
 
-        $assetStatus = isset($validated['asset_status'])
-            ? OperationalStatus::from($validated['asset_status'])
-            : null;
-
         try {
             $wo = $action->execute(
                 $workOrder,
                 $request->user()->id,
                 array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null,
-                $assetStatus,
                 $validated['serviced_pm_assignment_id'] ?? null,
             );
 
-            return response()->json(['message' => 'Work order closed.', 'data' => $wo]);
+            return response()->json([
+                'message' => 'Work order closed.',
+                'data' => $wo,
+                // Non-blocking: the close already happened. Rendered by the SPA
+                // as a notice on the work-order page.
+                'warnings' => $action->warnings,
+            ]);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
@@ -185,7 +187,12 @@ class WorkOrderController extends Controller
 
         $validated = $request->validate([
             'reason' => ['required', 'string'],
-            'asset_status' => ['nullable', Rule::in(['down', 'ready_for_field'])],
+            // `Rule::in`, not `Rule::enum`: the enum has four cases and only two
+            // make sense here. Cancelling says either "still broken" (failure)
+            // or "false alarm, it was fine" (ready_for_field) — never
+            // `under_maintenance` (no work is happening) and never
+            // `at_the_field`, which only a location change may write.
+            'asset_status' => ['nullable', Rule::in(['failure', 'ready_for_field'])],
         ]);
 
         $assetStatus = isset($validated['asset_status'])
@@ -249,8 +256,11 @@ class WorkOrderController extends Controller
     {
         Gate::authorize('setAssetStatus', $workOrder);
 
+        // The manual subset, not every case: `at_the_field` is owned by location
+        // changes, and offering it here would let someone claim an asset is on a
+        // rig while its location says the workshop.
         $validated = $request->validate([
-            'operational_status' => ['required', 'string', 'in:'.implode(',', array_map(fn ($c) => $c->value, OperationalStatus::cases()))],
+            'operational_status' => ['required', 'string', Rule::in(OperationalStatus::manuallySelectableValues())],
         ]);
 
         if (in_array($workOrder->status, [WorkOrderStatus::CLOSED, WorkOrderStatus::CANCELLED], true)) {

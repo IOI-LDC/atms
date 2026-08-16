@@ -126,7 +126,7 @@ class AssetUtilisationQuery
             ? $operationalStatus
             : OperationalStatus::tryFrom((string) $operationalStatus);
 
-        return ! in_array($status, [OperationalStatus::DOWN, OperationalStatus::UNDER_MAINTENANCE], true);
+        return ! in_array($status, [OperationalStatus::FAILURE, OperationalStatus::UNDER_MAINTENANCE], true);
     }
 
     private function bookedCount(): int

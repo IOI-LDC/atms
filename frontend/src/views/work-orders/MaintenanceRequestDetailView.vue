@@ -100,6 +100,9 @@ const {
   approveTechnicians,
   approveTechniciansLoading,
   selectedApproveTechId,
+  approveLocations,
+  approveLocationsLoading,
+  selectedApproveLocationId,
   rejectOpen,
   rejectLoading,
   rejectReason,
@@ -122,6 +125,16 @@ const selectedApproveTechIdStr = computed({
     selectedApproveTechId.value !== null ? String(selectedApproveTechId.value) : '__none__',
   set: (v: string | undefined) => {
     selectedApproveTechId.value = !v || v === '__none__' ? null : Number(v)
+  },
+})
+
+// Same sentinel pattern for the optional approval destination. '__none__' here
+// means "leave the asset where it is", which is the default.
+const selectedApproveLocationIdStr = computed({
+  get: () =>
+    selectedApproveLocationId.value !== null ? String(selectedApproveLocationId.value) : '__none__',
+  set: (v: string | undefined) => {
+    selectedApproveLocationId.value = !v || v === '__none__' ? null : Number(v)
   },
 })
 
@@ -544,6 +557,26 @@ watch(
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div class="form-field">
+          <Label for="approve-location">
+            Move asset to
+            <span class="field-optional">— optional</span>
+          </Label>
+          <div v-if="approveLocationsLoading" class="loading-state">Loading locations…</div>
+          <Select v-else v-model="selectedApproveLocationIdStr">
+            <SelectTrigger id="approve-location"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Leave where it is</SelectItem>
+              <SelectItem v-for="l in approveLocations" :key="l.id" :value="String(l.id)">
+                {{ l.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="form-help">
+            Where the asset should be sent for this work. The move is recorded in its location
+            history as part of the approval.
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" :disabled="approveLoading" @click="approveOpen = false"

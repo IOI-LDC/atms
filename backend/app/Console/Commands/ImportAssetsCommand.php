@@ -38,8 +38,38 @@ class ImportAssetsCommand extends Command
         'operational_status', 'maintenance_status',
     ];
 
+    /**
+     * Legacy operational statuses that map cleanly to a current one.
+     *
+     * `down → failure` is a pure rename — same meaning, better word — so it is
+     * applied silently and reported in the summary rather than rejected.
+     *
+     * @var array<string, string>
+     */
+    private const LEGACY_STATUS_MAP = ['down' => 'failure'];
+
+    /**
+     * Legacy statuses that are refused instead of mapped.
+     *
+     * Each of these also meant "this asset has left the fleet", and the workbook
+     * carries no column that can say so. Mapping them to a current status would
+     * quietly return retired or lost equipment to service, so the import stops
+     * and asks a person to decide.
+     *
+     * @var list<string>
+     */
+    private const RETIRED_STATUSES = ['scraped', 'under_inspection', 'lih'];
+
     /** @var array<int, string> */
     private array $errors = [];
+
+    /**
+     * Legacy values rewritten during this run, reported in the summary so a
+     * silent change is still a visible one.
+     *
+     * @var array<int, string>
+     */
+    private array $mappedStatuses = [];
 
     /**
      * FA subclass codes the workbook carries that the lookup table has not seen
@@ -206,12 +236,33 @@ class ImportAssetsCommand extends Command
                 $this->newSubclasses[$subclass] = $line;
             }
 
+            // The 2026-08-16 vocabulary change left workbooks in circulation
+            // carrying the old values, so they are handled explicitly rather
+            // than failing as "invalid".
+            $operationalStatus = trim($row['operational_status']);
+
+            if (isset(self::LEGACY_STATUS_MAP[$operationalStatus])) {
+                $mapped = self::LEGACY_STATUS_MAP[$operationalStatus];
+                $this->mappedStatuses[] = "line {$line}: {$code} {$operationalStatus} → {$mapped}.";
+                $operationalStatus = $mapped;
+            } elseif (in_array($operationalStatus, self::RETIRED_STATUSES, true)) {
+                $this->errors[] = "line {$line}: {$code} operational_status [{$operationalStatus}] no longer exists. "
+                    .'It meant the asset had left the fleet, which this workbook has no column for — '
+                    .'set the status to a current value and deactivate the asset in ATMS instead.';
+            }
+
             foreach ([
                 'asset_kind' => ['asset', 'package', 'component'],
                 'operational_status' => array_map(fn ($c) => $c->value, OperationalStatus::cases()),
                 'maintenance_status' => ['enrolled', 'withdrawn'],
             ] as $field => $allowed) {
-                $value = trim($row[$field]);
+                $value = $field === 'operational_status' ? $operationalStatus : trim($row[$field]);
+
+                // Already reported above with a message that explains itself.
+                if ($field === 'operational_status' && in_array($value, self::RETIRED_STATUSES, true)) {
+                    continue;
+                }
+
                 if ($value !== '' && ! in_array($value, $allowed, true)) {
                     $this->errors[] = "line {$line}: {$code} invalid {$field} [{$value}].";
                 }
@@ -236,7 +287,7 @@ class ImportAssetsCommand extends Command
                 'manufacturer_code' => trim($row['manufacturer_code']),
                 'fa_subclass_code' => $subclass,
                 'asset_kind' => trim($row['asset_kind']),
-                'operational_status' => trim($row['operational_status']),
+                'operational_status' => $operationalStatus,
                 'maintenance_status' => trim($row['maintenance_status']),
             ];
         }
@@ -272,6 +323,14 @@ class ImportAssetsCommand extends Command
             $this->warn('New FA subclass codes will be recorded with type code UNK:');
             foreach ($this->newSubclasses as $subclass => $line) {
                 $this->line("  · {$subclass} (first seen on line {$line})");
+            }
+        }
+
+        if ($this->mappedStatuses !== []) {
+            $this->newLine();
+            $this->warn('Legacy operational statuses rewritten to the current vocabulary:');
+            foreach ($this->mappedStatuses as $mapping) {
+                $this->line("  · {$mapping}");
             }
         }
 

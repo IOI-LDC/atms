@@ -192,6 +192,13 @@ function goDetail(payload: { row: Asset }) {
               {{ operationalStatusLabel(row.operational_status) }}
             </span>
 
+            <!-- Plain text, not a badge: Condition is a note about the asset,
+                 and a second pill beside Operational Status would compete with
+                 it for the reader's attention without ranking above it. -->
+            <span v-else-if="column.field === 'condition_status'">
+              {{ row.condition_label ?? row.condition_status ?? '—' }}
+            </span>
+
             <span v-else-if="column.field === 'current_location'">
               {{ row.current_location?.name ?? '—' }}
             </span>

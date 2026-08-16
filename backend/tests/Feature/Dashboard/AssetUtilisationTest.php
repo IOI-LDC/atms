@@ -185,7 +185,7 @@ class AssetUtilisationTest extends TestCase
         $rig = $this->location('rig');
 
         $this->asset($rig);
-        $this->asset($yard, ['operational_status' => OperationalStatus::DOWN->value]);
+        $this->asset($yard, ['operational_status' => OperationalStatus::FAILURE->value]);
         $this->asset($yard, ['operational_status' => OperationalStatus::UNDER_MAINTENANCE->value]);
 
         $u = $this->utilisation();

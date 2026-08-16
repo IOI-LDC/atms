@@ -2,23 +2,38 @@
 
 namespace App\Enums;
 
+use App\Support\Assets\AssetFieldStatus;
+
 /**
  * The machine axis: is this asset working right now?
  *
- * ⚠️ **Mid-transition (release 4a of the 2026-08-16 vocabulary change).** The
- * four cases below the divider are the agreed final vocabulary; the four above
- * it are legacy and are removed in release 4b, together with the migration that
- * rewrites the rows still carrying them. Both sets are present here on purpose:
- * 4a must deserialize existing `down` / `scraped` rows without throwing, while
- * accepting the new values, so old and new code can run against one database
- * during the rollout.
+ * Four values, agreed with LDC on 2026-08-16 and narrowed to this set in
+ * release 4b:
  *
- * Do not write a legacy value from new code, and do not add behaviour keyed to
- * one — everything above the divider is scheduled for deletion.
+ * | Value              | Meaning                                              |
+ * |--------------------|------------------------------------------------------|
+ * | `ready_for_field`  | Serviceable and on base, available to send out        |
+ * | `under_maintenance`| Work is happening on it right now                     |
+ * | `failure`          | Broken — not serviceable until repaired               |
+ * | `at_the_field`     | Out on a rig or well site                             |
  *
- * Causes live on `assets.condition_status` (Need Assembly / Missing Parts /
- * Need Inspection), not here. `down` becomes `failure` because LDC reads "down"
- * as "waiting for parts", which is a condition, not an operational state.
+ * Two properties are worth knowing before changing anything here:
+ *
+ *  - **`at_the_field` is derived, never chosen.** It is written when an asset
+ *    moves to a location `AssetDeployment` classifies as DEPLOYED, and it is
+ *    deliberately absent from every manual picker — offering it would let
+ *    someone claim an asset is on a rig while its location says otherwise.
+ *    {@see AssetFieldStatus}
+ *  - **Causes are not statuses.** Why an asset is not serviceable lives on
+ *    `assets.condition_status` (Need Assembly / Missing Parts / Need
+ *    Inspection), an Admin-editable vocabulary. `down` became `failure`
+ *    precisely because LDC read "down" as "waiting for parts" — a condition
+ *    wearing an operational state's clothes.
+ *
+ * The legacy values (`down`, `scraped`, `under_inspection`, `lih`) were removed
+ * here in 4b, after `2026_08_16_000003_migrate_operational_status_values`
+ * rewrote every row carrying one. That migration must run before this enum is
+ * deployed: the cast would otherwise throw on any surviving row.
  */
 enum OperationalStatus: string
 {
@@ -27,30 +42,40 @@ enum OperationalStatus: string
     case FAILURE = 'failure';
     case AT_THE_FIELD = 'at_the_field';
 
-    // ── Legacy — removed in release 4b ────────────────────────────────────────
-    case DOWN = 'down';
-    case SCRAPED = 'scraped';
-    case UNDER_INSPECTION = 'under_inspection';
-    case LIH = 'lih';
-
     /**
-     * The vocabulary release 4b leaves behind. Use this anywhere a list of
-     * choices is offered, so a picker never shows a value on its way out.
+     * The values a person may pick.
+     *
+     * `at_the_field` is excluded on purpose — location changes own it. Every
+     * manual status control (asset create, asset update, the work-order
+     * "Update status…" dialog) validates against this list, not `cases()`.
      *
      * @return list<self>
      */
-    public static function current(): array
+    public static function manuallySelectable(): array
     {
-        return [self::READY_FOR_FIELD, self::UNDER_MAINTENANCE, self::FAILURE, self::AT_THE_FIELD];
+        return [self::READY_FOR_FIELD, self::UNDER_MAINTENANCE, self::FAILURE];
     }
 
     /**
-     * Values that exist only so 4a can read rows 4b has not rewritten yet.
-     *
-     * @return list<self>
+     * @return list<string>
      */
-    public static function legacy(): array
+    public static function manuallySelectableValues(): array
     {
-        return [self::DOWN, self::SCRAPED, self::UNDER_INSPECTION, self::LIH];
+        return array_map(fn (self $case) => $case->value, self::manuallySelectable());
+    }
+
+    /**
+     * Human-readable label. Kept here rather than in a resource because three
+     * separate surfaces render it (asset lists, reports, CSV headers) and they
+     * must not drift apart.
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::READY_FOR_FIELD => 'Ready for Field',
+            self::UNDER_MAINTENANCE => 'Under Maintenance',
+            self::FAILURE => 'Failure',
+            self::AT_THE_FIELD => 'At the Field',
+        };
     }
 }

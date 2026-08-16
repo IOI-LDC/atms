@@ -54,17 +54,17 @@ class OperationalStatusDistributionReportTest extends TestCase
 
     /**
      * The contract is "every status the enum defines, zero-filled" — not a
-     * fixed count. Deriving the expectation from the enum keeps this honest
-     * across the vocabulary transition, where 4a widens the set and 4b narrows
-     * it again; a hardcoded list would just need rewriting at each step while
-     * asserting less.
+     * fixed count. Deriving the expectation from the enum is what carried this
+     * test unchanged through the vocabulary transition (4a widened the set to
+     * eight, 4b narrowed it to four); a hardcoded list would have needed
+     * rewriting at each step while asserting less.
      */
     public function test_returns_every_defined_status_with_zero_for_missing(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $this->createAsset(['operational_status' => OperationalStatus::READY_FOR_FIELD]);
         $this->createAsset(['operational_status' => OperationalStatus::READY_FOR_FIELD]);
-        $this->createAsset(['operational_status' => OperationalStatus::DOWN]);
+        $this->createAsset(['operational_status' => OperationalStatus::FAILURE]);
 
         $json = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
         $counts = $this->counts($json['items']);
@@ -76,40 +76,47 @@ class OperationalStatusDistributionReportTest extends TestCase
             'Every enum case must appear, in declaration order.',
         );
         $this->assertSame(2, $counts['ready_for_field']);
-        $this->assertSame(1, $counts['down']);
+        $this->assertSame(1, $counts['failure']);
         $this->assertSame(0, $counts['under_maintenance']);
+        $this->assertSame(0, $counts['at_the_field']);
     }
 
-    public function test_scraped_operational_status_is_shown_not_hidden(): void
+    /**
+     * Activity and operational status are separate axes, and this report reads
+     * only the second one. An asset that is out of service — `failure` — is
+     * still an active asset and must be counted, or the total stops matching
+     * the fleet. (Replaces a test that made the same point with `scraped`, a
+     * value release 4b removed precisely because it conflated the two axes.)
+     */
+    public function test_an_out_of_service_status_is_counted_not_hidden(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        // operational_status=scraped but is_active=true must still appear.
         $this->createAsset([
-            'operational_status' => OperationalStatus::SCRAPED,
+            'operational_status' => OperationalStatus::FAILURE,
             'is_active' => true,
         ]);
 
         $json = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
 
         $this->assertSame(1, $json['summary']['total']);
-        $this->assertSame(1, $this->counts($json['items'])['scraped']);
+        $this->assertSame(1, $this->counts($json['items'])['failure']);
     }
 
     public function test_default_excludes_soft_deactivated(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $this->createAsset(['operational_status' => OperationalStatus::READY_FOR_FIELD, 'is_active' => true]);
-        $this->createAsset(['operational_status' => OperationalStatus::DOWN, 'is_active' => false]);
+        $this->createAsset(['operational_status' => OperationalStatus::FAILURE, 'is_active' => false]);
 
         $defaultJson = $this->actingAs($admin)->getJson('/api/reports/asset-status-distribution')->json();
         $this->assertSame(1, $defaultJson['summary']['total']);
         $this->assertSame(1, $this->counts($defaultJson['items'])['ready_for_field']);
-        $this->assertSame(0, $this->counts($defaultJson['items'])['down']);
+        $this->assertSame(0, $this->counts($defaultJson['items'])['failure']);
 
         $includedJson = $this->actingAs($admin)
             ->getJson('/api/reports/asset-status-distribution?include_inactive=1')->json();
         $this->assertSame(2, $includedJson['summary']['total']);
-        $this->assertSame(1, $this->counts($includedJson['items'])['down']);
+        $this->assertSame(1, $this->counts($includedJson['items'])['failure']);
     }
 
     public function test_asset_kind_filter_excludes_other_kinds(): void
@@ -120,7 +127,7 @@ class OperationalStatusDistributionReportTest extends TestCase
             'asset_kind' => AssetKind::PACKAGE,
         ]);
         $this->createAsset([
-            'operational_status' => OperationalStatus::DOWN,
+            'operational_status' => OperationalStatus::FAILURE,
             'asset_kind' => AssetKind::COMPONENT,
         ]);
 
@@ -129,7 +136,7 @@ class OperationalStatusDistributionReportTest extends TestCase
 
         $this->assertSame(1, $json['summary']['total']);
         $this->assertSame(1, $this->counts($json['items'])['ready_for_field']);
-        $this->assertSame(0, $this->counts($json['items'])['down']);
+        $this->assertSame(0, $this->counts($json['items'])['failure']);
     }
 
     public function test_empty_state(): void

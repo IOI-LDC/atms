@@ -23,11 +23,18 @@ export const ASSET_KIND_OPTIONS: { value: AssetKind; label: string }[] = [
 export const OPERATIONAL_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'ready_for_field', label: 'Ready for Field' },
   { value: 'under_maintenance', label: 'Under Maintenance' },
-  { value: 'down', label: 'Down' },
-  { value: 'scraped', label: 'Scraped' },
-  { value: 'under_inspection', label: 'Under Inspection' },
-  { value: 'lih', label: 'Lost in Hole' },
+  { value: 'failure', label: 'Failure' },
+  { value: 'at_the_field', label: 'At the Field' },
 ]
+
+/**
+ * The subset a person may choose. `at_the_field` is derived from an asset's
+ * location, so every manual status control omits it — the API rejects it with
+ * 422 and a picker offering it would just produce a confusing error.
+ */
+export const MANUALLY_SELECTABLE_OPERATIONAL_STATUSES = OPERATIONAL_STATUS_OPTIONS.filter(
+  (o) => o.value !== 'at_the_field',
+)
 
 export const AGING_BUCKET_OPTIONS: { value: AgingBucket; label: string }[] = [
   { value: '0-7', label: '0–7 days' },

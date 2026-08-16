@@ -44,6 +44,7 @@ import { FileInput } from '@/components/ui/file-input'
 import WoChecklistSheet from '@/components/work-orders/WoChecklistSheet.vue'
 import WoReadingsTable from '@/components/work-orders/WoReadingsTable.vue'
 import { useWorkOrderDetail } from '@/composables/useWorkOrderDetail'
+import { MANUALLY_SELECTABLE_OPERATIONAL_STATUSES } from '@/lib/reportOptions'
 import { openAttachmentInNewTab } from '@/lib/attachments'
 import {
   woStatusClass,
@@ -122,7 +123,7 @@ const {
   closeOpen,
   closeLoading,
   closeIsFailure,
-  closeAssetStatus,
+  closeWarnings,
   serviceDeclared,
   servicedAssignmentId,
   serviceAssignmentOptions,
@@ -228,11 +229,12 @@ const selectedStatusStr = computed({
     selectedStatus.value = v ?? null
   },
 })
-// Cancel: required asset-status choice (down = still faulty, ready_for_field = false alarm).
+// Cancel: required asset-status choice (failure = still faulty, ready_for_field
+// = false alarm). Close has no equivalent — it always returns the asset to service.
 const cancelAssetStatusStr = computed({
   get: () => cancelAssetStatus.value ?? undefined,
   set: (v: string | undefined) => {
-    cancelAssetStatus.value = v === 'down' || v === 'ready_for_field' ? v : null
+    cancelAssetStatus.value = v === 'failure' || v === 'ready_for_field' ? v : null
   },
 })
 // Edit-reading delta round-trips through a string (mirrors readingValueStr).
@@ -372,6 +374,15 @@ watch(
         <ArrowLeftIcon class="detail-back-icon" />
         Back
       </Button>
+
+      <!-- Non-blocking notices from the last close. The work order is already
+           closed by the time these appear; they are worth reading, not acting on. -->
+      <div v-if="closeWarnings.length > 0" class="wo-close-warnings" role="status">
+        <strong>Closed, with notes:</strong>
+        <ul>
+          <li v-for="warning in closeWarnings" :key="warning">{{ warning }}</li>
+        </ul>
+      </div>
 
       <!-- Load states -->
       <div v-if="loading" class="loading-state">Loading work order…</div>
@@ -1003,22 +1014,11 @@ watch(
             in the MTBF metric.
           </p>
         </div>
-        <div class="form-field">
-          <Label for="wo-close-status">Asset status after close</Label>
-          <Select v-model="closeAssetStatus">
-            <SelectTrigger id="wo-close-status"
-              ><SelectValue placeholder="Is the asset operational again?"
-            /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ready_for_field">Ready for Field — back in service</SelectItem>
-              <SelectItem value="down">Down — still faulty</SelectItem>
-            </SelectContent>
-          </Select>
-          <p class="form-help">
-            Pre-set to Ready for Field — change it to Down only if the repair did not restore the
-            asset.
-          </p>
-        </div>
+        <p class="form-help">
+          Closing returns the asset to <strong>Ready for Field</strong> and clears its condition. If
+          the job did not restore the asset, cancel the work order instead — that is where the
+          still-faulty choice lives.
+        </p>
         <div v-if="serviceAssignmentOptions.length > 0" class="form-field">
           <label class="checkbox-field">
             <Checkbox id="wo-close-service" v-model="serviceDeclared" />
@@ -1092,7 +1092,7 @@ watch(
               <SelectItem value="ready_for_field"
                 >Ready for Field — false alarm, asset is fine</SelectItem
               >
-              <SelectItem value="down">Down — still faulty</SelectItem>
+              <SelectItem value="failure">Failure — still faulty</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1330,12 +1330,12 @@ watch(
               ><SelectValue placeholder="Select a status"
             /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="ready_for_field">Ready for Field</SelectItem>
-              <SelectItem value="under_maintenance">Under Maintenance</SelectItem>
-              <SelectItem value="down">Down</SelectItem>
-              <SelectItem value="scraped">Scraped</SelectItem>
-              <SelectItem value="under_inspection">Under Inspection</SelectItem>
-              <SelectItem value="lih">Lost in Hole</SelectItem>
+              <SelectItem
+                v-for="option in MANUALLY_SELECTABLE_OPERATIONAL_STATUSES"
+                :key="option.value"
+                :value="option.value"
+                >{{ option.label }}</SelectItem
+              >
             </SelectContent>
           </Select>
         </div>

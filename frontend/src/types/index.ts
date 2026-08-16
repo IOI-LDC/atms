@@ -16,22 +16,17 @@ export type MrType = 'corrective' | 'preventive'
 export type MeterReadingSource = 'user' | 'manual'
 export type ErpSyncStatus = 'running' | 'success' | 'partial' | 'failed'
 export type AssetMaintenanceStatus = 'enrolled' | 'withdrawn'
+/**
+ * Four values since release 4b. `at_the_field` is derived from the asset's
+ * location and is never offered in a picker — use
+ * `MANUALLY_SELECTABLE_OPERATIONAL_STATUSES` for anything a person chooses.
+ */
 export type AssetOperationalStatus =
   | 'ready_for_field'
   | 'under_maintenance'
-  | 'down'
-  | 'scraped'
-  | 'under_inspection'
-  | 'lih'
+  | 'failure'
+  | 'at_the_field'
 export type AssetKind = 'asset' | 'package' | 'component'
-export type AssetMaintenanceSubStatus =
-  | 'installed'
-  | 'ready' // enrolled sub-statuses (component/package)
-  | 'lih'
-  | 'dbr'
-  | 'disposed'
-  | 'scrapped'
-  | 'other' // withdrawn sub-statuses
 export type WoFormFieldType = 'boolean' | 'numeric' | 'text'
 
 // ── Shared fragments ──────────────────────────────────────────────────────────
@@ -149,15 +144,17 @@ export interface Asset {
   model: string | null
   manufacturer: string | null
   operational_status: string | null
+  operational_status_label?: string | null
+  /** Admin-editable cause vocabulary (`asset_conditions`). */
+  condition_status: string | null
+  condition_label?: string | null
   maintenance_status: AssetMaintenanceStatus | null
-  maintenance_sub_status: AssetMaintenanceSubStatus | null
   asset_kind: AssetKind | null
   asset_tag: string | null
   is_booked?: boolean // derived — true when an active booking covers today
   parent_asset_id: number | null
   child_assets_count?: number
   current_location?: LocationRef | null
-  erp_status?: string | null // not for Requester
   erp_last_synced_at?: string | null // not for Requester
   is_active?: boolean // Admin/Manager only
   erp_raw_data?: Record<string, unknown> // Admin only
@@ -499,6 +496,8 @@ export interface MasterDataItem {
   label: string
   sort_order: number | null
   is_active: boolean
+  /** At most one per group — what automatic resets resolve to. */
+  is_default?: boolean
 }
 
 export interface UsageReadingType {
@@ -647,10 +646,8 @@ export interface DashboardKpiResponse {
       by_status: {
         ready_for_field: number
         under_maintenance: number
-        down: number
-        scraped: number
-        under_inspection: number
-        lih: number
+        failure: number
+        at_the_field: number
       }
       by_booking: { booked: number; available: number }
       total: number
@@ -713,7 +710,7 @@ export type AgingBucket = '0-7' | '8-30' | '31-90' | '91+'
 
 // R-10A Operational Status Distribution
 export interface OperationalStatusDistributionRow {
-  status: string // OperationalStatus value: ready_for_field | under_maintenance | down | scraped | under_inspection | lih
+  status: string // OperationalStatus value: ready_for_field | under_maintenance | failure | at_the_field
   count: number
 }
 export interface OperationalStatusDistributionReport {
@@ -764,10 +761,8 @@ export interface AssetDistributionRow {
   by_operational_status: {
     ready_for_field: number
     under_maintenance: number
-    down: number
-    scraped: number
-    under_inspection: number
-    lih: number
+    failure: number
+    at_the_field: number
   }
   by_asset_kind: { standalone: number; package: number; component: number }
   booked_count: number

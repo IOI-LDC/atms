@@ -706,21 +706,11 @@ class WorkOrderLifecycleTest extends TestCase
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/complete", ['completion_notes' => 'Done'])->assertOk();
     }
 
-    public function test_close_with_asset_status_down_keeps_asset_down(): void
-    {
-        $requester = $this->createUser(RoleCode::REQUESTER);
-        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
-        $tech = $this->createUser(RoleCode::TECHNICIAN);
-        $wo = $this->createApprovedWorkOrder($requester, $manager);
-        $this->assignStartComplete($wo, $manager, $tech);
-
-        // The closer inspected the asset and reports it is still faulty.
-        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
-            'asset_status' => 'down',
-        ])->assertOk();
-
-        $this->assertEquals('down', $wo->asset->fresh()->operational_status->value);
-    }
+    // `test_close_with_asset_status_down_keeps_asset_down` was removed in 4b:
+    // close no longer takes a status, so "close but leave it broken" is not a
+    // reachable state. Its replacement is
+    // `test_close_ignores_any_asset_status_sent_and_always_returns_to_service`
+    // below, and the "still faulty" case is now expressed by cancelling.
 
     public function test_close_with_asset_status_ready_for_field_marks_asset_ready_for_field(): void
     {
@@ -751,7 +741,13 @@ class WorkOrderLifecycleTest extends TestCase
         $this->assertEquals('ready_for_field', $wo->asset->fresh()->operational_status->value);
     }
 
-    public function test_close_never_un_retires_a_scraped_asset(): void
+    /**
+     * The successor to "close never un-retires a SCRAPED asset". Since the
+     * 2026-08-16 vocabulary change `is_active = false` is the only retirement
+     * control, so the rule moved from a status check to an activity check — and
+     * moved from close alone to every work-order lifecycle transition.
+     */
+    public function test_close_never_un_retires_a_deactivated_asset(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
@@ -759,18 +755,26 @@ class WorkOrderLifecycleTest extends TestCase
         $wo = $this->createApprovedWorkOrder($requester, $manager);
         $this->assignStartComplete($wo, $manager, $tech);
 
-        // The asset was retired while the work ran (e.g. scrapped) — closing the
-        // work order must not silently un-retire it, even on an explicit choice.
-        $wo->asset->update(['operational_status' => OperationalStatus::SCRAPED]);
+        // Retired while the work ran. Closing must still be possible — a
+        // stranded work order helps nobody — but must not touch the asset.
+        $wo->asset->update([
+            'operational_status' => OperationalStatus::FAILURE,
+            'is_active' => false,
+        ]);
 
-        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
-            'asset_status' => 'ready_for_field',
-        ])->assertOk();
+        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
-        $this->assertEquals('scraped', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('failure', $wo->asset->fresh()->operational_status->value);
+        $this->assertFalse($wo->asset->fresh()->is_active);
     }
 
-    public function test_close_rejects_asset_statuses_outside_down_and_ready_for_field(): void
+    /**
+     * Close no longer takes an asset status at all: it always returns the asset
+     * to service. A job that did not fix the asset is *cancelled*, which is
+     * where the caller's choice now lives. Anything sent is ignored rather than
+     * rejected — the field simply is not part of the request any more.
+     */
+    public function test_close_ignores_any_asset_status_sent_and_always_returns_to_service(): void
     {
         $requester = $this->createUser(RoleCode::REQUESTER);
         $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
@@ -779,11 +783,9 @@ class WorkOrderLifecycleTest extends TestCase
         $this->assignStartComplete($wo, $manager, $tech);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
-            'asset_status' => 'scraped',
-        ])->assertStatus(422);
+            'asset_status' => 'failure',
+        ])->assertOk();
 
-        $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/close", [
-            'asset_status' => 'broken',
-        ])->assertStatus(422);
+        $this->assertEquals('ready_for_field', $wo->asset->fresh()->operational_status->value);
     }
 }

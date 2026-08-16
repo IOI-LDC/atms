@@ -86,10 +86,10 @@ class WorkOrderAssetStatusTest extends TestCase
         $wo = $this->createWorkOrder(WorkOrderStatus::IN_PROGRESS, $tech);
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/asset-status", [
-            'operational_status' => 'down',
+            'operational_status' => 'failure',
         ])->assertOk();
 
-        $this->assertEquals('down', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('failure', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_assigned_technician_can_set_status_on_completed_work_order(): void
@@ -134,10 +134,10 @@ class WorkOrderAssetStatusTest extends TestCase
         $wo = $this->createWorkOrder(WorkOrderStatus::OPEN, $tech);
 
         $this->actingAs($manager)->postJson("/api/work-orders/{$wo->id}/asset-status", [
-            'operational_status' => 'down',
+            'operational_status' => 'failure',
         ])->assertOk();
 
-        $this->assertEquals('down', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('failure', $wo->asset->fresh()->operational_status->value);
     }
 
     public function test_administrator_can_set_asset_status(): void
@@ -146,10 +146,25 @@ class WorkOrderAssetStatusTest extends TestCase
         $wo = $this->createWorkOrder(WorkOrderStatus::OPEN);
 
         $this->actingAs($admin)->postJson("/api/work-orders/{$wo->id}/asset-status", [
-            'operational_status' => 'scraped',
+            'operational_status' => 'under_maintenance',
         ])->assertOk();
 
-        $this->assertEquals('scraped', $wo->asset->fresh()->operational_status->value);
+        $this->assertEquals('under_maintenance', $wo->asset->fresh()->operational_status->value);
+    }
+
+    /**
+     * `at_the_field` is derived from an asset's location, never chosen. Offering
+     * it here would let someone assert an asset is on a rig while its recorded
+     * location says the workshop, and every utilisation figure would repeat it.
+     */
+    public function test_at_the_field_cannot_be_set_by_hand(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $wo = $this->createWorkOrder(WorkOrderStatus::OPEN);
+
+        $this->actingAs($admin)->postJson("/api/work-orders/{$wo->id}/asset-status", [
+            'operational_status' => 'at_the_field',
+        ])->assertStatus(422);
     }
 
     public function test_assigned_technician_cannot_set_status_on_closed_work_order(): void
@@ -218,11 +233,11 @@ class WorkOrderAssetStatusTest extends TestCase
         $originalName = $asset->name;
 
         $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/asset-status", [
-            'operational_status' => 'down',
+            'operational_status' => 'failure',
             'name' => 'Attempted Rename',
         ])->assertOk();
 
-        $this->assertEquals('down', $asset->fresh()->operational_status->value);
+        $this->assertEquals('failure', $asset->fresh()->operational_status->value);
         $this->assertEquals($originalName, $asset->fresh()->name);
     }
 }

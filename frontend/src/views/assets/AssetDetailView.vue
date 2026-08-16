@@ -36,11 +36,11 @@ import { FileInput } from '@/components/ui/file-input'
 import { Badge } from '@/components/ui/badge'
 import { useAssetDetail } from '@/composables/useAssetDetail'
 import { useListOptions } from '@/composables/useListOptions'
+import { MANUALLY_SELECTABLE_OPERATIONAL_STATUSES } from '@/lib/reportOptions'
 import { openAttachmentInNewTab } from '@/lib/attachments'
 import {
   assetMaintenanceStatusClass,
   assetMaintenanceStatusLabel,
-  assetMaintenanceSubStatusLabel,
   assetKindClass,
   assetKindLabel,
   operationalStatusClass,
@@ -139,7 +139,11 @@ const {
   assetSizes,
   assetSizesLoading,
   loadAssetSizes,
+  assetConditions,
+  loadAssetConditions,
 } = useListOptions()
+
+void loadAssetConditions()
 
 // The Select primitive works in strings; the draft holds the numeric FK.
 // `__none__` is the project's sentinel for "no selection" — reka-ui throws if a
@@ -164,32 +168,6 @@ const locationIdStr = computed({
   set: (v: string) => {
     draft.value.current_location_id = v === '__none__' ? null : Number(v)
   },
-})
-
-/**
- * Available maintenance sub-statuses depend on the draft's maintenance_status
- * and asset_kind (per ASSET_STATUS.md):
- * - enrolled + component/package  → installed, ready
- * - enrolled + standalone asset   → (none — sub-status hidden)
- * - withdrawn                     → lih, dbr, disposed, scrapped, other
- */
-const availableSubStatuses = computed<{ value: string; label: string }[]>(() => {
-  if (draft.value.maintenance_status === 'withdrawn') {
-    return [
-      { value: 'lih', label: 'Lost in Hole' },
-      { value: 'dbr', label: 'Damaged Beyond Repair' },
-      { value: 'disposed', label: 'Disposed' },
-      { value: 'scrapped', label: 'Scrapped' },
-      { value: 'other', label: 'Other' },
-    ]
-  }
-  if (draft.value.asset_kind === 'package' || draft.value.asset_kind === 'component') {
-    return [
-      { value: 'installed', label: 'Installed' },
-      { value: 'ready', label: 'Ready (spare)' },
-    ]
-  }
-  return [] // enrolled standalone asset → no sub-status
 })
 
 // Attachment deletion uses its target id as open state (same pattern as WO).
@@ -343,13 +321,16 @@ watch(
                     </p>
                   </div>
                   <div class="detail-field">
+                    <span class="detail-field-label">Condition</span>
+                    <p class="detail-field-value">
+                      {{ record.condition_label ?? record.condition_status ?? '—' }}
+                    </p>
+                  </div>
+                  <div class="detail-field">
                     <span class="detail-field-label">Maintenance Status</span>
                     <p class="detail-field-value">
                       <span :class="assetMaintenanceStatusClass(record.maintenance_status)">
                         {{ assetMaintenanceStatusLabel(record.maintenance_status) }}
-                      </span>
-                      <span v-if="record.maintenance_sub_status" class="detail-field-muted">
-                        · {{ assetMaintenanceSubStatusLabel(record.maintenance_sub_status) }}
                       </span>
                     </p>
                   </div>
@@ -547,10 +528,6 @@ watch(
                       }}</span>
                       <span v-else>—</span>
                     </p>
-                  </div>
-                  <div class="detail-field">
-                    <span class="detail-field-label">ERP Status</span>
-                    <p class="detail-field-value">{{ record.erp_status ?? '—' }}</p>
                   </div>
                   <div class="detail-field">
                     <span class="detail-field-label">Last ERP Sync</span>
@@ -814,11 +791,11 @@ watch(
                 <SelectTrigger id="edit-op-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem
-                    v-for="value in ['ready_for_field', 'under_maintenance', 'down', 'scraped', 'under_inspection', 'lih']"
-                    :key="value"
-                    :value="value"
+                    v-for="option in MANUALLY_SELECTABLE_OPERATIONAL_STATUSES"
+                    :key="option.value"
+                    :value="option.value"
                   >
-                    {{ operationalStatusLabel(value) }}
+                    {{ option.label }}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -838,36 +815,29 @@ watch(
               </Select>
             </div>
 
-            <!-- Maintenance Sub-Status (conditional on status + kind) -->
-            <div v-if="availableSubStatuses.length > 0" class="form-field">
-              <Label for="edit-maint-sub">
-                Maintenance Sub-Status
-                <span class="field-optional">— optional</span>
-              </Label>
-              <Select
-                :model-value="draft.maintenance_sub_status || '__none__'"
-                @update:model-value="
-                  (v) => {
-                    const s = String(v)
-                    draft.maintenance_sub_status = s === '__none__' ? '' : s
-                  }
-                "
-              >
-                <SelectTrigger id="edit-maint-sub"
-                  ><SelectValue placeholder="None"
+            <!-- Condition: what is wrong with the asset, if anything. Distinct
+                 from Operational Status, which says whether it is working. -->
+            <div class="form-field">
+              <Label for="edit-condition">Condition</Label>
+              <Select v-model="draft.condition_status">
+                <SelectTrigger id="edit-condition"
+                  ><SelectValue placeholder="Select a condition"
                 /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
                   <SelectItem
-                    v-for="opt in availableSubStatuses"
-                    :key="opt.value"
-                    :value="opt.value"
-                    >{{ opt.label }}</SelectItem
+                    v-for="option in assetConditions"
+                    :key="option.value"
+                    :value="option.value"
+                    >{{ option.label }}</SelectItem
                   >
                 </SelectContent>
               </Select>
-              <p v-if="validationErrors?.maintenance_sub_status" class="form-error">
-                {{ validationErrors.maintenance_sub_status[0] }}
+              <p class="form-help">
+                What is wrong with the asset, if anything. Closing a work order returns this to the
+                default.
+              </p>
+              <p v-if="validationErrors?.condition_status" class="form-error">
+                {{ validationErrors.condition_status[0] }}
               </p>
             </div>
 

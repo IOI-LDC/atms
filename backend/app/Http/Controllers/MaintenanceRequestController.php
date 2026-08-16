@@ -97,6 +97,10 @@ class MaintenanceRequestController extends Controller
         // correct 409 instead of a validation 422. Preventive MRs ignore it.
         $rules = [
             'assignee_id' => ['nullable', 'exists:users,id'],
+            // Q4: where to send the asset for the work. Optional, and absent
+            // means "leave it where it is" — the approver picks a destination
+            // (typically the Tajoura Base yard) rather than ATMS assuming one.
+            'move_to_location_id' => ['nullable', 'integer', 'exists:locations,id'],
         ];
         if (! $maintenanceRequest->is_preventive && $maintenanceRequest->status === MaintenanceRequestStatus::PENDING_REVIEW) {
             $rules['is_failure'] = ['required', 'boolean'];
@@ -109,6 +113,7 @@ class MaintenanceRequestController extends Controller
                 $request->user()->id,
                 isset($validated['assignee_id']) ? (int) $validated['assignee_id'] : null,
                 array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null,
+                isset($validated['move_to_location_id']) ? (int) $validated['move_to_location_id'] : null,
             );
 
             return response()->json([

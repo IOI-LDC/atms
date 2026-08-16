@@ -116,6 +116,12 @@ class StartWorkOrder
                 'Started work order '.$workOrder->number,
                 null,
                 $actorUserId,
+                // The work order owns this asset's status from here: the caller
+                // forces `under_maintenance` immediately after. Letting the
+                // location rules fire would fight that, and would stamp
+                // `need_inspection` on an asset a technician is about to
+                // inspect anyway (D6, 2026-08-16).
+                applyStatusRules: false,
             );
 
             return;

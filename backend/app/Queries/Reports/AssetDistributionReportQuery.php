@@ -135,10 +135,8 @@ class AssetDistributionReportQuery
             ->selectRaw('count(*) as asset_count')
             ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as ready_for_field_count', [OperationalStatus::READY_FOR_FIELD->value])
             ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as under_maintenance_count', [OperationalStatus::UNDER_MAINTENANCE->value])
-            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as down_count', [OperationalStatus::DOWN->value])
-            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as scraped_count', [OperationalStatus::SCRAPED->value])
-            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as under_inspection_count', [OperationalStatus::UNDER_INSPECTION->value])
-            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as lih_count', [OperationalStatus::LIH->value])
+            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as failure_count', [OperationalStatus::FAILURE->value])
+            ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as at_the_field_count', [OperationalStatus::AT_THE_FIELD->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as standalone_count', [AssetKind::ASSET->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as package_count', [AssetKind::PACKAGE->value])
             ->selectRaw('sum(case when asset_kind = ? then 1 else 0 end) as component_count', [AssetKind::COMPONENT->value])
@@ -214,10 +212,8 @@ class AssetDistributionReportQuery
             'by_operational_status' => [
                 'ready_for_field' => (int) $row->ready_for_field_count,
                 'under_maintenance' => (int) $row->under_maintenance_count,
-                'down' => (int) $row->down_count,
-                'scraped' => (int) $row->scraped_count,
-                'under_inspection' => (int) $row->under_inspection_count,
-                'lih' => (int) $row->lih_count,
+                'failure' => (int) $row->failure_count,
+                'at_the_field' => (int) $row->at_the_field_count,
             ],
             'by_asset_kind' => [
                 'standalone' => (int) $row->standalone_count,

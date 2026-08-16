@@ -12,10 +12,12 @@ use App\Enums\WorkOrderStatus;
 use App\Models\AssetMeterReading;
 use App\Models\AssetPmAssignment;
 use App\Models\MaintenanceRequest;
+use App\Models\MasterDataItem;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Notifications\WorkOrders\WorkOrderClosedNotification;
 use App\Services\Audit\AuditLogger;
+use App\Support\Assets\AssetFieldStatus;
 use App\Support\FrontendUrl;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +25,18 @@ use Illuminate\Support\Facades\Notification;
 
 class CloseWorkOrder
 {
+    /**
+     * Non-blocking notices raised by the last `execute()` call, for the
+     * controller to return alongside the closed work order.
+     *
+     * Deliberately not exceptions: none of these is a reason to refuse a close.
+     * An asset that has been repaired has been repaired, whatever ATMS can or
+     * cannot say about the paperwork.
+     *
+     * @var list<string>
+     */
+    public array $warnings = [];
+
     /**
      * @param  int|null  $servicedPmAssignmentId  Set when the closer declares that a
      *                                            preventive service was performed
@@ -36,10 +50,11 @@ class CloseWorkOrder
         WorkOrder $workOrder,
         int $closedByUserId,
         ?bool $isFailureOverride = null,
-        ?OperationalStatus $assetStatus = null,
         ?int $servicedPmAssignmentId = null
     ): WorkOrder {
-        return DB::transaction(function () use ($workOrder, $closedByUserId, $isFailureOverride, $assetStatus, $servicedPmAssignmentId) {
+        $this->warnings = [];
+
+        return DB::transaction(function () use ($workOrder, $closedByUserId, $isFailureOverride, $servicedPmAssignmentId) {
             $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();
 
@@ -56,12 +71,15 @@ class CloseWorkOrder
             $after = $workOrder->fresh()->toArray();
             $logger->log('work_order.closed', $locked, $before, $after);
 
-            // The closer's explicit asset-status choice wins, defaulting to
-            // READY_FOR_FIELD when absent (the original behaviour). Close is a
-            // workflow event, never an asset-management one: a SCRAPED (retired)
-            // asset is never touched, and a no-op when already at the target.
+            // Close always returns the asset to service. The closer used to be
+            // able to pick a status here; since the 2026-08-16 vocabulary change
+            // that choice is gone, because "closed but still broken" is not a
+            // thing — a work order that did not fix the asset is *cancelled*,
+            // which is where the choice now lives.
             app(ApplyWorkOrderAssetStatusTransition::class)
-                ->execute($locked, $assetStatus ?? OperationalStatus::READY_FOR_FIELD, [OperationalStatus::SCRAPED]);
+                ->execute($locked, OperationalStatus::READY_FOR_FIELD);
+
+            $this->resetCondition($locked, $logger);
 
             // Confirm this work order's readings before anything reads them back.
             // Both PM baseline queries below (the assignment's own, and the one
@@ -319,5 +337,67 @@ class CloseWorkOrder
             $lowerAssignment->update($reset);
             $logger->log('close_work_order_reset_pm_assignment', $lowerAssignment, $beforeLower, $lowerAssignment->fresh()->toArray());
         }
+    }
+
+    /**
+     * Return the asset's condition to the vocabulary's default.
+     *
+     * The condition records what is wrong with an asset — Need Assembly,
+     * Missing Parts, Need Inspection. Closing the work order is the moment those
+     * stop being true, so leaving the old value would have every repaired asset
+     * still advertising the fault it came in with.
+     *
+     * Two deliberate restraints:
+     *  - **Only close resets.** Cancel does not: a cancelled job did not fix
+     *    anything, so the condition it came in with still stands.
+     *  - **Never writes null.** With no resolvable default the condition is left
+     *    exactly as it was and the omission is reported, rather than clearing a
+     *    value nobody replaced.
+     */
+    private function resetCondition(WorkOrder $workOrder, AuditLogger $logger): void
+    {
+        $asset = $workOrder->asset()->lockForUpdate()->first();
+
+        if ($asset === null) {
+            return;
+        }
+
+        $previous = $asset->condition_status;
+
+        // An asset that came back from the field flagged for inspection, and is
+        // now being closed out, is the case RQ1 (Phase 6) exists to tighten:
+        // once PM marking is built this should only warn when no PM level was
+        // marked. Until then it warns on the condition alone, which is the
+        // half that is knowable today.
+        if ($previous === AssetFieldStatus::NEED_INSPECTION) {
+            $this->warnings[] = 'This asset was flagged Need Inspection. Confirm the inspection was carried out '
+                .'and the relevant PM level recorded before relying on its schedule.';
+        }
+
+        $default = MasterDataItem::defaultFor(MasterDataItem::ASSET_CONDITIONS);
+
+        if ($default === null) {
+            $this->warnings[] = 'The asset condition could not be reset: no default condition is configured.';
+
+            $logger->log('asset.condition_reset_skipped', $asset, [], [], [
+                'work_order_id' => $workOrder->id,
+                'reason' => 'no_active_default',
+            ]);
+
+            return;
+        }
+
+        if ($previous === $default->value) {
+            return;
+        }
+
+        $before = $asset->toArray();
+        $asset->update(['condition_status' => $default->value]);
+
+        $logger->log('asset.condition_reset', $asset, $before, $asset->fresh()->toArray(), [
+            'work_order_id' => $workOrder->id,
+            'from' => $previous,
+            'to' => $default->value,
+        ]);
     }
 }

@@ -131,22 +131,25 @@ export function useDashboardKpis() {
     if (!h) return []
 
     return [
-      { key: 'ready_for_field', label: 'Ready for Field', count: h.by_status.ready_for_field, tone: 'active' },
+      {
+        key: 'ready_for_field',
+        label: 'Ready for Field',
+        count: h.by_status.ready_for_field,
+        tone: 'active',
+      },
       {
         key: 'under_maintenance',
         label: 'Under Maintenance',
         count: h.by_status.under_maintenance,
         tone: 'warning',
       },
-      { key: 'down', label: 'Down', count: h.by_status.down, tone: 'critical' },
-      { key: 'scraped', label: 'Scraped', count: h.by_status.scraped, tone: 'muted' },
+      { key: 'failure', label: 'Failure', count: h.by_status.failure, tone: 'critical' },
       {
-        key: 'under_inspection',
-        label: 'Under Inspection',
-        count: h.by_status.under_inspection,
-        tone: 'warning',
+        key: 'at_the_field',
+        label: 'At the Field',
+        count: h.by_status.at_the_field,
+        tone: 'info',
       },
-      { key: 'lih', label: 'Lost in Hole', count: h.by_status.lih, tone: 'critical' },
     ]
   })
 

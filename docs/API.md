@@ -52,12 +52,38 @@ route's controller in `backend/`; tests are the contract for edge cases.
 | GET | `/assets/{asset}/maintenance-history` | Derived maintenance read model. |
 | GET / POST | `/assets/{asset}/attachments` | Asset attachment list/upload. |
 
-Asset `operational_status` vocabulary (six values): `ready_for_field` ("Ready
-for Field"), `under_maintenance` ("Under Maintenance"), `down` ("Down"),
-`under_inspection` ("Under Inspection"), `scraped` ("Scraped"), and `lih` ("Lost
-in Hole"). WO close/cancel accept only `down` or `ready_for_field` for the
-asset's next status (pre-seeded to `ready_for_field`); a `scraped` asset is
-never touched by those transitions.
+Asset `operational_status` vocabulary (**four values** since release 4b):
+`ready_for_field` ("Ready for Field"), `under_maintenance` ("Under
+Maintenance"), `failure` ("Failure"), and `at_the_field` ("At the Field").
+
+- **`at_the_field` is derived, never sent.** It is written when an asset moves
+  to a location classified DEPLOYED (rig or well site) and cleared when it comes
+  back. Every manual status control rejects it with 422.
+- **Manual moves are gated.** `PATCH /assets/{asset}` and
+  `POST /assets/{asset}/location` accept a move for a `ready_for_field` asset
+  (any destination) and for an `at_the_field` asset returning to a yard or
+  building. A `failure` or `under_maintenance` asset returns **409** — the work
+  order decides where it goes. Workflow-driven moves (work-order start, MR
+  approval) bypass this gate.
+- **Returning from the field** sets `ready_for_field` and stamps
+  `condition_status = need_inspection`. Work-order-driven moves do not.
+- **Close no longer takes `asset_status`** — it always returns the asset to
+  `ready_for_field`. Cancel keeps the caller's choice, now `failure` |
+  `ready_for_field`. A **deactivated** asset (`is_active = false`) is never
+  touched by any lifecycle transition; that replaces the old "`scraped` is never
+  touched" rule.
+
+Assets also carry `condition_status` — the hand-set cause vocabulary (`normal`,
+`need_assembly`, `missing_parts`, `need_inspection`), served by
+`GET /list-options/asset_conditions` and administered through
+`/admin/master-data/asset_conditions`. Validation accepts **active rows only**.
+Payloads include `condition_status`, `condition_label`, and
+`operational_status_label`.
+
+Removed in 4b: `maintenance_sub_status` and `erp_status` are no longer served or
+accepted (an old client sending `maintenance_sub_status` has it ignored, not
+rejected). The `down`, `scraped`, `under_inspection` and `lih` values no longer
+exist.
 
 ## Maintenance and work orders
 
@@ -66,16 +92,16 @@ never touched by those transitions.
 | GET | `/maintenance-requests` | Cursor list with policy-scoped visibility. |
 | POST | `/maintenance-requests/corrective` | Create a corrective MR. |
 | GET / PATCH | `/maintenance-requests/{maintenanceRequest}` | Detail and pending-request update. |
-| POST | `/maintenance-requests/{maintenanceRequest}/approve` | Manager/Admin approval; atomically creates WO. |
+| POST | `/maintenance-requests/{maintenanceRequest}/approve` | Manager/Admin approval; atomically creates WO. Optional `move_to_location_id` sends the asset somewhere as part of the approval (corrective and preventive alike) — absent keeps its current location. The move, the location-history row and the audit entry share the approval's transaction, so a rejected location rolls the whole approval back (**409** for an inactive location, **422** for an unknown one). |
 | POST | `/maintenance-requests/{maintenanceRequest}/reject` | Rejection; PM requests require appropriate suppression context. |
 | POST | `/maintenance-requests/{maintenanceRequest}/cancel` | Cancellation; PM requests create suppression context. `decision_type` is `cancelled` for an ordinary cancellation, or `performed_under_repair` when a work-order close retires the request because the service was actually carried out — compliance reporting must not read the second as a skipped service. |
 | GET / POST | `/maintenance-requests/{maintenanceRequest}/attachments` | MR attachment list/upload. |
 | GET | `/work-orders` | Cursor list with supported filters. |
 | GET / PATCH | `/work-orders/{workOrder}` | Detail and permitted execution update. Detail also returns `meter_snapshots` — the asset's meter position per reading type at close, the reference point for "usage since this job". Empty until closed. |
 | POST | `/work-orders/{workOrder}/assign`, `/start`, `/complete`, `/close`, `/cancel` | State transitions; close/cancel remain Manager/Admin actions. |
-| POST | `/work-orders/{workOrder}/close` | Body: optional `is_failure` (corrective-origin only), `asset_status`, and `serviced_pm_assignment_id`. **Closing confirms the readings taken on this work order** (oldest-first; a reading still failing a monotonicity guard is skipped and audited as `meter_reading.confirm_skipped`, never fatal) and snapshots the asset's meter position per reading type. `serviced_pm_assignment_id` declares that a preventive service was performed alongside the job: it resets that assignment's date and reading baselines, cascades to lower levels, and cancels any pending PM request for it — **409** if the assignment is inactive or belongs to another asset. |
+| POST | `/work-orders/{workOrder}/close` | Body: optional `is_failure` (corrective-origin only) and `serviced_pm_assignment_id` — **`asset_status` was removed in 4b**; close always returns the asset to `ready_for_field` and resets its `condition_status` to the vocabulary default. The response carries a `warnings` array (non-blocking notices, e.g. the asset was flagged Need Inspection). **Closing confirms the readings taken on this work order** (oldest-first; a reading still failing a monotonicity guard is skipped and audited as `meter_reading.confirm_skipped`, never fatal) and snapshots the asset's meter position per reading type. `serviced_pm_assignment_id` declares that a preventive service was performed alongside the job: it resets that assignment's date and reading baselines, cascades to lower levels, and cancels any pending PM request for it — **409** if the assignment is inactive or belongs to another asset. |
 | POST / DELETE | `/work-orders/{workOrder}/parts` | Add a part line; remove it using `/parts/{partLine}`. |
-| POST | `/work-orders/{workOrder}/asset-status` | Set permitted post-work asset status. On close/cancel the choice is limited to `down` \| `ready_for_field` (see the vocabulary note under Dashboard and assets). |
+| POST | `/work-orders/{workOrder}/asset-status` | Set the asset's status by hand. Limited to `ready_for_field` \| `under_maintenance` \| `failure` — never `at_the_field`, which only a location change may write. Cancel's own `asset_status` is limited further, to `failure` \| `ready_for_field` (see the vocabulary note under Dashboard and assets). |
 | GET | `/work-orders/{workOrder}/form` | Read attached WO form. |
 | PATCH | `/work-orders/{workOrder}/form/fields` | Atomic bulk save of captured form values — the write path behind the checklist's Save button. Body `{ fields: [{ id, pre_value?, post_value?, notes? }] }`; partial in both directions (send only changed fields, and an absent slot key keeps its stored value). Any validation failure or duplicate id rejects the whole batch with `422`; an id not belonging to this form (typically dropped by a template sync since the form was opened) rejects it with `409`. Returns the updated form, so no re-fetch is needed. One audit entry per save. |
 | PATCH | `/work-orders/{workOrder}/form/fields/{field}` | Update a single captured form value. Retained alongside the bulk route. |

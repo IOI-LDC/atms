@@ -14,8 +14,8 @@ import type {
 
 /**
  * Draft shape for the Edit Asset sheet.
- * Covers all PATCH /api/assets/{asset} fields except parent_asset_id and
- * maintenance_sub_status — those are Phase 2 (assembly).
+ * Covers all PATCH /api/assets/{asset} fields except parent_asset_id, which is
+ * Phase 2 (assembly). `maintenance_sub_status` left the API in release 4b.
  *
  * asset_tag: set freely when current tag is null (Admin/Manager). Once a tag
  * is saved it is immutable — override requires Admin + reason (separate flow).
@@ -29,8 +29,9 @@ interface AssetEditDraft {
   model: string
   manufacturer: string
   operational_status: string
+  /** `asset_conditions` value — the hand-set cause vocabulary. */
+  condition_status: string
   maintenance_status: string
-  maintenance_sub_status: string
   is_active: boolean
   current_location_id: number | null
   location_notes: string
@@ -109,8 +110,8 @@ export function useAssetDetail() {
     model: '',
     manufacturer: '',
     operational_status: 'ready_for_field',
+    condition_status: '',
     maintenance_status: 'enrolled',
-    maintenance_sub_status: '',
     is_active: true,
     current_location_id: null,
     location_notes: '',
@@ -263,8 +264,8 @@ export function useAssetDetail() {
       model: record.value.model ?? '',
       manufacturer: record.value.manufacturer ?? '',
       operational_status: record.value.operational_status ?? 'ready_for_field',
+      condition_status: record.value.condition_status ?? '',
       maintenance_status: record.value.maintenance_status ?? 'enrolled',
-      maintenance_sub_status: record.value.maintenance_sub_status ?? '',
       is_active: record.value.is_active ?? true,
       current_location_id: record.value.current_location?.id ?? null,
       location_notes: '',
@@ -312,8 +313,10 @@ export function useAssetDetail() {
         model: draft.value.model.trim() || null,
         manufacturer: draft.value.manufacturer.trim() || null,
         operational_status: draft.value.operational_status,
+        // Omitted rather than nulled when blank: the API validates against the
+        // active vocabulary, and null is not one of its values.
+        ...(draft.value.condition_status ? { condition_status: draft.value.condition_status } : {}),
         maintenance_status: draft.value.maintenance_status,
-        maintenance_sub_status: draft.value.maintenance_sub_status.trim() || null,
         current_location_id: draft.value.current_location_id,
         location_notes: draft.value.location_notes.trim() || null,
         asset_kind: draft.value.asset_kind,

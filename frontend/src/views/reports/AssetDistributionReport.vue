@@ -261,17 +261,11 @@ onMounted(() => {
                     <span v-if="row.by_operational_status.under_maintenance" class="report-chip">
                       Under maint. <b>{{ row.by_operational_status.under_maintenance }}</b>
                     </span>
-                    <span v-if="row.by_operational_status.down" class="report-chip">
-                      Down <b>{{ row.by_operational_status.down }}</b>
+                    <span v-if="row.by_operational_status.failure" class="report-chip">
+                      Failure <b>{{ row.by_operational_status.failure }}</b>
                     </span>
-                    <span v-if="row.by_operational_status.scraped" class="report-chip">
-                      Scraped <b>{{ row.by_operational_status.scraped }}</b>
-                    </span>
-                    <span v-if="row.by_operational_status.under_inspection" class="report-chip">
-                      Under insp. <b>{{ row.by_operational_status.under_inspection }}</b>
-                    </span>
-                    <span v-if="row.by_operational_status.lih" class="report-chip">
-                      Lost in hole <b>{{ row.by_operational_status.lih }}</b>
+                    <span v-if="row.by_operational_status.at_the_field" class="report-chip">
+                      At the field <b>{{ row.by_operational_status.at_the_field }}</b>
                     </span>
                   </div>
                 </td>

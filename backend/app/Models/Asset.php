@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\AssetKind;
 use App\Enums\BookingStatus;
 use App\Enums\MaintenanceStatus;
-use App\Enums\MaintenanceSubStatus;
 use App\Enums\OperationalStatus;
 use App\Support\SizeCast;
 use Illuminate\Database\Eloquent\Model;
@@ -31,7 +30,6 @@ class Asset extends Model
         'erp_last_synced_at',
         'is_active',
         'maintenance_status',
-        'maintenance_sub_status',
         // Hand-set label vocabulary (`asset_conditions` master data). A plain
         // string, not an enum cast: LDC adds and renames these through the Admin
         // UI, and a cast would make every query touching an unrecognised row throw.
@@ -58,7 +56,6 @@ class Asset extends Model
             'asset_tag_generated_at' => 'datetime',
             'operational_status' => OperationalStatus::class,
             'maintenance_status' => MaintenanceStatus::class,
-            'maintenance_sub_status' => MaintenanceSubStatus::class,
             'asset_kind' => AssetKind::class,
         ];
     }

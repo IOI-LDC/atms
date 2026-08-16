@@ -40,7 +40,7 @@ const { html, filteredToc, searchQuery, activeId, scrollToSection, printManual }
             <Input
               v-model="searchQuery"
               type="search"
-              placeholder="Search sections…"
+              placeholder="Search the manual…"
               aria-label="Search the user manual"
             />
           </div>

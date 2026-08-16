@@ -138,7 +138,7 @@ class AssetStatusReportTest extends TestCase
 
     public function test_filters_by_operational_status_and_summary_matches(): void
     {
-        $this->asset(['operational_status' => OperationalStatus::DOWN->value]);
+        $this->asset(['operational_status' => OperationalStatus::FAILURE->value]);
         $this->asset(['operational_status' => OperationalStatus::READY_FOR_FIELD->value]);
         $this->asset(['operational_status' => OperationalStatus::READY_FOR_FIELD->value]);
 
@@ -146,7 +146,7 @@ class AssetStatusReportTest extends TestCase
 
         $this->assertCount(2, $response->json('data'));
         $this->assertSame(2, $response->json('summary.total'));
-        $this->assertSame(0, $response->json('summary.by_status.down'));
+        $this->assertSame(0, $response->json('summary.by_status.failure'));
     }
 
     public function test_filters_by_location(): void

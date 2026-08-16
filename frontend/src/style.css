@@ -3066,6 +3066,7 @@
 .status-activation-pending,
 .status-booked,
 .status-released,
+.status-deployed,
 .badge-kind-package,
 .badge-kind-component,
 .priority-high,
@@ -3111,7 +3112,7 @@
   background: oklch(0.62 0.19 149 / 0.14);
   color: oklch(0.5 0.16 149);
 }
-/* Red — MR Rejected · Priority Critical / Operational Down · PM Due · ERP Failed
+/* Red — MR Rejected · Priority Critical / Operational Failure · PM Due · ERP Failed
    · Failure = Failure. */
 .status-rejected,
 .priority-critical,
@@ -3148,6 +3149,14 @@
 .status-completed {
   background: oklch(0.55 0.16 290 / 0.14);
   color: oklch(0.5 0.17 290);
+}
+
+/* Teal — Operational "At the Field". Its own tone on purpose: green already
+   means "ready and available here", and an asset out on a rig is a good state
+   but not an available one. Blue is taken by WO Open / Role Administrator. */
+.status-deployed {
+  background: oklch(0.6 0.11 195 / 0.14);
+  color: oklch(0.48 0.1 195);
 }
 
 /* ERP Sync statuses: running → blue, success → green, partial → orange,
@@ -5566,6 +5575,29 @@
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+/* Post-close notices returned by the API (`warnings`). Same amber family as the
+   sync banner, but a list and without actions — nothing here blocks anything,
+   it is information the closer should see once. */
+.wo-close-warnings {
+  padding: 0.75rem 1rem;
+  border: 1px solid oklch(0.7 0.155 75 / 0.25);
+  border-radius: var(--radius);
+  background: oklch(0.7 0.155 75 / 0.12);
+  color: oklch(0.5 0.13 75);
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
+}
+
+.wo-close-warnings ul {
+  margin: 0.25rem 0 0;
+  padding-inline-start: 1.125rem;
+  list-style: disc;
+}
+
+.wo-close-warnings li + li {
+  margin-block-start: 0.25rem;
 }
 
 /* Collapsed checklist summary on the WO detail page — the table itself lives in

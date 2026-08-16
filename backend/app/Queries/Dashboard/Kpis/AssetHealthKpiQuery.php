@@ -24,7 +24,7 @@ class AssetHealthKpiQuery
      * @return array{
      *     asset_health: array{
      *         availability: array{percentage: float|null},
-     *         by_status: array{ready_for_field: int, under_maintenance: int, down: int, scraped: int, under_inspection: int, lih: int},
+     *         by_status: array{ready_for_field: int, under_maintenance: int, failure: int, at_the_field: int},
      *         total: int,
      *     },
      * }
@@ -49,10 +49,8 @@ class AssetHealthKpiQuery
                 'by_status' => [
                     'ready_for_field' => $readyForField,
                     'under_maintenance' => $byStatus[OperationalStatus::UNDER_MAINTENANCE->value] ?? 0,
-                    'down' => $byStatus[OperationalStatus::DOWN->value] ?? 0,
-                    'scraped' => $byStatus[OperationalStatus::SCRAPED->value] ?? 0,
-                    'under_inspection' => $byStatus[OperationalStatus::UNDER_INSPECTION->value] ?? 0,
-                    'lih' => $byStatus[OperationalStatus::LIH->value] ?? 0,
+                    'failure' => $byStatus[OperationalStatus::FAILURE->value] ?? 0,
+                    'at_the_field' => $byStatus[OperationalStatus::AT_THE_FIELD->value] ?? 0,
                 ],
                 'by_booking' => $this->bookingCounts(),
                 'total' => $total,

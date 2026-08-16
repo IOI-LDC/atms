@@ -24,7 +24,8 @@ class ListOptionController extends Controller
     public function index(string $group): JsonResponse
     {
         return match ($group) {
-            'maintenance_priorities' => $this->maintenancePriorities(),
+            MasterDataItem::MAINTENANCE_PRIORITIES => $this->masterData(MasterDataItem::MAINTENANCE_PRIORITIES),
+            MasterDataItem::ASSET_CONDITIONS => $this->masterData(MasterDataItem::ASSET_CONDITIONS),
             'usage_reading_types' => $this->usageReadingTypes(),
             'fa_subclass_type_codes' => $this->faSubclassTypeCodes(),
             'maintenance_categories' => $this->maintenanceCategories(),
@@ -33,12 +34,17 @@ class ListOptionController extends Controller
         };
     }
 
-    private function maintenancePriorities(): JsonResponse
+    /**
+     * Any `master_data_items` vocabulary, active rows only.
+     *
+     * `is_default` is included: the asset form pre-selects it for a new record,
+     * which is the same value a work-order close resets to, so the picker and
+     * the workflow agree without the frontend hardcoding a string.
+     */
+    private function masterData(string $groupKey): JsonResponse
     {
-        $items = MasterDataItem::where('group_key', 'maintenance_priorities')
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get(['id', 'value', 'label', 'sort_order']);
+        $items = MasterDataItem::activeIn($groupKey)
+            ->get(['id', 'value', 'label', 'sort_order', 'is_default']);
 
         return response()->json(['data' => $items]);
     }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\WorkOrders;
 
 use App\Enums\LocationType;
+use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
@@ -311,5 +312,45 @@ class StartWorkOrderLocationTest extends TestCase
         $this->actingAs($tech)->getJson("/api/work-orders/{$wo->id}")
             ->assertOk()
             ->assertJsonPath('data.asset.current_location', null);
+    }
+
+    // ── D6: the work order owns the status of the asset it moves ────────────────
+
+    /**
+     * Starting a work order moves the asset to the workshop, which for a
+     * user-initiated move would be a field exit and would stamp
+     * `need_inspection`. It must not here: a technician is about to inspect the
+     * asset as part of the job, and closing the work order resets the condition
+     * anyway — so the flag would appear and vanish having told nobody anything.
+     *
+     * Confirmed with the user on 2026-08-16 (decision D6).
+     */
+    public function test_starting_a_work_order_does_not_flag_the_asset_for_inspection(): void
+    {
+        $manager = $this->createUser(RoleCode::MAINTENANCE_MANAGER);
+        $tech = $this->createUser(RoleCode::TECHNICIAN);
+        $rig = $this->location('RB', LocationType::RIG);
+        $workshop = $this->location('WS', LocationType::WORKSHOP);
+
+        $asset = $this->assetAt($rig);
+        $asset->update([
+            'operational_status' => OperationalStatus::AT_THE_FIELD,
+            'condition_status' => 'normal',
+        ]);
+
+        $wo = $this->assignedWorkOrder($asset, $manager, $tech);
+
+        $this->actingAs($tech)->postJson("/api/work-orders/{$wo->id}/start", [
+            'location_id' => $workshop->id,
+        ])->assertOk();
+
+        $asset->refresh();
+        $this->assertSame($workshop->id, $asset->current_location_id, 'The move still happens.');
+        $this->assertSame('normal', $asset->condition_status, 'But it is not read as a field exit.');
+        $this->assertSame(
+            OperationalStatus::UNDER_MAINTENANCE,
+            $asset->operational_status,
+            'The work order sets the status, not the location rule.',
+        );
     }
 }

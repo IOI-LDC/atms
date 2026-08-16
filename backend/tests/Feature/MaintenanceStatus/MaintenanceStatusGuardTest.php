@@ -148,13 +148,21 @@ class MaintenanceStatusGuardTest extends TestCase
         ])->assertStatus(422);
     }
 
-    public function test_legacy_maintenance_sub_status_input_is_rejected(): void
+    /**
+     * `maintenance_sub_status` left the API in 4b (the column follows in 4c).
+     * An old client still sending it is not an error — the field is simply no
+     * longer part of the request, so it is dropped rather than rejected. Pinned
+     * because "ignored" and "written" look identical from a 200.
+     */
+    public function test_retired_maintenance_sub_status_input_is_ignored(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
         $asset = $this->createAsset();
 
         $this->actingAs($admin)->patchJson("/api/assets/{$asset->id}", [
-            'maintenance_sub_status' => 'Disposed',
-        ])->assertStatus(422);
+            'maintenance_sub_status' => 'disposed',
+        ])->assertOk();
+
+        $this->assertNull($asset->fresh()->getRawOriginal('maintenance_sub_status'));
     }
 }

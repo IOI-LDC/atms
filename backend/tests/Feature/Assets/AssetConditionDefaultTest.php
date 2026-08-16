@@ -36,12 +36,17 @@ class AssetConditionDefaultTest extends TestCase
         $this->seed(RoleSeeder::class);
     }
 
-    private function admin(): User
+    private function user(RoleCode $roleCode): User
     {
         return User::factory()->create([
-            'role_id' => Role::where('code', RoleCode::ADMINISTRATOR)->first()->id,
+            'role_id' => Role::where('code', $roleCode)->first()->id,
             'is_active' => true,
         ]);
+    }
+
+    private function admin(): User
+    {
+        return $this->user(RoleCode::ADMINISTRATOR);
     }
 
     public function test_the_seeded_default_is_normal(): void
@@ -125,5 +130,115 @@ class AssetConditionDefaultTest extends TestCase
             ->assertCreated();
 
         $this->assertNull(Asset::where('erp_asset_code', 'AST-COND-003')->sole()->condition_status);
+    }
+
+    // ── The condition API contract (4b) ─────────────────────────────────────────
+
+    public function test_a_condition_can_be_set_on_an_existing_asset(): void
+    {
+        $asset = Asset::create([
+            'erp_asset_code' => 'AST-COND-004',
+            'name' => 'Editable',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/assets/{$asset->id}", ['condition_status' => 'missing_parts'])
+            ->assertOk()
+            ->assertJsonPath('data.condition_status', 'missing_parts')
+            ->assertJsonPath('data.condition_label', 'Missing Parts');
+    }
+
+    /**
+     * Validation is resolved from the vocabulary, not a constant — so retiring a
+     * condition takes it out of circulation immediately, without a deploy.
+     * Assets already carrying it keep it; only new writes are refused.
+     */
+    public function test_a_retired_condition_cannot_be_assigned(): void
+    {
+        MasterDataItem::where('group_key', MasterDataItem::ASSET_CONDITIONS)
+            ->where('value', 'need_assembly')
+            ->update(['is_active' => false]);
+
+        $asset = Asset::create([
+            'erp_asset_code' => 'AST-COND-005',
+            'name' => 'Editable',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/assets/{$asset->id}", ['condition_status' => 'need_assembly'])
+            ->assertStatus(422);
+    }
+
+    public function test_an_unknown_condition_is_rejected(): void
+    {
+        $asset = Asset::create([
+            'erp_asset_code' => 'AST-COND-006',
+            'name' => 'Editable',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/assets/{$asset->id}", ['condition_status' => 'invented'])
+            ->assertStatus(422);
+    }
+
+    /**
+     * The picker every non-Admin screen reads. Serves active rows in sort order
+     * and carries `is_default` so the asset form can pre-select the same value a
+     * work-order close resets to, without hardcoding the string.
+     */
+    public function test_the_condition_picker_serves_the_active_vocabulary(): void
+    {
+        MasterDataItem::where('group_key', MasterDataItem::ASSET_CONDITIONS)
+            ->where('value', 'missing_parts')
+            ->update(['is_active' => false]);
+
+        $data = $this->actingAs($this->admin())
+            ->getJson('/api/list-options/asset_conditions')
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame(['normal', 'need_assembly', 'need_inspection'], array_column($data, 'value'));
+        $this->assertSame(['Normal', 'Need Assembly', 'Need Inspection'], array_column($data, 'label'));
+        $this->assertTrue($data[0]['is_default']);
+    }
+
+    /**
+     * The picker is a read path for every role — a technician setting a
+     * condition needs the labels, and the Admin-gated master-data CRUD is a
+     * different endpoint with a different purpose.
+     */
+    public function test_the_condition_picker_is_readable_by_a_technician(): void
+    {
+        $this->actingAs($this->user(RoleCode::TECHNICIAN))
+            ->getJson('/api/list-options/asset_conditions')
+            ->assertOk();
+    }
+
+    /**
+     * `at_the_field` is derived from location. Accepting it here would let an
+     * asset claim to be on a rig while its location says the yard.
+     */
+    public function test_at_the_field_cannot_be_set_through_the_asset_api(): void
+    {
+        $asset = Asset::create([
+            'erp_asset_code' => 'AST-COND-007',
+            'name' => 'Editable',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/assets/{$asset->id}", ['operational_status' => 'at_the_field'])
+            ->assertStatus(422);
+
+        $this->actingAs($this->admin())
+            ->postJson('/api/assets', [
+                'name' => 'Claimed Deployed',
+                'erp_asset_code' => 'AST-COND-008',
+                'operational_status' => 'at_the_field',
+            ])
+            ->assertStatus(422);
     }
 }

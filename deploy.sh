@@ -15,6 +15,15 @@
 #   sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
 #
 # Idempotent — safe to re-run on every deploy.
+#
+# ⚠️ EXCEPTION — release 4b (status vocabulary), 2026-08-16.
+#   That release narrows the OperationalStatus enum AND rewrites the rows still
+#   carrying the old values. New code against un-migrated data throws on every
+#   read of an affected asset, so the two must not overlap: traffic has to stop,
+#   the migration runs from a one-off new-image container, and only then does the
+#   new stack start. This script's ordering is wrong for that one release.
+#   Follow docs/RELEASE-4b-CUTOVER.md instead, once, then resume using this
+#   script as normal.
 # ===========================================================================
 set -euo pipefail
 

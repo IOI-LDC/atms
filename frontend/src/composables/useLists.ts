@@ -26,6 +26,12 @@ export const LIST_GROUPS: ListGroup[] = [
     kind: 'master_data',
   },
   {
+    key: 'asset_conditions',
+    label: 'Asset Conditions',
+    section: 'Master Data',
+    kind: 'master_data',
+  },
+  {
     key: 'maintenance_categories',
     label: 'Maintenance Categories',
     section: 'Master Data',
@@ -136,7 +142,9 @@ export function useLists() {
 
   // is_active toggle — every list kind carries this field.
   async function toggleActive(item: ListItem): Promise<boolean> {
-    return updateItem(item, { is_active: !(item as MasterDataItem | UsageReadingType | MaintenanceCategoryOption).is_active })
+    return updateItem(item, {
+      is_active: !(item as MasterDataItem | UsageReadingType | MaintenanceCategoryOption).is_active,
+    })
   }
 
   return {

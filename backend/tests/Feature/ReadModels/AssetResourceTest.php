@@ -58,7 +58,6 @@ class AssetResourceTest extends TestCase
         $response->assertStatus(200);
         $data = $response->json('data.0');
         $this->assertArrayHasKey('erp_raw_data', $data);
-        $this->assertArrayHasKey('erp_status', $data);
         $this->assertArrayHasKey('erp_last_synced_at', $data);
         $this->assertArrayHasKey('is_active', $data);
         $this->assertArrayHasKey('serial_number', $data);
@@ -74,7 +73,6 @@ class AssetResourceTest extends TestCase
         $response->assertStatus(200);
         $data = $response->json('data.0');
         $this->assertArrayNotHasKey('erp_raw_data', $data);
-        $this->assertArrayHasKey('erp_status', $data);
         $this->assertArrayHasKey('is_active', $data);
     }
 
@@ -89,7 +87,6 @@ class AssetResourceTest extends TestCase
         $data = $response->json('data.0');
         $this->assertArrayNotHasKey('erp_raw_data', $data);
         $this->assertArrayNotHasKey('is_active', $data);
-        $this->assertArrayHasKey('erp_status', $data);
         $this->assertArrayHasKey('erp_last_synced_at', $data);
         $this->assertArrayHasKey('name', $data);
         // ERP identifiers are Admin-only — they must not reach ordinary users.
@@ -108,7 +105,6 @@ class AssetResourceTest extends TestCase
         $data = $response->json('data.0');
         $this->assertArrayNotHasKey('erp_raw_data', $data);
         $this->assertArrayNotHasKey('is_active', $data);
-        $this->assertArrayHasKey('erp_status', $data);
         $this->assertArrayHasKey('erp_last_synced_at', $data);
     }
 
@@ -259,20 +255,53 @@ class AssetResourceTest extends TestCase
         $this->assertSame('enrolled', $response->json('data.0.maintenance_status'));
     }
 
-    public function test_set_maintenance_sub_status_serializes_lowercase(): void
+    /**
+     * `maintenance_sub_status` and `erp_status` stopped being served in 4b —
+     * both were ERP vocabulary ATMS mirrored without reading. The columns
+     * themselves go in 4c. This pins that neither leaks back into a payload.
+     */
+    public function test_retired_erp_mirror_fields_are_not_serialized(): void
     {
         $admin = $this->createUser(RoleCode::ADMINISTRATOR);
-        $location = Location::create(['name' => 'Loc', 'type' => 'building']);
-        Asset::create([
-            'erp_asset_code' => 'A-SUB-001',
-            'name' => 'Sub-status Asset',
-            'maintenance_sub_status' => 'disposed',
-            'current_location_id' => $location->id,
-        ]);
+        $this->createAsset();
 
-        $response = $this->actingAs($admin)->getJson('/api/assets');
+        $data = $this->actingAs($admin)->getJson('/api/assets')->assertStatus(200)->json('data.0');
 
-        $response->assertStatus(200);
-        $this->assertSame('disposed', $response->json('data.0.maintenance_sub_status'));
+        $this->assertArrayNotHasKey('maintenance_sub_status', $data);
+        $this->assertArrayNotHasKey('erp_status', $data);
+    }
+
+    /**
+     * The condition axis, added in 4a and exposed here in 4b. The label is
+     * resolved from the `asset_conditions` vocabulary so a rename reaches every
+     * screen at once rather than being duplicated per view.
+     */
+    public function test_condition_is_serialized_with_its_label(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        // Set explicitly: this fixture writes the model directly, so it does not
+        // go through the creation path that resolves the default. Default
+        // resolution is covered by AssetConditionDefaultTest.
+        $this->createAsset()->update(['condition_status' => 'need_inspection']);
+
+        $data = $this->actingAs($admin)->getJson('/api/assets')->assertStatus(200)->json('data.0');
+
+        $this->assertSame('need_inspection', $data['condition_status']);
+        $this->assertSame('Need Inspection', $data['condition_label']);
+        $this->assertSame('Ready for Field', $data['operational_status_label']);
+    }
+
+    /**
+     * A condition an Admin has since deleted still renders as something a person
+     * can read, rather than a blank cell that looks like missing data.
+     */
+    public function test_an_unknown_condition_falls_back_to_its_raw_value(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createAsset()->update(['condition_status' => 'retired_vocabulary_value']);
+
+        $data = $this->actingAs($admin)->getJson('/api/assets')->assertStatus(200)->json('data.0');
+
+        $this->assertSame('retired_vocabulary_value', $data['condition_label']);
     }
 }

@@ -3,7 +3,94 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — review hardening, pre-4b)
+## Session — 2026-08-16 (latest — Release 4b SHIPPED: the vocabulary switch)
+
+**1181 tests green (was 1132), Pint clean, vue-tsc clean, SPA builds.** This is
+the breaking half of the vocabulary rollout, and the only release in the
+programme that needs a maintenance window.
+
+### ⚠️ Deploy order is load-bearing
+
+`OperationalStatus` narrowed to four cases **and** a migration rewrote the rows
+still carrying the old ones. New code against un-migrated data throws on every
+read of an affected asset — the enum cast has no case to deserialize into. The
+sequence is documented in **`docs/RELEASE-4b-CUTOVER.md`**, and `deploy.sh` now
+carries a header pointing at it, because this script's own ordering is wrong for
+this one release.
+
+This bit during the session: the dev stack volume-mounts the backend, so the
+narrowed enum went live the moment it was written while the migration had not
+run. The asset API 500'd until `php artisan migrate` was applied. On dev that is
+a nuisance; on the VPS it is the outage the window exists to prevent.
+
+### Preflight: the plan over-asserted, and it would have blocked the release
+
+The plan says to assert 0 active bookings and 0 open work orders across the rows
+carrying `down` **and** `scraped`. Splitting them is what matters:
+
+- **The `scraped`/`lih` set** gets `is_active = false`, so open work on it is a
+  real problem. Live: 1 row (id 155), 0 bookings, 0 WOs, 0 MRs.
+- **The `down` set** is a *pure rename*. An open work order on a `down` asset
+  becomes an open work order on a `failure` asset. Live: 2 rows (353, 410) with
+  **2 open work orders** — which the plan's combined assertion would have read as
+  a blocker for no reason.
+
+The cutover doc records the corrected assertion. Ids are annotation only; the
+migration and the preflight both derive their sets by value.
+
+### What shipped
+
+- **Value migration** (`2026_08_16_000003`) — `down → failure`;
+  `under_inspection → under_maintenance`; `scraped` and `lih` →
+  `ready_for_field` + `is_active = false`. It **releases bookings itself**,
+  because raw SQL bypasses `Asset::booted`. It refuses to finish while any legacy
+  value survives. `down()` reverses the renames but deliberately **not** the
+  deactivations — `ready_for_field` + inactive is indistinguishable from an asset
+  legitimately deactivated while ready, and the abort path is the backup snapshot.
+- **`OperationalStatus` → 4 cases**, plus `manuallySelectable()` (excludes
+  `at_the_field`) and `label()`.
+- **`AssetFieldStatus`** — the new home for the location rules. Entering a
+  DEPLOYED location sets `at_the_field`; leaving sets `ready_for_field` +
+  `need_inspection`; `guardManualMove()` implements Q1. Keyed off
+  `AssetDeployment::forLocationType()`, not a literal rig/well_site list.
+- **The gate sits in the two controllers, never in `UpdateAssetLocation`** —
+  `StartWorkOrder` and MR approval both call that action and pass
+  `applyStatusRules: false`. Putting the gate inside it would make corrective
+  work orders un-startable on exactly the assets that need them.
+- **Close** always returns the asset to `ready_for_field` (the `asset_status`
+  parameter is gone) and resets `condition_status` to the vocabulary default,
+  returning non-blocking `warnings`. **Cancel** keeps the choice, now
+  `failure | ready_for_field`. **Approval** sets `failure`.
+- **Deactivated assets are never touched** by any lifecycle transition — moved
+  into `ApplyWorkOrderAssetStatusTransition`, replacing the old "skip if SCRAPED"
+  which only covered close.
+- **Task 4.6** — optional `move_to_location_id` on MR approval, corrective and
+  preventive, inside the approval's transaction.
+- **Condition API contract** — validation from active rows, `condition_status` +
+  `condition_label` + `operational_status_label` on `AssetResource`,
+  `asset_conditions` on `ListOptionController`, `useListOptions`, and the Admin
+  Lists screen.
+- **Workbook import** maps `down → failure` silently (reporting it in the
+  summary) and **refuses** `scraped`/`under_inspection`/`lih` — each also meant
+  "left the fleet", which the workbook has no column for. The one `scraped` row
+  in the committed `assets.csv` was regenerated.
+- **Frontend** — types, badges (new `.status-deployed` teal tone), Condition
+  column and detail field, condition picker, close dialog without the status
+  choice, close-warnings notice, approval destination picker, dashboard and
+  report key renames.
+- **Docs** — `docs/API.md`, `docs/PRODUCT.md`, the user manual (glossary,
+  close side-effects, WO transitions, R-10A), `docs/RELEASE-4b-CUTOVER.md`.
+
+### Still true after this release
+
+- **`at_the_field` is inert until LDC creates rig/well_site locations.** Ops
+  activation, not a release gate.
+- **4c** drops `maintenance_sub_status` and `erp_status` (readers all gone here)
+  — an ordinary `deploy.sh` release, once 4b has run cleanly for a few days.
+
+---
+
+## Session — 2026-08-16 (review hardening, pre-4b)
 
 **1130 tests green (was 1108), Pint clean.** No feature work: this closes the
 findings of an independent review of Phases 0–4a. That review found **zero

@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import api, { ApiError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
-import type { MaintenanceRequest, Attachment, Assignee } from '@/types'
+import type { MaintenanceRequest, Attachment, Assignee, Location } from '@/types'
 
 /**
  * Owns the state and actions for a single Maintenance Request detail page.
@@ -70,6 +70,12 @@ export function useMaintenanceRequestDetail() {
   const approveTechnicians = ref<Assignee[]>([])
   const approveTechniciansLoading = ref(false)
   const selectedApproveTechId = ref<number | null>(null)
+  // Q4: optionally send the asset somewhere as part of approving the work.
+  // null = leave it where it is, which is the default — LDC's usual destination
+  // is the Tajoura Base yard, but that is the approver's choice, not a constant.
+  const approveLocations = ref<Location[]>([])
+  const approveLocationsLoading = ref(false)
+  const selectedApproveLocationId = ref<number | null>(null)
   const rejectOpen = ref(false)
   const rejectLoading = ref(false)
   const rejectReason = ref('')
@@ -251,7 +257,9 @@ export function useMaintenanceRequestDetail() {
   function openApprove() {
     selectedApproveTechId.value = null
     approveIsFailure.value = null
+    selectedApproveLocationId.value = null
     approveOpen.value = true
+    void loadApproveLocations()
     void loadApproveTechnicians()
   }
   function openReject() {
@@ -284,6 +292,20 @@ export function useMaintenanceRequestDetail() {
     }
   }
 
+  /** Active locations for the approval destination picker. */
+  async function loadApproveLocations() {
+    if (approveLocations.value.length > 0 || approveLocationsLoading.value) return
+    approveLocationsLoading.value = true
+    try {
+      const res = await api.get<{ data: Location[] }>('/locations')
+      approveLocations.value = res.data ?? []
+    } catch {
+      approveLocations.value = []
+    } finally {
+      approveLocationsLoading.value = false
+    }
+  }
+
   async function doApprove() {
     if (!record.value) return
     approveLoading.value = true
@@ -299,6 +321,11 @@ export function useMaintenanceRequestDetail() {
       }
       if (isCorrective.value && approveIsFailure.value !== null) {
         payload.is_failure = approveIsFailure.value
+      }
+      // Only sent when a destination was picked. Absent means "keep its current
+      // location" — sending the current id would write a pointless history row.
+      if (selectedApproveLocationId.value !== null) {
+        payload.move_to_location_id = selectedApproveLocationId.value
       }
       await api.post(
         `/maintenance-requests/${record.value.id}/approve`,
@@ -398,6 +425,9 @@ export function useMaintenanceRequestDetail() {
     approveTechnicians,
     approveTechniciansLoading,
     selectedApproveTechId,
+    approveLocations,
+    approveLocationsLoading,
+    selectedApproveLocationId,
     rejectOpen,
     rejectLoading,
     rejectReason,

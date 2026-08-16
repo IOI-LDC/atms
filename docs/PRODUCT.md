@@ -205,40 +205,61 @@ perform these actions on their own account.
 ### Operational status
 
 Every asset carries an `operational_status` answering "is the asset working
-right now?" — distinct from maintenance status and booking state. There are six
-values:
+right now?" — distinct from maintenance status and booking state. Since release
+4b (2026-08-16) there are **four** values:
 
 | DB value | Label |
 |---|---|
 | `ready_for_field` | Ready for Field |
 | `under_maintenance` | Under Maintenance |
-| `down` | Down |
-| `under_inspection` | Under Inspection |
-| `scraped` | Scraped |
-| `lih` | Lost in Hole |
+| `failure` | Failure |
+| `at_the_field` | At the Field |
 
-`ready_for_field` and `scraped` were renamed from the former `active` and
-`inactive` values; `under_inspection` (asset sent to a third party) and `lih`
-(physically inaccessible, e.g. downhole) are new.
+`failure` was renamed from `down`: LDC read "down" as *waiting for parts*, which
+is a cause rather than an operational state. `at_the_field` is **derived from
+location** — it is written when an asset moves somewhere classified as deployed
+(rig or well site) and cleared when it returns, and it is deliberately absent
+from every manual picker.
+
+The former `scraped`, `under_inspection` and `lih` values were removed. An asset
+that has left the fleet is **deactivated** (`is_active = false`), which is now
+the single "out of ATMS" control; an inspection is a PM, not a separate state.
+Distinguishing *scrapped* from *lost in hole* for reporting would need a new
+withdrawal-reason field and is not recoverable from asset data today.
 
 Operational status is driven primarily by Work Order events: approving a
-corrective MR sets `down`, starting work sets `under_maintenance`, and closing
-or cancelling a WO asks the closer for the asset's next status. The close/cancel
-choice is limited to `down` or `ready_for_field` (pre-seeded to
-`ready_for_field`), and a `scraped` asset is never touched. Any value — including
-`under_inspection` and `scraped` — can be set deliberately via the WO "Update
-Asset Status" action or the asset edit form; `scraped` is terminal and requires
-an explicit human decision.
+corrective MR sets `failure`, starting work sets `under_maintenance`, and
+**closing always returns the asset to `ready_for_field`**. A job that did not
+restore the asset is cancelled rather than closed — cancel keeps a caller's
+choice of `failure` or `ready_for_field`. A deactivated asset is never touched by
+any lifecycle transition.
 
-`under_inspection` records only that the asset is away being inspected. It
-carries no certificate, issuer, or expiry date, so ATMS cannot say when an
-inspection falls due or has lapsed. **Phase 1.5 (third-party inspection
-certificates) is cancelled (2026-08-16)**: for LDC, "inspection" means PM —
-an inspection form attached to the WO with the executed PM marked (see
-`docs/plans/2026-08-07-operational-status-vocabulary.md` §7 RQ1/RQ2).
-Until the vocabulary work ships, a recurring inspection is modelled as an
-ordinary date-based PM rule, with its completed form or supporting evidence
-uploaded as an attachment on the work order that closes it.
+Manual location moves are gated: a `ready_for_field` asset moves anywhere, an
+`at_the_field` asset may only return to a yard or building, and a `failure` or
+`under_maintenance` asset cannot be moved by hand at all — its work order decides
+where it goes. Workflow-driven moves (work-order start, MR approval) bypass the
+gate.
+
+### Condition
+
+A second, independent axis answering *what is wrong with this asset?* — an
+Admin-editable vocabulary (`assets.condition_status`, master-data group
+`asset_conditions`), seeded with **Normal** (the default), **Need Assembly**,
+**Missing Parts** and **Need Inspection**.
+
+An asset can be Ready for Field with a condition of Missing Parts: serviceable,
+but not complete. Returning from the field stamps **Need Inspection**
+automatically; closing a work order resets the condition to the default, and
+warns if the asset had been flagged for inspection. Cancelling never resets it —
+a cancelled job fixed nothing.
+
+**Phase 1.5 (third-party inspection certificates) is cancelled (2026-08-16)**:
+for LDC, "inspection" means PM — an inspection form attached to the WO with the
+executed PM marked (see
+`docs/plans/2026-08-07-operational-status-vocabulary.md` §7 RQ1/RQ2). A
+recurring inspection is modelled as an ordinary date-based PM rule, with its
+completed form or supporting evidence uploaded as an attachment on the work
+order that closes it.
 
 ### Meter readings
 

@@ -13,9 +13,11 @@ use App\Http\Resources\AssetResource;
 use App\Http\Resources\MaintenanceHistoryResource;
 use App\Models\Asset;
 use App\Models\Location;
+use App\Models\MasterDataItem;
 use App\Queries\Assets\AssetIndexQuery;
 use App\Queries\MaintenanceHistory\BuildAssetMaintenanceHistory;
 use App\Services\AssetTagService;
+use App\Support\Assets\AssetFieldStatus;
 use App\Support\SizeRule;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +27,23 @@ use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
+    /**
+     * Condition values a request may set, resolved from the vocabulary rather
+     * than a constant: LDC adds and retires these through the Admin UI, and a
+     * hardcoded list would reject a value the picker had just offered.
+     *
+     * Active rows only — a retired condition stays readable on the assets that
+     * already carry it, but must not be selectable for new ones.
+     *
+     * @return list<string>
+     */
+    private function activeConditionValues(): array
+    {
+        return MasterDataItem::activeIn(MasterDataItem::ASSET_CONDITIONS)
+            ->pluck('value')
+            ->all();
+    }
+
     public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', Asset::class);
@@ -54,16 +73,17 @@ class AssetController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'manufacturer' => ['nullable', 'string', 'max:255'],
-            'operational_status' => ['nullable', Rule::enum(OperationalStatus::class)],
+            // Subset, not the whole enum: `at_the_field` is derived from location.
+            'operational_status' => ['nullable', Rule::in(OperationalStatus::manuallySelectableValues())],
+            'condition_status' => ['nullable', Rule::in($this->activeConditionValues())],
             'maintenance_status' => ['nullable', 'string', 'in:enrolled,withdrawn'],
-            'maintenance_sub_status' => ['nullable', 'string', 'in:installed,ready,lih,dbr,disposed,scrapped,other'],
             'asset_kind' => ['nullable', 'string', 'in:asset,package,component'],
             'current_location_id' => ['nullable', 'exists:locations,id'],
         ]);
 
         // Only Admin/Manager may set maintenance lifecycle fields
         $user = $request->user();
-        $lifecycleFields = ['maintenance_status', 'maintenance_sub_status', 'asset_kind'];
+        $lifecycleFields = ['maintenance_status', 'asset_kind'];
         $hasLifecycleFields = ! empty(array_intersect_key($validated, array_flip($lifecycleFields)));
 
         if ($hasLifecycleFields && ! $user->hasRole(RoleCode::ADMINISTRATOR) && ! $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
@@ -110,9 +130,11 @@ class AssetController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'manufacturer' => ['nullable', 'string', 'max:255'],
-            'operational_status' => ['nullable', Rule::enum(OperationalStatus::class)],
+            // Not `Rule::enum`: that would accept `at_the_field`, which only a
+            // location change may write. See OperationalStatus::manuallySelectable().
+            'operational_status' => ['nullable', Rule::in(OperationalStatus::manuallySelectableValues())],
+            'condition_status' => ['nullable', Rule::in($this->activeConditionValues())],
             'maintenance_status' => ['nullable', 'string', 'in:enrolled,withdrawn'],
-            'maintenance_sub_status' => ['nullable', 'string', 'in:installed,ready,lih,dbr,disposed,scrapped,other'],
             'asset_kind' => ['nullable', 'string', 'in:asset,package,component'],
             'is_active' => ['nullable', 'boolean'],
             'asset_tag' => ['nullable', 'string', 'max:15'],
@@ -123,7 +145,7 @@ class AssetController extends Controller
 
         // Only Admin/Manager may change maintenance lifecycle fields
         $user = $request->user();
-        $lifecycleFields = ['maintenance_status', 'maintenance_sub_status', 'asset_kind'];
+        $lifecycleFields = ['maintenance_status', 'asset_kind'];
         $hasLifecycleFields = ! empty(array_intersect_key($validated, array_flip($lifecycleFields)));
 
         if ($hasLifecycleFields && ! $user->hasRole(RoleCode::ADMINISTRATOR) && ! $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
@@ -143,6 +165,15 @@ class AssetController extends Controller
                 return response()->json(['message' => 'Cannot assign an inactive location.'], 422);
             }
 
+            // Q1: same user-move rules as POST /assets/{id}/location. Applied at
+            // both entry points and never inside UpdateAssetLocation, which
+            // StartWorkOrder also calls.
+            try {
+                AssetFieldStatus::guardManualMove($asset, $location);
+            } catch (DomainException $e) {
+                return response()->json(['message' => $e->getMessage()], 409);
+            }
+
             $asset = $locationAction->execute(
                 $asset,
                 $location,
@@ -155,7 +186,7 @@ class AssetController extends Controller
         // --- Update operational fields ---
         $fieldUpdates = array_intersect_key(
             $validated,
-            array_flip(['name', 'description', 'fa_subclass_code', 'maintenance_category_id', 'size_inches', 'serial_number', 'model', 'manufacturer', 'operational_status', 'is_active', 'asset_tag', 'asset_tag_override_reason', 'maintenance_status', 'maintenance_sub_status', 'asset_kind'])
+            array_flip(['name', 'description', 'fa_subclass_code', 'maintenance_category_id', 'size_inches', 'serial_number', 'model', 'manufacturer', 'operational_status', 'condition_status', 'is_active', 'asset_tag', 'asset_tag_override_reason', 'maintenance_status', 'asset_kind'])
         );
 
         try {

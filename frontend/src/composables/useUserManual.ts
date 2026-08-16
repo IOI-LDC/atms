@@ -10,6 +10,13 @@ export interface ManualHeading {
   title: string
   level: number
   children: ManualHeading[]
+  /**
+   * Pre-lowercased raw source text of this heading's section: for a `##`
+   * section the text before its first `###`, for a `###` section the text up
+   * to the next `##`/`###`. Powers body-text search — heading titles alone
+   * would miss terms like "MTBF" that only appear in tables and paragraphs.
+   */
+  searchHaystack: string
 }
 
 interface RenderedManual {
@@ -58,6 +65,37 @@ function splitTableRow(raw: string): string[] {
 const BLOCK_BOUNDARY = /^(\s*$|#{1,6}\s|```|>\s?|\s*[-*+]\s+|\s*\d+\.\s+)/
 
 /**
+ * Pre-pass over the source collecting the raw text belonging to each `##`/`###`
+ * heading, in document order, so search can match body text and not just titles.
+ * Mirrors the renderer's fence handling: a heading-shaped line inside a fenced
+ * code block is content, not a heading.
+ */
+function collectSectionHaystacks(lines: string[]): string[] {
+  const haystacks: string[] = []
+  let current: string[] | null = null
+  let inFence = false
+  for (const line of lines) {
+    if (/^```/.test(line)) {
+      inFence = !inFence
+      current?.push(line)
+      continue
+    }
+    if (!inFence && /^#{2,3}\s/.test(line)) {
+      if (current !== null) {
+        haystacks.push(current.join('\n').toLowerCase())
+      }
+      current = []
+      continue
+    }
+    current?.push(line)
+  }
+  if (current !== null) {
+    haystacks.push(current.join('\n').toLowerCase())
+  }
+  return haystacks
+}
+
+/**
  * A small, dependency-free Markdown-to-HTML renderer scoped to the subset the
  * User Manual uses (headings, paragraphs, lists, tables, blockquotes, code,
  * rules, inline emphasis/links). It also extracts a nested Table of Contents
@@ -69,6 +107,8 @@ const BLOCK_BOUNDARY = /^(\s*$|#{1,6}\s|```|>\s?|\s*[-*+]\s+|\s*\d+\.\s+)/
  */
 function renderManual(source: string): RenderedManual {
   const lines = source.replace(/\r\n/g, '\n').split('\n')
+  const haystacks = collectSectionHaystacks(lines)
+  let haystackIndex = 0
   const html: string[] = []
   const toc: ManualHeading[] = []
   const usedIds = new Set<string>()
@@ -118,7 +158,14 @@ function renderManual(source: string): RenderedManual {
         html.push(
           `<h${level} id="${id}" class="manual-h${level}">${renderInline(title)}</h${level}>`,
         )
-        const node: ManualHeading = { id, title, level, children: [] }
+        const node: ManualHeading = {
+          id,
+          title,
+          level,
+          children: [],
+          searchHaystack: haystacks[haystackIndex] ?? '',
+        }
+        haystackIndex++
         const parent = toc[toc.length - 1]
         if (level === 3 && parent) {
           parent.children.push(node)
@@ -225,9 +272,11 @@ export function useUserManual() {
     }
     const result: ManualHeading[] = []
     for (const section of toc) {
-      const sectionMatches = section.title.toLowerCase().includes(query)
-      const matchingChildren = section.children.filter((child) =>
-        child.title.toLowerCase().includes(query),
+      const sectionMatches =
+        section.title.toLowerCase().includes(query) || section.searchHaystack.includes(query)
+      const matchingChildren = section.children.filter(
+        (child) =>
+          child.title.toLowerCase().includes(query) || child.searchHaystack.includes(query),
       )
       if (sectionMatches || matchingChildren.length > 0) {
         result.push({

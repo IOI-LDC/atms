@@ -110,7 +110,7 @@ class AssetDistributionReportTest extends TestCase
         ]);
         $this->createAsset([
             'current_location_id' => $loc->id,
-            'operational_status' => OperationalStatus::DOWN,
+            'operational_status' => OperationalStatus::FAILURE,
             'asset_kind' => AssetKind::COMPONENT,
         ]);
         $bookedAsset = $this->createAsset([
@@ -134,7 +134,7 @@ class AssetDistributionReportTest extends TestCase
 
         $this->assertSame(3, $row['asset_count']);
         $this->assertSame(
-            ['ready_for_field' => 2, 'under_maintenance' => 0, 'down' => 1, 'scraped' => 0, 'under_inspection' => 0, 'lih' => 0],
+            ['ready_for_field' => 2, 'under_maintenance' => 0, 'failure' => 1, 'at_the_field' => 0],
             $row['by_operational_status']
         );
         $this->assertSame(
@@ -398,7 +398,7 @@ class AssetDistributionReportTest extends TestCase
         ]);
         $this->createAsset([
             'current_location_id' => $loc->id,
-            'operational_status' => OperationalStatus::DOWN,
+            'operational_status' => OperationalStatus::FAILURE,
         ]);
 
         $json = $this->actingAs($admin)
@@ -408,6 +408,6 @@ class AssetDistributionReportTest extends TestCase
         $row = $this->findRow($json['items'], $loc->id);
         $this->assertSame(1, $row['asset_count']);
         $this->assertSame(1, $row['by_operational_status']['ready_for_field']);
-        $this->assertSame(0, $row['by_operational_status']['down']);
+        $this->assertSame(0, $row['by_operational_status']['failure']);
     }
 }

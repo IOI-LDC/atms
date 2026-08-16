@@ -91,10 +91,8 @@ export function operationalStatusLabel(s: string | null | undefined): string {
   const m: Record<string, string> = {
     ready_for_field: 'Ready for Field',
     under_maintenance: 'Under Maintenance',
-    down: 'Down',
-    scraped: 'Scraped',
-    under_inspection: 'Under Inspection',
-    lih: 'Lost in Hole',
+    failure: 'Failure',
+    at_the_field: 'At the Field',
   }
   return m[s] ?? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
@@ -103,10 +101,10 @@ export function operationalStatusClass(s: string | null | undefined): string {
   const m: Record<string, string> = {
     ready_for_field: 'status-badge status-active',
     under_maintenance: 'status-badge status-in-progress',
-    down: 'status-badge priority-critical',
-    scraped: 'status-badge status-inactive',
-    under_inspection: 'status-badge status-in-progress',
-    lih: 'status-badge status-inactive',
+    failure: 'status-badge priority-critical',
+    // Deployed and earning — its own tone, not "active": an asset on a rig is
+    // not available to send anywhere else.
+    at_the_field: 'status-badge status-deployed',
   }
   return m[s ?? ''] ?? 'status-badge'
 }

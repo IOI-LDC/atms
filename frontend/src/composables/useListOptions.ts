@@ -32,12 +32,16 @@ export function useListOptions() {
   const faSubclasses = ref<FaSubclassTypeCode[]>([])
   const maintenanceCategories = ref<MaintenanceCategoryOption[]>([])
   const assetSizes = ref<FilterOption[]>([])
+  const assetConditions = ref<FilterOption[]>([])
+  /** The `is_default` row — what a new asset is pre-set to, and what a close resets to. */
+  const defaultAssetCondition = ref<string | null>(null)
 
   const prioritiesLoading = ref(false)
   const readingTypesLoading = ref(false)
   const faSubclassesLoading = ref(false)
   const maintenanceCategoriesLoading = ref(false)
   const assetSizesLoading = ref(false)
+  const assetConditionsLoading = ref(false)
 
   async function loadPriorities(): Promise<FilterOption[]> {
     prioritiesLoading.value = true
@@ -121,10 +125,35 @@ export function useListOptions() {
     return assetSizes.value
   }
 
+  /**
+   * The asset condition vocabulary. Unlike priorities there is no hardcoded
+   * fallback: the values are LDC's to add and retire, so inventing a client-side
+   * list would offer conditions the API would then reject.
+   */
+  async function loadAssetConditions(): Promise<FilterOption[]> {
+    assetConditionsLoading.value = true
+    try {
+      const res = await api.get<{ data: MasterDataItem[] }>('/list-options/asset_conditions')
+      const items = res.data ?? []
+      assetConditions.value = items.map((i) => ({ value: i.value, label: i.label }))
+      defaultAssetCondition.value = items.find((i) => i.is_default)?.value ?? null
+    } catch {
+      assetConditions.value = []
+      defaultAssetCondition.value = null
+    } finally {
+      assetConditionsLoading.value = false
+    }
+    return assetConditions.value
+  }
+
   return {
     priorities,
     prioritiesLoading,
     loadPriorities,
+    assetConditions,
+    assetConditionsLoading,
+    defaultAssetCondition,
+    loadAssetConditions,
     readingTypes,
     readingTypesLoading,
     loadReadingTypes,

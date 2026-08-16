@@ -15,11 +15,13 @@ import type { FilterOption } from '@/lib/dataTableSource'
  *   filtering is handled externally via the select in the table's #toolbar
  *   slot, shown to Admin/Manager/Logistics only).
  * - The status column shows `operational_status` (Ready for Field / Under
- *   Maintenance / Down / Scraped / Under Inspection / Lost in Hole) — the
- *   business-relevant "is it usable right now?" signal
- *   that moves with the MR/WO workflow. `maintenance_status` was dropped from
- *   the table: 400/400 assets read `enrolled`, so the badge carried no
- *   information; it remains on the asset detail page.
+ *   Maintenance / Failure / At the Field) — the business-relevant "is it usable
+ *   right now?" signal that moves with the MR/WO workflow. `maintenance_status`
+ *   was dropped from the table: 400/400 assets read `enrolled`, so the badge
+ *   carried no information; it remains on the asset detail page.
+ * - Condition sits beside it and answers the different question "what is wrong
+ *   with it?" — the two are separate axes and an asset can be Ready for Field
+ *   with a condition of Missing Parts.
  * - "Latest usage reading" and "PM status" are not returned by the list
  *   endpoint and are deferred to the asset detail page.
  */
@@ -58,6 +60,13 @@ export const assetColumns: ColumnDef<Asset>[] = [
   {
     field: 'operational_status',
     header: 'Operational Status',
+    sortable: true,
+    headerFilter: 'select',
+    minWidth: 130,
+  },
+  {
+    field: 'condition_status',
+    header: 'Condition',
     sortable: true,
     headerFilter: 'select',
     minWidth: 130,
@@ -108,15 +117,10 @@ export const assetFilterOptions: Record<string, FilterOption[]> = {
     value: v,
     label: assetKindLabel(v),
   })),
+  // Filters list every value including `at_the_field` — you filter by what an
+  // asset *is*, even where you cannot set it by hand.
   operational_status: (
-    [
-      'ready_for_field',
-      'under_maintenance',
-      'down',
-      'scraped',
-      'under_inspection',
-      'lih',
-    ] as AssetOperationalStatus[]
+    ['ready_for_field', 'under_maintenance', 'failure', 'at_the_field'] as AssetOperationalStatus[]
   ).map((v) => ({
     value: v,
     label: operationalStatusLabel(v),

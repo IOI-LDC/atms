@@ -3,11 +3,39 @@
 namespace App\Http\Resources;
 
 use App\Enums\RoleCode;
+use App\Models\MasterDataItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class AssetResource extends JsonResource
 {
+    private const CONDITION_LABEL_CACHE = 'atms.asset_condition_labels';
+
+    /**
+     * Display label for the asset's condition, or null when it has none.
+     *
+     * Unknown values fall back to the raw string rather than null: a condition
+     * an Admin has since deleted still tells the reader more than a blank cell.
+     */
+    private function conditionLabel(): ?string
+    {
+        if ($this->condition_status === null) {
+            return null;
+        }
+
+        // Memoised on the container, which is rebuilt per request and per test,
+        // so a renamed label never leaks into the next one. Resolving this per
+        // row would cost one query per asset on a list of several hundred.
+        if (! app()->bound(self::CONDITION_LABEL_CACHE)) {
+            app()->instance(self::CONDITION_LABEL_CACHE, MasterDataItem::query()
+                ->where('group_key', MasterDataItem::ASSET_CONDITIONS)
+                ->pluck('label', 'value')
+                ->all());
+        }
+
+        return app(self::CONDITION_LABEL_CACHE)[$this->condition_status] ?? $this->condition_status;
+    }
+
     public function toArray(Request $request): array
     {
         $user = $request->user();
@@ -34,8 +62,14 @@ class AssetResource extends JsonResource
             'model' => $this->model,
             'manufacturer' => $this->manufacturer,
             'operational_status' => $this->operational_status,
+            'operational_status_label' => $this->operational_status?->label(),
+            // The hand-set cause vocabulary. `condition_label` is resolved from
+            // `asset_conditions` so a renamed label reaches every screen at once;
+            // it falls back to the raw value for a condition that has since been
+            // deleted, which is readable rather than blank.
+            'condition_status' => $this->condition_status,
+            'condition_label' => $this->conditionLabel(),
             'maintenance_status' => $this->maintenance_status?->value,
-            'maintenance_sub_status' => $this->maintenance_sub_status?->value,
             'asset_kind' => $this->asset_kind?->value,
             'is_booked' => $this->is_booked,
             'asset_tag' => $this->asset_tag,
@@ -50,7 +84,9 @@ class AssetResource extends JsonResource
         ];
 
         if (! $isRequester) {
-            $data['erp_status'] = $this->erp_status;
+            // `erp_status` was dropped here in 4b — it duplicated
+            // `maintenance_status` from the ERP's vocabulary and nothing read it.
+            // The column itself goes in 4c.
             $data['erp_last_synced_at'] = $this->erp_last_synced_at?->toIso8601String();
         }
 

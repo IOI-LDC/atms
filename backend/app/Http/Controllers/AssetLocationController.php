@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Assets\UpdateAssetLocation;
 use App\Models\Asset;
 use App\Models\Location;
+use App\Support\Assets\AssetFieldStatus;
 use App\Support\Assets\AssetWorkEligibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,15 @@ class AssetLocationController extends Controller
 
         if (! $location->is_active) {
             return response()->json(['message' => 'Cannot assign an inactive location.'], 422);
+        }
+
+        // Q1: this is a user-initiated move, so the manual-move rules apply.
+        // Deliberately here and in AssetController::update rather than inside
+        // UpdateAssetLocation, which StartWorkOrder also calls.
+        try {
+            AssetFieldStatus::guardManualMove($asset, $location);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
         }
 
         $asset = $action->execute(

@@ -80,7 +80,7 @@ class DashboardKpiTest extends TestCase
                 'avg_wo_duration' => ['hours'],
                 'asset_health' => [
                     'availability' => ['percentage'],
-                    'by_status' => ['ready_for_field', 'under_maintenance', 'down', 'scraped', 'under_inspection', 'lih'],
+                    'by_status' => ['ready_for_field', 'under_maintenance', 'failure', 'at_the_field'],
                     'total',
                 ],
                 'workforce' => [
@@ -359,7 +359,7 @@ class DashboardKpiTest extends TestCase
         $this->createAssetWithStatus('A-1', OperationalStatus::READY_FOR_FIELD);
         $this->createAssetWithStatus('A-2', OperationalStatus::READY_FOR_FIELD);
         $this->createAssetWithStatus('A-3', OperationalStatus::UNDER_MAINTENANCE);
-        $this->createAssetWithStatus('A-4', OperationalStatus::DOWN);
+        $this->createAssetWithStatus('A-4', OperationalStatus::FAILURE);
 
         $health = $this->actingAs($admin)->getJson('/api/dashboard/kpis')->json('kpis.asset_health');
 
@@ -367,10 +367,8 @@ class DashboardKpiTest extends TestCase
         $this->assertEquals(50.0, $health['availability']['percentage']); // 2 ready_for_field / 4 total
         $this->assertSame(2, $health['by_status']['ready_for_field']);
         $this->assertSame(1, $health['by_status']['under_maintenance']);
-        $this->assertSame(1, $health['by_status']['down']);
-        $this->assertSame(0, $health['by_status']['scraped']);
-        $this->assertSame(0, $health['by_status']['under_inspection']);
-        $this->assertSame(0, $health['by_status']['lih']);
+        $this->assertSame(1, $health['by_status']['failure']);
+        $this->assertSame(0, $health['by_status']['at_the_field']);
     }
 
     public function test_workforce_backlog_counts_open_and_in_progress(): void

@@ -27,7 +27,7 @@ class DashboardKpiResource extends JsonResource
      *         avg_wo_duration: array{hours: float|null},
      *         asset_health: array{
      *             availability: array{percentage: float|null},
-     *             by_status: array{ready_for_field: int, under_maintenance: int, down: int, scraped: int, under_inspection: int, lih: int},
+     *             by_status: array{ready_for_field: int, under_maintenance: int, failure: int, at_the_field: int},
      *             by_booking: array{booked: int, available: int},
      *             total: int,
      *         },
