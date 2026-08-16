@@ -179,11 +179,12 @@ this is the agreed direction; the implementation plan is the next step.
      filters and the WO "Update status" dialog must ship in the same
      backend+frontend release (PHP enum removal is compile-time enforced
      on the backend).
-   - Replacement safety net: the `is_active = false` MR/WO gating defect
+   - Replacement safety net: the `is_active = false` MR/WO/PM gating defect
      must be fixed (make it block like `withdrawn`), since scrapping is
      now represented by `is_active`, not by an operational value with a
      close-guard. The fix must cover the preventive MR approval path and
-     let an open WO be finished, not started.
+     direct/manual PM evaluation, while letting an open WO be finished,
+     not started.
 5. **`assets.erp_status` is removed** (decision 2026-08-15). Dead weight:
    all 400 rows carry the column default `'active'`; no workflow logic
    reads it — but it is serialized in `AssetResource.php:53` and seeded by
@@ -236,11 +237,13 @@ this is the agreed direction; the implementation plan is the next step.
 (close only; warn when `need_inspection` + PM not marked); `down` renamed
 to `failure` (LDC reads "down" as waiting-for-parts, which is
 `missing_parts`); Scrapped has no automatic effect — `is_active = false`
-(Admin-set) is the out-of-ATMS control and its MR/WO gating fix must cover
+(Admin-set) is the out-of-ATMS control and its MR/WO/PM gating fix must cover
 MR create, **approval (corrective and preventive)**, WO assignment **and
 WO start**, plus **direct/manual PM evaluation** (`EvaluatePmRule` and the
 evaluate-all endpoint — today they check neither status), while letting an
-open WO be finished, not started; WO close
+open WO be finished, not started. Implementation must use one reusable,
+explicit guard across the scheduler, direct evaluation, evaluate-all and
+MR/WO entry points rather than a global model scope; WO close
 always `ready_for_field`; WO cancel keeps caller choice; `at_the_field`
 set when the location is rig/well_site (location changes **and** initial
 placement); MR approval optionally moves the asset to a yard/workshop
@@ -262,13 +265,14 @@ close-cascade).
 4. P2-001 edge case: leaning — parent-as-asset-row (decide at P2-001
    design).
 5. Reporting: R-10B not restorable (its data source is deprecated);
-   R-11 only as a simplified withdrawn-assets count if LDC wants it;
+   R-11 only as a simplified withdrawn-assets count if LDC wants it —
+   **this is the one item still gated on Q7, which is unanswered**;
    categorical LIH/DBR/Scrapped reporting needs a distinguishing source
    (e.g. a withdrawal-reason value) — none exists today. `condition_status`
    joins R-1 and the Asset Distribution report + CSV as a filter/dimension
-   in the vocabulary work.
+   **in the vocabulary release itself** (not deferred behind Q7).
 
-**Implementation order (recorded):** 1) the `is_active` MR/WO gating fix
+**Implementation order (recorded):** 1) the `is_active` MR/WO/PM gating fix
 (live defect, independent of LDC answers, prerequisite for removing
 `scraped`); 2) RQ4 (fully specified, independent); 3) the vocabulary axis
 + `condition_status` (after LDC answers); 4) RQ2/RQ3/RQ1 (RQ1 after the
@@ -321,10 +325,27 @@ side-effects (PM baselines, snapshots) — deferred unless LDC asks.
   (`EXPECTED_HEADERS`) and **updates existing parts** (rejects unknown ERP
   ids) including `available_quantity` — CLI only. RQ3 = an in-app Admin
   upload path on the same pattern.
-- **Open (recommended lean):** `available_quantity` becomes **locally
-  owned** — the CSV upload is the master writer; the future ERP sync never
-  overwrites it (mirrors the assets `is_active` split); consumption stays
-  check-only (no decrement) until LDC asks for it.
+- **ANSWERED 2026-08-16 (Q6) — supersedes the earlier recommended lean.**
+  The lean recorded here was "`available_quantity` becomes locally owned;
+  the CSV upload is the master writer; the ERP sync never overwrites it;
+  consumption stays check-only (no decrement)". LDC reversed **both**
+  halves:
+  - **ERP remains the quantity authority.** `SyncParts` keeps overwriting
+    `available_quantity` wholesale; the CSV upload is an **interim** writer
+    only, until the ERP sync is live. Trigger for the overwrite becoming
+    live: `LDC_ERP_PARTS_API` configured (tracked in `.kilo/TLD.md` 🟠).
+  - **Recording a part on a WO must decrement the quantity**, and removing
+    the line restores it — so the consumption report and on-hand stock stay
+    honest between ERP refreshes. This is no longer check-only.
+- **Q8 — part identifier (answered 2026-08-16).** `erp_part_code` is the
+  only identifier the Maintenance team uses, and the only one that belongs
+  on screens and in exports. It is **not** a matching key: it is not
+  guaranteed unique and LDC edits it. Keying stays split — the **live ERP
+  sync matches on the external `erp_part_id`** (`SyncParts` does
+  `firstOrNew(['erp_part_id' => …])`; `ImportPartsCommand` keys the same
+  way), while **ATMS-internal relationships and the RQ3 CSV round-trip use
+  `parts.id`**, the table primary key. Do not re-key the ERP sync onto
+  `parts.id`, and do not match uploads on `erp_part_code` alone.
 
 ### RQ4 — Show the ERP part code everywhere
 

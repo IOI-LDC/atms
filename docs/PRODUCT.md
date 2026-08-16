@@ -237,8 +237,8 @@ certificates) is cancelled (2026-08-16)**: for LDC, "inspection" means PM —
 an inspection form attached to the WO with the executed PM marked (see
 `docs/plans/2026-08-07-operational-status-vocabulary.md` §7 RQ1/RQ2).
 Until the vocabulary work ships, a recurring inspection is modelled as an
-ordinary date-based PM rule, with the certificate uploaded as an
-attachment on the work order that closes it.
+ordinary date-based PM rule, with its completed form or supporting evidence
+uploaded as an attachment on the work order that closes it.
 
 ### Meter readings
 

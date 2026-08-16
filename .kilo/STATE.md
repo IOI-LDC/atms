@@ -3,7 +3,88 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-15/16 (latest — record corrected 2026-08-15; design agreed 2026-08-16)
+## Session — 2026-08-16 (latest — implementation plan reviewed ×3; Phase 0 doc hygiene done)
+
+**Nothing in `app/`, `frontend/src/` or `database/` changed. This session
+produced an execution plan and corrected the docs it depends on.**
+
+### The implementation plan exists and has been reviewed three times
+
+`.kilo/plans/2026-08-16-status-vocabulary-implementation.md` (v2, not in
+`docs/plans/` because that directory was locked at the time). Eight phases.
+Three review rounds against the code and, where the stack was up, against the
+live database. Round 1 raised 32 findings, round 2 raised 10, round 3 raised 6;
+all are now folded into the plan text.
+
+**The findings worth remembering, because each was a plan that looked ready:**
+
+1. **The scheduler was missing from the gating fix.**
+   `AssetPmAssignment::scopeEvaluable` (`:79-85`) filters on
+   `maintenance_status` only — never `is_active` — and both
+   `EvaluatePmRulesJob:50` and `EvaluatePmAssignmentsJob:41` inherit it. A fix
+   covering only the MR/WO entry points would have looked complete and left the
+   daily 06:00 job raising PM requests for deactivated assets. Phase 4 removes
+   `scraped` on the premise that this hole is closed.
+2. **The Q1 location gate would have bricked corrective work orders.**
+   `StartWorkOrder:107-113` moves the asset via `UpdateAssetLocation`, and by
+   then a corrective asset is `failure`. Gating "location change" inside that
+   shared action makes every corrective WO needing a move un-startable. The
+   gate belongs on the two **user-facing** paths only — `AssetLocationController`
+   and `AssetController::update` (which routes through the same action at
+   `:146`) — never in the action itself.
+3. **The value migration and the row it targets were one release apart.**
+   An earlier draft narrowed the enum in 4b but deactivated the `scraped` row
+   in 4c — by which point 4b had already rewritten the value, so nothing
+   identified the row. Both statements now live in 4b's migration.
+4. **Raw SQL in a migration bypasses `Asset::booted`** (`Asset.php:65-78`), so
+   the booking auto-release does not fire for a deactivation done in SQL. The
+   preflight derives the target rows **by value** and asserts 0 active bookings
+   and 0 open WOs before proceeding.
+5. **A precision fix nearly introduced a worse bug.** Replacing
+   `numeric|min:0.01` with a bare precision regex would have accepted
+   `quantity: 0` — a phantom consumption line that passes the stock guard and
+   decrements nothing. The rule keeps **both**: regex for precision,
+   `min:0.01` for magnitude.
+
+### Live data facts (verified against the running stack, 2026-08-16)
+
+- `operational_status`: **397 `ready_for_field`, 2 `down`, 1 `scraped`.** Zero
+  `under_inspection`, zero `lih`. The scraped row is asset **id 155**, and it
+  is still `is_active = true` with 0 active bookings and 0 open WOs.
+- `master_data_items`: only one group exists — `maintenance_priorities`
+  (4 items). Any new group allowlist must include it or the MR priority admin
+  screen breaks.
+- The migration must filter **by value, not by id** — a WO close between now
+  and the cutover changes which rows carry these values.
+
+### Phase 0 (doc hygiene) — done this session
+
+- **Design doc §7 RQ3 corrected.** Its recorded "recommended lean" (locally
+  owned quantity, ERP never overwrites, no decrement) was reversed on **both**
+  halves by Q6 and is now marked superseded rather than left to be re-read as
+  current. Q8's identifier split recorded alongside it: live ERP sync matches
+  on `erp_part_id`, ATMS-internal relationships and the CSV round-trip use
+  `parts.id`; `erp_part_code` is for display, not matching (not unique, LDC
+  edits it).
+- **`docs/ROADMAP.md`:** four external-dependency rows deleted — they asked
+  LDC questions LDC answered on 2026-08-16 — and replaced by a single Q7 row.
+  "Next step" rewritten: the vocabulary work is **no longer externally
+  gated**.
+- **`.kilo/TLD.md`:** three deferred items added, each with a real trigger —
+  D-020 (ERP overwrite of decremented quantities; trigger:
+  `LDC_ERP_PARTS_API` configured), D-021 (R-11; trigger: LDC answers Q7),
+  D-022 (mid-WO PM persistence; trigger: before RQ1 starts).
+
+### Next
+
+Phase 1 — the unified asset-eligibility guard, **eight** surfaces (the eighth
+is `AssetLocationController:24-25`, which hand-rolls its own `is_active` check
+with different wording and a 422; no test pins it). Then RQ4, then the parts
+decrement. Phase 4 is gated on Phase 1 and nothing else.
+
+---
+
+## Session — 2026-08-15/16 (record corrected 2026-08-15; design agreed 2026-08-16)
 
 ### ⚠️ Status vocabulary — TRUE RECORD (corrected with the user; supersedes all earlier drafts)
 
@@ -53,9 +134,9 @@ the 2026-08-15 8-value draft; nothing implemented):**
    NOT reset; warn the closer when `need_inspection` and no PM was marked
    completed (RQ1). "Need Maintenance" has no label — the MR is its
    record. LIH/DBR/Scrapped have no label home — `is_active = false`
-   (Admin-set) is the out-of-ATMS control; its MR/WO gating fix must
-   cover the preventive approval path and let an open WO finish, not
-   start.
+   (Admin-set) is the out-of-ATMS control; its MR/WO/PM gating fix must
+   cover the preventive approval path and direct/manual PM evaluation,
+   while letting an open WO finish, not start.
 3. **`operational_status` becomes a 4-value machine axis:**
    `ready_for_field`, `under_maintenance`, `failure` (**renamed from
    `down`** — LDC reads "down" as waiting-for-parts, which is the
@@ -72,7 +153,7 @@ the 2026-08-15 8-value draft; nothing implemented):**
    `scraped`/`lih` leave the axis with no replacement; `under_inspection`
    → `condition_status.need_inspection`. Conditions: migrate the 1
    `scraped` row; backend+frontend deploy together; the `is_active`
-   MR/WO gating fix is the replacement safety net for the removed
+   MR/WO/PM gating fix is the replacement safety net for the removed
    close-guard.
 4. **`assets.erp_status` removed** — dead weight (all rows default
    `'active'`; no workflow logic reads it — serialized in

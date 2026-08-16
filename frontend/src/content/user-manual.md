@@ -517,7 +517,7 @@ And a fifth dimension for the asset record itself:
 
 | Field | Type | Question It Answers |
 |---|---|---|
-| `is_active` | boolean | **Does the asset record exist in the active registry?** `true` = active, `false` = deactivated (hidden from lists, new actions blocked) |
+| `is_active` | boolean | **Does the asset record exist in the active registry?** `true` = active, `false` = deactivated (hidden from normal views; see the known workflow-gating gap below) |
 
 **Why four separate statuses?** Each answers a different operational question:
 - An asset can be `operational_status = ready_for_field` (working fine) while
@@ -531,7 +531,7 @@ And a fifth dimension for the asset record itself:
   non-Admin/Manager views, excluded from reports and KPIs, and blocked from
   bookings, meter readings and location changes. ⚠️ **Known defect being
   fixed:** it does not yet gate MR/WO creation, approval, assignment or
-  start — see the status-vocabulary plan.
+  start, nor direct/manual PM evaluation — see the status-vocabulary plan.
 
 For detailed explanations, see:
 - **Section 5.4** — Asset Maintenance Status (`maintenance_status` and `maintenance_sub_status`)
@@ -991,8 +991,9 @@ Motor (Package, Root)
   the parent, inserts a new history row). Both happen in a single operation.
 - Cycle prevention: a component's parent cannot be itself or any of its own
   descendants. Enforced in application logic.
-- Spare components: a component with `parent_asset_id = null` and
-  `maintenance_sub_status = ready` is available for installation.
+- Spare components: under the 2026-08-16 design, a component with
+  `parent_asset_id = null` is derived as ready for installation;
+  `maintenance_sub_status` is deprecated.
 
 **How assembly interacts with maintenance:**
 
@@ -3170,10 +3171,11 @@ The cycle is complete. The system is now watching for the next interval.
 
 #### Asset Must Be Enrolled
 
-PM evaluation only runs against assets with `maintenance_status = enrolled`.
-Withdrawn assets do not generate PM requests. If you withdraw an asset, all its
-PM assignments stop evaluating (they remain on record; they are just ignored
-until the asset is re-enrolled).
+Scheduled PM evaluation only runs against assets with
+`maintenance_status = enrolled`. Withdrawn assets are excluded from the
+scheduled job. ⚠️ The direct
+single-assignment and evaluate-all endpoints do not yet enforce this rule; the
+status-vocabulary plan includes both in the independent gating fix.
 
 #### No Confirmed Reading = No Reading-Based PM
 
@@ -3807,8 +3809,10 @@ from ERP (via SM) but does not write back.
 count and a per-day average. One of the reliability metrics on the Dashboard.
 
 **Withdrawn (asset maintenance status, `withdrawn`):** The asset is not in active
-maintenance service. PM evaluation, CM creation, and WO creation are blocked.
-(Renamed from the former "Inactive".)
+maintenance service. CM creation, MR approval/WO creation, WO assignment, and
+scheduled PM evaluation are blocked. Direct/manual PM evaluation still has a
+known gating gap recorded in the status-vocabulary plan. (Renamed from the former
+"Inactive".)
 
 **Installed (`installed`):** A sub-status indicating a component is currently
 installed in a parent (`parent_asset_id` is set).

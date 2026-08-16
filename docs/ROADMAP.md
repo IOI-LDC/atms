@@ -25,12 +25,19 @@ belongs in [REQUIREMENTS.md](REQUIREMENTS.md), not here.
 ## Next step
 
 Confirm and record the current UAT/deployment state. After that administrative
-confirmation, the next product actions are: (1) implement the agreed
-status-vocabulary design and RQ1–RQ4 once LDC answers the open questions —
-recorded order: the `is_active` MR/WO gating fix, then RQ4 (see
-[docs/plans/2026-08-07-operational-status-vocabulary.md](plans/2026-08-07-operational-status-vocabulary.md));
-(2) approve or reject R-001 in [REQUIREMENTS.md](REQUIREMENTS.md). Do not
-begin Phase 2 or Phase 3 work implicitly.
+confirmation, the next product actions are: (1) implement the independent
+`is_active` MR/WO/PM gating fix, then RQ4 and the parts stock decrement —
+none of these wait on LDC; (2) implement the status-vocabulary/condition
+slice and RQ1–RQ3 — **LDC answered the blocking questions on 2026-08-16**
+(`at_the_field` precedence and field-exit rules, MR-approval location, PM
+marking flow, parts quantity ownership), so this is no longer externally
+gated; (3) approve or reject R-001 in [REQUIREMENTS.md](REQUIREMENTS.md).
+Only Q7 (withdrawn-assets report) remains unanswered, and it gates only
+R-11. The agreed design lives in
+[the status-vocabulary plan](plans/2026-08-07-operational-status-vocabulary.md);
+execution order and per-phase detail live in its companion,
+`.kilo/plans/2026-08-16-status-vocabulary-implementation.md`. Do not begin
+Phase 2 or Phase 3 work implicitly.
 
 ## External dependencies
 
@@ -39,10 +46,7 @@ begin Phase 2 or Phase 3 work implicitly.
 | ERP parts API | Page name and sample payload/field mapping | Parts sync quality and future SM work. |
 | ERP consumption write-back | Confirm supported BC warehouse transaction and contract | Required before Phase 3 SM consumption write-back. |
 | Asset ownership | Confirm whether ATMS remains the operational source for asset reference data or an ERP-sync design is revived | Do not reintroduce asset sync without this decision. |
-| Status vocabulary — `at_the_field` rules | LDC answers: precedence when a `failure` asset moves to a rig; status when leaving the field | Gates the 4-value operational axis slice (recorded recommendations: keep `failure`; `ready_for_field` only from `at_the_field`; no write on workshop moves). |
-| Status vocabulary — MR-approval location choice | LDC answers: which locations are offered, the default, and whether preventive approvals participate | Gates the MR-approval location option (recommendations: any active yard/workshop; default keep-current; both approval types). |
-| RQ1 — PM marking flow | LDC answers: mark during the WO or at completion | Gates RQ1 (the cumulative L3 ⊇ L2 ⊇ L1 ladder is already settled). |
-| RQ3 — parts quantity ownership | LDC answers: is the uploaded CSV the official stock source | Gates the RQ3 upload (recommendation: yes — CSV locally owns `available_quantity`; ERP sync never overwrites). |
+| Status vocabulary — withdrawn/out-of-service report (Q7) | LDC answers: do they want a report of withdrawn / out-of-service assets | Gates **only** R-11 (a simplified withdrawn-assets count). Nothing else in the vocabulary work waits on this. |
 | Official SPA hostname | Confirm the permanent LDC subdomain. The SPA is hosted at `https://atms.inova.krd` for now, which is what `FRONTEND_URL` should be set to on the deployed backend; treat it as provisional. | Email deep links point wherever `FRONTEND_URL` says, so the value must be revisited when the permanent host is issued. |
 | Exchange Application Access Policy | LDC IT restricts the notification Entra application to `notification@ldc.com.ly` | Required before enabling production email; today the credential can send as any tenant mailbox. |
 
