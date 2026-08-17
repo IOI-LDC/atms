@@ -28,6 +28,21 @@ So: stop traffic, migrate, start the new image.
 
 ---
 
+## Before anything: survey what is actually there
+
+```bash
+./scripts/survey-data.sh > survey-before.txt
+```
+
+Production is pre-handover but **not empty** — the LDC team have already entered
+users, locations, maintenance categories, form templates and master data, and
+the asset and part lists are the source of truth until the Phase 3 ERP sync
+exists. Keep the output beside the backup: it is the record of what the deploy
+was supposed to preserve, and the only way to prove afterwards that it did.
+
+Run it again after the cutover and diff the two. Reference data and
+configuration counts must be identical; only `operational_status` should move.
+
 ## Preflight (run before the window, then again inside it)
 
 ```bash

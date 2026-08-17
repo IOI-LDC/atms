@@ -240,9 +240,10 @@ MTBF, failure analysis and parts-usage figures, changing the answer to questions
 about periods that are already closed.
 
 > The `atms:import-assets --prune` flag does delete assets, cascading to their
-> maintenance records. That is a **pre-handover data-reset tool**, not an
-> operational one, and it should not be used once LDC's real history begins to
-> accumulate.
+> maintenance records. It is a **rebuild tool for the asset list**, not an
+> operational one. The asset and part lists are the source of truth until the
+> Phase 3 ERP sync exists, so pruning them is a deliberate act, never routine
+> housekeeping.
 
 ### Operational status
 
