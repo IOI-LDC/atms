@@ -178,7 +178,7 @@ function doPrint() {
             </td>
             <td class="pr-center">{{ line.part.size ?? '—' }}</td>
             <td class="pr-center">{{ line.quantity }}</td>
-            <td class="pr-center">{{ line.part.part_number ?? '—' }}</td>
+            <td class="pr-center">{{ line.part.erp_part_code ?? '—' }}</td>
             <td class="pr-center">{{ line.part.erp_part_code ?? '—' }}</td>
           </tr>
 
@@ -211,7 +211,11 @@ function doPrint() {
           <div class="pr-approval-sign">SIGNATURE</div>
         </div>
 
-        <div v-for="box in ['REVIEWER', 'APPROVER', 'ISSUED BY — WAREHOUSE', 'RECEIVED BY']" :key="box" class="pr-approval">
+        <div
+          v-for="box in ['REVIEWER', 'APPROVER', 'ISSUED BY — WAREHOUSE', 'RECEIVED BY']"
+          :key="box"
+          class="pr-approval"
+        >
           <div class="pr-approval-title">{{ box }}</div>
           <div class="pr-approval-field">
             <span class="pr-approval-label">NAME</span>

@@ -8,14 +8,19 @@ import type { Part } from '@/types'
  * Part Number, Size and Maintenance Category badges), so those have no columns
  * of their own — they are filtered from the toolbar via `useIdentityFilters`.
  *
- * `erp_part_code` is the exception: it also gets a dedicated "Part No." column,
- * because it is the value LDC scans the list for and a badge inside the Name
- * cell is not a column you can sort or scan down.
+ * `erp_part_code` is the exception: it gets a dedicated **Part Number** column,
+ * because it is the value LDC scan the list for and a badge inside the Name cell
+ * is not a column you can sort or scan down.
+ *
+ * It is also the *only* part identifier the UI shows. A second column,
+ * `part_number`, held a supplier's code on 3 of 734 parts and sat under a
+ * near-identical label; the two were routinely confused, and the filter box
+ * labelled "Part Number" searched the near-empty one (2026-08-17).
  */
 export const partColumns: ColumnDef<Part>[] = [
   {
     field: 'erp_part_code',
-    header: 'Part No.',
+    header: 'Part Number',
     sortable: true,
     minWidth: 160,
     searchFields: ['erp_part_code'],
@@ -26,8 +31,9 @@ export const partColumns: ColumnDef<Part>[] = [
     sortable: true,
     minWidth: 700,
     // The cell renders the full identity package, so its badge values join the
-    // toolbar search.
-    searchFields: ['part_number', 'size', 'maintenance_category.name'],
+    // toolbar search. `erp_part_code` is not repeated here — it has its own
+    // searchable column above.
+    searchFields: ['size', 'maintenance_category.name'],
   },
   {
     field: 'unit_of_measure',
@@ -49,5 +55,3 @@ export const partColumns: ColumnDef<Part>[] = [
     minWidth: 100,
   },
 ]
-
-

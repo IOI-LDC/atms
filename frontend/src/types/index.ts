@@ -115,7 +115,6 @@ export interface PartIdentity {
   name: string
   /** The "No." column from LDC's parts workbook — the code the team quotes. */
   erp_part_code: string | null
-  part_number: string | null
   unit_of_measure: string | null
   size: string | null
   size_inches: string | null
@@ -233,7 +232,6 @@ export interface Part {
   /** The "No." column from LDC's parts workbook — the code the team quotes. */
   erp_part_code: string | null
   /** Supplier part number — a second code, from the supplier rather than ERP. */
-  part_number: string | null
   name: string
   description: string | null
   unit_of_measure: string | null

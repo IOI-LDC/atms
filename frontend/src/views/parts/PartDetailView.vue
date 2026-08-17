@@ -183,12 +183,8 @@ watch(
               <div class="detail-card-content">
                 <div class="detail-grid">
                   <div class="detail-field">
-                    <span class="detail-field-label">ERP Part Code</span>
-                    <p class="detail-field-value">{{ record.erp_part_code ?? '—' }}</p>
-                  </div>
-                  <div class="detail-field">
                     <span class="detail-field-label">Part Number</span>
-                    <p class="detail-field-value">{{ record.part_number ?? '—' }}</p>
+                    <p class="detail-field-value">{{ record.erp_part_code ?? '—' }}</p>
                   </div>
                   <div class="detail-field">
                     <span class="detail-field-label">Size</span>
@@ -346,7 +342,7 @@ watch(
 
           <div class="form-grid">
             <div class="form-field">
-              <Label for="edit-part-code">ERP Part Code</Label>
+              <Label for="edit-part-code">Part Number</Label>
               <!-- readonly, not disabled: ERP owns the value, but people still
                    need to read and copy it while editing the rest. -->
               <Input

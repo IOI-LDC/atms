@@ -3,8 +3,11 @@ import type { FilterOption } from '@/lib/dataTableSource'
 import type { AssetIdentity, PartIdentity } from '@/types'
 
 /** Anything carrying an identity we can filter on. */
-type Identity = Pick<AssetIdentity, 'serial_number' | 'size' | 'size_inches' | 'maintenance_category'> &
-  Partial<Pick<PartIdentity, 'part_number'>>
+type Identity = Pick<
+  AssetIdentity,
+  'serial_number' | 'size' | 'size_inches' | 'maintenance_category'
+> &
+  Partial<Pick<PartIdentity, 'erp_part_code'>>
 
 /**
  * Serial-number / size / category filtering for the table toolbars.
@@ -90,14 +93,17 @@ export function useIdentityFilters<T>(
       if (serial && !(identity.serial_number ?? '').toLowerCase().includes(serial)) {
         return false
       }
-      if (partNumber && !(identity.part_number ?? '').toLowerCase().includes(partNumber)) {
+      if (partNumber && !(identity.erp_part_code ?? '').toLowerCase().includes(partNumber)) {
         return false
       }
       // Size matches on the exact canonical value, never the formatted text.
       if (sizeValue.value && identity.size_inches !== sizeValue.value) {
         return false
       }
-      if (categoryValue.value && String(identity.maintenance_category?.id ?? '') !== categoryValue.value) {
+      if (
+        categoryValue.value &&
+        String(identity.maintenance_category?.id ?? '') !== categoryValue.value
+      ) {
         return false
       }
       return true

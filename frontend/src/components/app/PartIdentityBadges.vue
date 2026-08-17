@@ -28,19 +28,17 @@ withDefaults(
     v-if="
       part &&
       (part.erp_part_code ||
-        part.part_number ||
         part.size ||
         part.maintenance_category ||
         (showStock && part.available_quantity <= 0))
     "
     class="identity-badges"
   >
-    <!-- First: the code LDC works from, so it reads before the supplier's. -->
+    <!-- The Part Number. Reads first because it is what people look a part up
+         by. `part_number` used to sit beside it holding a supplier's code on 3
+         of 734 parts; it was retired 2026-08-17 as a source of confusion. -->
     <span v-if="part.erp_part_code" class="identity-badge identity-badge-part-code">
       {{ part.erp_part_code }}
-    </span>
-    <span v-if="part.part_number" class="identity-badge identity-badge-part-number">
-      {{ part.part_number }}
     </span>
     <span v-if="part.size" class="identity-badge identity-badge-size">{{ part.size }}</span>
     <span v-if="part.maintenance_category" class="identity-badge identity-badge-category">

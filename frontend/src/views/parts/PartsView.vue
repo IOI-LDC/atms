@@ -90,7 +90,13 @@ const identityFilters = useIdentityFilters(() => all.rows.value)
           />
         </template>
         <template #cell="{ column, row }">
-          <PartIdentity v-if="column.field === 'name'" :part="row" stacked show-stock />
+          <!-- Rendered explicitly: AppDataTable's #cell slot replaces the default
+               output entirely, so a column with no branch here shows blank. -->
+          <span v-if="column.field === 'erp_part_code'" class="identity-mono">
+            {{ row.erp_part_code ?? '—' }}
+          </span>
+
+          <PartIdentity v-else-if="column.field === 'name'" :part="row" stacked show-stock />
 
           <span v-else-if="column.field === 'unit_of_measure'">
             {{ row.unit_of_measure ?? '—' }}
