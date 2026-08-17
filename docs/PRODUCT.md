@@ -218,13 +218,31 @@ ATMS, either by re-running the import or by switching it off in the Admin UI.
 Until the sync lands, that is a human procedure and belongs in LDC's operating
 instructions, not in the software.
 
+**"Inactive" in the ERP is permanent** (confirmed with LDC 2026-08-17). It means
+disposed, lost in hole, damaged beyond repair, or sold — the asset has been
+written off in the financial records and is not coming back. It never means
+"temporarily away": an asset at a vendor for repair, in transit, or awaiting
+parts stays active in the ERP. That makes the mapping into ATMS a clean one —
+ERP inactive → `is_active = false` — with no risk of ejecting equipment that is
+merely out of sight for a fortnight.
+
 Deactivating an asset (`is_active = false`) removes it from every workflow —
 no maintenance requests, no work orders, no preventive-maintenance evaluation,
 no location changes, no bookings (existing ones are released automatically) —
-and hides it from every role except Administrator and Maintenance Manager. It is
-deliberately **not deleted**: an asset that has been in service carries closed
-work orders, meter readings and parts consumption, and removing it would rewrite
-the maintenance history those reports are built on.
+and hides it from every role except Administrator and Maintenance Manager.
+
+**A deactivated asset is never deleted from ATMS. Not after six months, not
+ever** (LDC policy, 2026-08-17). An asset that has been in service carries
+closed work orders, meter readings, parts consumption and failure records, and
+those are precisely what ATMS exists to hold — the ERP has the financial history,
+ATMS has the maintenance one. Deleting a written-off asset would rewrite past
+MTBF, failure analysis and parts-usage figures, changing the answer to questions
+about periods that are already closed.
+
+> The `atms:import-assets --prune` flag does delete assets, cascading to their
+> maintenance records. That is a **pre-handover data-reset tool**, not an
+> operational one, and it should not be used once LDC's real history begins to
+> accumulate.
 
 ### Operational status
 
