@@ -202,6 +202,30 @@ Once activated, the Administrator can edit the user's name/email/role, reset
 their password, or deactivate/reactivate the account. An Administrator cannot
 perform these actions on their own account.
 
+### Where asset data comes from
+
+ATMS is currently the **operational source** for asset reference data. Assets
+were loaded once from an ERP CSV extract (`atms:import-erp-assets`) and are
+maintained in ATMS thereafter.
+
+**A weekly ERP sync covering both assets and parts is planned for Phase 3**
+(roughly six months out as of 2026-08-17, subject to LDC budget). Parts already
+sync weekly; assets do not.
+
+The practical consequence today: **when an asset is disposed or otherwise
+deactivated in the ERP, ATMS is not told.** Someone has to deactivate it in
+ATMS, either by re-running the import or by switching it off in the Admin UI.
+Until the sync lands, that is a human procedure and belongs in LDC's operating
+instructions, not in the software.
+
+Deactivating an asset (`is_active = false`) removes it from every workflow —
+no maintenance requests, no work orders, no preventive-maintenance evaluation,
+no location changes, no bookings (existing ones are released automatically) —
+and hides it from every role except Administrator and Maintenance Manager. It is
+deliberately **not deleted**: an asset that has been in service carries closed
+work orders, meter readings and parts consumption, and removing it would rewrite
+the maintenance history those reports are built on.
+
 ### Operational status
 
 Every asset carries an `operational_status` answering "is the asset working

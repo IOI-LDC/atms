@@ -46,7 +46,7 @@ Phase 2 or Phase 3 work implicitly.
 |---|---|---|
 | ERP parts API | Page name and sample payload/field mapping | Parts sync quality and future SM work. |
 | ERP consumption write-back | Confirm supported BC warehouse transaction and contract | Required before Phase 3 SM consumption write-back. |
-| Asset ownership | Confirm whether ATMS remains the operational source for asset reference data or an ERP-sync design is revived | Do not reintroduce asset sync without this decision. |
+| Asset ownership | **Answered 2026-08-17: ERP becomes authoritative.** A weekly ERP sync covering **both assets and parts** is planned for **Phase 3 — roughly six months out, subject to LDC budget.** | Until then ATMS is the operational source for asset reference data and ERP status reaches it only through the manual `atms:import-erp-assets` CSV import. Design decisions taken now must not make that sync harder to add — see 🟠 D-024. |
 | Official SPA hostname | Confirm the permanent LDC subdomain. The SPA is hosted at `https://atms.inova.krd` for now, which is what `FRONTEND_URL` should be set to on the deployed backend; treat it as provisional. | Email deep links point wherever `FRONTEND_URL` says, so the value must be revisited when the permanent host is issued. |
 | Exchange Application Access Policy | LDC IT restricts the notification Entra application to `notification@ldc.com.ly` | Required before enabling production email; today the credential can send as any tenant mailbox. |
 

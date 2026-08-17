@@ -8,6 +8,19 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
+/**
+ * ⚠️ **Historical.** This covers the 2026-08-04 migration that renamed
+ * `active` → `ready_for_field` and `inactive` → `scraped`. `scraped` was itself
+ * removed in release 4b, so the assertions below name a value the application no
+ * longer has.
+ *
+ * That is correct and deliberate: a migration test asserts what the migration
+ * did at the time it ran, against the vocabulary of that moment. Rewriting it to
+ * the current values would make it assert something the migration never did.
+ * Everything here goes through raw `DB`, so no enum cast is involved.
+ *
+ * The follow-on rewrite lives in `OperationalStatusValueMigrationTest`.
+ */
 class RenameOperationalStatusValuesTest extends TestCase
 {
     use RefreshDatabase;

@@ -25,7 +25,6 @@ class Asset extends Model
         'manufacturer',
         'current_location_id',
         'operational_status',
-        'erp_status',
         'erp_raw_data',
         'erp_last_synced_at',
         'is_active',
