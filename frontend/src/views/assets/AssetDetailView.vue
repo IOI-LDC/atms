@@ -108,6 +108,8 @@ const {
   closeEdit,
   requestSave,
   doSave,
+  saveCondition,
+  savingCondition,
   suggestTagLoading,
   suggestTagCollision,
   suggestTag,
@@ -169,6 +171,13 @@ const locationIdStr = computed({
     draft.value.current_location_id = v === '__none__' ? null : Number(v)
   },
 })
+
+// The Select emits AcceptableValue; Condition is always a plain string value
+// from the vocabulary, and an empty emission means "no change", not "clear".
+function onConditionSelect(v: unknown) {
+  if (typeof v !== 'string' || v === '') return
+  void saveCondition(v)
+}
 
 // Attachment deletion uses its target id as open state (same pattern as WO).
 const deleteAttachmentOpen = computed({
@@ -237,6 +246,30 @@ watch(
                   {{ operationalStatusLabel(record.operational_status) }}
                 </span>
                 <span v-if="record.is_booked" class="status-badge status-booked">Booked</span>
+
+                <!-- Condition is a status, so it sits with the other two rather
+                     than in the reference rail — and it is the one field that
+                     changes often enough to deserve editing without opening the
+                     form. The trigger is styled as a badge: it reads like the
+                     values beside it and behaves like a control. -->
+                <Select
+                  v-if="canEdit"
+                  :model-value="record.condition_status ?? undefined"
+                  :disabled="savingCondition"
+                  @update:model-value="onConditionSelect"
+                >
+                  <SelectTrigger class="condition-badge-trigger" aria-label="Condition">
+                    <SelectValue placeholder="Set condition" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="c in assetConditions" :key="c.value" :value="c.value">
+                      {{ c.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <span v-else-if="record.condition_label" class="status-badge status-unclassified">
+                  {{ record.condition_label }}
+                </span>
               </div>
               <p class="detail-command-subtitle">
                 <span class="atms-erp-code">{{ record.asset_tag ?? '—' }}</span>

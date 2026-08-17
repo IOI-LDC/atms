@@ -297,6 +297,33 @@ export function useAssetDetail() {
     confirmEditOpen.value = true
   }
 
+  /**
+   * Save Condition on its own, without opening the edit sheet.
+   *
+   * Condition changes far more often than anything else on an asset — it is the
+   * field that tracks what is currently wrong with it — so routing it through
+   * the full edit form means a sheet, a scroll and a save for a one-word change.
+   * Everything else on the asset stays behind the form.
+   */
+  const savingCondition = ref(false)
+
+  async function saveCondition(value: string): Promise<void> {
+    if (!record.value || value === record.value.condition_status) return
+
+    savingCondition.value = true
+    try {
+      const res = await api.patch<{ data: Asset }>(`/assets/${record.value.id}`, {
+        condition_status: value,
+      })
+      record.value = res.data
+      toast.success('Condition updated.')
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to update the condition.')
+    } finally {
+      savingCondition.value = false
+    }
+  }
+
   async function doSave() {
     if (!record.value) return
     saving.value = true
@@ -621,6 +648,8 @@ export function useAssetDetail() {
     closeEdit,
     requestSave,
     doSave,
+    saveCondition,
+    savingCondition,
     // Suggest tag
     suggestTagLoading,
     suggestTagCollision,

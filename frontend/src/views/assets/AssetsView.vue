@@ -35,13 +35,17 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const { all, locations, loadLocations } = useAssets()
-const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
+const { maintenanceCategories, loadMaintenanceCategories, assetConditions, loadAssetConditions } =
+  useListOptions()
 
 // Static filter options + the live maintenance-category list (readable by every
 // role, unlike the Admin/Manager-gated location filter above).
 const mergedFilterOptions = computed(() => ({
   ...assetFilterOptions,
   'maintenance_category.name': toMaintenanceCategoryFilterOptions(maintenanceCategories.value),
+  // Live data like the categories above — Admins add and retire conditions
+  // through the Lists screen, so a hardcoded list would drift.
+  condition_status: assetConditions.value,
 }))
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -67,6 +71,7 @@ watch(
       all.load()
       if (auth.isAdminOrManager || auth.isLogistics) loadLocations()
       loadMaintenanceCategories()
+      loadAssetConditions()
     }
   },
   { immediate: true },

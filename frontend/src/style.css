@@ -346,6 +346,30 @@
   color: var(--muted-foreground);
 }
 
+/* Condition, in the asset header: reads as a status badge, behaves as a select.
+   Sized to sit level with the badges beside it rather than as a form control. */
+.condition-badge-trigger {
+  height: auto;
+  min-height: 0;
+  width: auto;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 0.1875rem;
+  border: 1px solid transparent;
+  background: oklch(0.6 0.008 260 / 0.14);
+  color: oklch(0.48 0.008 260);
+  font-size: 0.625rem;
+  line-height: 1.4;
+  gap: 0.25rem;
+}
+
+.condition-badge-trigger:hover:not(:disabled) {
+  border-color: oklch(0.6 0.008 260 / 0.35);
+}
+
+.condition-badge-trigger:disabled {
+  opacity: 0.6;
+}
+
 /* Terminal / read-only notice. */
 .detail-banner {
   padding: 0.75rem 1rem;
