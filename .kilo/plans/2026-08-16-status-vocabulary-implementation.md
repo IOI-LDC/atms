@@ -206,7 +206,7 @@ remains trivially buildable at any time.
 
 ## Rollout rules (revised)
 - **Only Phase 1 gates Phase 4.** Phases 2 and 3 ship independently, whenever.
-- Rig/well_site locations are an ops activation step, not a code gate (`at_the_field` may stay inert until created).
+- ✅ Rig/well_site locations exist on dev as of 2026-08-17 (`RIG A`, `Well A`), so `at_the_field` is live rather than inert. Verify prod separately.
 - Every phase commit updates `.kilo/STATE.md` + `.kilo/TLD.md` (not at the end).
 - Backend commands: `docker exec atms-api php artisan …`; frontend: `cd frontend && npm run type-check && npm run build`. Pint with explicit touched paths.
 - **Audit coverage required in tests:** stock mutations (before/after `available_quantity` on record/remove), `condition_status` changes (manual set, close reset, field-exit auto-set), and approval location moves (location history + audit row in the same transaction).

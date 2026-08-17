@@ -154,10 +154,11 @@ retired equipment back into the pool.
 
 - **Tell whoever uses the system that "Down" now reads "Failure".** It is the
   same state under a better name, but it is the change people will notice first.
-- **`at_the_field` stays inert until LDC creates rig or well_site locations.**
-  That is an ops activation step, not a release gate — the rule simply never
-  fires while the only location is a yard. Once those locations exist, moving an
-  asset to one sets the status automatically.
+- **`at_the_field` is live as soon as rig or well_site locations exist.** They
+  do on dev (`RIG A`, `Well A`) as of 2026-08-17, so the rule fires the moment
+  an asset is moved to one — it is not dormant. Check prod with
+  `./scripts/survey-data.sh` before the window so nobody is surprised by assets
+  changing status on their first field move.
 - **Release 4c** drops the now-unread **`erp_status`** column only. Ordinary
   `deploy.sh` release, once 4b has run cleanly for a few days.
 
