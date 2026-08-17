@@ -2693,13 +2693,29 @@ Between ERP refreshes, the quantities in ATMS are consumption-adjusted only
 miscount, a missing issue, a part used outside a Work Order — an Administrator
 can correct them in bulk:
 
-1. **Download the parts CSV** from the Parts section. The file lists the
-   catalogue — **Part No.**, name, and current available quantity — so it can
-   be reconciled offline against a physical count.
-2. **Correct the quantities** in the downloaded file.
-3. **Upload the file back.** Each row's quantity is applied to the matching
-   part (matched on Part No.). Rows that do not match, or carry invalid
-   quantities, are reported rather than applied.
+1. **Download the parts CSV** from the Parts section. The file lists the whole
+   catalogue — active and inactive parts alike, since a physical count does not
+   stop at the catalogue edge. Each row carries three identifiers: the internal
+   **part_id**, the **erp_part_id** (for looking the row up against an ERP
+   export), and the **Part No.** you actually read.
+2. **Correct the quantities** in the downloaded file. Leave the identifier
+   columns alone. Extra helper columns are fine — anything beyond `part_id`,
+   `erp_part_code` and `available_quantity` is ignored.
+3. **Upload the file back.** Rows are matched on **part_id**, with the Part No.
+   checked against it. Matching on the Part No. itself would be fragile — it is
+   editable and not guaranteed unique — so it serves as a cross-check instead:
+   if the two columns disagree, the file is rejected rather than applied to the
+   wrong parts. That is what catches a spreadsheet lookup that has slipped by a
+   row.
+
+**The upload is all-or-nothing.** One bad row rejects the whole file and
+nothing is changed; every problem is reported with its line number so you can
+fix the spreadsheet and try again. A file you downloaded and did not edit
+applies as zero changes.
+
+Quantities must be zero or more with at most three decimal places. Negatives
+are refused — a physical count cannot be negative, and one here means a sign
+error in the worksheet.
 
 This is an **interim, Administrator-only process**. It corrects the local
 figure; it does not write back to the ERP, and the next ERP sync will overwrite
