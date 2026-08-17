@@ -12,7 +12,13 @@ import api, { ApiError } from '@/lib/api'
  * back with line-numbered errors, so the operator's next move is always "fix the
  * spreadsheet and retry" rather than "work out which half landed".
  */
-export function usePartsCsvRoundTrip() {
+/**
+ * @param onApplied Run after a successful upload. The caller owns the parts
+ *   list, so reloading it is its job — but forgetting to call it leaves the
+ *   table showing the quantities the upload just replaced, which reads as the
+ *   upload having silently failed.
+ */
+export function usePartsCsvRoundTrip(onApplied?: () => void | Promise<void>) {
   const uploadOpen = ref(false)
   const uploadFile = ref<File | null>(null)
   const uploading = ref(false)
@@ -71,6 +77,7 @@ export function usePartsCsvRoundTrip() {
           `${res.data.unchanged} unchanged.`,
       )
       uploadOpen.value = false
+      await onApplied?.()
     } catch (e) {
       // Kept in the dialog rather than a toast: the list is long, numbered, and
       // the operator needs to read it against the file they still have open.

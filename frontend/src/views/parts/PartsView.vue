@@ -41,7 +41,10 @@ const {
   chooseFile,
   downloadCsv,
   submitUpload,
-} = usePartsCsvRoundTrip()
+  // `load(true)` forces a refetch — the list is cached client-side, so without
+  // it the table keeps showing the quantities the upload just replaced, which
+  // reads as the upload having done nothing.
+} = usePartsCsvRoundTrip(() => all.load(true))
 
 onMounted(() => {
   all.load()
