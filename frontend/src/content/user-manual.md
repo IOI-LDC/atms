@@ -1895,6 +1895,23 @@ a WO is closed (all in one database transaction):
 - `closed_at` timestamp set.
 - All WO fields, parts, readings, and attachments permanently locked.
 
+### Recording preventive maintenance during a job
+
+The maintenance team often performs a scheduled service — L1, L2, L3 — while an
+asset is already stripped down for a repair. That is recorded on the work order
+itself, in the **Preventive maintenance performed** picker, at any point while
+the job is open or in progress.
+
+- It is a **single "highest level performed" choice**, not a checklist. The
+  ladder is cumulative, so recording L3 already means L2 and L1 were done.
+- The technician doing the work records it. A Manager or Administrator can still
+  correct it after the work is marked complete, up until the work order closes.
+- **Nothing happens to the schedule until the work order closes.** If the job is
+  cancelled the record is discarded and the asset's next service falls due
+  exactly when it would have anyway — a cancelled job did not service anything.
+- The close dialog shows what was recorded, so the closer confirms rather than
+  re-enters it.
+
 **0. Precondition — the work order must carry an attachment:**
 - A work order **cannot be closed** until at least one file is attached to it —
   normally the completed inspection form or job sheet (PDF or spreadsheet).
@@ -1909,6 +1926,19 @@ a WO is closed (all in one database transaction):
 - Any attachment satisfies the rule. ATMS does not distinguish "the inspection
   form" from a photograph, so this is a check that *something* was filed, not
   that the right thing was.
+
+**1b. Preventive Maintenance Applied:**
+- If a PM level was recorded on this work order — either marked by the team
+  while they worked, or chosen by the closer — that service schedule's clock
+  restarts, **and so does every lower numbered level's**. Recording L3 covers
+  L2 and L1: the ladder is cumulative.
+- A **custom** level (one not written as L1, L2, L3 …) restarts only itself.
+  There is no defined order between a custom level and a numbered one, so
+  nothing can be inferred about the others.
+- If the closer names a different level from the one marked during the work,
+  **the closer's choice wins** and the difference is recorded in the audit log.
+- If the marked schedule was switched off between marking and closing, it is
+  skipped and reported as a note — the close still succeeds.
 
 **2. Asset Operational Status Updated:**
 - Asset's `operational_status` → **always `ready_for_field`**. The work is done,
