@@ -15,6 +15,7 @@ use App\Models\MaintenanceRequest;
 use App\Models\MasterDataItem;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderPmMark;
 use App\Notifications\WorkOrders\WorkOrderClosedNotification;
 use App\Services\Audit\AuditLogger;
 use App\Support\Assets\AssetFieldStatus;
@@ -102,7 +103,7 @@ class CloseWorkOrder
             app(ApplyWorkOrderAssetStatusTransition::class)
                 ->execute($locked, OperationalStatus::READY_FOR_FIELD);
 
-            $this->resetCondition($locked, $logger);
+            $this->resetCondition($locked, $logger, $servicedPmAssignmentId);
 
             // Confirm this work order's readings before anything reads them back.
             // Both PM baseline queries below (the assignment's own, and the one
@@ -155,9 +156,7 @@ class CloseWorkOrder
             // the workshop, a PM level was due, and the team did both. The branch
             // above only fires for preventive work orders (they carry a pm_rule_id);
             // this is the corrective path, which has none.
-            if ($servicedPmAssignmentId !== null) {
-                $this->recordDeclaredService($locked, $servicedPmAssignmentId, $closedByUserId, $logger);
-            }
+            $this->applyServicedAssignment($locked, $servicedPmAssignmentId, $closedByUserId, $logger);
 
             // Capture the meter position *after* readings are confirmed and after any
             // baseline reset, so the snapshot reflects the state this close leaves behind.
@@ -211,6 +210,73 @@ class CloseWorkOrder
      * already raised for that assignment so nobody approves a second work order for
      * work that is done.
      */
+    /**
+     * Decide which PM assignment this close should treat as serviced, and apply
+     * it through the existing declared-service path.
+     *
+     * Two sources can name one:
+     *
+     *  - `serviced_pm_assignment_id` in the close payload — the closer saying so
+     *    at the moment of signing off;
+     *  - a mark staged during the work (RQ1) — the technician saying so while
+     *    they were doing it.
+     *
+     * **The payload wins.** It is the later and more deliberate act, and a 409
+     * on disagreement would strand a work order over which of two plausible
+     * levels was performed — a paperwork dispute must never block an operational
+     * transition. The discrepancy is audited instead.
+     *
+     * A staged mark whose assignment has since been deactivated is **skipped**,
+     * audited and reported in `warnings` — the same treatment
+     * `ConfirmWorkOrderReadings` gives a reading that fails its guard, and for
+     * the same reason.
+     */
+    private function applyServicedAssignment(
+        WorkOrder $workOrder,
+        ?int $payloadAssignmentId,
+        int $closedByUserId,
+        AuditLogger $logger
+    ): void {
+        $mark = WorkOrderPmMark::where('work_order_id', $workOrder->id)->first();
+
+        if ($payloadAssignmentId !== null) {
+            if ($mark !== null && $mark->asset_pm_assignment_id !== $payloadAssignmentId) {
+                $logger->log('work_order_pm_mark.superseded', $workOrder, [], [], [
+                    'work_order_id' => $workOrder->id,
+                    'marked_assignment_id' => $mark->asset_pm_assignment_id,
+                    'closed_with_assignment_id' => $payloadAssignmentId,
+                ]);
+            }
+
+            $this->recordDeclaredService($workOrder, $payloadAssignmentId, $closedByUserId, $logger);
+
+            return;
+        }
+
+        if ($mark === null) {
+            return;
+        }
+
+        $assignment = AssetPmAssignment::find($mark->asset_pm_assignment_id);
+
+        // Guarded at marking time too, but a schedule can be deactivated in the
+        // window between marking and closing.
+        if ($assignment === null || ! $assignment->is_active || $assignment->asset_id !== $workOrder->asset_id) {
+            $this->warnings[] = 'The PM level marked during this work order could not be applied: '
+                .'its service schedule is no longer active. Record the service against the schedule directly.';
+
+            $logger->log('work_order_pm_mark.skipped', $workOrder, [], [], [
+                'work_order_id' => $workOrder->id,
+                'asset_pm_assignment_id' => $mark->asset_pm_assignment_id,
+                'reason' => 'assignment_inactive_or_missing',
+            ]);
+
+            return;
+        }
+
+        $this->recordDeclaredService($workOrder, $mark->asset_pm_assignment_id, $closedByUserId, $logger);
+    }
+
     private function recordDeclaredService(
         WorkOrder $workOrder,
         int $assignmentId,
@@ -314,14 +380,23 @@ class CloseWorkOrder
     /**
      * Cumulative maintenance: when a higher-level PM (e.g. L3) closes, reset the
      * baselines of all active lower-level assignments (L1, L2) on the same asset
-     * so the lower-level cycle restarts from this maintenance event. Only applies
-     * to the standard L1-L4 levels (parses numeric suffix); custom levels skipped.
+     * so the lower-level cycle restarts from this maintenance event.
+     *
+     * Levels of the form `L<number>` are ordered and cascade — **any** number,
+     * not only 1–4. The old `L([1-4])` bound was arbitrary: `maintenance_level`
+     * is a free `varchar(10)` and the rule form already offers a custom level,
+     * so an `L5` rule silently cascaded to nothing.
+     *
+     * Anything else — a custom level like `SEASONAL` — participates in no
+     * cascade, because there is no defined ordering between it and `L2`. That
+     * skip is deliberate, unlike the L4 bound, and the UI says so where a custom
+     * level appears in the marking picker.
      */
     private function resetLowerLevelAssignments(AssetPmAssignment $assignment, AuditLogger $logger): void
     {
         $level = $assignment->pmRule?->maintenance_level;
 
-        if (! $level || ! preg_match('/^L([1-4])$/', $level, $matches)) {
+        if (! $level || ! preg_match('/^L(\\d+)$/', $level, $matches)) {
             return;
         }
 
@@ -334,7 +409,7 @@ class CloseWorkOrder
             ->get();
 
         foreach ($lowerAssignments as $lowerAssignment) {
-            if (! preg_match('/^L([1-4])$/', $lowerAssignment->pmRule?->maintenance_level ?? '', $lowerMatches)) {
+            if (! preg_match('/^L(\\d+)$/', $lowerAssignment->pmRule?->maintenance_level ?? '', $lowerMatches)) {
                 continue;
             }
 
@@ -377,7 +452,7 @@ class CloseWorkOrder
      *    exactly as it was and the omission is reported, rather than clearing a
      *    value nobody replaced.
      */
-    private function resetCondition(WorkOrder $workOrder, AuditLogger $logger): void
+    private function resetCondition(WorkOrder $workOrder, AuditLogger $logger, ?int $servicedPmAssignmentId): void
     {
         $asset = $workOrder->asset()->lockForUpdate()->first();
 
@@ -387,14 +462,18 @@ class CloseWorkOrder
 
         $previous = $asset->condition_status;
 
-        // An asset that came back from the field flagged for inspection, and is
-        // now being closed out, is the case RQ1 (Phase 6) exists to tighten:
-        // once PM marking is built this should only warn when no PM level was
-        // marked. Until then it warns on the condition alone, which is the
-        // half that is knowable today.
-        if ($previous === AssetFieldStatus::NEED_INSPECTION) {
-            $this->warnings[] = 'This asset was flagged Need Inspection. Confirm the inspection was carried out '
-                .'and the relevant PM level recorded before relying on its schedule.';
+        // An asset that came back from the field flagged for inspection, closed
+        // out with no PM level recorded anywhere. Narrowed in Phase 6 to include
+        // the second half the design always wanted: if the team *did* mark a
+        // level — staged during the work or named in the close payload — the
+        // inspection is accounted for and there is nothing to warn about. This
+        // is what stops the notice firing on the common, correct case.
+        $pmAccountedFor = $servicedPmAssignmentId !== null
+            || WorkOrderPmMark::where('work_order_id', $workOrder->id)->exists();
+
+        if ($previous === AssetFieldStatus::NEED_INSPECTION && ! $pmAccountedFor) {
+            $this->warnings[] = 'This asset was flagged Need Inspection and no PM level was recorded on this '
+                .'work order. Confirm the inspection was carried out before relying on its schedule.';
         }
 
         $default = MasterDataItem::defaultFor(MasterDataItem::ASSET_CONDITIONS);

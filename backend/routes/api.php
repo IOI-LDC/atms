@@ -194,6 +194,9 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::post('/work-orders/{workOrder}/parts', [WorkOrderController::class, 'addPart']);
     Route::delete('/work-orders/{workOrder}/parts/{partLine}', [WorkOrderController::class, 'removePart']);
     Route::post('/work-orders/{workOrder}/asset-status', [WorkOrderController::class, 'setAssetStatus']);
+    // RQ1: the PM level performed during the work. Staged here, applied at close.
+    Route::put('/work-orders/{workOrder}/pm-mark', [WorkOrderController::class, 'setPmMark']);
+    Route::delete('/work-orders/{workOrder}/pm-mark', [WorkOrderController::class, 'clearPmMark']);
     Route::get('/work-orders/{workOrder}/form', [WorkOrderController::class, 'showForm']);
     Route::patch('/work-orders/{workOrder}/form/fields', [WorkOrderController::class, 'bulkUpdateFormFields']);
     Route::patch('/work-orders/{workOrder}/form/fields/{field}', [WorkOrderController::class, 'updateFormField']);

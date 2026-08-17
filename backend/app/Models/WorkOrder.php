@@ -75,6 +75,20 @@ class WorkOrder extends Model
      * The asset's meter position, per reading type, captured when this work order
      * closed. Empty for anything not yet closed.
      */
+    /**
+     * The PM level marked as performed during this work order (RQ1).
+     *
+     * HasOne, not HasMany — `work_order_pm_marks.work_order_id` is unique,
+     * because the maintenance ladder is cumulative and a second mark could only
+     * be redundant or contradictory.
+     *
+     * @return HasOne<WorkOrderPmMark, $this>
+     */
+    public function pmMark(): HasOne
+    {
+        return $this->hasOne(WorkOrderPmMark::class);
+    }
+
     public function meterSnapshots(): HasMany
     {
         return $this->hasMany(WorkOrderMeterSnapshot::class);

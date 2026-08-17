@@ -2,10 +2,10 @@
 
 namespace App\Actions\WorkOrders;
 
-use App\Actions\WorkOrders\ApplyWorkOrderAssetStatusTransition;
 use App\Enums\OperationalStatus;
 use App\Enums\WorkOrderStatus;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderPmMark;
 use App\Notifications\WorkOrders\WorkOrderCancelledNotification;
 use App\Services\Audit\AuditLogger;
 use App\Support\FrontendUrl;
@@ -36,9 +36,28 @@ class CancelWorkOrder
             $after = $workOrder->fresh()->toArray();
             $logger->log('work_order.cancelled', $locked, $before, $after);
 
-            // Caller-chosen asset status: DOWN = still faulty, READY_FOR_FIELD = false alarm.
+            // Caller-chosen asset status: FAILURE = still faulty, READY_FOR_FIELD = false alarm.
             if ($assetStatus !== null) {
                 app(ApplyWorkOrderAssetStatusTransition::class)->execute($locked, $assetStatus);
+            }
+
+            // A PM level marked during the work is discarded, never applied.
+            // This is the case the staged model exists for: applying marks
+            // immediately would have advanced this asset's schedule for work
+            // that is now abandoned, pushing its next service out by a full
+            // interval with nothing on the record to explain it.
+            $mark = WorkOrderPmMark::where('work_order_id', $locked->id)->lockForUpdate()->first();
+
+            if ($mark !== null) {
+                $markBefore = $mark->toArray();
+                $markedAssignmentId = $mark->asset_pm_assignment_id;
+                $mark->delete();
+
+                $logger->log('work_order_pm_mark.discarded', $locked, $markBefore, [], [
+                    'work_order_id' => $locked->id,
+                    'asset_pm_assignment_id' => $markedAssignmentId,
+                    'reason' => 'work_order_cancelled',
+                ]);
             }
 
             $this->notifyAssignee($locked->fresh(), $reason);

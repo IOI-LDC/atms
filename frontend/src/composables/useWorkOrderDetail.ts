@@ -277,6 +277,44 @@ export function useWorkOrderDetail() {
         return (a.rule.maintenance_level ?? '').localeCompare(b.rule.maintenance_level ?? '')
       }),
   )
+  // ── PM level performed during the work (RQ1) ──────────────────────────────
+  // Staged: recorded while the job runs, applied when the work order closes,
+  // discarded on cancel. The picker is a single "highest level performed"
+  // choice, not a multi-select — the ladder is cumulative, so marking L3
+  // already asserts L1 and L2.
+  const pmMarkSaving = ref(false)
+  const pmMark = computed(() => record.value?.pm_mark ?? null)
+
+  async function setPmMark(assignmentId: number) {
+    if (!record.value) return
+    pmMarkSaving.value = true
+    try {
+      await api.put(`/work-orders/${record.value.id}/pm-mark`, {
+        asset_pm_assignment_id: assignmentId,
+      })
+      toast.success('PM level recorded. It applies when the work order is closed.')
+      await load(record.value.id, { silent: true })
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to record the PM level.')
+    } finally {
+      pmMarkSaving.value = false
+    }
+  }
+
+  async function clearPmMark() {
+    if (!record.value) return
+    pmMarkSaving.value = true
+    try {
+      await api.delete(`/work-orders/${record.value.id}/pm-mark`)
+      toast.success('PM level cleared.')
+      await load(record.value.id, { silent: true })
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to clear the PM level.')
+    } finally {
+      pmMarkSaving.value = false
+    }
+  }
+
   const cancelOpen = ref(false)
   const cancelLoading = ref(false)
   const cancelReason = ref('')
@@ -505,6 +543,9 @@ export function useWorkOrderDetail() {
       const res = await api.get<{ data: WorkOrder }>(`/work-orders/${id}`)
       record.value = res.data
       void loadAttachments(id)
+      // The PM picker sits in the execution section, so the list is needed as
+      // soon as the page renders for someone who can use it.
+      if (canEdit.value) void loadServiceAssignments()
     } catch (e) {
       record.value = null
       if (e instanceof ApiError) {
@@ -693,8 +734,13 @@ export function useWorkOrderDetail() {
     // No asset-status choice here since 4b: closing always returns the asset to
     // service. A job that did not restore it is cancelled, not closed.
     closeWarnings.value = []
-    serviceDeclared.value = false
-    servicedAssignmentId.value = null
+    // Seeded from a level marked during the work (RQ1): marking mid-job and
+    // declaring at close are the same decision at two moments, so the dialog
+    // shows what was already recorded rather than asking again. The closer can
+    // still override — the backend takes the payload over the mark and audits
+    // the difference.
+    serviceDeclared.value = pmMark.value !== null
+    servicedAssignmentId.value = pmMark.value?.asset_pm_assignment_id ?? null
     closeOpen.value = true
     void loadServiceAssignments()
   }
@@ -706,6 +752,9 @@ export function useWorkOrderDetail() {
    */
   async function loadServiceAssignments() {
     if (!record.value) return
+    // Two surfaces want this list now — the mid-work PM picker and the close
+    // dialog — and neither should refetch what the other already has.
+    if (serviceAssignments.value.length > 0 || serviceAssignmentsLoading.value) return
     serviceAssignmentsLoading.value = true
     try {
       serviceAssignments.value = await fetchList<AssetPmAssignment>(
@@ -1163,6 +1212,10 @@ export function useWorkOrderDetail() {
     closeLoading,
     closeIsFailure,
     closeWarnings,
+    pmMark,
+    pmMarkSaving,
+    setPmMark,
+    clearPmMark,
     serviceDeclared,
     servicedAssignmentId,
     serviceAssignmentOptions,

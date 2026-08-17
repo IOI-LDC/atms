@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Actions\WorkOrders\AssignWorkOrder;
 use App\Actions\WorkOrders\BulkUpdateWorkOrderFormFieldValues;
 use App\Actions\WorkOrders\CancelWorkOrder;
+use App\Actions\WorkOrders\ClearWorkOrderPmMark;
 use App\Actions\WorkOrders\CloseWorkOrder;
 use App\Actions\WorkOrders\CompleteWorkOrder;
 use App\Actions\WorkOrders\DeferWorkOrderFormSync;
 use App\Actions\WorkOrders\DeleteWorkOrderPart;
 use App\Actions\WorkOrders\RecordWorkOrderPart;
 use App\Actions\WorkOrders\SetWorkOrderAssetStatus;
+use App\Actions\WorkOrders\SetWorkOrderPmMark;
 use App\Actions\WorkOrders\StartWorkOrder;
 use App\Actions\WorkOrders\SyncWorkOrderFormToLatest;
 use App\Actions\WorkOrders\UpdateWorkOrderExecution;
@@ -21,6 +23,7 @@ use App\Enums\WorkOrderStatus;
 use App\Exceptions\WorkOrderFormIncompleteException;
 use App\Http\Resources\AssetResource;
 use App\Http\Resources\WorkOrderFormResource;
+use App\Http\Resources\WorkOrderPmMarkResource;
 use App\Http\Resources\WorkOrderResource;
 use App\Models\Location;
 use App\Models\User;
@@ -49,7 +52,7 @@ class WorkOrderController extends Controller
         // Only load the (relatively heavy) form relations for roles that can
         // see the form — avoids 2-3 wasted queries for Logistics/Requester,
         // matching the Resource's $canSeeForm gate.
-        $loads = ['asset', 'asset.currentLocation', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments', 'meterSnapshots.readingType'];
+        $loads = ['asset', 'asset.currentLocation', 'assignedTo', 'maintenanceRequest', 'assignedBy', 'parts.part', 'attachments', 'meterSnapshots.readingType', 'pmMark.assetPmAssignment.pmRule', 'pmMark.markedBy'];
         $canSeeForm = $request->user()->hasRole(RoleCode::ADMINISTRATOR)
             || $request->user()->hasRole(RoleCode::MAINTENANCE_MANAGER)
             || $request->user()->hasRole(RoleCode::TECHNICIAN);
@@ -250,6 +253,45 @@ class WorkOrderController extends Controller
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
+    }
+
+    /**
+     * Record the highest PM level performed during this work order (RQ1).
+     *
+     * PUT rather than POST: the operation is "set the mark for this work order",
+     * and running it twice must not produce two marks. `updateExecution` is the
+     * same policy that governs parts, readings and form fields — the assigned
+     * technician records what they did; a Manager can still correct it before
+     * close.
+     */
+    public function setPmMark(Request $request, WorkOrder $workOrder, SetWorkOrderPmMark $action): JsonResponse
+    {
+        Gate::authorize('updateExecution', $workOrder);
+
+        $validated = $request->validate([
+            'asset_pm_assignment_id' => ['required', 'integer', 'exists:asset_pm_assignments,id'],
+        ]);
+
+        try {
+            $mark = $action->execute($workOrder, (int) $validated['asset_pm_assignment_id'], $request->user()->id);
+
+            return response()->json([
+                'message' => 'PM level recorded. It is applied when the work order is closed.',
+                'data' => new WorkOrderPmMarkResource($mark->load('assetPmAssignment.pmRule', 'markedBy')),
+            ]);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    /** Remove a staged PM mark. Succeeds whether or not one was set. */
+    public function clearPmMark(Request $request, WorkOrder $workOrder, ClearWorkOrderPmMark $action): JsonResponse
+    {
+        Gate::authorize('updateExecution', $workOrder);
+
+        $action->execute($workOrder);
+
+        return response()->json(['message' => 'PM level cleared.']);
     }
 
     public function setAssetStatus(Request $request, WorkOrder $workOrder, SetWorkOrderAssetStatus $action): JsonResponse

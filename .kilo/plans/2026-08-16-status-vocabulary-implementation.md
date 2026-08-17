@@ -177,8 +177,14 @@
 - UI: complete dialog attach step; backend upload unchanged (`AttachmentPolicy.php:50` verified).
 - Commit + STATE/TLD.
 
-## Phase 6 — RQ1: PM level marking (DESIGN GATE — not executable as written)
-Execute only after a mini-spec (with user) resolves: the staged-record model/table (e.g. `work_order_pm_marks`), endpoint + controller/action + authorization, idempotency key, close-time application (cascade generalized from `CloseWorkOrder.php:283,296`), cancel-time cleanup, mid-WO frontend control placement, and audit events. D4 (staged until close, discarded on cancel) is the working default. Until that spec exists, this phase is a design note, not tasks.
+## Phase 6 — RQ1: PM level marking ✅ SHIPPED 2026-08-17
+
+Built to `docs/plans/2026-08-16-rq1-pm-level-marking-mini-spec.md`, all five of
+its §4 decisions confirmed. `work_order_pm_marks` (unique per WO) staged and
+applied at close, discarded on cancel; `PUT`/`DELETE /work-orders/{id}/pm-mark`
+under `updateExecution`; the cascade generalised from `L1–L4` to any `L<number>`
+(custom levels cascade to nothing, by design); the Need Inspection close warning
+narrowed to "and no PM level was recorded".
 
 ## Phase 7 — RQ3: parts CSV down/up (DESIGN GATE — not executable as written)
 Execute only after a mini-spec pins: export route/controller + exact CSV columns (`parts.id`, `erp_part_code`, name, quantity, …) + error contract; upload route/request/action + UI + tests. Q8 semantics pinned: **live ERP matching still uses external `erp_part_id`; ATMS relationships and CSV uploads use `parts.id`.** Ownership: ERP authority; overwrite trigger recorded 🟠 (Phase 3).

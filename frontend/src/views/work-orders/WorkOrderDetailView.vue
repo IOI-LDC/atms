@@ -126,6 +126,10 @@ const {
   closeLoading,
   closeIsFailure,
   closeWarnings,
+  pmMark,
+  pmMarkSaving,
+  setPmMark,
+  clearPmMark,
   serviceDeclared,
   servicedAssignmentId,
   serviceAssignmentOptions,
@@ -307,6 +311,17 @@ const editReadingValueStr = computed({
     editReadingDraft.value.value = v === '' ? null : Number(v)
   },
 })
+
+// The PM picker round-trips through a string id, and choosing fires the save
+// immediately — there is no separate confirm, so a stray empty value must not
+// be read as "clear". Clearing has its own button.
+const pmMarkValue = computed(() =>
+  pmMark.value ? String(pmMark.value.asset_pm_assignment_id) : undefined,
+)
+function onPmMarkSelect(v: unknown) {
+  if (typeof v !== 'string' || v === '') return
+  void setPmMark(Number(v))
+}
 
 // Delete-reading confirm open state derives from a target id (mirrors parts/attachment flows).
 const deleteReadingOpen = computed({
@@ -687,6 +702,56 @@ watch(
                         </span>
                       </li>
                     </ul>
+                  </div>
+
+                  <!-- RQ1: the PM level performed while the asset was in.
+                       Recorded here rather than only at close, because the
+                       person who did the service is not usually the person who
+                       signs the work order off. Staged — it reaches the asset's
+                       schedule when the work order closes. -->
+                  <div v-if="canEdit || pmMark" class="reading-group">
+                    <p class="reading-group-title">Preventive maintenance performed</p>
+
+                    <div v-if="pmMark" class="pm-mark-current">
+                      <span class="pm-mark-level">{{ pmMark.maintenance_level ?? 'Custom' }}</span>
+                      <span class="pm-mark-rule">{{ pmMark.rule_name }}</span>
+                      <Button
+                        v-if="canEdit"
+                        size="sm"
+                        variant="ghost"
+                        :disabled="pmMarkSaving"
+                        @click="clearPmMark"
+                        >Clear</Button
+                      >
+                    </div>
+
+                    <div v-if="canEdit" class="form-field">
+                      <Label for="wo-pm-mark">Highest level performed</Label>
+                      <Select :model-value="pmMarkValue" @update:model-value="onPmMarkSelect">
+                        <SelectTrigger id="wo-pm-mark"
+                          ><SelectValue placeholder="None recorded"
+                        /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem
+                            v-for="a in serviceAssignmentOptions"
+                            :key="a.id"
+                            :value="String(a.id)"
+                          >
+                            {{ a.rule.maintenance_level ?? 'Custom' }} — {{ a.rule.name }}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p class="form-help">
+                        The ladder is cumulative — recording L3 also covers L2 and L1, so pick the
+                        highest level actually performed. It is applied when the work order is
+                        closed, and discarded if it is cancelled. A custom level resets only itself:
+                        there is no defined order between it and the numbered levels.
+                      </p>
+                    </div>
+
+                    <div v-else-if="!pmMark" class="empty-state">
+                      No preventive maintenance recorded on this work order.
+                    </div>
                   </div>
 
                   <!-- Readings taken on this work order, kept apart from the

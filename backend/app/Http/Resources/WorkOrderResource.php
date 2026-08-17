@@ -120,6 +120,14 @@ class WorkOrderResource extends JsonResource
             'reading_at' => $s->reading_at?->toIso8601String(),
         ])->values());
 
+        // The PM level recorded during the work, if any. Staged until close —
+        // present here so the execution screen and the close dialog agree on
+        // what was marked without asking twice.
+        $data['pm_mark'] = $this->whenLoaded(
+            'pmMark',
+            fn () => $this->pmMark ? (new WorkOrderPmMarkResource($this->pmMark))->toArray($request) : null,
+        );
+
         return $data;
     }
 }

@@ -3,7 +3,66 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-16 (latest — Q7 answered: R-11 cancelled)
+## Session — 2026-08-17 (latest — Phases 5 and 6 SHIPPED)
+
+**1213 tests green, Pint clean, vue-tsc clean.** Two LDC requests landed:
+RQ2 (attachment before close) and RQ1 (PM level marking during a work order).
+
+### RQ2 — and the user improved the design
+
+The plan recommended gating **completion**. The user gated **closure**, which is
+better: the technician finishes the physical job — often from a rig with poor
+connectivity — marks it complete, then uploads the paperwork; the manager cannot
+sign off until it is there.
+
+The backend already allowed uploads at any status. **The bug was in the SPA**:
+the Upload button was gated on `canEdit`, which excludes `completed`, so the
+control vanished exactly when it was needed. Split into `canUploadAttachment`.
+
+Also tightened: uploads to a closed or cancelled work order now 403. The manual
+has always said a closed work order's attachments are locked and nothing
+enforced it. Flagged to the user as a deliberate inclusion, not a silent one.
+
+⚠️ **It is a presence check, not a kind check.** A photo uploaded at start
+satisfies the gate. Distinguishing "the inspection form" needs an attachment
+category that does not exist, and one was not invented.
+
+### RQ1 — most of it already existed
+
+`serviced_pm_assignment_id` on close already reset the marked level, cascaded
+down and suppressed the pending PM request. The delta was mid-WO marking, the
+cascade bound, and the close warning — recorded in the mini-spec so a future
+session does not rebuild the cascade beside the existing one.
+
+- **Staged, not applied.** `work_order_pm_marks`, unique per work order, applied
+  at close and discarded on cancel. Applying immediately would push an asset's
+  next service out by a full interval for work that was later abandoned, with
+  nothing on the record to explain it. `test_cancelling_discards_the_mark…` is
+  the test that justifies the whole model.
+- **Cascade was capped at L4 by an arbitrary regex.** `maintenance_level` is a
+  free `varchar(10)` and the rule form offers a custom level, so an `L5` rule
+  silently cascaded to nothing. Now `/^L(\d+)$/`. Custom levels still cascade to
+  nothing — deliberate, because there is no ordering between `SEASONAL` and
+  `L2` — and the picker now says so.
+- **Conflict resolution:** the close payload beats a staged mark, audited. A 409
+  would strand a work order over a paperwork disagreement, and the house rule is
+  that a data-quality problem never blocks an operational transition.
+
+### Process notes
+
+- `TestCase::attachToWorkOrder()` — a shared fixture, added because the close
+  gate broke ~29 tests that only needed to reach `closed`.
+- **Another session is editing `frontend/src/content/user-manual.md` concurrently.**
+  Its work was swallowed into the 4b release commit by a broad `git add -A`;
+  that commit was split (`86c3abe` code / `ac9e59d` manual) and manual commits
+  are now kept separate with their provenance stated. Stage narrowly here.
+- **All data — dev *and* the pre-handover production server — is test data and
+  will be reset at handover.** No need to tiptoe around asset statuses or open
+  work orders.
+
+---
+
+## Session — 2026-08-16 (Q7 answered: R-11 cancelled)
 
 **LDC answered Q7: No.** They do not want a withdrawn / out-of-service assets
 report. **Phase 8 is cancelled, not deferred** — it contained R-11 and nothing

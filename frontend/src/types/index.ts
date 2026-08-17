@@ -317,6 +317,12 @@ export interface WorkOrder {
   assigned_to?: UserRef | null // Admin/Manager/Tech/Viewer
   assigned_by?: UserRef | null // Admin/Manager only
   parts?: WorkOrderPart[] // Admin/Manager/Tech/Viewer
+  /**
+   * The PM level recorded as performed during this work order (RQ1). Staged —
+   * it is applied to the asset's schedule when the work order closes, and
+   * discarded if it is cancelled.
+   */
+  pm_mark?: WorkOrderPmMark | null
   started_at?: string | null
   completed_at?: string | null
   completion_notes?: string | null
@@ -433,6 +439,16 @@ export interface PmAssignmentRule {
   interval_days: number | null
   interval_reading: number | null
   usage_reading_type?: { id: number; name: string; unit: string } | null
+}
+
+export interface WorkOrderPmMark {
+  id: number
+  work_order_id: number
+  asset_pm_assignment_id: number
+  maintenance_level: string | null
+  rule_name: string | null
+  marked_at: string | null
+  marked_by?: { id: number; name: string } | null
 }
 
 export interface AssetPmAssignment {

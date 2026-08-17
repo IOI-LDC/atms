@@ -5600,6 +5600,33 @@
   margin-block-start: 0.25rem;
 }
 
+/* The PM level recorded on a work order. A row, not a badge: it carries two
+   pieces of text (level and schedule name) plus a clear action, and a pill
+   would crowd all three. */
+.pm-mark-current {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted);
+  margin-block-end: 0.75rem;
+}
+
+.pm-mark-level {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.pm-mark-rule {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  flex: 1 1 auto;
+}
+
 /* Collapsed checklist summary on the WO detail page — the table itself lives in
    the Fill-checklist sheet (WoChecklistSheet). */
 .wo-checklist-summary {
