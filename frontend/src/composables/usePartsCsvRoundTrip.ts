@@ -27,6 +27,14 @@ export function usePartsCsvRoundTrip() {
     Math.max(0, uploadErrorCount.value - uploadErrors.value.length),
   )
 
+  /** `FileInput` emits an array; this feature takes exactly one file. */
+  function chooseFile(files: File[]) {
+    uploadFile.value = files[0] ?? null
+    // A newly chosen file makes the previous rejection list stale and confusing.
+    uploadErrors.value = []
+    uploadErrorCount.value = 0
+  }
+
   function openUpload() {
     uploadFile.value = null
     uploadErrors.value = []
@@ -90,6 +98,7 @@ export function usePartsCsvRoundTrip() {
     hiddenErrorCount,
     canSubmit,
     openUpload,
+    chooseFile,
     downloadCsv,
     submitUpload,
   }

@@ -321,6 +321,31 @@
   height: 1rem;
 }
 
+/* An icon sitting inside a Button, before its label. */
+.button-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Visible trigger + chosen-filename pair for a hidden file input. */
+.file-choose-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.file-choose-name {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  word-break: break-all;
+}
+
+.file-choose-empty {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
 /* Terminal / read-only notice. */
 .detail-banner {
   padding: 0.75rem 1rem;
@@ -5625,14 +5650,6 @@
   font-size: 0.8125rem;
   color: var(--muted-foreground);
   flex: 1 1 auto;
-}
-
-/* Action buttons that sit in a data-table toolbar alongside its filters. */
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 /* Line-numbered rejection list from a CSV upload. Scrolls rather than growing

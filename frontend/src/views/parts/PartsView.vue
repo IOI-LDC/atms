@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/app/AppLayout.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
@@ -9,6 +9,7 @@ import { useParts } from '@/composables/useParts'
 import { usePartsCsvRoundTrip } from '@/composables/usePartsCsvRoundTrip'
 import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui/button'
+import { DownloadIcon, UploadIcon } from '@lucide/vue'
 import { FileInput } from '@/components/ui/file-input'
 import {
   Dialog,
@@ -27,6 +28,8 @@ const router = useRouter()
 
 const { all } = useParts()
 const auth = useAuthStore()
+const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
+
 const {
   uploadOpen,
   uploadFile,
@@ -35,6 +38,7 @@ const {
   hiddenErrorCount,
   canSubmit,
   openUpload,
+  chooseFile,
   downloadCsv,
   submitUpload,
 } = usePartsCsvRoundTrip()
@@ -64,6 +68,20 @@ const identityFilters = useIdentityFilters(() => all.rows.value)
           <h1 class="page-title">Parts Reference</h1>
           <p class="page-subtitle">ERP-synced spare parts catalogue</p>
         </div>
+        <!-- Page-level actions, not table filters. They were briefly in the
+             table toolbar and got lost among four filter controls — a stock
+             reconciliation is something you come to this page to do, so it
+             belongs beside the title. -->
+        <div v-if="auth.isAdmin" class="page-actions">
+          <Button variant="outline" @click="downloadCsv">
+            <DownloadIcon class="button-icon" />
+            Download CSV
+          </Button>
+          <Button @click="openUpload">
+            <UploadIcon class="button-icon" />
+            Upload quantities
+          </Button>
+        </div>
       </div>
 
       <AppDataTable
@@ -75,10 +93,6 @@ const identityFilters = useIdentityFilters(() => all.rows.value)
         @row-click="goDetail"
       >
         <template #toolbar>
-          <div v-if="auth.isAdmin" class="toolbar-actions">
-            <Button size="sm" variant="outline" @click="downloadCsv">Download CSV</Button>
-            <Button size="sm" variant="outline" @click="openUpload">Upload quantities</Button>
-          </div>
           <IdentityFilters
             v-model:part-number="identityFilters.partNumberQuery.value"
             v-model:size="identityFilters.sizeValue.value"
@@ -130,10 +144,21 @@ const identityFilters = useIdentityFilters(() => all.rows.value)
         </DialogHeader>
 
         <div class="form-field">
-          <FileInput v-model="uploadFile" accept=".csv,text/csv" />
+          <!-- FileInput is a hidden <input type="file"> that exposes open() and
+               emits `change`; it renders nothing on its own, so the visible
+               trigger is this Button. Same pattern as the WO attachment dialog. -->
+          <div class="file-choose-row">
+            <Button variant="outline" :disabled="uploading" @click="fileInputRef?.open()">
+              <UploadIcon class="button-icon" />
+              Choose file
+            </Button>
+            <span v-if="uploadFile" class="file-choose-name">{{ uploadFile.name }}</span>
+            <span v-else class="file-choose-empty">No file chosen</span>
+          </div>
+          <FileInput ref="fileInputRef" accept=".csv,text/csv" @change="chooseFile" />
           <p class="form-help">
             Use the downloaded CSV. Rows are matched on the <strong>part_id</strong> column, with
-            Part No. checked against it — if either column is edited or re-sorted apart from the
+            Part Number checked against it — if either column is edited or re-sorted apart from the
             other, the file is rejected rather than applied to the wrong parts.
           </p>
         </div>
