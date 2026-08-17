@@ -123,6 +123,8 @@ exist.
 | POST | `/assets/{asset}/pm-assignments/{assignment}/deactivate`, `/reactivate`, `/evaluate` | Assignment lifecycle/manual evaluation. |
 | GET | `/parts`, `/parts/{part}` | Parts read model. |
 | PATCH | `/parts/{part}` | Authorized parts update. |
+| GET | `/parts/export-csv` | **RQ3** — the whole catalogue as CSV (active and inactive), for offline reconciliation. Columns in order: `part_id`, `erp_part_id`, `erp_part_code`, `name`, `unit_of_measure`, `erp_status`, `is_active`, `available_quantity`. Quantities are written at stored precision (`numeric(14,3)`). **Administrator only** — `PartPolicy::importQuantities`, deliberately narrower than `manage()`. Registered above `/parts/{part}` or it binds as a part id. |
+| POST | `/parts/import-quantities` | **RQ3** — apply corrected quantities. Multipart `file`. Required headers `part_id`, `erp_part_code`, `available_quantity`; extras ignored; a UTF-8 BOM is tolerated. Matching is on `part_id` with `erp_part_code` cross-checked (blank skips the check; a filled mismatch rejects). Quantities must match `/^\d{1,11}(\.\d{1,3})?$/`. **All-or-nothing** — one bad row returns **422** with `{ errors: ["line N: …"] (first 40), error_count }` and writes nothing. Success returns `{ rows, updated, unchanged }` and audits one `parts.quantity_upload.completed` event carrying the file's SHA-256. Caps: 5 MB / 25,000 rows. ⚠️ Interim — `SyncParts` overwrites these quantities wholesale once the live ERP feed lands (🟠 D-020). |
 | GET / POST | `/parts/{part}/attachments` | Part attachment list/upload. |
 | GET | `/locations` | Active locations available to authenticated users. |
 | GET | `/list-options/{group}` | Read-only dropdown vocabulary. |

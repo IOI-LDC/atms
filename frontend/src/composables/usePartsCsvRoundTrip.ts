@@ -1,0 +1,96 @@
+import { ref, computed } from 'vue'
+import { toast } from 'vue-sonner'
+import api, { ApiError } from '@/lib/api'
+
+/**
+ * RQ3 — the offline stock-reconciliation round trip.
+ *
+ * Download the parts list, VLOOKUP the ERP's quantities onto it in Excel, upload
+ * the result. Administrator only; the backend gate is authoritative.
+ *
+ * The upload is **all-or-nothing**: a rejected file changes nothing and comes
+ * back with line-numbered errors, so the operator's next move is always "fix the
+ * spreadsheet and retry" rather than "work out which half landed".
+ */
+export function usePartsCsvRoundTrip() {
+  const uploadOpen = ref(false)
+  const uploadFile = ref<File | null>(null)
+  const uploading = ref(false)
+
+  /** Line-numbered rejection messages from the last attempt. */
+  const uploadErrors = ref<string[]>([])
+  /** Total rejections — may exceed `uploadErrors.length`, which the API caps at 40. */
+  const uploadErrorCount = ref(0)
+
+  const canSubmit = computed(() => uploadFile.value !== null && !uploading.value)
+  const hiddenErrorCount = computed(() =>
+    Math.max(0, uploadErrorCount.value - uploadErrors.value.length),
+  )
+
+  function openUpload() {
+    uploadFile.value = null
+    uploadErrors.value = []
+    uploadErrorCount.value = 0
+    uploadOpen.value = true
+  }
+
+  /**
+   * A plain navigation rather than a fetch: the response is a streamed
+   * attachment with its own Content-Disposition filename, and letting the
+   * browser handle it keeps the dated filename the server chose.
+   */
+  function downloadCsv() {
+    window.location.href = '/api/parts/export-csv'
+  }
+
+  async function submitUpload(): Promise<void> {
+    if (!uploadFile.value) return
+
+    uploading.value = true
+    uploadErrors.value = []
+    uploadErrorCount.value = 0
+
+    const form = new FormData()
+    form.append('file', uploadFile.value)
+
+    try {
+      const res = await api.upload<{ data: { rows: number; updated: number; unchanged: number } }>(
+        '/parts/import-quantities',
+        form,
+      )
+      toast.success(
+        `${res.data.updated} quantit${res.data.updated === 1 ? 'y' : 'ies'} updated, ` +
+          `${res.data.unchanged} unchanged.`,
+      )
+      uploadOpen.value = false
+    } catch (e) {
+      // Kept in the dialog rather than a toast: the list is long, numbered, and
+      // the operator needs to read it against the file they still have open.
+      // ApiError exposes the decoded payload as `data`. The rejection list is a
+      // flat string array here, not the field-keyed map `validationErrors`
+      // returns, so it is read directly.
+      if (e instanceof ApiError && Array.isArray(e.data.errors)) {
+        uploadErrors.value = e.data.errors as string[]
+        uploadErrorCount.value =
+          (e.data.error_count as number | undefined) ?? uploadErrors.value.length
+      } else {
+        toast.error(e instanceof ApiError ? e.message : 'Failed to upload the file.')
+      }
+    } finally {
+      uploading.value = false
+    }
+  }
+
+  return {
+    uploadOpen,
+    uploadFile,
+    uploading,
+    uploadErrors,
+    uploadErrorCount,
+    hiddenErrorCount,
+    canSubmit,
+    openUpload,
+    downloadCsv,
+    submitUpload,
+  }
+}

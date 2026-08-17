@@ -186,8 +186,13 @@ under `updateExecution`; the cascade generalised from `L1–L4` to any `L<number
 (custom levels cascade to nothing, by design); the Need Inspection close warning
 narrowed to "and no PM level was recorded".
 
-## Phase 7 — RQ3: parts CSV down/up (DESIGN GATE — not executable as written)
-Execute only after a mini-spec pins: export route/controller + exact CSV columns (`parts.id`, `erp_part_code`, name, quantity, …) + error contract; upload route/request/action + UI + tests. Q8 semantics pinned: **live ERP matching still uses external `erp_part_id`; ATMS relationships and CSV uploads use `parts.id`.** Ownership: ERP authority; overwrite trigger recorded 🟠 (Phase 3).
+## Phase 7 — RQ3: parts CSV down/up ✅ SHIPPED 2026-08-17
+
+Built to `docs/plans/2026-08-17-rq3-parts-csv-mini-spec.md`, all nine decisions
+confirmed. `GET /parts/export-csv` + `POST /parts/import-quantities`, Admin-only
+via a dedicated `PartPolicy::importQuantities`; all-or-nothing validation keyed
+on `parts.id` with `erp_part_code` cross-checked; one summary audit event
+carrying the file hash.
 
 ## Phase 8 — CANCELLED (Q7 answered "No", 2026-08-16)
 

@@ -168,6 +168,10 @@ Route::middleware(['auth:sanctum', EnsureTokenAbilities::class])->group(function
     Route::post('/assets/{asset}/pm-assignments/{assignment}/evaluate', [AssetPmAssignmentController::class, 'evaluate']);
 
     Route::get('/parts', [PartController::class, 'index']);
+    // RQ3 stock-correction round trip. Both MUST stay above /parts/{part},
+    // or `export-csv` binds as a part id and 404s.
+    Route::get('/parts/export-csv', [PartController::class, 'exportCsv']);
+    Route::post('/parts/import-quantities', [PartController::class, 'importQuantities']);
     Route::get('/parts/{part}', [PartController::class, 'show']);
     Route::patch('/parts/{part}', [PartController::class, 'update']);
     Route::get('/parts/{part}/attachments', [AttachmentController::class, 'indexForPart']);

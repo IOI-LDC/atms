@@ -3,7 +3,46 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-17 (latest — Phases 5 and 6 SHIPPED)
+## Session — 2026-08-17 (latest — Phase 7 SHIPPED: parts CSV round trip)
+
+**1243 tests green, Pint clean, vue-tsc clean.** RQ3 done; every phase of the
+status-vocabulary programme is now built.
+
+Built to the mini-spec, whose technical claims I verified against code and live
+data first — all held. Worth keeping: of 734 parts, **none has a null
+`erp_part_id`**, so the VLOOKUP key the workflow depends on is complete.
+
+### The two things that make or break this feature
+
+- **`isDirty` on a decimal cast.** Assigning `'12.5'` where `12.500` is stored
+  must count as *unchanged*. Get it wrong and a re-uploaded, unedited download
+  reports the entire catalogue as corrected — which would destroy the operator's
+  trust in the counts the first time they tried it. Eloquent's numeric
+  comparison handles it; `test_re_uploading_an_unedited_export_changes_nothing`
+  is the guard.
+- **Matching on `part_id`, never the Part No.** (Q8). The code is editable and
+  not guaranteed unique, so it is a *cross-check*: a blank cell skips it (the
+  operator may not have carried the column — not evidence of a shift), a filled
+  mismatch rejects. That is what catches a VLOOKUP that slipped a row.
+
+### Smaller decisions worth not reopening
+
+- **Admin-only**, via a new `PartPolicy::importQuantities`. `manage()` also
+  admits Manager, and one upload rewrites the whole catalogue — a Manager can
+  still correct a single part where the blast radius is one row.
+- **Export writes stored precision verbatim** (`12.500`). Trimming means parsing,
+  and the obvious implementation routes a stored decimal through a float.
+- **A UTF-8 BOM on the header is stripped.** Excel writes one into files it
+  opened from our own export, and it lands invisibly on `part_id`.
+- **One audit event per upload**, not per row, with the file's SHA-256 as
+  provenance. A catalogue-wide correction is 700+ rows.
+
+Manual §10.4a corrected — it claimed rows were "matched on Part No.", which
+contradicted Q8.
+
+---
+
+## Session — 2026-08-17 (Phases 5 and 6 SHIPPED)
 
 **1213 tests green, Pint clean, vue-tsc clean.** Two LDC requests landed:
 RQ2 (attachment before close) and RQ1 (PM level marking during a work order).

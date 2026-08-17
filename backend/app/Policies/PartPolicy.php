@@ -35,4 +35,18 @@ class PartPolicy
     {
         return $this->manage($user);
     }
+
+    /**
+     * Bulk stock correction by CSV (RQ3) — **Administrator only**, deliberately
+     * narrower than `manage()`.
+     *
+     * One upload rewrites `available_quantity` across the whole catalogue, and
+     * the user manual promises it as "an interim, Administrator-only process".
+     * A Maintenance Manager can still correct a single part through the ordinary
+     * update path, where the blast radius is one row.
+     */
+    public function importQuantities(User $user): bool
+    {
+        return $user->hasRole(RoleCode::ADMINISTRATOR);
+    }
 }
