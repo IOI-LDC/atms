@@ -11,6 +11,7 @@ use App\Models\Asset;
 use App\Models\Booking;
 use App\Models\Location;
 use App\Models\MaintenanceRequest;
+use App\Models\MasterDataItem;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -242,5 +243,96 @@ class AssetStatusReportTest extends TestCase
 
         $this->assertCount(2, $response->json('data'));
         $this->assertNotNull($response->json('meta.next_cursor'));
+    }
+
+    // ── Condition, the second axis ──────────────────────────────────────────────
+
+    /**
+     * Condition is the *cause* axis and operational status is the *state* axis —
+     * "Failure" and "Missing Parts" answer different questions. A register that
+     * carries only one of them cannot support the other, which is why the
+     * vocabulary design made this mandatory for the release rather than a
+     * follow-up.
+     */
+    public function test_a_row_carries_the_condition_value_and_its_label(): void
+    {
+        $this->asset(['condition_status' => 'need_inspection']);
+
+        $row = $this->fetch()->assertOk()->json('data.0');
+
+        $this->assertSame('need_inspection', $row['condition_status']);
+        $this->assertSame('Need Inspection', $row['condition_label']);
+    }
+
+    public function test_filters_by_condition(): void
+    {
+        $this->asset(['condition_status' => 'need_inspection']);
+        $this->asset(['condition_status' => 'missing_parts']);
+        $this->asset();
+
+        $response = $this->fetch(['condition_status' => 'need_inspection'])->assertOk();
+
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame(1, $response->json('summary.total'));
+    }
+
+    /**
+     * The breakdown is a list, not a keyed map over the whole vocabulary.
+     * Conditions are Admin-editable, so enumerating every configured value would
+     * put a permanent row of zeroes in front of the reader and change shape
+     * whenever LDC edit the list.
+     */
+    public function test_the_condition_summary_covers_the_filtered_set_and_reconciles(): void
+    {
+        $this->asset(['condition_status' => 'need_inspection']);
+        $this->asset(['condition_status' => 'need_inspection']);
+        $this->asset(['condition_status' => 'missing_parts']);
+        $this->asset(['condition_status' => null]);
+
+        $response = $this->fetch()->assertOk();
+        $byCondition = $response->json('summary.by_condition');
+
+        $this->assertSame(
+            $response->json('summary.total'),
+            array_sum(array_column($byCondition, 'count')),
+            'The breakdown must account for every asset in the filtered set.',
+        );
+
+        $labels = array_column($byCondition, 'label', 'value');
+        $this->assertSame('Need Inspection', $labels['need_inspection']);
+        $this->assertArrayHasKey('', $labels, 'Assets with no condition need their own bucket.');
+        $this->assertSame('Unrecorded', $labels['']);
+    }
+
+    /**
+     * A condition an Admin retires stays on the assets that already carry it.
+     * The report has to keep naming it — dropping it from the label map would
+     * blank those cells rather than explain them — and has to keep filtering on
+     * it, or those rows become unreachable from the report entirely.
+     */
+    public function test_a_retired_condition_is_still_labelled_and_filterable(): void
+    {
+        $this->asset(['condition_status' => 'need_inspection']);
+        MasterDataItem::where('group_key', MasterDataItem::ASSET_CONDITIONS)
+            ->where('value', 'need_inspection')
+            ->update(['is_active' => false]);
+
+        $response = $this->fetch(['condition_status' => 'need_inspection'])->assertOk();
+
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame('Need Inspection', $response->json('data.0.condition_label'));
+    }
+
+    public function test_the_csv_export_carries_the_condition_label(): void
+    {
+        $this->asset(['condition_status' => 'missing_parts']);
+
+        $csv = $this->actingAs($this->user(RoleCode::ADMINISTRATOR))
+            ->get('/api/reports/asset-status?format=csv')
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertStringContainsString('Condition', $csv);
+        $this->assertStringContainsString('Missing Parts', $csv);
     }
 }

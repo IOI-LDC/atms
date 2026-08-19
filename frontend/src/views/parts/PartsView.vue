@@ -34,6 +34,7 @@ const {
   uploadOpen,
   uploadFile,
   uploading,
+  downloading,
   uploadErrors,
   hiddenErrorCount,
   canSubmit,
@@ -76,9 +77,9 @@ const identityFilters = useIdentityFilters(() => all.rows.value)
              reconciliation is something you come to this page to do, so it
              belongs beside the title. -->
         <div v-if="auth.isAdmin" class="page-actions">
-          <Button variant="outline" @click="downloadCsv">
+          <Button variant="outline" :disabled="downloading" @click="downloadCsv">
             <DownloadIcon class="button-icon" />
-            Download CSV
+            {{ downloading ? 'Preparing…' : 'Download CSV' }}
           </Button>
           <Button @click="openUpload">
             <UploadIcon class="button-icon" />

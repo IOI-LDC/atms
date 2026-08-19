@@ -24,6 +24,9 @@
 #   new stack start. This script's ordering is wrong for that one release.
 #   Follow docs/RELEASE-4b-CUTOVER.md instead, once, then resume using this
 #   script as normal.
+#
+#   Step 0b enforces that rather than trusting anyone to have read this: while a
+#   legacy value survives in `assets.operational_status`, the script aborts.
 # ===========================================================================
 set -euo pipefail
 
@@ -47,6 +50,30 @@ if [[ -z "${APP_KEY:-}" ]]; then
   exit 1
 fi
 command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not installed." >&2; exit 1; }
+
+# --- 0b. Release 4b tripwire ------------------------------------------------
+# This script starts the new image (step 2) before migrating (step 3). For every
+# ordinary release that is fine. For 4b it is not: the narrowed OperationalStatus
+# enum throws on every read of a row still carrying `down`/`scraped`/
+# `under_inspection`/`lih`, so the app is broken for the window between the two.
+#
+# That used to be a comment at the top of this file and nothing else — safety by
+# hoping the operator reads. This refuses to run instead, and names the document
+# that describes the correct sequence.
+if [[ -n "$(docker compose ps -q postgres 2>/dev/null || true)" ]]; then
+  LEGACY_STATUSES=$(docker compose exec -T postgres \
+    psql -U "${DB_USERNAME:-atms}" -d "${DB_DATABASE:-atms}" -tAc \
+    "SELECT count(*) FROM assets WHERE operational_status IN ('down','scraped','under_inspection','lih')" \
+    2>/dev/null | tr -d '[:space:]' || true)
+
+  if [[ -n "$LEGACY_STATUSES" && "$LEGACY_STATUSES" != "0" ]]; then
+    echo "ERROR: $LEGACY_STATUSES asset(s) still carry a legacy operational_status." >&2
+    echo "       Release 4b must not be deployed with this script — it would start the" >&2
+    echo "       new enum against un-migrated rows and break every read of those assets." >&2
+    echo "       Follow docs/RELEASE-4b-CUTOVER.md once, then re-run this script." >&2
+    exit 1
+  fi
+fi
 
 # --- 1. Build the Vue SPA (uses frontend/.env.production for the API origin) -
 echo "==> Building frontend (VITE_API_ORIGIN from frontend/.env.production)…"

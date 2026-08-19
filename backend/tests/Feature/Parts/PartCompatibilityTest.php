@@ -544,11 +544,20 @@ class PartCompatibilityTest extends TestCase
     }
 
     /**
-     * Two concurrent requests for the last unit: the row lock must serialise
-     * them so the second sees the decremented stock and is refused, rather than
-     * both reading 1 and driving the balance negative.
+     * The last unit cannot be sold twice: the second request sees the
+     * decremented stock and is refused, rather than both reading 1 and driving
+     * the balance negative.
+     *
+     * ⚠️ **Sequential, not concurrent — and it cannot be otherwise here.** This
+     * was previously described as proving the row lock serialises two
+     * simultaneous requests. It does not, and no feature test in this suite can:
+     * `RefreshDatabase` wraps each test in a transaction, so a second connection
+     * cannot see the fixtures at all. What this proves is the guard reads
+     * current stock rather than a stale copy — worth having, but the
+     * `lockForUpdate` in `RecordWorkOrderPart` is covered by review, not by
+     * this test. Do not let the name suggest otherwise again.
      */
-    public function test_concurrent_requests_cannot_oversell_the_last_unit(): void
+    public function test_the_last_unit_cannot_be_sold_twice(): void
     {
         $asset = $this->asset($this->motor->id, '6 3/4');
         $part = $this->part('contended', $this->motor->id, '6 3/4', qty: 1);

@@ -17,17 +17,24 @@ class CreateAssetBooking
      */
     public function execute(Asset $asset, User $user, array $data): Booking
     {
-        // Both axes, not just `is_active`. `Asset::booted` auto-releases active
-        // bookings when an asset is withdrawn *or* deactivated — checking only
-        // one here let a withdrawn asset be re-booked the moment after its own
-        // bookings were released, so the two halves of one rule disagreed.
-        AssetWorkEligibility::guard($asset, 'create a booking');
-
         $from = $data['booked_from'];
         $until = $data['booked_until'];
         $force = $data['force'] ?? false;
 
         return DB::transaction(function () use ($asset, $user, $data, $from, $until, $force) {
+            // Both axes, not just `is_active`. `Asset::booted` auto-releases
+            // active bookings when an asset is withdrawn *or* deactivated —
+            // checking only one here let a withdrawn asset be re-booked the
+            // moment after its own bookings were released, so the two halves of
+            // one rule disagreed.
+            //
+            // Locked, and inside the transaction, because this is the action
+            // where the unlocked version was outright wrong: the guard ran
+            // before the transaction opened, so a deactivation could release the
+            // existing bookings and this request would insert a new active one
+            // straight afterwards.
+            $asset = AssetWorkEligibility::lockAndGuard($asset, 'create a booking');
+
             $overlapping = Booking::where('asset_id', $asset->id)
                 ->overlapping($from, $until)
                 ->with('bookedBy')

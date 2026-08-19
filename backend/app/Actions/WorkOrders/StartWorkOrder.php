@@ -7,6 +7,7 @@ use App\Enums\LocationType;
 use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
+use App\Models\Asset;
 use App\Models\Location;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -60,7 +61,11 @@ class StartWorkOrder
             // Starting is starting new work, so the asset must still be eligible
             // for it — checked before the location move below, which would
             // otherwise relocate an asset whose work order cannot begin.
-            AssetWorkEligibility::guard($locked->asset, 'start a work order');
+            //
+            // The work order is locked; `$locked->asset` was not. Lock it here
+            // and carry the locked row into the location move, so the row this
+            // decision was made about is the row that gets moved.
+            $asset = AssetWorkEligibility::lockAndGuard($locked->asset, 'start a work order');
 
             $assignee = User::find($locked->assigned_to_user_id);
             if (! $assignee || ! $assignee->isWorkOrderAssignee()) {
@@ -69,7 +74,7 @@ class StartWorkOrder
 
             // Resolve the work location before anything mutates, so a rejected
             // start leaves the work order untouched.
-            $this->resolveWorkLocation($locked, $toLocation, $actorUserId);
+            $this->resolveWorkLocation($locked, $asset, $toLocation, $actorUserId);
 
             $before = $workOrder->toArray();
             $locked->update([
@@ -92,11 +97,13 @@ class StartWorkOrder
     /**
      * Ensure the asset is at a workshop or yard, moving it there if a location
      * was supplied. Throws when the asset is elsewhere and none was.
+     *
+     * Takes the already-locked asset rather than re-reading it. The re-read was
+     * a second unlocked `SELECT` of a row the caller had just made a decision
+     * about — and one the caller now holds the lock on.
      */
-    private function resolveWorkLocation(WorkOrder $workOrder, ?Location $toLocation, ?int $actorUserId): void
+    private function resolveWorkLocation(WorkOrder $workOrder, ?Asset $asset, ?Location $toLocation, ?int $actorUserId): void
     {
-        $asset = $workOrder->asset()->first();
-
         if ($asset === null) {
             return;
         }

@@ -7057,13 +7057,16 @@
    Sized against real data: item 2 digits, qty 2 digits, size `12 1/16"` (8 ch),
    supplier part number 10 ch, part names up to 103 ch. Description takes the
    remainder because it is the only column that needs the slack. */
-/* Column order on the form: # | PART DESCRIPTION | SIZE | QTY | SPN | CODE.
+/* Column order on the form: # | PART DESCRIPTION | SIZE | QTY | PART NUMBER.
    Widths are order-independent — <colgroup> maps them positionally.
 
-   The short headers (#, SIZE, QTY, SPN, CODE) mean the data now sets these
-   widths rather than the labels, so SPN and CODE tightened from 32/28mm.
-   Landscape A4 gives ~281mm usable: 10 + 18 + 12 + 26 + 26 = 92mm fixed,
-   leaving ~189mm for the description — needed, at part names up to 103 chars. */
+   Five columns since 2026-08-17. SPN and CODE both printed `erp_part_code`,
+   so the same number appeared twice under two names, implying two identifiers
+   where ATMS has one. CODE is gone and PART NUMBER widened to hold the longer
+   header without wrapping.
+
+   Landscape A4 gives ~281mm usable: 10 + 18 + 12 + 32 = 72mm fixed, leaving
+   ~209mm for the description — needed, at part names up to 103 chars. */
 .pr-w-item {
   width: 10mm;
 }
@@ -7077,10 +7080,7 @@
   width: 12mm;
 }
 .pr-w-pn {
-  width: 26mm;
-}
-.pr-w-erp {
-  width: 26mm;
+  width: 32mm;
 }
 
 /* Narrow columns hold short centred values; the table's cell padding would

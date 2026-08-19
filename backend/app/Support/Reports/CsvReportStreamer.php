@@ -2,6 +2,7 @@
 
 namespace App\Support\Reports;
 
+use App\Actions\Parts\ImportPartQuantities;
 use BackedEnum;
 use Closure;
 use DateTimeInterface;
@@ -95,7 +96,7 @@ class CsvReportStreamer
      */
     private function format(mixed $value): string
     {
-        return match (true) {
+        return self::neutralise(match (true) {
             $value === null => '',
             is_bool($value) => $value ? 'Yes' : 'No',
             $value instanceof BackedEnum => (string) $value->value,
@@ -104,7 +105,47 @@ class CsvReportStreamer
                 ->format('Y-m-d H:i'),
             is_array($value) => implode(', ', array_map(fn ($v) => $this->format($v), $value)),
             default => (string) $value,
-        };
+        });
+    }
+
+    /**
+     * Characters that make Excel treat a cell as a formula rather than text.
+     *
+     * `-` is on the list because `-1+1` evaluates; plain negative numbers are
+     * not, which is why {@see neutralise()} exempts anything that parses as a
+     * number rather than testing the first character alone.
+     */
+    private const FORMULA_TRIGGERS = ['=', '+', '-', '@', "\t", "\r"];
+
+    /**
+     * Prefix a formula-triggering cell with an apostrophe so Excel and LibreOffice
+     * read it as literal text.
+     *
+     * These exports are opened by hand, and a value that begins `=` or `@` is
+     * executed on open — `=HYPERLINK(...)` and `=cmd|...` are the well-known
+     * shapes. Nothing in ATMS deliberately writes such a value, but part names,
+     * descriptions and notes are free text typed by people, and "no user has
+     * done it yet" is not a control.
+     *
+     * ⚠️ **The parts export is read back by {@see ImportPartQuantities}**,
+     * which cross-checks `erp_part_code` against what ATMS holds. A code such as
+     * `-1036-LDC` goes out guarded, so the import strips this prefix before
+     * comparing. Change the marker here and you must change it there.
+     */
+    public static function neutralise(string $value): string
+    {
+        if ($value === '' || ! in_array($value[0], self::FORMULA_TRIGGERS, true)) {
+            return $value;
+        }
+
+        // A genuine negative number is not a formula, and guarding it would turn
+        // every negative figure in every report into text a spreadsheet cannot
+        // total.
+        if (is_numeric($value)) {
+            return $value;
+        }
+
+        return "'".$value;
     }
 
     private function now(): Carbon

@@ -68,6 +68,54 @@ class AssetWorkEligibility
     }
 
     /**
+     * Lock the asset row, then guard it. **Use this, not {@see guard()}, on any
+     * path that goes on to create or transition work.**
+     *
+     * ⚠️ Being inside a transaction is not the same as holding the row.
+     *
+     * Every caller here used to read the asset with a plain `SELECT` — often a
+     * lazy relationship like `$lockedWorkOrder->asset`, which reads correctly as
+     * "the locked one" and is nothing of the sort: the lock is on the work
+     * order. Under READ COMMITTED, a concurrent withdrawal or deactivation can
+     * commit between that read and this transaction's own write, and nothing
+     * serialises the two. Booking creation showed it most plainly —
+     * `Asset::booted` released the asset's bookings, and the request already
+     * past the guard then inserted a fresh active one.
+     *
+     * Taking the lock here makes the check and the work that depends on it one
+     * atomic decision, and returning the locked model means the caller has no
+     * reason to reach for the unlocked one again.
+     *
+     * **Lock order.** Each caller keeps whatever primary lock it already takes —
+     * the work order, the PM assignment, the maintenance request — and locks the
+     * asset after it. There is deliberately no global table order: imposing one
+     * would mean reordering established, working code for no gain, and the
+     * asset is always the *last* row these actions need.
+     *
+     * @param  ?Asset  $asset  null passes, exactly as in {@see guard()}
+     * @return ?Asset the locked row, or null when $asset was null
+     *
+     * @throws DomainException
+     */
+    public static function lockAndGuard(?Asset $asset, string $verb): ?Asset
+    {
+        if ($asset === null) {
+            return null;
+        }
+
+        $locked = Asset::where('id', $asset->id)->lockForUpdate()->first();
+
+        // Deleted between the read and the lock. Nothing to do work against.
+        if ($locked === null) {
+            throw new DomainException("Cannot {$verb} for an asset that no longer exists.");
+        }
+
+        self::guard($locked, $verb);
+
+        return $locked;
+    }
+
+    /**
      * The query-side twin of {@see guard()}, for the paths that select a
      * population instead of checking one row — the PM scheduler and the
      * evaluate-all batch.

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Asset;
 use App\Models\WorkOrder;
+use App\Support\Assets\AssetConditionLabels;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,6 +35,10 @@ class AssetStatusReportItemResource extends JsonResource
                 fn () => $this->maintenanceCategory?->name
             ),
             'operational_status' => $this->operational_status?->value,
+            // Both, as everywhere else that renders a condition: the value is
+            // what a filter round-trips on, the label is what a person reads.
+            'condition_status' => $this->condition_status,
+            'condition_label' => AssetConditionLabels::for($this->condition_status),
             'is_booked' => (bool) $this->is_booked,
             'location' => $this->whenLoaded(
                 'currentLocation',

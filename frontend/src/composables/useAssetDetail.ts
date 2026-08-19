@@ -70,6 +70,14 @@ export function useAssetDetail() {
   // Logistics cannot see ERP reference fields or maintenance history (API 403)
   const canViewSensitive = computed(() => !auth.isLogistics)
 
+  /**
+   * `at_the_field` is derived from the asset's location and is not a value the
+   * API accepts as a manual choice. The status control has to say so rather than
+   * offer an edit that the server would reject — or, worse, accept and thereby
+   * record an asset as on base while it sits on a rig.
+   */
+  const isAtTheField = computed(() => record.value?.operational_status === 'at_the_field')
+
   // ── Booking state ───────────────────────────────────────────────────────────
   const bookings = ref<Booking[]>([])
   const bookingsLoading = ref(false)
@@ -326,48 +334,71 @@ export function useAssetDetail() {
 
   async function doSave() {
     if (!record.value) return
+    const current = record.value
     saving.value = true
     validationErrors.value = null
     editError.value = null
     try {
-      const payload: Record<string, unknown> = {
-        name: draft.value.name.trim(),
-        description: draft.value.description.trim() || null,
-        serial_number: draft.value.serial_number.trim() || null,
-        // Both are picked from controlled lists; an empty selection clears them.
-        size_inches: draft.value.size_inches || null,
-        maintenance_category_id: draft.value.maintenance_category_id,
-        model: draft.value.model.trim() || null,
-        manufacturer: draft.value.manufacturer.trim() || null,
-        operational_status: draft.value.operational_status,
-        // Omitted rather than nulled when blank: the API validates against the
-        // active vocabulary, and null is not one of its values.
-        ...(draft.value.condition_status ? { condition_status: draft.value.condition_status } : {}),
-        maintenance_status: draft.value.maintenance_status,
-        current_location_id: draft.value.current_location_id,
-        location_notes: draft.value.location_notes.trim() || null,
-        asset_kind: draft.value.asset_kind,
+      // ⚠️ Only changed fields go on the wire.
+      //
+      // Sending the whole form back was what broke `at_the_field`. That status
+      // is derived from location and the API rejects it as a manual value, so
+      // any asset out on a rig became uneditable — renaming it returned 422 —
+      // and a payload that echoed a stale status alongside a location change
+      // fought the value the move had just derived. A field the user did not
+      // touch has no business being in the request.
+      const payload: Record<string, unknown> = {}
+      const set = (key: string, next: unknown, currentValue: unknown) => {
+        if (next !== currentValue) payload[key] = next
       }
+
+      set('name', draft.value.name.trim(), current.name)
+      set('description', draft.value.description.trim() || null, current.description ?? null)
+      set('serial_number', draft.value.serial_number.trim() || null, current.serial_number ?? null)
+      // Both are picked from controlled lists; an empty selection clears them.
+      set('size_inches', draft.value.size_inches || null, current.size_inches ?? null)
+      set(
+        'maintenance_category_id',
+        draft.value.maintenance_category_id,
+        current.maintenance_category?.id ?? null,
+      )
+      set('model', draft.value.model.trim() || null, current.model ?? null)
+      set('manufacturer', draft.value.manufacturer.trim() || null, current.manufacturer ?? null)
+      set('operational_status', draft.value.operational_status, current.operational_status)
+      // Omitted rather than nulled when blank: the API validates against the
+      // active vocabulary, and null is not one of its values.
+      if (
+        draft.value.condition_status &&
+        draft.value.condition_status !== current.condition_status
+      ) {
+        payload.condition_status = draft.value.condition_status
+      }
+      set('maintenance_status', draft.value.maintenance_status, current.maintenance_status)
+      set('asset_kind', draft.value.asset_kind, current.asset_kind)
+
+      const locationChanged =
+        draft.value.current_location_id !== (current.current_location?.id ?? null)
+      if (locationChanged) {
+        payload.current_location_id = draft.value.current_location_id
+        // Annotates the move, so it only travels with one.
+        payload.location_notes = draft.value.location_notes.trim() || null
+      }
+
       // is_active is Admin/Manager-only per the API
       if (auth.isAdminOrManager) {
-        payload.is_active = draft.value.is_active
+        set('is_active', draft.value.is_active, current.is_active)
       }
       // asset_tag: set freely when null. When already set, Admin may override
       // with a reason (per STATE.md / ASSET_TAG.md Rule 2).
       const newTag = draft.value.asset_tag.trim()
-      if (!record.value.asset_tag && newTag) {
+      if (!current.asset_tag && newTag) {
         payload.asset_tag = newTag
-      } else if (
-        record.value.asset_tag &&
-        newTag &&
-        newTag !== record.value.asset_tag &&
-        auth.isAdmin
-      ) {
+      } else if (current.asset_tag && newTag && newTag !== current.asset_tag && auth.isAdmin) {
         payload.asset_tag = newTag
         payload.asset_tag_override_reason = draft.value.asset_tag_override_reason.trim()
       }
 
-      const res = await api.patch<{ data: Asset }>(`/assets/${record.value.id}`, payload)
+      const res = await api.patch<{ data: Asset }>(`/assets/${current.id}`, payload)
       record.value = res.data
       editOpen.value = false
       confirmEditOpen.value = false
@@ -611,6 +642,7 @@ export function useAssetDetail() {
     // Permissions
     canEdit,
     canViewSensitive,
+    isAtTheField,
     canManageBooking,
     // Booking
     bookings,

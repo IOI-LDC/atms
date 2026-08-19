@@ -238,6 +238,24 @@ class PartQuantityCsvTest extends TestCase
         $this->assertSame('4.000', $a->fresh()->available_quantity);
     }
 
+    /**
+     * The export guards a cell that would otherwise execute as a spreadsheet
+     * formula, so a part code beginning `-` leaves ATMS as `'-1036-LDC`. Re-uploading
+     * that unedited file must not then fail its own cross-check.
+     */
+    public function test_a_formula_guarded_part_code_survives_the_round_trip(): void
+    {
+        $a = $this->part('-1036-LDC', '1.000');
+
+        $csv = $this->actingAs($this->admin)->get('/api/parts/export-csv')->assertOk()->streamedContent();
+
+        $this->assertStringContainsString("'-1036-LDC", $csv, 'The export must guard it.');
+
+        $this->upload($this->admin, $this->csv(preg_replace('/^\xEF\xBB\xBF/', '', $csv)))->assertOk();
+
+        $this->assertSame('1.000', $a->fresh()->available_quantity);
+    }
+
     public function test_the_cross_check_ignores_case_and_padding(): void
     {
         $a = $this->part('Case-1', '1.000');
@@ -273,6 +291,74 @@ class PartQuantityCsvTest extends TestCase
             ->assertStatus(422);
 
         $this->assertSame('1.000', $a->fresh()->available_quantity);
+    }
+
+    // ── Row shape ───────────────────────────────────────────────────────────────
+
+    /**
+     * The one that mattered. An operator types a grouped number and Excel writes
+     * it unquoted, so `1,200` arrives as two fields. An earlier version sliced
+     * every row to the header count, which threw the `200` away and committed a
+     * stock level of **1** — silently, with the file reported as applied.
+     *
+     * A row whose shape does not match the header is a row whose meaning is
+     * unknown. It is never repaired by guessing.
+     */
+    public function test_a_row_with_more_fields_than_headers_is_rejected(): void
+    {
+        $a = $this->part('WIDE-1', '7.000');
+
+        $this->upload($this->admin, $this->csv($this->header()."{$a->id},WIDE-1,1,200\n"))
+            ->assertStatus(422)
+            ->assertJsonPath('errors.0', 'line 2: expected 3 columns, found 4. Check for an unquoted comma inside a value.');
+
+        $this->assertSame('7.000', $a->fresh()->available_quantity, 'Nothing may be applied from a malformed file.');
+    }
+
+    /**
+     * The mirror case: padding a short row to the header count invented an empty
+     * quantity, which then failed the quantity check with a message pointing at
+     * the wrong problem.
+     */
+    public function test_a_row_with_fewer_fields_than_headers_is_rejected(): void
+    {
+        $a = $this->part('NARROW-1', '7.000');
+
+        $this->upload($this->admin, $this->csv($this->header()."{$a->id},NARROW-1\n"))
+            ->assertStatus(422)
+            ->assertJsonPath('errors.0', 'line 2: expected 3 columns, found 2. Check for an unquoted comma inside a value.');
+
+        $this->assertSame('7.000', $a->fresh()->available_quantity);
+    }
+
+    /**
+     * `array_combine` keeps only the last of a repeated key, so one of two
+     * identically named columns would be read and the other ignored without a
+     * word. There is no safe reading — reject the file.
+     */
+    public function test_a_duplicated_header_is_rejected(): void
+    {
+        $a = $this->part('DUP-1', '7.000');
+
+        $this->upload($this->admin, $this->csv("part_id,erp_part_code,available_quantity,available_quantity\n{$a->id},DUP-1,1,2\n"))
+            ->assertStatus(422)
+            ->assertJsonPath('errors.0', 'Duplicate column(s): available_quantity.');
+
+        $this->assertSame('7.000', $a->fresh()->available_quantity);
+    }
+
+    /**
+     * A malformed row must not be reported as an empty file — that sends the
+     * operator looking for the wrong problem entirely.
+     */
+    public function test_a_file_of_only_malformed_rows_reports_the_rows_not_emptiness(): void
+    {
+        $a = $this->part('ONLYBAD-1', '7.000');
+
+        $response = $this->upload($this->admin, $this->csv($this->header()."{$a->id},ONLYBAD-1,1,200\n"))
+            ->assertStatus(422);
+
+        $this->assertStringNotContainsString('no data rows', json_encode($response->json()));
     }
 
     public function test_zero_is_a_valid_quantity(): void

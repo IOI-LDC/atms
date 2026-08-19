@@ -158,7 +158,24 @@ class AttachmentPolicy
 
     public function delete(User $user, Attachment $attachment): bool
     {
-        // Admins and managers can delete any attachment at any stage.
+        $parent = $attachment->attachable;
+
+        // A closed work order cannot be closed without an attachment
+        // (CloseWorkOrder) and cannot receive one afterwards
+        // (uploadToWorkOrder). Deleting one defeated both: the record that
+        // justified the closure could be removed the minute after, leaving a
+        // closed work order with no evidence and no way to supply any. Nobody
+        // may do that — including an administrator, because there is no
+        // legitimate reason to and no way to undo it.
+        //
+        // Cancelled is included for the same reason uploads are blocked there:
+        // a terminal work order is a finished record, not a working document.
+        if ($parent instanceof WorkOrder
+            && in_array($parent->status, [WorkOrderStatus::CLOSED, WorkOrderStatus::CANCELLED], true)) {
+            return false;
+        }
+
+        // Admins and managers can delete any other attachment at any stage.
         if ($user->hasRole(RoleCode::ADMINISTRATOR) || $user->hasRole(RoleCode::MAINTENANCE_MANAGER)) {
             return true;
         }
@@ -170,8 +187,6 @@ class AttachmentPolicy
         if ($attachment->uploaded_by_user_id !== $user->id) {
             return false;
         }
-
-        $parent = $attachment->attachable;
 
         return $parent instanceof MaintenanceRequest
             && $parent->status === MaintenanceRequestStatus::PENDING_REVIEW;

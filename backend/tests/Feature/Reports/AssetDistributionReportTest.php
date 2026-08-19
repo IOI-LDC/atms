@@ -410,4 +410,108 @@ class AssetDistributionReportTest extends TestCase
         $this->assertSame(1, $row['by_operational_status']['ready_for_field']);
         $this->assertSame(0, $row['by_operational_status']['failure']);
     }
+
+    // ── Condition as a dimension ────────────────────────────────────────────────
+
+    /**
+     * Condition is a **grouping dimension**, not a set of per-condition count
+     * columns.
+     *
+     * The vocabulary is Admin-editable, so count columns would change shape
+     * whenever LDC add or retire a value — a CSV whose header depends on the
+     * database contents is one nobody can build a spreadsheet against. As a
+     * dimension it behaves exactly like location, category and size, and both
+     * the JSON and the file stay stable.
+     */
+    public function test_groups_by_condition(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createAsset(['condition_status' => 'need_inspection']);
+        $this->createAsset(['condition_status' => 'need_inspection']);
+        $this->createAsset(['condition_status' => 'missing_parts']);
+
+        $json = $this->actingAs($admin)
+            ->getJson('/api/reports/asset-distribution?group_by=condition')->json();
+
+        $this->assertSame(['condition'], $json['group_by']);
+        $this->assertSame(3, $json['summary']['total_assets']);
+
+        $row = $this->findRow($json['items'], 'need_inspection');
+        $this->assertSame(2, $row['asset_count']);
+        $this->assertSame('Need Inspection', $row['groups'][0]['label']);
+    }
+
+    /**
+     * "Unrecorded" is not "Normal". An asset nobody has assessed is a different
+     * statement from one assessed as fine, and collapsing the two would let a
+     * gap in the data read as a clean bill of health.
+     */
+    public function test_assets_with_no_condition_fall_into_an_unrecorded_bucket(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createAsset(['condition_status' => 'normal']);
+        $this->createAsset(['condition_status' => null]);
+
+        $json = $this->actingAs($admin)
+            ->getJson('/api/reports/asset-distribution?group_by=condition')->json();
+
+        $unrecorded = $this->findRow($json['items'], null);
+        $this->assertSame(1, $unrecorded['asset_count']);
+        $this->assertSame('Unrecorded', $unrecorded['groups'][0]['label']);
+        $this->assertTrue($unrecorded['groups'][0]['is_unassigned']);
+
+        $this->assertSame('Normal', $this->findRow($json['items'], 'normal')['groups'][0]['label']);
+    }
+
+    public function test_condition_filter_applies(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $loc = $this->createLocation('Loc-A');
+        $this->createAsset(['current_location_id' => $loc->id, 'condition_status' => 'missing_parts']);
+        $this->createAsset(['current_location_id' => $loc->id, 'condition_status' => 'normal']);
+
+        $json = $this->actingAs($admin)
+            ->getJson('/api/reports/asset-distribution?condition_status=missing_parts')->json();
+
+        $this->assertSame(1, $json['summary']['total_assets']);
+        $this->assertSame(1, $this->findRow($json['items'], $loc->id)['asset_count']);
+    }
+
+    /** Four dimensions now, so all four must be combinable at once. */
+    public function test_condition_combines_with_the_other_three_dimensions(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $category = MaintenanceCategory::factory()->create(['code' => 'MOTOR', 'name' => 'Mud Motor']);
+        $loc = $this->createLocation('Yard-A');
+        $this->createAsset([
+            'current_location_id' => $loc->id,
+            'maintenance_category_id' => $category->id,
+            'size_inches' => '6.75000',
+            'condition_status' => 'missing_parts',
+        ]);
+
+        $json = $this->actingAs($admin)->getJson(
+            '/api/reports/asset-distribution?group_by[]=maintenance_category&group_by[]=size'
+            .'&group_by[]=location&group_by[]=condition'
+        )->assertOk()->json();
+
+        $this->assertSame(
+            ['Mud Motor', '6 3/4"', 'Yard-A', 'Missing Parts'],
+            $this->labels($json['items'][0]),
+        );
+    }
+
+    public function test_the_csv_export_carries_a_condition_column(): void
+    {
+        $admin = $this->createUser(RoleCode::ADMINISTRATOR);
+        $this->createAsset(['condition_status' => 'need_assembly']);
+
+        $csv = $this->actingAs($admin)
+            ->get('/api/reports/asset-distribution?group_by=condition&format=csv')
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertStringContainsString('Condition', $csv);
+        $this->assertStringContainsString('Need Assembly', $csv);
+    }
 }

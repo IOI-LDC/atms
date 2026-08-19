@@ -13,6 +13,8 @@ export interface AssetDistributionFilters {
   maintenance_category_id?: string | number
   asset_kind?: AssetKind | ''
   operational_status?: string | ''
+  /** `asset_conditions` value — the cause axis, orthogonal to operational_status. */
+  condition_status?: string | ''
   include_inactive?: boolean
 }
 
@@ -23,6 +25,8 @@ export function dimensionLabel(dimension: AssetDistributionGroupBy): string {
       return 'Maintenance category'
     case 'size':
       return 'Size'
+    case 'condition':
+      return 'Condition'
     default:
       return 'Location'
   }
@@ -58,6 +62,9 @@ export function useAssetDistributionReport() {
       }
       if (filters.operational_status) {
         query.operational_status = filters.operational_status
+      }
+      if (filters.condition_status) {
+        query.condition_status = filters.condition_status
       }
       if (filters.include_inactive) {
         query.include_inactive = true

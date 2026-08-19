@@ -3,10 +3,12 @@
 **This release requires a maintenance window.** Ten to fifteen minutes is
 enough. It is the only release in the vocabulary programme that does.
 
-`./deploy.sh` is safe to run for ordinary releases and deliberately is **not**
-changed for this one: it brings the stack up and migrates in the order that
-suits an additive change, which is the wrong order here. Follow the sequence
-below instead, once, and then resume using `deploy.sh` as normal.
+`./deploy.sh` still brings the stack up and *then* migrates — the right order for
+an additive change and the wrong one here. It no longer relies on you knowing
+that: it now checks for surviving legacy `operational_status` values and
+**refuses to run** while any exist, pointing back at this document. Follow the
+sequence below once; `deploy.sh` starts working again by itself the moment the
+migration has run.
 
 ---
 
@@ -79,8 +81,14 @@ out of these sets.
 ## Cutover sequence
 
 ```bash
-# ① Build the new image WITHOUT starting it.
+# ① Build BOTH artifacts before anything stops. Neither is published yet.
+#    The SPA is built here rather than after the stack starts: its status
+#    vocabulary changed too, so serving the old bundle against the new API —
+#    which is what happens if this waits until the end — shows a blank Status
+#    column on every asset for however long the build takes.
 docker compose build
+(cd frontend && npm ci && npm run build)
+[ -d frontend/dist ] || { echo "SPA build failed — stop here."; exit 1; }
 
 # ② Drain traffic and stop the application containers.
 #    Postgres stays up — the migration needs it.
@@ -94,14 +102,12 @@ docker compose stop api queue scheduler
 #    Never from the old running container — it has no such migration class.
 docker compose run --rm api php artisan migrate --force
 
-# ⑤ Start the new stack.
+# ⑤ Start the new stack. The SPA built at ① is already in place, so traffic
+#    reopens on a matched pair — never on an old bundle against a new API.
 docker compose up -d
-
-# ⑥ Rebuild and publish the SPA (its status vocabulary changed too).
-cd frontend && npm ci && npm run build && cd ..
 ```
 
-### Smoke checks (⑦)
+### Smoke checks (⑥)
 
 ```bash
 # No legacy value survived. The migration itself refuses to finish otherwise,
@@ -118,7 +124,7 @@ Then, in the browser:
 
 1. **Asset list loads** and the Status column reads Ready for Field / Under
    Maintenance / Failure / At the Field. A blank column means the SPA was not
-   rebuilt at step ⑥.
+   rebuilt at step ①.
 2. **Asset detail** shows a **Condition** field, and the edit sheet offers the
    four seeded conditions.
 3. **Lists → Asset Conditions** serves the vocabulary and refuses to deactivate

@@ -148,13 +148,16 @@ function doPrint() {
       <table class="pr-doc">
         <!-- Column widths MUST live here: `table-layout: fixed` derives them
              from the first row, so widths on the header cells are ignored. -->
+        <!-- Five columns since 2026-08-17. There used to be six: SPN and CODE
+             both rendered `erp_part_code`, printing the same number twice under
+             two names and implying ATMS tracks two part identifiers. It tracks
+             one, and it is called Part Number. -->
         <colgroup>
           <col class="pr-w-item" />
           <col class="pr-w-desc" />
           <col class="pr-w-size" />
           <col class="pr-w-qty" />
           <col class="pr-w-pn" />
-          <col class="pr-w-erp" />
         </colgroup>
         <thead>
           <!-- Only the column headers live here, so they repeat on a genuine
@@ -164,8 +167,7 @@ function doPrint() {
             <th class="pr-col-desc">PART DESCRIPTION</th>
             <th class="pr-col-size">SIZE</th>
             <th class="pr-col-qty">QTY</th>
-            <th class="pr-col-pn">SPN</th>
-            <th class="pr-col-erp">CODE</th>
+            <th class="pr-col-pn">PART NUMBER</th>
           </tr>
         </thead>
 
@@ -179,13 +181,11 @@ function doPrint() {
             <td class="pr-center">{{ line.part.size ?? '—' }}</td>
             <td class="pr-center">{{ line.quantity }}</td>
             <td class="pr-center">{{ line.part.erp_part_code ?? '—' }}</td>
-            <td class="pr-center">{{ line.part.erp_part_code ?? '—' }}</td>
           </tr>
 
           <!-- One ruled blank for a handwritten addition. Unnumbered, because a
                number would imply a line that was requested and then left empty. -->
           <tr class="pr-row pr-row-blank">
-            <td></td>
             <td></td>
             <td></td>
             <td></td>

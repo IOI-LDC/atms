@@ -166,12 +166,9 @@ class OperationalStatusValueMigrationTest extends TestCase
      * The property the whole release rests on: after this runs, no row carries a
      * value the narrowed enum cannot represent.
      *
-     * The migration also asserts this itself and throws if it fails. That guard
-     * is unreachable through `up()` — the mapping covers all four legacy values,
-     * so there is nothing left for it to catch — and it is kept as a tripwire
-     * for the case that would otherwise be silent: someone adding a fifth legacy
-     * value to the enum and forgetting to add it to the mapping. This test
-     * covers the property; the guard covers the future edit.
+     * The migration also asserts this itself and throws if it fails — see
+     * {@see self::test_an_unmapped_value_aborts_the_migration()} for the case
+     * that guard actually catches.
      */
     public function test_no_legacy_value_survives_a_mixed_fleet(): void
     {
@@ -190,6 +187,50 @@ class OperationalStatusValueMigrationTest extends TestCase
             DB::table('assets')->distinct()->pluck('operational_status')->push('at_the_field')->unique()->sort()->values()->all(),
             'Every surviving value is one the narrowed enum defines.',
         );
+    }
+
+    /**
+     * The guard asserts the **complement**, not the mapped set.
+     *
+     * An earlier version counted rows still carrying one of the four legacy
+     * values — which, after mapping all four, is necessarily zero. It could
+     * therefore never fail, and a database carrying anything the mapping had
+     * never heard of sailed through and threw on the next Eloquent read instead.
+     *
+     * `active` is the realistic instance: it was the column default from
+     * `create_assets_table` until 2026-08-04, so a row untouched since then
+     * still carries it.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function unmappedValueProvider(): array
+    {
+        return [
+            'the original column default' => ['active'],
+            'a value from some future import' => ['in_transit'],
+            'a typo written straight to the column' => ['read_for_field'],
+        ];
+    }
+
+    #[DataProvider('unmappedValueProvider')]
+    public function test_an_unmapped_value_aborts_the_migration(string $status): void
+    {
+        $legacy = $this->asset('down');
+        $this->asset($status);
+
+        try {
+            $this->migration()->up();
+            $this->fail("Expected the migration to refuse to complete with a [{$status}] row present.");
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString($status, $e->getMessage());
+            $this->assertStringContainsString('Refusing to complete', $e->getMessage());
+        }
+
+        // The abort is a hard stop, not a rollback: migrations run outside a
+        // transaction here, so the mapped rows are already rewritten. That is
+        // the right trade — the operator fixes the offending rows and re-runs,
+        // and the second pass is a no-op over the ones already done.
+        $this->assertSame('failure', $this->statusOf($legacy));
     }
 
     public function test_running_it_twice_changes_nothing(): void

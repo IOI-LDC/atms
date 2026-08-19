@@ -44,13 +44,7 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
         ?bool $isFailure = null,
         ?int $moveToLocationId = null
     ): MaintenanceRequest {
-        $asset = $maintenanceRequest->asset;
-
-        // Covers preventive approvals too: a PM request raised before the asset
-        // left the programme can still be sitting in the queue afterwards.
-        AssetWorkEligibility::guard($asset, 'approve a maintenance request');
-
-        return DB::transaction(function () use ($maintenanceRequest, $approvedByUserId, $assignToUserId, $isFailure, $moveToLocationId, $asset) {
+        return DB::transaction(function () use ($maintenanceRequest, $approvedByUserId, $assignToUserId, $isFailure, $moveToLocationId) {
             $logger = app(AuditLogger::class);
             $locked = MaintenanceRequest::where('id', $maintenanceRequest->id)->lockForUpdate()->first();
 
@@ -59,6 +53,12 @@ class ApproveMaintenanceRequestAndCreateWorkOrder
             if ($locked->status !== MaintenanceRequestStatus::PENDING_REVIEW) {
                 throw new DomainException('Only pending review requests can be approved.');
             }
+
+            // Covers preventive approvals too: a PM request raised before the
+            // asset left the programme can still be sitting in the queue
+            // afterwards. Request first, then the asset — approval both creates
+            // a work order and may relocate the asset, so the row must be held.
+            $asset = AssetWorkEligibility::lockAndGuard($locked->asset, 'approve a maintenance request');
 
             $locked->update([
                 'status' => MaintenanceRequestStatus::CONVERTED,

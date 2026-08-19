@@ -59,7 +59,8 @@ class MaintenanceRequestDemoSeeder extends Seeder
                 [
                     'name' => $name,
                     'operational_status' => 'ready_for_field',
-                    'erp_status' => 'active',
+                    // `assets.erp_status` was dropped in release 4c. `is_active`
+                    // is the only out-of-ATMS control now.
                     'is_active' => true,
                 ],
             ));

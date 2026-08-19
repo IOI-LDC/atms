@@ -22,6 +22,7 @@ export function usePartsCsvRoundTrip(onApplied?: () => void | Promise<void>) {
   const uploadOpen = ref(false)
   const uploadFile = ref<File | null>(null)
   const uploading = ref(false)
+  const downloading = ref(false)
 
   /** Line-numbered rejection messages from the last attempt. */
   const uploadErrors = ref<string[]>([])
@@ -49,12 +50,24 @@ export function usePartsCsvRoundTrip(onApplied?: () => void | Promise<void>) {
   }
 
   /**
-   * A plain navigation rather than a fetch: the response is a streamed
-   * attachment with its own Content-Disposition filename, and letting the
-   * browser handle it keeps the dated filename the server chose.
+   * Goes through `api.download`, never a bare navigation.
+   *
+   * A `window.location.href = '/api/…'` resolves against the *SPA* origin. In
+   * production the SPA is served from `atms.inova.krd` and the API from
+   * `atmsapi.inova.krd`, and the SPA host has no `/api` proxy — its catch-all
+   * returns `index.html`, so the operator gets the app's own HTML saved as a
+   * spreadsheet. `api.download` applies `VITE_API_ORIGIN` and surfaces a failure
+   * as an ApiError instead of replacing the page with it.
    */
-  function downloadCsv() {
-    window.location.href = '/api/parts/export-csv'
+  async function downloadCsv(): Promise<void> {
+    downloading.value = true
+    try {
+      await api.download('/parts/export-csv')
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to download the parts list.')
+    } finally {
+      downloading.value = false
+    }
   }
 
   async function submitUpload(): Promise<void> {
@@ -77,7 +90,18 @@ export function usePartsCsvRoundTrip(onApplied?: () => void | Promise<void>) {
           `${res.data.unchanged} unchanged.`,
       )
       uploadOpen.value = false
-      await onApplied?.()
+
+      // Deliberately outside this try. The import has already committed; a
+      // failed table reload is a stale view, not a failed upload, and reporting
+      // it as one would send the operator back to re-upload a file that already
+      // landed.
+      try {
+        await onApplied?.()
+      } catch {
+        toast.error(
+          'Quantities were applied, but the table could not be refreshed. Reload the page.',
+        )
+      }
     } catch (e) {
       // Kept in the dialog rather than a toast: the list is long, numbered, and
       // the operator needs to read it against the file they still have open.
@@ -100,6 +124,7 @@ export function usePartsCsvRoundTrip(onApplied?: () => void | Promise<void>) {
     uploadOpen,
     uploadFile,
     uploading,
+    downloading,
     uploadErrors,
     uploadErrorCount,
     hiddenErrorCount,

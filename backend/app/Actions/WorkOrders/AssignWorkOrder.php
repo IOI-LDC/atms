@@ -17,10 +17,6 @@ class AssignWorkOrder
 {
     public function execute(WorkOrder $workOrder, int $assignToUserId, int $assignedByUserId): WorkOrder
     {
-        $asset = $workOrder->asset;
-
-        AssetWorkEligibility::guard($asset, 'assign a work order');
-
         return DB::transaction(function () use ($workOrder, $assignToUserId, $assignedByUserId) {
             $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();
@@ -28,6 +24,11 @@ class AssignWorkOrder
             if ($locked->status === WorkOrderStatus::CLOSED || $locked->status === WorkOrderStatus::CANCELLED) {
                 throw new DomainException('Cannot assign a closed or cancelled work order.');
             }
+
+            // Work order first, then the asset — the order every WO action here
+            // uses. The guard ran outside the transaction against
+            // `$workOrder->asset`, an ordinary lazy read that locks nothing.
+            AssetWorkEligibility::lockAndGuard($locked->asset, 'assign a work order');
 
             $assignee = User::find($assignToUserId);
 

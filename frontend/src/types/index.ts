@@ -757,14 +757,14 @@ export interface AssetUsageReport {
   items: AssetUsageRow[]
 }
 
-// R-2 Asset Distribution (group_by: location | maintenance_category | size)
-export type AssetDistributionGroupBy = 'location' | 'maintenance_category' | 'size'
+// R-2 Asset Distribution (group_by: location | maintenance_category | size | condition)
+export type AssetDistributionGroupBy = 'location' | 'maintenance_category' | 'size' | 'condition'
 /** One grouped dimension's value on a distribution row. */
 export interface AssetDistributionGroup {
   dimension: AssetDistributionGroupBy
-  /** Location id, category id, or canonical size string. Null = catch-all bucket. */
+  /** Location id, category id, canonical size, or condition value. Null = catch-all bucket. */
   key: number | string | null
-  /** "Unassigned" / "Uncategorised" / "Unspecified" when `is_unassigned`. */
+  /** "Unassigned" / "Uncategorised" / "Unspecified" / "Unrecorded" when `is_unassigned`. */
   label: string | null
   is_unassigned: boolean
 }
@@ -842,6 +842,10 @@ export interface AssetStatusReportItem {
   asset_kind: string | null
   maintenance_category?: string | null
   operational_status: string | null
+  /** The `asset_conditions` value — the cause axis, distinct from the state above. */
+  condition_status: string | null
+  /** Its display label, resolved from the vocabulary including retired entries. */
+  condition_label: string | null
   is_booked: boolean
   location?: string | null
   /** Technician on the asset's open work order — assets have no custodian field. */
@@ -850,9 +854,27 @@ export interface AssetStatusReportItem {
   created_at: string | null
   updated_at: string | null
 }
+/**
+ * A list rather than a keyed map, unlike `by_status`.
+ *
+ * Operational statuses are a closed enum of four, so a zero for each is
+ * meaningful. Conditions are an Admin-editable vocabulary — the API returns only
+ * the values the filtered set actually holds, plus an "Unrecorded" bucket with
+ * an empty `value`, so the counts always sum to `total`.
+ */
+export interface AssetConditionCount {
+  value: string
+  label: string
+  count: number
+}
 export interface AssetStatusReportPage extends CursorPage<AssetStatusReportItem> {
   /** Counts over the same filtered set as the rows, so the two reconcile. */
-  summary: { total: number; by_status: Record<string, number>; booked: number }
+  summary: {
+    total: number
+    by_status: Record<string, number>
+    by_condition: AssetConditionCount[]
+    booked: number
+  }
 }
 
 export interface OverduePmReportPage extends CursorPage<OverduePmItem> {

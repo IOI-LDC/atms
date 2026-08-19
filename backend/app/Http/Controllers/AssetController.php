@@ -3,21 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Assets\CreateAsset;
-use App\Actions\Assets\UpdateAssetFields;
-use App\Actions\Assets\UpdateAssetLocation;
+use App\Actions\Assets\UpdateAsset;
 use App\Enums\OperationalStatus;
 use App\Enums\RoleCode;
+use App\Exceptions\AssetTagConflictException;
+use App\Exceptions\InactiveLocationException;
 use App\Http\Resources\AssetLocationHistoryResource;
 use App\Http\Resources\AssetMeterReadingResource;
 use App\Http\Resources\AssetResource;
 use App\Http\Resources\MaintenanceHistoryResource;
 use App\Models\Asset;
-use App\Models\Location;
 use App\Models\MasterDataItem;
 use App\Queries\Assets\AssetIndexQuery;
 use App\Queries\MaintenanceHistory\BuildAssetMaintenanceHistory;
 use App\Services\AssetTagService;
-use App\Support\Assets\AssetFieldStatus;
 use App\Support\SizeRule;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -99,7 +98,7 @@ class AssetController extends Controller
             ->setStatusCode(201);
     }
 
-    public function update(Request $request, Asset $asset, UpdateAssetLocation $locationAction): JsonResponse
+    public function update(Request $request, Asset $asset, UpdateAsset $action): JsonResponse
     {
         Gate::authorize('update', $asset);
 
@@ -154,47 +153,22 @@ class AssetController extends Controller
             ], 403);
         }
 
-        // --- Handle location change via the existing action ---
-        $locationChanged = array_key_exists('current_location_id', $validated)
-            && $validated['current_location_id'] !== $asset->current_location_id;
-
-        if ($locationChanged) {
-            $location = Location::findOrFail($validated['current_location_id']);
-
-            if (! $location->is_active) {
-                return response()->json(['message' => 'Cannot assign an inactive location.'], 422);
-            }
-
-            // Q1: same user-move rules as POST /assets/{id}/location. Applied at
-            // both entry points and never inside UpdateAssetLocation, which
-            // StartWorkOrder also calls.
-            try {
-                AssetFieldStatus::guardManualMove($asset, $location);
-            } catch (DomainException $e) {
-                return response()->json(['message' => $e->getMessage()], 409);
-            }
-
-            $asset = $locationAction->execute(
-                $asset,
-                $location,
-                null,
-                $validated['location_notes'] ?? null,
-                $request->user()->id
-            );
-        }
-
-        // --- Update operational fields ---
-        $fieldUpdates = array_intersect_key(
-            $validated,
-            array_flip(['name', 'description', 'fa_subclass_code', 'maintenance_category_id', 'size_inches', 'serial_number', 'model', 'manufacturer', 'operational_status', 'condition_status', 'is_active', 'asset_tag', 'asset_tag_override_reason', 'maintenance_status', 'asset_kind'])
-        );
-
+        // The location move and the field update are one transaction inside the
+        // action, so a guard that fires late cannot leave the asset already
+        // relocated. See UpdateAsset for why the move-time rules live there and
+        // not in UpdateAssetLocation.
         try {
-            $asset = app(UpdateAssetFields::class)->execute($asset, $fieldUpdates);
-        } catch (DomainException $e) {
+            $asset = $action->execute($asset, $validated, $request->user()->id);
+        } catch (AssetTagConflictException $e) {
             return response()->json([
                 'errors' => ['asset_tag' => [$e->getMessage()]],
             ], 409);
+        } catch (InactiveLocationException $e) {
+            // 422, matching POST /assets/{id}/location — a bad value, not a bad
+            // state. Must stay ahead of the DomainException arm below.
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
         }
 
         return (new AssetResource($asset->fresh()->load(['currentLocation', 'maintenanceCategory'])))->toResponse($request);

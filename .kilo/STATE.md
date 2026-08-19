@@ -3,7 +3,120 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-17 (latest — Phase 7 SHIPPED: parts CSV round trip)
+## Session — 2026-08-17 (latest — external review, all five batches landed)
+
+**1280 tests green (4006 assertions), Pint clean, vue-tsc clean, SPA builds.**
+
+An external review of `8aaa35a..807b133` raised 19 findings. I validated each
+against source; two of my three refutations were themselves wrong and the
+reviewer corrected me. **Both corrections are worth remembering:**
+
+- **Being inside a transaction is not the same as holding the row.** I read
+  `AssetWorkEligibility::guard($locked->asset, …)` as proof the asset was
+  locked. `$locked` was the *work order*; `$locked->asset` is a lazy relationship
+  read — a plain `SELECT`. Under READ COMMITTED nothing serialised the guard
+  against a concurrent withdrawal. Six actions had this shape.
+- **Check the handler the finding names.** I refuted "the admin list dialog
+  closes silently on error" by reading `onSave` (the edit sheet). The finding was
+  about `confirmToggle` (the confirm dialog), which did close unconditionally.
+
+### Decisions taken with the user
+
+- **Lock order: no global table order.** Each action keeps whatever primary lock
+  it already takes (work order, PM assignment, maintenance request) and locks the
+  asset *after* it. Imposing `assets → work_orders` globally would have meant
+  reordering established working code for nothing. The invariant is narrower and
+  enforceable: **eligibility is checked after the asset row is locked, never
+  before** — which is why `AssetWorkEligibility::lockAndGuard()` exists and
+  returns the locked row, so callers have no reason to reach for the unlocked one.
+- **PM service is a tri-state**, resolved once into `PmServiceResolution`:
+  omitted → apply the staged mark; integer → override it; **explicit null →
+  apply nothing**. Read with `array_key_exists`, never `isset`. Resolved once
+  because two consumers need the same answer — the baseline reset and the Need
+  Inspection warning — and deriving it twice is how a suppressed close applied
+  nothing while a leftover mark row still silenced the warning.
+- **Everything ships as one release.** No deploy between batches, so 4b can be
+  declared genuinely complete rather than partially qualified.
+- **Formula-injection neutralisation is in scope** (it was initially flagged as
+  deliberately skipped; the user reversed that). Consequence nobody had spotted:
+  the parts export is read back by the import, which cross-checks
+  `erp_part_code` — so a code like `-1036-LDC` goes out guarded as `'-1036-LDC`
+  and the import must strip the guard before comparing.
+
+### The two defects that were genuinely broken in production
+
+- **Parts CSV download** navigated to `/api/parts/export-csv` on the SPA origin.
+  Production is split-domain (`atms.inova.krd` / `atmsapi.inova.krd`) and the SPA
+  host has no `/api` proxy — its catch-all returned `index.html`. The operator
+  got the app's own HTML saved as a spreadsheet. Now `api.download()`.
+- **Any asset at the field was uneditable.** The edit form posted the whole draft
+  back including `operational_status: at_the_field`, which the API rejects as a
+  manual value, so renaming a rig-deployed asset returned 422. The same payload
+  also overwrote a status the location move had just derived. Fixed on both
+  sides: the form now diffs against the loaded record, and `PATCH /assets/{id}`
+  discards a submitted status when the move derived one (audited as
+  `asset.status_payload_discarded`).
+
+### Other structural changes
+
+- **`UpdateAsset` action** — the location move and the field write were two
+  back-to-back transactions, so a tag collision returned 409 *after* the asset
+  had already moved. One transaction now; two new exception types keep the
+  controller's 409-field-keyed and 422 response shapes without matching on
+  message text.
+- **`ImportPartQuantities` no longer truncates rows.** It sliced each row to the
+  header count, so an unquoted `1,200` became two cells, the `200` was discarded
+  and stock committed as **1**. A row whose field count differs from the header
+  is now rejected by line number. Ids are also sorted before locking, so two
+  differently-sorted uploads cannot deadlock.
+- **The value migration asserts the complement**, not the mapped set. Counting
+  rows still carrying one of the four legacy values after mapping all four is
+  necessarily zero — the guard could never fire. An `active` row (the column
+  default until 2026-08-04) sailed through and threw on the next Eloquent read.
+- **A closed work order's attachment can no longer be deleted**, by anyone.
+  Close requires an attachment and post-close upload is blocked, but deletion
+  stayed open to Admin/Manager — and attachments soft-delete behind a global
+  scope, so it left no visible gap.
+- **`deploy.sh` refuses to run** while a legacy `operational_status` survives,
+  instead of relying on an operator reading a comment. The 4b cutover doc now
+  builds the SPA at step ① rather than after the stack starts, closing the
+  old-bundle/new-API window.
+
+### Batch 5 — condition reporting, and the shape decision inside it
+
+The last mandatory item of the vocabulary release. The decision worth keeping is
+**why condition is a grouping dimension rather than per-condition count columns**
+on the Distribution report: the vocabulary is Admin-editable, so count columns
+would change the report's shape — and its CSV header — every time LDC add or
+retire a value, and nobody can build a spreadsheet against a header that depends
+on the database. R-1's `by_condition` summary is a **list** for the same reason,
+where `by_status` is a keyed map: four enum cases make a zero meaningful, an open
+vocabulary does not.
+
+Two smaller calls: **"Unrecorded" is not "Normal"** — an asset nobody has
+assessed is a different statement from one assessed as fine, and collapsing them
+would let a gap in the data read as a clean bill of health. And the **filter
+accepts retired conditions**, because assets keep a condition after an Admin
+retires it and a filter that could not select them would make those rows
+unreachable from the report entirely. `AssetConditionLabels` is shared by the
+asset resource, both reports and the CSV so none of them can disagree.
+
+### Verified against live dev data, not just tests
+
+399 assets in R-1's scope (400 total, one excluded as inactive):
+`normal 397`, `need_assembly 2`, summing to the reported total. Distribution
+grouped by condition returns the same split; combined with maintenance category
+it returns `MOTOR | Need Assembly 1`, `MOTOR | Normal 195`, and so on. Both CSV
+headers carry the Condition column.
+
+### Ready to deploy
+
+Nothing outstanding from the review. The release goes out as **one coordinated
+cutover** — `docs/RELEASE-4b-CUTOVER.md`, which now builds the SPA at step ①
+before traffic stops. `deploy.sh` will refuse to run until that migration has
+happened, so the ordinary path is safe again by itself afterwards.
+
+## Session — 2026-08-17 (Phase 7 SHIPPED: parts CSV round trip)
 
 **1243 tests green, Pint clean, vue-tsc clean.** RQ3 done; every phase of the
 status-vocabulary programme is now built.

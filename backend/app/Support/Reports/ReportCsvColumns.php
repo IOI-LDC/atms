@@ -3,6 +3,7 @@
 namespace App\Support\Reports;
 
 use App\Models\Asset;
+use App\Support\Assets\AssetConditionLabels;
 use Closure;
 
 /**
@@ -37,6 +38,10 @@ final class ReportCsvColumns
             'Kind' => 'asset_kind',
             'Maintenance Category' => fn (Asset $a) => $a->maintenanceCategory?->name,
             'Operational Status' => 'operational_status',
+            // The label, not the raw value — this file is read by a person, and
+            // the two axes sit side by side precisely so a reader can see that
+            // "Failure" and "Missing Parts" answer different questions.
+            'Condition' => fn (Asset $a) => AssetConditionLabels::for($a->condition_status),
             'Booked' => fn (Asset $a) => (bool) $a->is_booked,
             'Location' => fn (Asset $a) => $a->currentLocation?->name,
             'Assigned To' => fn (Asset $a) => $a->workOrders->first()?->assignedTo?->name,
@@ -111,6 +116,7 @@ final class ReportCsvColumns
             'maintenance_category' => 'Maintenance Category',
             'size' => 'Size',
             'location' => 'Location',
+            'condition' => 'Condition',
             'technician' => 'Technician',
             'asset' => 'Asset',
             'rule' => 'PM Rule',

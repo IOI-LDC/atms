@@ -84,11 +84,15 @@ class ReportController extends Controller
         $request->merge(['group_by' => (array) $request->query('group_by', [])]);
 
         $filters = $request->validate([
-            'group_by' => ['nullable', 'array', 'max:3'],
-            'group_by.*' => [Rule::in(['location', 'maintenance_category', 'size'])],
+            'group_by' => ['nullable', 'array', 'max:4'],
+            'group_by.*' => [Rule::in(['location', 'maintenance_category', 'size', 'condition'])],
             'maintenance_category_id' => ['nullable', 'exists:maintenance_categories,id'],
             'asset_kind' => ['nullable', Rule::enum(AssetKind::class)],
             'operational_status' => ['nullable', Rule::enum(OperationalStatus::class)],
+            // Any recorded condition, not just the currently active ones: assets
+            // keep a retired condition, and a filter that could not select them
+            // would make those rows unreachable from the report.
+            'condition_status' => ['nullable', 'string', 'max:64'],
             'include_inactive' => ['nullable', 'boolean'],
         ]);
 
@@ -100,6 +104,7 @@ class ReportController extends Controller
                 'maintenance_category_id' => $filters['maintenance_category_id'] ?? null,
                 'asset_kind' => $filters['asset_kind'] ?? null,
                 'operational_status' => $filters['operational_status'] ?? null,
+                'condition_status' => $filters['condition_status'] ?? null,
                 'include_inactive' => (bool) ($filters['include_inactive'] ?? false),
             ]
         );
@@ -404,6 +409,8 @@ class ReportController extends Controller
         $filters = $request->validate([
             'location_id' => ['nullable', 'exists:locations,id'],
             'operational_status' => ['nullable', Rule::enum(OperationalStatus::class)],
+            // Any recorded condition, not just active ones — see assetDistribution.
+            'condition_status' => ['nullable', 'string', 'max:64'],
             'asset_kind' => ['nullable', Rule::enum(AssetKind::class)],
             'maintenance_category_id' => ['nullable', 'exists:maintenance_categories,id'],
             'booked' => ['nullable', 'boolean'],
@@ -418,6 +425,7 @@ class ReportController extends Controller
             [
                 'location_id' => $filters['location_id'] ?? null,
                 'operational_status' => $filters['operational_status'] ?? null,
+                'condition_status' => $filters['condition_status'] ?? null,
                 'asset_kind' => $filters['asset_kind'] ?? null,
                 'maintenance_category_id' => $filters['maintenance_category_id'] ?? null,
                 'booked' => array_key_exists('booked', $filters) ? (bool) $filters['booked'] : null,

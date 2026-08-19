@@ -88,6 +88,10 @@ export const ASSET_DISTRIBUTION_GROUP_BY_OPTIONS: {
   { value: 'location', label: 'Location' },
   { value: 'maintenance_category', label: 'Maintenance Category' },
   { value: 'size', label: 'Size' },
+  // Condition is a dimension rather than a set of count columns: the vocabulary
+  // is Admin-editable, so per-condition columns would change the report's shape
+  // — and its CSV header — whenever LDC add or retire a value.
+  { value: 'condition', label: 'Condition' },
 ]
 
 /**

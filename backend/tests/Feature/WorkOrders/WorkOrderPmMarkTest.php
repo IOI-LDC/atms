@@ -166,6 +166,59 @@ class WorkOrderPmMarkTest extends TestCase
         $this->assertSame($l3->id, $marks->first()->asset_pm_assignment_id);
     }
 
+    /**
+     * "A double-submit is a no-op" is what the mini-spec promises, and
+     * `updateOrCreate` alone does not deliver it: it rewrites `marked_at` and
+     * emits a second audit event every time. The log has to answer "who marked
+     * this level, and when" — not "who last pressed the button".
+     */
+    public function test_an_identical_mark_is_a_true_no_op(): void
+    {
+        $wo = $this->inProgressWorkOrder();
+        $l2 = $this->assignment('L2');
+
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+        $first = WorkOrderPmMark::where('work_order_id', $wo->id)->first();
+
+        $this->travel(2)->minutes();
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+        $this->travelBack();
+
+        $again = WorkOrderPmMark::where('work_order_id', $wo->id)->first();
+
+        $this->assertEquals(
+            $first->marked_at->toDateTimeString(),
+            $again->marked_at->toDateTimeString(),
+            'A repeat of the same mark must not restamp who marked it, or when.',
+        );
+        $this->assertSame(
+            1,
+            AuditLog::where('event', 'work_order_pm_mark.set')
+                ->where('metadata->work_order_id', $wo->id)
+                ->count(),
+            'Nor add a log entry recording no change.',
+        );
+    }
+
+    /**
+     * A different level is a real change, so it must restamp and re-audit.
+     * The no-op above must not swallow it.
+     */
+    public function test_marking_a_different_level_still_records_the_change(): void
+    {
+        $wo = $this->inProgressWorkOrder();
+
+        $this->mark($this->tech, $wo, $this->assignment('L1'))->assertOk();
+        $this->mark($this->tech, $wo, $this->assignment('L3'))->assertOk();
+
+        $this->assertSame(
+            2,
+            AuditLog::where('event', 'work_order_pm_mark.set')
+                ->where('metadata->work_order_id', $wo->id)
+                ->count(),
+        );
+    }
+
     public function test_a_technician_can_clear_their_own_mark(): void
     {
         $wo = $this->inProgressWorkOrder();
@@ -241,6 +294,27 @@ class WorkOrderPmMarkTest extends TestCase
         $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
         $this->mark($this->manager, $wo->fresh(), $this->assignment('L2'))->assertForbidden();
+    }
+
+    /**
+     * Clearing has to close the same door marking does. It used to lock only the
+     * mark row, never the work order, so the status check ran against nothing
+     * held — a clear could pass authorisation on a completed order, race a
+     * concurrent close, and delete the mark just before close consumed it. The
+     * schedule then silently failed to advance for work that was performed.
+     */
+    public function test_a_closed_work_order_cannot_have_its_mark_cleared(): void
+    {
+        $wo = $this->inProgressWorkOrder();
+        $l2 = $this->assignment('L2');
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+
+        $this->complete($wo);
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $this->actingAs($this->manager)
+            ->deleteJson("/api/work-orders/{$wo->id}/pm-mark")
+            ->assertForbidden();
     }
 
     // ── Applied at close ────────────────────────────────────────────────────────
@@ -365,6 +439,125 @@ class WorkOrderPmMarkTest extends TestCase
         $this->assertEquals($baseline, $l2->fresh()->last_triggered_date?->toDateString());
         $this->assertSame(1, AuditLog::where('event', 'work_order_pm_mark.skipped')->count());
         $this->assertStringContainsString('no longer active', $response->json('warnings.0'));
+    }
+
+    // ── The three states of serviced_pm_assignment_id ───────────────────────────
+
+    /**
+     * Omitted, an integer and an explicit null are three different instructions.
+     *
+     * Only two of them existed before: "unticked" in the close dialog omitted
+     * the field, and the backend read omission as "use the staged mark" — so
+     * unticking applied the mark anyway and the control did nothing at all.
+     */
+    public function test_omitting_the_field_applies_the_staged_mark(): void
+    {
+        $l2 = $this->assignment('L2');
+        $wo = $this->inProgressWorkOrder();
+
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+        $this->complete($wo);
+
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $this->assertSame(now()->toDateString(), $l2->fresh()->last_triggered_date?->toDateString());
+    }
+
+    public function test_an_explicit_null_applies_no_pm_level_at_all(): void
+    {
+        $l2 = $this->assignment('L2');
+        $baseline = $l2->last_triggered_date?->toDateString();
+        $wo = $this->inProgressWorkOrder();
+
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+        $this->complete($wo);
+
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'serviced_pm_assignment_id' => null,
+        ])->assertOk();
+
+        $this->assertEquals(
+            $baseline,
+            $l2->fresh()->last_triggered_date?->toDateString(),
+            'Suppression must leave the schedule exactly where it was.',
+        );
+
+        $log = AuditLog::where('event', 'work_order_pm_mark.suppressed')->sole();
+        $this->assertSame($l2->id, $log->metadata['marked_assignment_id']);
+    }
+
+    /**
+     * The cross-consistency case, and the reason the tri-state is resolved once
+     * rather than derived separately by each consumer.
+     *
+     * The Need Inspection warning used to ask the mark table directly. A close
+     * that explicitly suppressed the mark applied nothing — yet the row still
+     * existed, so the warning stayed silent on precisely the close it exists
+     * for: an asset flagged for inspection, signed off with no PM recorded.
+     */
+    public function test_a_suppressed_close_still_warns_about_need_inspection(): void
+    {
+        $l2 = $this->assignment('L2');
+        $this->asset->update(['condition_status' => 'need_inspection']);
+        $wo = $this->inProgressWorkOrder();
+
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+        $this->complete($wo);
+
+        $response = $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'serviced_pm_assignment_id' => null,
+        ])->assertOk();
+
+        $this->assertStringContainsString('Need Inspection', $response->json('warnings.0'));
+    }
+
+    /**
+     * Suppression short-circuits before the staged mark is examined, so a
+     * deactivated schedule raises nothing — there is no attempt to apply it and
+     * therefore nothing that failed.
+     */
+    public function test_suppressing_a_deactivated_mark_warns_about_nothing(): void
+    {
+        $l2 = $this->assignment('L2');
+        $wo = $this->inProgressWorkOrder();
+
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+        $this->complete($wo);
+        $l2->update(['is_active' => false]);
+
+        $response = $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'serviced_pm_assignment_id' => null,
+        ])->assertOk();
+
+        $this->assertSame([], $response->json('warnings'));
+        $this->assertSame(0, AuditLog::where('event', 'work_order_pm_mark.skipped')->count());
+    }
+
+    /**
+     * The asymmetry that makes the tri-state worth having.
+     *
+     * A deactivated schedule reached through a **staged mark** is skipped with a
+     * warning — nobody chose that id at close time, so refusing the close would
+     * punish the wrong person. The same schedule named **explicitly in the
+     * payload** is a 409: the closer typed it, so they can fix it. Sending the
+     * staged mark back as an explicit override, which the close dialog used to
+     * do, turned every one of the first case into the second.
+     */
+    public function test_an_explicit_deactivated_assignment_is_refused(): void
+    {
+        $l2 = $this->assignment('L2');
+        $wo = $this->inProgressWorkOrder();
+
+        $this->mark($this->tech, $wo, $l2)->assertOk();
+        $this->complete($wo);
+        $l2->update(['is_active' => false]);
+
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close", [
+            'serviced_pm_assignment_id' => $l2->id,
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'That service schedule is not active.');
+
+        $this->assertSame('completed', $wo->fresh()->status->value, 'A refused close changes nothing.');
     }
 
     // ── The close warning narrows ───────────────────────────────────────────────

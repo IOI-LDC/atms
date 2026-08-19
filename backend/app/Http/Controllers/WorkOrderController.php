@@ -158,10 +158,18 @@ class WorkOrderController extends Controller
         // rather than closed. The choice lives on cancel.
         $validated = $request->validate([
             'is_failure' => ['nullable', 'boolean'],
-            // Set when the closer declares a preventive service was performed
-            // alongside this job. The action verifies the assignment belongs to
-            // this work order's asset and is active (409 otherwise).
-            'serviced_pm_assignment_id' => ['nullable', 'integer', 'exists:asset_pm_assignments,id'],
+            // Three states, and the difference between two of them is whether
+            // the key is present at all:
+            //
+            //   omitted  → apply whatever was marked during the work
+            //   integer  → apply this, overriding any staged mark
+            //   null     → apply nothing; the staged mark does not stand
+            //
+            // Hence `sometimes` + `array_key_exists` below, never `isset` — an
+            // explicit null is an instruction, not an absence. The action
+            // verifies an integer belongs to this work order's asset and is
+            // active (409 otherwise).
+            'serviced_pm_assignment_id' => ['sometimes', 'nullable', 'integer', 'exists:asset_pm_assignments,id'],
         ]);
 
         try {
@@ -170,6 +178,7 @@ class WorkOrderController extends Controller
                 $request->user()->id,
                 array_key_exists('is_failure', $validated) ? (bool) $validated['is_failure'] : null,
                 $validated['serviced_pm_assignment_id'] ?? null,
+                array_key_exists('serviced_pm_assignment_id', $validated),
             );
 
             return response()->json([

@@ -6,6 +6,8 @@ import type { AssetStatusReportItem, AssetStatusReportPage } from '@/types'
 export interface AssetStatusFilters {
   location_id?: string | number
   operational_status?: string
+  /** `asset_conditions` value — the cause axis, orthogonal to operational_status. */
+  condition_status?: string
   asset_kind?: string
   maintenance_category_id?: string | number
   booked?: boolean
@@ -45,6 +47,7 @@ export function useAssetStatusReport() {
     if (activeFilters.location_id) query.location_id = activeFilters.location_id
     if (activeFilters.operational_status)
       query.operational_status = activeFilters.operational_status
+    if (activeFilters.condition_status) query.condition_status = activeFilters.condition_status
     if (activeFilters.asset_kind) query.asset_kind = activeFilters.asset_kind
     if (activeFilters.maintenance_category_id)
       query.maintenance_category_id = activeFilters.maintenance_category_id

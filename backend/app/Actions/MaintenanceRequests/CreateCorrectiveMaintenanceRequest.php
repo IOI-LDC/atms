@@ -27,9 +27,12 @@ class CreateCorrectiveMaintenanceRequest
         ?string $description = null,
         ?array $meterReading = null
     ): MaintenanceRequest {
-        AssetWorkEligibility::guard($asset, 'create a maintenance request');
-
         $mr = DB::transaction(function () use ($asset, $createdByUserId, $priority, $description, $meterReading) {
+            // Locked before the check: the request that follows is new work, and
+            // a withdrawal committing between an unlocked read and this insert
+            // would leave a pending request against an asset nobody maintains.
+            $asset = AssetWorkEligibility::lockAndGuard($asset, 'create a maintenance request');
+
             $logger = app(AuditLogger::class);
             $number = BusinessNumberSequence::next('MR', 'MR-');
 

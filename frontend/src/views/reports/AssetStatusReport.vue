@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { useAssetStatusReport, type AssetStatusFilters } from '@/composables/useAssetStatusReport'
 import { useLocations } from '@/composables/useLocations'
+import { useListOptions } from '@/composables/useListOptions'
 import { useReportCsvExport } from '@/composables/useReportCsvExport'
 import {
   fmtDate,
@@ -31,10 +32,12 @@ const ALL = '__all__'
 const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } =
   useAssetStatusReport()
 const { activeLocations, loadLocations } = useLocations()
+const { assetConditions, loadAssetConditions } = useListOptions()
 const { exporting, exportError, exportCsv } = useReportCsvExport()
 
 const locationId = ref<string>(ALL)
 const operationalStatus = ref<string>(ALL)
+const conditionStatus = ref<string>(ALL)
 const assetKind = ref<string>(ALL)
 const booked = ref<string>(ALL)
 const dateField = ref<'created_at' | 'updated_at'>('updated_at')
@@ -45,6 +48,7 @@ function currentFilters(): AssetStatusFilters {
   const filters: AssetStatusFilters = {}
   if (locationId.value !== ALL) filters.location_id = locationId.value
   if (operationalStatus.value !== ALL) filters.operational_status = operationalStatus.value
+  if (conditionStatus.value !== ALL) filters.condition_status = conditionStatus.value
   if (assetKind.value !== ALL) filters.asset_kind = assetKind.value
   if (booked.value !== ALL) filters.booked = booked.value === 'booked'
   if (from.value) filters.from = from.value
@@ -74,6 +78,7 @@ function exportReport() {
 function clearFilters() {
   locationId.value = ALL
   operationalStatus.value = ALL
+  conditionStatus.value = ALL
   assetKind.value = ALL
   booked.value = ALL
   dateField.value = 'updated_at'
@@ -102,6 +107,7 @@ const dateFieldLabel = computed(() =>
 
 onMounted(() => {
   loadLocations()
+  loadAssetConditions()
   runLoad()
 })
 </script>
@@ -144,6 +150,22 @@ onMounted(() => {
                 :key="opt.value"
                 :value="opt.value"
               >
+                {{ opt.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <!-- The cause axis. Status says whether the asset works; Condition says
+             what is wrong with it, and a register carrying only one cannot
+             answer the other. -->
+        <div class="form-field">
+          <Label for="asr-condition">Condition</Label>
+          <Select id="asr-condition" v-model="conditionStatus">
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="ALL">All conditions</SelectItem>
+              <SelectItem v-for="opt in assetConditions" :key="opt.value" :value="opt.value">
                 {{ opt.label }}
               </SelectItem>
             </SelectContent>
@@ -227,6 +249,7 @@ onMounted(() => {
               <th scope="col">Name</th>
               <th scope="col">Type</th>
               <th scope="col">Status</th>
+              <th scope="col">Condition</th>
               <th scope="col">Location</th>
               <th scope="col">Assigned To</th>
               <th scope="col">Last Update</th>
@@ -246,6 +269,9 @@ onMounted(() => {
                 </span>
                 <span v-if="row.is_booked" class="status-badge status-booked">Booked</span>
               </td>
+              <!-- Sits directly beside Status on purpose: the pair is the whole
+                   point of the two-axis vocabulary. -->
+              <td>{{ row.condition_label ?? '—' }}</td>
               <td>{{ row.location ?? 'Unassigned' }}</td>
               <td>
                 <RouterLink v-if="row.open_work_order_number" :to="`/assets/${row.id}`">

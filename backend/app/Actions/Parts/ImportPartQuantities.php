@@ -4,6 +4,7 @@ namespace App\Actions\Parts;
 
 use App\Models\Part;
 use App\Services\Audit\AuditLogger;
+use App\Support\Reports\CsvReportStreamer;
 use DomainException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -62,7 +63,10 @@ class ImportPartQuantities
         $hash = hash_file('sha256', $file->getRealPath());
         $rows = $this->read($file);
 
-        if ($rows === []) {
+        // Checked before the empty-file message: a file whose every row was
+        // rejected for a malformed shape is not an empty file, and saying so
+        // would send the operator looking for the wrong problem.
+        if ($this->errors === [] && $rows === []) {
             throw new DomainException('The file has no data rows.');
         }
 
@@ -84,7 +88,12 @@ class ImportPartQuantities
     private function read(UploadedFile $file): array
     {
         $handle = fopen($file->getRealPath(), 'r');
-        $headers = fgetcsv($handle);
+
+        // `escape: ''` disables PHP's non-standard backslash escaping, which no
+        // spreadsheet emits and which silently swallows a trailing backslash.
+        // Also required on PHP 8.4, where the default is deprecated.
+        // `ImportPartsCommand` already reads this way.
+        $headers = fgetcsv($handle, escape: '');
 
         if ($headers === false) {
             fclose($handle);
@@ -104,10 +113,21 @@ class ImportPartQuantities
             throw new DomainException('Missing required column(s): '.implode(', ', $missing).'.');
         }
 
+        // A repeated header makes `array_combine` keep only the last of the
+        // duplicates, so one of two columns would be read and the other
+        // silently ignored. There is no safe interpretation — reject the file.
+        $duplicates = array_keys(array_filter(array_count_values($headers), fn ($n) => $n > 1));
+
+        if ($duplicates !== []) {
+            fclose($handle);
+            throw new DomainException('Duplicate column(s): '.implode(', ', $duplicates).'.');
+        }
+
+        $expected = count($headers);
         $rows = [];
         $line = 1;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        while (($data = fgetcsv($handle, escape: '')) !== false) {
             $line++;
 
             // Blank rows are what Excel leaves behind after a delete; they are
@@ -121,9 +141,23 @@ class ImportPartQuantities
                 throw new DomainException('The file has more than '.number_format(self::MAX_ROWS).' rows.');
             }
 
+            // ⚠️ Never truncate or pad to fit. An earlier version sliced the row
+            // to the header count, which turned an unquoted `1,200` in the
+            // quantity column into two cells, discarded the `200`, and committed
+            // a stock level of 1. A row whose shape does not match the header is
+            // a row whose meaning is unknown; the operator is told which line.
+            $actual = count($data);
+
+            if ($actual !== $expected) {
+                $this->errors[] = "line {$line}: expected {$expected} columns, found {$actual}. "
+                    .'Check for an unquoted comma inside a value.';
+
+                continue;
+            }
+
             $rows[] = [
                 'line' => $line,
-                'data' => array_combine($headers, array_pad(array_slice($data, 0, count($headers)), count($headers), '')),
+                'data' => array_combine($headers, $data),
             ];
         }
 
@@ -155,7 +189,7 @@ class ImportPartQuantities
         foreach ($rows as $row) {
             $line = $row['line'];
             $rawId = trim((string) $row['data']['part_id']);
-            $code = trim((string) $row['data']['erp_part_code']);
+            $code = $this->unguard(trim((string) $row['data']['erp_part_code']));
             $quantity = trim((string) $row['data']['available_quantity']);
 
             if ($rawId === '' || ! ctype_digit($rawId)) {
@@ -209,11 +243,44 @@ class ImportPartQuantities
     }
 
     /**
+     * Undo the export's formula guard.
+     *
+     * `CsvReportStreamer` prefixes a cell that starts `=`, `+`, `-`, `@` or a
+     * control character with an apostrophe, so a spreadsheet reads it as text
+     * instead of executing it. A part code like `-1036-LDC` therefore leaves
+     * ATMS as `'-1036-LDC` — and would come straight back failing the
+     * shifted-VLOOKUP cross-check against the very value that produced it.
+     *
+     * Only the leading apostrophe is removed, and only when what follows would
+     * have been guarded. A code that genuinely begins with an apostrophe and
+     * nothing else is left alone.
+     *
+     * @see CsvReportStreamer::neutralise()
+     */
+    private function unguard(string $value): string
+    {
+        if (! str_starts_with($value, "'") || $value === "'") {
+            return $value;
+        }
+
+        $rest = substr($value, 1);
+
+        return CsvReportStreamer::neutralise($rest) === $value ? $rest : $value;
+    }
+
+    /**
      * @param  array<int, array{id: int, quantity: string}>  $prepared
      * @return array{rows: int, updated: int, unchanged: int}
      */
     private function apply(array $prepared, string $filename, string $hash, int $uploadedByUserId, int $rowCount): array
     {
+        // Locked in ascending id order, never in the order the spreadsheet
+        // happened to list them. Two operators uploading files sorted
+        // differently would otherwise take the same row locks in opposite
+        // orders and deadlock — one request dying with an uncaught 500 on a
+        // stock correction that was perfectly valid.
+        usort($prepared, fn (array $a, array $b) => $a['id'] <=> $b['id']);
+
         return DB::transaction(function () use ($prepared, $filename, $hash, $uploadedByUserId, $rowCount) {
             $updated = 0;
             $unchanged = 0;

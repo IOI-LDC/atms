@@ -256,4 +256,157 @@ class AssetFieldStatusTest extends TestCase
 
         $this->assertSame(OperationalStatus::AT_THE_FIELD, $asset->operational_status);
     }
+
+    // ── Update: the same rule, on the path that had it backwards ────────────────
+
+    /**
+     * Creation already refused to let an explicit status beat the location. The
+     * update path did the opposite, and silently.
+     *
+     * `PATCH /assets/{id}` applies the location move first and the field updates
+     * second, so a payload carrying both moved the asset to a rig — deriving
+     * `at_the_field` — and then overwrote it with whatever status the payload
+     * happened to hold. The asset ended up on a rig, recorded as on base. The
+     * edit sheet produced exactly this payload on every save, because it echoed
+     * back the status it had loaded.
+     */
+    public function test_a_submitted_status_never_overrides_one_derived_by_the_same_move(): void
+    {
+        $asset = $this->asset();
+        $rig = $this->location(LocationType::RIG);
+
+        $this->actingAs($this->admin())->patchJson("/api/assets/{$asset->id}", [
+            'current_location_id' => $rig->id,
+            'operational_status' => OperationalStatus::READY_FOR_FIELD->value,
+        ])->assertOk();
+
+        $this->assertSame(OperationalStatus::AT_THE_FIELD, $asset->fresh()->operational_status);
+    }
+
+    /**
+     * Discarded, not ignored. An API client that sent a value it meant should be
+     * able to find out from the log why it did not stick.
+     */
+    public function test_the_discarded_status_is_audited(): void
+    {
+        $asset = $this->asset();
+        $rig = $this->location(LocationType::RIG);
+
+        $this->actingAs($this->admin())->patchJson("/api/assets/{$asset->id}", [
+            'current_location_id' => $rig->id,
+            'operational_status' => OperationalStatus::FAILURE->value,
+        ])->assertOk();
+
+        $entry = AuditLog::where('event', 'asset.status_payload_discarded')->latest('id')->first();
+
+        $this->assertNotNull($entry, 'The overridden value must leave a trace.');
+        $this->assertSame(OperationalStatus::FAILURE->value, $entry->metadata['submitted']);
+        $this->assertSame(OperationalStatus::AT_THE_FIELD->value, $entry->metadata['applied']);
+    }
+
+    /**
+     * The rule is narrow on purpose: it applies only when the move itself
+     * derived a status. A move between two non-field locations derives nothing,
+     * so a status in the same payload is an ordinary edit and must still apply.
+     */
+    public function test_a_submitted_status_still_applies_when_the_move_derives_nothing(): void
+    {
+        $asset = $this->asset();
+        $workshop = $this->location(LocationType::WORKSHOP);
+
+        $this->actingAs($this->admin())->patchJson("/api/assets/{$asset->id}", [
+            'current_location_id' => $workshop->id,
+            'operational_status' => OperationalStatus::FAILURE->value,
+        ])->assertOk();
+
+        $fresh = $asset->fresh();
+        $this->assertSame(OperationalStatus::FAILURE, $fresh->operational_status);
+        $this->assertSame($workshop->id, $fresh->current_location_id);
+    }
+
+    // ── Update: atomicity ───────────────────────────────────────────────────────
+
+    /**
+     * The move and the field write are one transaction.
+     *
+     * They used to be two, back to back, each with its own. A tag collision in
+     * the second returned 409 while the first had already committed — so a
+     * request the caller was told had failed had moved the asset and written a
+     * location-history row, and nothing in the response said so.
+     */
+    public function test_a_rejected_field_update_rolls_back_the_location_move(): void
+    {
+        $taken = $this->asset(['asset_tag' => 'L-AAA-111-0001']);
+        $asset = $this->asset();
+        $origin = $asset->current_location_id;
+        $workshop = $this->location(LocationType::WORKSHOP);
+
+        $this->actingAs($this->admin())->patchJson("/api/assets/{$asset->id}", [
+            'current_location_id' => $workshop->id,
+            'asset_tag' => $taken->asset_tag,
+        ])->assertStatus(409)
+            ->assertJsonPath('errors.asset_tag.0', 'The generated asset tag is already in use.');
+
+        $fresh = $asset->fresh();
+        $this->assertSame($origin, $fresh->current_location_id, 'A rejected PATCH must not have moved the asset.');
+        $this->assertSame(0, $fresh->locationHistories()->count(), 'Nor left a history row behind.');
+    }
+
+    // ── Update: eligibility ─────────────────────────────────────────────────────
+
+    /**
+     * `POST /assets/{id}/location` blocked withdrawn and deactivated assets;
+     * `PATCH /assets/{id}` moved them happily. Same move, two answers.
+     *
+     * @return array<string, array{array<string, mixed>, string}>
+     */
+    public static function ineligibleAssetProvider(): array
+    {
+        return [
+            'withdrawn' => [
+                ['maintenance_status' => 'withdrawn'],
+                'Cannot update location for an asset withdrawn from maintenance.',
+            ],
+            'deactivated' => [
+                ['is_active' => false],
+                'Cannot update location for a deactivated asset.',
+            ],
+        ];
+    }
+
+    #[DataProvider('ineligibleAssetProvider')]
+    public function test_an_ineligible_asset_cannot_be_relocated_through_patch(array $overrides, string $expected): void
+    {
+        $asset = $this->asset($overrides);
+        $origin = $asset->current_location_id;
+
+        $this->actingAs($this->admin())->patchJson("/api/assets/{$asset->id}", [
+            'current_location_id' => $this->location(LocationType::WORKSHOP)->id,
+        ])->assertStatus(409)
+            ->assertJsonPath('message', $expected);
+
+        $this->assertSame($origin, $asset->fresh()->current_location_id);
+    }
+
+    /**
+     * The counterweight, and the reason the guard sits inside the location
+     * branch rather than at the top of the endpoint: a withdrawn asset must stay
+     * editable, or there is no way to correct one — including no way to withdraw
+     * it back into the programme.
+     */
+    #[DataProvider('ineligibleAssetProvider')]
+    public function test_an_ineligible_asset_is_still_editable(array $overrides, string $unusedMessage): void
+    {
+        $asset = $this->asset($overrides);
+
+        $this->actingAs($this->admin())->patchJson("/api/assets/{$asset->id}", [
+            'name' => 'Corrected Name',
+            'maintenance_status' => 'enrolled',
+            'is_active' => true,
+        ])->assertOk();
+
+        $fresh = $asset->fresh();
+        $this->assertSame('Corrected Name', $fresh->name);
+        $this->assertTrue($fresh->is_active);
+    }
 }

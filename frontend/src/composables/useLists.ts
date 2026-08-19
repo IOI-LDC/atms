@@ -109,17 +109,37 @@ export function useLists() {
   // ── Mutations ───────────────────────────────────────────────────────────────
   const saving = ref(false)
   const validationErrors = ref<Record<string, string[]> | null>(null)
+  /**
+   * A refusal with no field to hang it on.
+   *
+   * `validationErrors` only carries 422s with a field map. The Admin lists have
+   * one refusal that arrives without one — deactivating the default row — and
+   * with nowhere to put it, the caller had nothing to show and simply looked
+   * like it had worked.
+   */
+  const mutationError = ref<string | null>(null)
+
+  function captureError(e: unknown): false {
+    if (e instanceof ApiError) {
+      if (e.validationErrors) validationErrors.value = e.validationErrors
+      else mutationError.value = e.message
+    } else {
+      mutationError.value = 'Something went wrong. Try again.'
+    }
+
+    return false
+  }
 
   async function createItem(payload: Record<string, unknown>): Promise<boolean> {
     saving.value = true
     validationErrors.value = null
+    mutationError.value = null
     try {
       await api.post(collectionPath(activeGroup.value), payload)
       await loadActive(true)
       return true
     } catch (e) {
-      if (e instanceof ApiError && e.validationErrors) validationErrors.value = e.validationErrors
-      return false
+      return captureError(e)
     } finally {
       saving.value = false
     }
@@ -128,13 +148,13 @@ export function useLists() {
   async function updateItem(item: ListItem, payload: Record<string, unknown>): Promise<boolean> {
     saving.value = true
     validationErrors.value = null
+    mutationError.value = null
     try {
       await api.patch(itemPath(activeGroup.value, item), payload)
       await loadActive(true)
       return true
     } catch (e) {
-      if (e instanceof ApiError && e.validationErrors) validationErrors.value = e.validationErrors
-      return false
+      return captureError(e)
     } finally {
       saving.value = false
     }
@@ -157,6 +177,7 @@ export function useLists() {
     selectGroup,
     saving,
     validationErrors,
+    mutationError,
     createItem,
     updateItem,
     toggleActive,

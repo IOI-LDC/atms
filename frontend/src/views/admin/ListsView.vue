@@ -28,6 +28,7 @@ const {
   selectGroup,
   saving,
   validationErrors,
+  mutationError,
   createItem,
   updateItem,
   toggleActive,
@@ -122,7 +123,18 @@ async function confirmToggle() {
   if (!toggleTarget.value) return
   const wasActive = itemIsActive(toggleTarget.value)
   const ok = await toggleActive(toggleTarget.value)
-  if (ok) toast.success(wasActive ? 'Item deactivated.' : 'Item reactivated.')
+
+  // Closes on success only. It used to close either way, so the API refusing to
+  // deactivate a default row — the one refusal this dialog can actually provoke
+  // — looked exactly like it having worked: dialog gone, list unchanged, no
+  // message anywhere. The error is surfaced in the dialog instead.
+  if (!ok) {
+    toast.error(mutationError.value ?? 'That change could not be applied.')
+
+    return
+  }
+
+  toast.success(wasActive ? 'Item deactivated.' : 'Item reactivated.')
   toggleOpen.value = false
   toggleTarget.value = null
 }
@@ -291,7 +303,11 @@ function itemLabel(row: ListItem): string {
         <Button variant="outline" @click="toggleOpen = false">Cancel</Button>
         <Button :disabled="saving" @click="confirmToggle">
           {{
-            saving ? 'Saving…' : toggleTarget && itemIsActive(toggleTarget) ? 'Deactivate' : 'Reactivate'
+            saving
+              ? 'Saving…'
+              : toggleTarget && itemIsActive(toggleTarget)
+                ? 'Deactivate'
+                : 'Reactivate'
           }}
         </Button>
       </DialogFooter>

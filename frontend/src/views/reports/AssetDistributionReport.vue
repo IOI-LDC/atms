@@ -31,7 +31,8 @@ const ALL = '__all__'
 
 const { loading, error, summary, rows, groupHeaders, groupsLabel, load } =
   useAssetDistributionReport()
-const { maintenanceCategories, loadMaintenanceCategories } = useListOptions()
+const { maintenanceCategories, loadMaintenanceCategories, assetConditions, loadAssetConditions } =
+  useListOptions()
 const { exporting, exportError, exportCsv } = useReportCsvExport()
 
 const categoryOptions = computed(() =>
@@ -67,6 +68,7 @@ function dimensionPosition(dimension: AssetDistributionGroupBy): number {
 const categoryId = ref<string>(ALL)
 const assetKind = ref<string>(ALL)
 const operationalStatus = ref<string>(ALL)
+const conditionStatus = ref<string>(ALL)
 
 function currentFilters(): AssetDistributionFilters {
   const filters: AssetDistributionFilters = { group_by: groupBy.value }
@@ -78,6 +80,9 @@ function currentFilters(): AssetDistributionFilters {
   }
   if (operationalStatus.value !== ALL) {
     filters.operational_status = operationalStatus.value
+  }
+  if (conditionStatus.value !== ALL) {
+    filters.condition_status = conditionStatus.value
   }
   return filters
 }
@@ -104,11 +109,13 @@ function clearFilters() {
   categoryId.value = ALL
   assetKind.value = ALL
   operationalStatus.value = ALL
+  conditionStatus.value = ALL
   runLoad({ group_by: ['location'] })
 }
 
 onMounted(() => {
   loadMaintenanceCategories()
+  loadAssetConditions()
   runLoad({ group_by: ['location'] })
 })
 </script>
@@ -116,7 +123,7 @@ onMounted(() => {
 <template>
   <ReportPage
     title="Asset Distribution"
-    subtitle="How assets are spread across location, maintenance category and size — tick any combination (R-2)."
+    subtitle="How assets are spread across location, maintenance category, size and condition — tick any combination (R-2)."
   >
     <template #actions>
       <Button variant="outline" :disabled="loading || exporting" @click="exportReport">
@@ -191,6 +198,21 @@ onMounted(() => {
                 :key="opt.value"
                 :value="opt.value"
               >
+                {{ opt.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <!-- The cause axis, beside the state axis. "Failure" and "Missing Parts"
+             answer different questions, so both belong on the same filter bar. -->
+        <div class="report-filter">
+          <Label for="abl-condition">Condition</Label>
+          <Select v-model="conditionStatus">
+            <SelectTrigger id="abl-condition"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="ALL">All conditions</SelectItem>
+              <SelectItem v-for="opt in assetConditions" :key="opt.value" :value="opt.value">
                 {{ opt.label }}
               </SelectItem>
             </SelectContent>

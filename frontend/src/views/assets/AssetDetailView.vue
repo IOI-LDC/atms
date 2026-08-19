@@ -73,6 +73,7 @@ const {
   loadAttachments,
   canEdit,
   canViewSensitive,
+  isAtTheField,
   canManageBooking,
   bookings,
   bookingsLoading,
@@ -817,10 +818,14 @@ watch(
               </p>
             </div>
 
-            <!-- Operational Status -->
+            <!-- Operational Status. Disabled while the asset is at the field:
+                 that value is derived from location and the API refuses it as a
+                 manual choice, so the only thing this control could do here is
+                 claim an asset on a rig is back on base. Moving it back is what
+                 changes the status. -->
             <div class="form-field">
               <Label for="edit-op-status">Operational Status</Label>
-              <Select v-model="draft.operational_status">
+              <Select v-model="draft.operational_status" :disabled="isAtTheField">
                 <SelectTrigger id="edit-op-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem
@@ -832,6 +837,10 @@ watch(
                   </SelectItem>
                 </SelectContent>
               </Select>
+              <p v-if="isAtTheField" class="form-help">
+                Set by the asset's location. Move it back to a yard or building to return it to
+                service.
+              </p>
             </div>
 
             <!-- Maintenance Status (enrolled/withdrawn) -->

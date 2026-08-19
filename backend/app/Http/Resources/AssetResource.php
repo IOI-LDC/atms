@@ -3,37 +3,22 @@
 namespace App\Http\Resources;
 
 use App\Enums\RoleCode;
-use App\Models\MasterDataItem;
+use App\Support\Assets\AssetConditionLabels;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class AssetResource extends JsonResource
 {
-    private const CONDITION_LABEL_CACHE = 'atms.asset_condition_labels';
-
     /**
      * Display label for the asset's condition, or null when it has none.
      *
-     * Unknown values fall back to the raw string rather than null: a condition
-     * an Admin has since deleted still tells the reader more than a blank cell.
+     * Shared with the reports rather than resolved here: R-1 and Asset
+     * Distribution render the same vocabulary, and a report that labels a
+     * condition differently from the asset page is worse than one that omits it.
      */
     private function conditionLabel(): ?string
     {
-        if ($this->condition_status === null) {
-            return null;
-        }
-
-        // Memoised on the container, which is rebuilt per request and per test,
-        // so a renamed label never leaks into the next one. Resolving this per
-        // row would cost one query per asset on a list of several hundred.
-        if (! app()->bound(self::CONDITION_LABEL_CACHE)) {
-            app()->instance(self::CONDITION_LABEL_CACHE, MasterDataItem::query()
-                ->where('group_key', MasterDataItem::ASSET_CONDITIONS)
-                ->pluck('label', 'value')
-                ->all());
-        }
-
-        return app(self::CONDITION_LABEL_CACHE)[$this->condition_status] ?? $this->condition_status;
+        return AssetConditionLabels::for($this->condition_status);
     }
 
     public function toArray(Request $request): array

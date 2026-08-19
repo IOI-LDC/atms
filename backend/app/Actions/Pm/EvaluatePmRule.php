@@ -40,7 +40,11 @@ class EvaluatePmRule
             // The scheduler filters this population out through
             // AssetWorkEligibility::scope() on scopeEvaluable; the direct and
             // evaluate-all paths reach an assignment by id, so they check here.
-            AssetWorkEligibility::guard($locked->asset, 'evaluate preventive maintenance');
+            //
+            // `$locked` is the *assignment*. `$locked->asset` is a plain lazy
+            // read and was never locked — hence lockAndGuard, which takes the
+            // asset row after the assignment row.
+            AssetWorkEligibility::lockAndGuard($locked->asset, 'evaluate preventive maintenance');
 
             if ($locked->hasActiveChain()) {
                 throw new DomainException('PM assignment already has an active maintenance chain.');

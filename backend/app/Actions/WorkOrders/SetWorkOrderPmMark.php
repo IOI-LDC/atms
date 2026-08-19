@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Idempotent by construction: `work_order_pm_marks.work_order_id` is unique, so
  * this replaces any existing mark rather than adding one. Submitting the same
- * body twice is a no-op beyond a touched timestamp.
+ * body twice is a **true** no-op — it does not touch `marked_at` and does not
+ * emit a second audit event, so the log answers "who marked this level, and
+ * when" rather than "who last pressed the button".
  *
  * Nothing is applied here. The mark is staged and `CloseWorkOrder` turns it into
  * a baseline reset; cancelling discards it. Applying immediately would advance
@@ -55,7 +57,16 @@ class SetWorkOrderPmMark
                 throw new DomainException('That service schedule is not active.');
             }
 
-            $existing = WorkOrderPmMark::where('work_order_id', $locked->id)->first();
+            $existing = WorkOrderPmMark::where('work_order_id', $locked->id)->lockForUpdate()->first();
+
+            // A genuine no-op, as the mini-spec promises. `updateOrCreate` alone
+            // is not one: it rewrites `marked_at` and emits a fresh audit event,
+            // so a double-click or a client retry rewrote who-marked-when and
+            // filled the log with entries recording no change at all.
+            if ($existing !== null && $existing->asset_pm_assignment_id === $assignment->id) {
+                return $existing;
+            }
+
             $before = $existing?->toArray() ?? [];
 
             $mark = WorkOrderPmMark::updateOrCreate(

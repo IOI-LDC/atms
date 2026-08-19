@@ -20,3 +20,4 @@ session-*.md
 
 # Editor-local agent settings (per-machine, not shared)
 .qoder/
+.kilo-to-qoder-staging

@@ -5,6 +5,7 @@ namespace Tests\Feature\Attachments;
 use App\Enums\RoleCode;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
+use App\Models\Attachment;
 use App\Models\MaintenanceRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -39,6 +40,8 @@ class WorkOrderAttachmentGateTest extends TestCase
 
     private User $tech;
 
+    private User $admin;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -47,6 +50,7 @@ class WorkOrderAttachmentGateTest extends TestCase
 
         $this->manager = $this->user(RoleCode::MAINTENANCE_MANAGER);
         $this->tech = $this->user(RoleCode::TECHNICIAN);
+        $this->admin = $this->user(RoleCode::ADMINISTRATOR);
     }
 
     private function user(RoleCode $roleCode): User
@@ -231,6 +235,68 @@ class WorkOrderAttachmentGateTest extends TestCase
 
         $this->upload($this->tech, $wo->fresh(), UploadedFile::fake()->create('late.pdf', 20, 'application/pdf'))
             ->assertForbidden();
+    }
+
+    // ── Deletion, the other half of the same invariant ──────────────────────────
+
+    /**
+     * Blocking post-close uploads is only half a lock.
+     *
+     * A work order cannot be closed without an attachment and cannot receive one
+     * afterwards — but deletion stayed open to Admin and Manager at every stage,
+     * so the file that justified the closure could be removed the minute after,
+     * leaving a closed work order with no evidence and no way to supply any.
+     * Attachments are soft-deleted behind a global scope, so it did not even
+     * leave a visible gap.
+     *
+     * Nobody may do this, administrators included: there is no legitimate reason
+     * to, and no way to undo it.
+     */
+    public function test_a_closed_work_orders_attachment_cannot_be_deleted(): void
+    {
+        $wo = $this->completedWorkOrder();
+        $attachmentId = $this->upload($this->tech, $wo, UploadedFile::fake()->create('form.pdf', 20, 'application/pdf'))
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $this->actingAs($this->manager)->deleteJson("/api/attachments/{$attachmentId}")->assertForbidden();
+        $this->actingAs($this->admin)->deleteJson("/api/attachments/{$attachmentId}")->assertForbidden();
+
+        $this->assertNull(
+            Attachment::withoutGlobalScopes()->find($attachmentId)->deleted_at,
+            'The evidence for a closed work order must survive.',
+        );
+    }
+
+    public function test_a_cancelled_work_orders_attachment_cannot_be_deleted(): void
+    {
+        $wo = $this->completedWorkOrder();
+        $attachmentId = $this->upload($this->tech, $wo, UploadedFile::fake()->create('form.pdf', 20, 'application/pdf'))
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/cancel", [
+            'reason' => 'Not needed after all.',
+            'asset_status' => 'ready_for_field',
+        ])->assertOk();
+
+        $this->actingAs($this->manager)->deleteJson("/api/attachments/{$attachmentId}")->assertForbidden();
+    }
+
+    /**
+     * The counterweight: a work order still in flight is a working document, and
+     * a mistaken upload must stay removable.
+     */
+    public function test_an_open_work_orders_attachment_can_still_be_deleted(): void
+    {
+        $wo = $this->completedWorkOrder();
+        $attachmentId = $this->upload($this->tech, $wo, UploadedFile::fake()->create('wrong.pdf', 20, 'application/pdf'))
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->actingAs($this->manager)->deleteJson("/api/attachments/{$attachmentId}")->assertOk();
     }
 
     /**

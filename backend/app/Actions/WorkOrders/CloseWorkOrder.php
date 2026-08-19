@@ -20,6 +20,7 @@ use App\Notifications\WorkOrders\WorkOrderClosedNotification;
 use App\Services\Audit\AuditLogger;
 use App\Support\Assets\AssetFieldStatus;
 use App\Support\FrontendUrl;
+use App\Support\WorkOrders\PmServiceResolution;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -46,16 +47,24 @@ class CloseWorkOrder
      *                                            due, and the team did both. Resets that
      *                                            assignment's baselines and retires any
      *                                            PM request already raised for it.
+     * @param  bool  $servicedPmAssignmentProvided  Whether the caller mentioned the field
+     *                                              at all. Together with a null id this
+     *                                              is **suppression** — "no PM level
+     *                                              applies to this close" — which is a
+     *                                              different instruction from omitting
+     *                                              the field, and must not be collapsed
+     *                                              into it. {@see PmServiceResolution}
      */
     public function execute(
         WorkOrder $workOrder,
         int $closedByUserId,
         ?bool $isFailureOverride = null,
-        ?int $servicedPmAssignmentId = null
+        ?int $servicedPmAssignmentId = null,
+        bool $servicedPmAssignmentProvided = false
     ): WorkOrder {
         $this->warnings = [];
 
-        return DB::transaction(function () use ($workOrder, $closedByUserId, $isFailureOverride, $servicedPmAssignmentId) {
+        return DB::transaction(function () use ($workOrder, $closedByUserId, $isFailureOverride, $servicedPmAssignmentId, $servicedPmAssignmentProvided) {
             $logger = app(AuditLogger::class);
             $locked = WorkOrder::where('id', $workOrder->id)->lockForUpdate()->first();
 
@@ -103,7 +112,17 @@ class CloseWorkOrder
             app(ApplyWorkOrderAssetStatusTransition::class)
                 ->execute($locked, OperationalStatus::READY_FOR_FIELD);
 
-            $this->resetCondition($locked, $logger, $servicedPmAssignmentId);
+            // Resolved once, here, before anything consumes it. Both the
+            // condition reset below and applyServicedAssignment further down
+            // need the same answer, and working it out twice is how they come
+            // to disagree.
+            $pmService = PmServiceResolution::resolve(
+                WorkOrderPmMark::where('work_order_id', $locked->id)->first(),
+                $servicedPmAssignmentProvided,
+                $servicedPmAssignmentId,
+            );
+
+            $this->resetCondition($locked, $logger, $pmService);
 
             // Confirm this work order's readings before anything reads them back.
             // Both PM baseline queries below (the assignment's own, and the one
@@ -156,7 +175,7 @@ class CloseWorkOrder
             // the workshop, a PM level was due, and the team did both. The branch
             // above only fires for preventive work orders (they carry a pm_rule_id);
             // this is the corrective path, which has none.
-            $this->applyServicedAssignment($locked, $servicedPmAssignmentId, $closedByUserId, $logger);
+            $this->applyServicedAssignment($locked, $pmService, $closedByUserId, $logger);
 
             // Capture the meter position *after* readings are confirmed and after any
             // baseline reset, so the snapshot reflects the state this close leaves behind.
@@ -211,44 +230,54 @@ class CloseWorkOrder
      * work that is done.
      */
     /**
-     * Decide which PM assignment this close should treat as serviced, and apply
-     * it through the existing declared-service path.
+     * Apply the PM decision {@see PmServiceResolution} already reached.
      *
-     * Two sources can name one:
+     * The three outcomes and why each behaves as it does:
      *
-     *  - `serviced_pm_assignment_id` in the close payload — the closer saying so
-     *    at the moment of signing off;
-     *  - a mark staged during the work (RQ1) — the technician saying so while
-     *    they were doing it.
-     *
-     * **The payload wins.** It is the later and more deliberate act, and a 409
-     * on disagreement would strand a work order over which of two plausible
-     * levels was performed — a paperwork dispute must never block an operational
-     * transition. The discrepancy is audited instead.
-     *
-     * A staged mark whose assignment has since been deactivated is **skipped**,
-     * audited and reported in `warnings` — the same treatment
-     * `ConfirmWorkOrderReadings` gives a reading that fails its guard, and for
-     * the same reason.
+     *  - **`payload`** — the closer named a level at the moment of signing off.
+     *    It **wins** over any staged mark: the later, more deliberate act. A 409
+     *    on disagreement would strand a work order over which of two plausible
+     *    levels was performed, and a paperwork dispute must never block an
+     *    operational transition. The discrepancy is audited instead. A bad id
+     *    here *is* a 409 — the closer typed it, so they can fix it.
+     *  - **`mark`** — the technician marked a level during the work and the
+     *    closer did not contradict it. A schedule deactivated in the meantime is
+     *    **skipped, audited and warned about**, never a 409: nobody chose this
+     *    id at close time, so refusing the close punishes the wrong person. Same
+     *    treatment `ConfirmWorkOrderReadings` gives a reading that fails a guard.
+     *  - **`suppressed`** — an explicit null: the closer says no level applies,
+     *    overriding the mark. Audited, because it contradicts what the
+     *    technician recorded.
      */
     private function applyServicedAssignment(
         WorkOrder $workOrder,
-        ?int $payloadAssignmentId,
+        PmServiceResolution $pmService,
         int $closedByUserId,
         AuditLogger $logger
     ): void {
-        $mark = WorkOrderPmMark::where('work_order_id', $workOrder->id)->first();
+        $mark = $pmService->mark;
 
-        if ($payloadAssignmentId !== null) {
-            if ($mark !== null && $mark->asset_pm_assignment_id !== $payloadAssignmentId) {
-                $logger->log('work_order_pm_mark.superseded', $workOrder, [], [], [
+        if ($pmService->source === 'suppressed') {
+            if ($mark !== null) {
+                $logger->log('work_order_pm_mark.suppressed', $workOrder, [], [], [
                     'work_order_id' => $workOrder->id,
                     'marked_assignment_id' => $mark->asset_pm_assignment_id,
-                    'closed_with_assignment_id' => $payloadAssignmentId,
                 ]);
             }
 
-            $this->recordDeclaredService($workOrder, $payloadAssignmentId, $closedByUserId, $logger);
+            return;
+        }
+
+        if ($pmService->source === 'payload') {
+            if ($pmService->supersedesMark()) {
+                $logger->log('work_order_pm_mark.superseded', $workOrder, [], [], [
+                    'work_order_id' => $workOrder->id,
+                    'marked_assignment_id' => $mark->asset_pm_assignment_id,
+                    'closed_with_assignment_id' => $pmService->assignmentId,
+                ]);
+            }
+
+            $this->recordDeclaredService($workOrder, $pmService->assignmentId, $closedByUserId, $logger);
 
             return;
         }
@@ -452,7 +481,7 @@ class CloseWorkOrder
      *    exactly as it was and the omission is reported, rather than clearing a
      *    value nobody replaced.
      */
-    private function resetCondition(WorkOrder $workOrder, AuditLogger $logger, ?int $servicedPmAssignmentId): void
+    private function resetCondition(WorkOrder $workOrder, AuditLogger $logger, PmServiceResolution $pmService): void
     {
         $asset = $workOrder->asset()->lockForUpdate()->first();
 
@@ -468,10 +497,11 @@ class CloseWorkOrder
         // level — staged during the work or named in the close payload — the
         // inspection is accounted for and there is nothing to warn about. This
         // is what stops the notice firing on the common, correct case.
-        $pmAccountedFor = $servicedPmAssignmentId !== null
-            || WorkOrderPmMark::where('work_order_id', $workOrder->id)->exists();
-
-        if ($previous === AssetFieldStatus::NEED_INSPECTION && ! $pmAccountedFor) {
+        //
+        // Reads the shared resolution rather than re-deriving it. Checking the
+        // mark table directly would silence this warning on a close that
+        // explicitly suppressed the mark — the one case it most needs to fire.
+        if ($previous === AssetFieldStatus::NEED_INSPECTION && ! $pmService->accountedFor()) {
             $this->warnings[] = 'This asset was flagged Need Inspection and no PM level was recorded on this '
                 .'work order. Confirm the inspection was carried out before relying on its schedule.';
         }

@@ -262,8 +262,18 @@ export function useWorkOrderDetail() {
   // reading baselines and retires any service request already raised for it.
   const serviceDeclared = ref(false)
   const servicedAssignmentId = ref<number | null>(null)
+  /**
+   * What was already marked when the close dialog opened.
+   *
+   * Kept so `doClose` can tell "the closer left the staged mark alone" from
+   * "the closer chose this level" — the same value on the wire, but a different
+   * instruction. See the payload comment in `doClose`.
+   */
+  const stagedAssignmentIdAtOpen = ref<number | null>(null)
   const serviceAssignments = ref<AssetPmAssignment[]>([])
   const serviceAssignmentsLoading = ref(false)
+  /** Which asset `serviceAssignments` was loaded for — the cache key. */
+  const serviceAssignmentsAssetId = ref<number | null>(null)
 
   // Due schedules first — due-ness is what prompts the declaration in the first
   // place, so it should not be buried under schedules that are not yet relevant.
@@ -739,8 +749,9 @@ export function useWorkOrderDetail() {
     // shows what was already recorded rather than asking again. The closer can
     // still override — the backend takes the payload over the mark and audits
     // the difference.
-    serviceDeclared.value = pmMark.value !== null
-    servicedAssignmentId.value = pmMark.value?.asset_pm_assignment_id ?? null
+    stagedAssignmentIdAtOpen.value = pmMark.value?.asset_pm_assignment_id ?? null
+    serviceDeclared.value = stagedAssignmentIdAtOpen.value !== null
+    servicedAssignmentId.value = stagedAssignmentIdAtOpen.value
     closeOpen.value = true
     void loadServiceAssignments()
   }
@@ -752,16 +763,27 @@ export function useWorkOrderDetail() {
    */
   async function loadServiceAssignments() {
     if (!record.value) return
-    // Two surfaces want this list now — the mid-work PM picker and the close
-    // dialog — and neither should refetch what the other already has.
-    if (serviceAssignments.value.length > 0 || serviceAssignmentsLoading.value) return
+    const assetId = record.value.asset.id
+
+    // Two surfaces want this list — the mid-work PM picker and the close dialog
+    // — and neither should refetch what the other already has. Keyed by asset,
+    // not by "is it empty": the router reuses this component when only the work
+    // order id changes, so a bare non-empty check would serve one work order's
+    // schedules to another and let the closer submit an assignment that does
+    // not belong to the asset in front of them.
+    if (serviceAssignmentsAssetId.value === assetId || serviceAssignmentsLoading.value) return
+
     serviceAssignmentsLoading.value = true
     try {
-      serviceAssignments.value = await fetchList<AssetPmAssignment>(
-        `/assets/${record.value.asset.id}/pm-assignments`,
-      )
+      const rows = await fetchList<AssetPmAssignment>(`/assets/${assetId}/pm-assignments`)
+      // The asset can change while this is in flight; a late response must not
+      // overwrite the list for whatever is on screen now.
+      if (record.value?.asset.id !== assetId) return
+      serviceAssignments.value = rows
+      serviceAssignmentsAssetId.value = assetId
     } catch {
       serviceAssignments.value = []
+      serviceAssignmentsAssetId.value = null
     } finally {
       serviceAssignmentsLoading.value = false
     }
@@ -775,15 +797,28 @@ export function useWorkOrderDetail() {
       // classification. The key is omitted entirely for PM WOs and when unset.
       const payload: {
         is_failure?: boolean
-        serviced_pm_assignment_id?: number
+        serviced_pm_assignment_id?: number | null
       } = {}
       if (isCorrectiveOrigin.value && closeIsFailure.value !== null) {
         payload.is_failure = closeIsFailure.value
       }
-      // Only sent when the closer both ticked the box and picked a schedule —
-      // the backend resets baselines off this, so a stray id is not harmless.
-      if (serviceDeclared.value && servicedAssignmentId.value !== null) {
-        payload.serviced_pm_assignment_id = servicedAssignmentId.value
+
+      // Three states, and the difference matters:
+      //
+      //   omitted  → the closer did not touch what was marked during the work;
+      //              let the backend apply it, including its skip-and-warn path
+      //              for a schedule deactivated since
+      //   integer  → the closer chose this level, overriding any staged mark
+      //   null     → the closer unticked the box; no level applies
+      //
+      // Echoing the staged mark back as an explicit integer — which this used to
+      // do on every close — collapsed the first case into the second. It also
+      // turned the backend's intended warning about a deactivated schedule into
+      // a 409 that blocked the close outright.
+      const chosen = serviceDeclared.value ? servicedAssignmentId.value : null
+
+      if (chosen !== stagedAssignmentIdAtOpen.value) {
+        payload.serviced_pm_assignment_id = chosen
       }
       const response = await api.post<{ warnings?: string[] }>(
         `/work-orders/${record.value.id}/close`,

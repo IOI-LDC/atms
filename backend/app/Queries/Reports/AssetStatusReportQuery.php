@@ -7,6 +7,7 @@ use App\Enums\OperationalStatus;
 use App\Enums\WorkOrderStatus;
 use App\Models\Asset;
 use App\Models\Booking;
+use App\Support\Assets\AssetConditionLabels;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\LazyCollection;
@@ -37,6 +38,7 @@ class AssetStatusReportQuery
      * @param  array{
      *     location_id?: ?int,
      *     operational_status?: ?string,
+     *     condition_status?: ?string,
      *     asset_kind?: ?string,
      *     maintenance_category_id?: ?int,
      *     booked?: ?bool,
@@ -45,7 +47,12 @@ class AssetStatusReportQuery
      *     date_field?: ?string,
      * }  $filters
      * @return array{
-     *     summary: array{total: int, by_status: array<string, int>, booked: int},
+     *     summary: array{
+     *         total: int,
+     *         by_status: array<string, int>,
+     *         by_condition: array<int, array{value: string, label: string, count: int}>,
+     *         booked: int,
+     *     },
      *     paginator: CursorPaginator,
      *     stream: \Closure(): LazyCollection,
      * }
@@ -87,6 +94,7 @@ class AssetStatusReportQuery
             ->where('maintenance_status', MaintenanceStatus::ENROLLED->value)
             ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->where('current_location_id', $v))
             ->when($filters['operational_status'] ?? null, fn ($q, $v) => $q->where('operational_status', $v))
+            ->when($filters['condition_status'] ?? null, fn ($q, $v) => $q->where('condition_status', $v))
             ->when($filters['asset_kind'] ?? null, fn ($q, $v) => $q->where('asset_kind', $v))
             ->when($filters['maintenance_category_id'] ?? null, fn ($q, $v) => $q->where('maintenance_category_id', $v))
             ->when($filters['from'] ?? null, fn ($q, $v) => $q->whereDate($dateField, '>=', $v))
@@ -103,7 +111,12 @@ class AssetStatusReportQuery
      * the rows below it.
      *
      * @param  array<string, mixed>  $filters
-     * @return array{total: int, by_status: array<string, int>, booked: int}
+     * @return array{
+     *     total: int,
+     *     by_status: array<string, int>,
+     *     by_condition: array<int, array{value: string, label: string, count: int}>,
+     *     booked: int,
+     * }
      */
     private function summarise(array $filters): array
     {
@@ -118,8 +131,41 @@ class AssetStatusReportQuery
         return [
             'total' => (clone $this->base($filters))->count(),
             'by_status' => $byStatus,
+            'by_condition' => $this->byCondition($filters),
             'booked' => (clone $this->base($filters))->whereIn('id', $this->bookedAssetIds())->count(),
         ];
+    }
+
+    /**
+     * Condition breakdown, derived from what the filtered set actually holds.
+     *
+     * A **list**, not the fixed keyed map `by_status` uses, because the two are
+     * different kinds of thing: `OperationalStatus` is a closed enum of four, so
+     * a zero for each is meaningful. Conditions are an Admin-editable vocabulary
+     * — enumerating every configured value would put a permanent row of zeroes
+     * in front of the reader for conditions no asset has, and the shape would
+     * change whenever LDC edit the list.
+     *
+     * The null bucket is included and labelled, so the counts sum to `total`.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<int, array{value: string, label: string, count: int}>
+     */
+    private function byCondition(array $filters): array
+    {
+        $rows = (clone $this->base($filters))
+            ->selectRaw('condition_status, count(*) as c')
+            ->groupBy('condition_status')
+            ->orderByRaw('condition_status IS NULL, condition_status')
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'value' => (string) ($r->condition_status ?? ''),
+            'label' => $r->condition_status === null
+                ? 'Unrecorded'
+                : (AssetConditionLabels::for($r->condition_status) ?? $r->condition_status),
+            'count' => (int) $r->c,
+        ])->all();
     }
 
     /**

@@ -2,10 +2,10 @@
 
 namespace App\Actions\Assets;
 
+use App\Exceptions\AssetTagConflictException;
 use App\Jobs\ReconcilePmCategoryAssignmentsJob;
 use App\Models\Asset;
 use App\Services\Audit\AuditLogger;
-use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -32,7 +32,7 @@ class UpdateAssetFields
                 $asset->update($fieldUpdates);
             } catch (QueryException $e) {
                 if (str_contains($e->getMessage(), 'unique constraint') || str_contains($e->getMessage(), '23505')) {
-                    throw new DomainException('The generated asset tag is already in use.');
+                    throw new AssetTagConflictException('The generated asset tag is already in use.');
                 }
 
                 throw $e;

@@ -43,7 +43,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('assets', function (Blueprint $table) {
-            $table->string('erp_status')->nullable();
+            // `default('active')` restores the column as `create_assets_table`
+            // declared it. Without it, a rollback followed by any insert written
+            // against the old schema would fail on a NOT NULL column with no
+            // default — a rollback that leaves the table subtly different from
+            // what it was is not a rollback.
+            $table->string('erp_status')->default('active');
         });
     }
 };

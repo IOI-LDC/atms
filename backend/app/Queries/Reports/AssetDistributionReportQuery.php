@@ -7,6 +7,7 @@ use App\Enums\OperationalStatus;
 use App\Models\Asset;
 use App\Models\Location;
 use App\Models\MaintenanceCategory;
+use App\Support\Assets\AssetConditionLabels;
 use App\Support\Size;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -42,11 +43,20 @@ use InvalidArgumentException;
  */
 class AssetDistributionReportQuery
 {
-    /** Dimension => the assets column it groups on. */
+    /**
+     * Dimension => the assets column it groups on.
+     *
+     * `condition` is a real dimension, not a widening set of count columns. The
+     * vocabulary is Admin-editable, so per-condition columns would change shape
+     * whenever LDC add or retire a value — a CSV whose header depends on the
+     * database is one nobody can build a spreadsheet against. As a grouping
+     * column it behaves exactly like the other three and the file stays stable.
+     */
     private const DIMENSIONS = [
         'location' => 'current_location_id',
         'maintenance_category' => 'maintenance_category_id',
         'size' => 'size_inches',
+        'condition' => 'condition_status',
     ];
 
     /** Dimension => label for the bucket holding assets with no value. */
@@ -54,11 +64,13 @@ class AssetDistributionReportQuery
         'location' => 'Unassigned',
         'maintenance_category' => 'Uncategorised',
         'size' => 'Unspecified',
+        // Distinct from a condition of "Normal": nothing has been recorded.
+        'condition' => 'Unrecorded',
     ];
 
     /**
      * @param  array<int, string>  $groupBy  Ordered dimensions; column order follows it.
-     * @param  array{maintenance_category_id?: ?int, asset_kind?: ?string, operational_status?: ?string, include_inactive?: bool}  $filters
+     * @param  array{maintenance_category_id?: ?int, asset_kind?: ?string, operational_status?: ?string, condition_status?: ?string, include_inactive?: bool}  $filters
      * @return array{
      *     group_by: array<int, string>,
      *     summary: array{total_assets: int, total_groups: int, total_booked: int},
@@ -131,6 +143,7 @@ class AssetDistributionReportQuery
             ->when($filters['maintenance_category_id'] ?? null, fn ($q, $v) => $q->where('maintenance_category_id', $v))
             ->when($filters['asset_kind'] ?? null, fn ($q, $v) => $q->where('asset_kind', $v))
             ->when($filters['operational_status'] ?? null, fn ($q, $v) => $q->where('operational_status', $v))
+            ->when($filters['condition_status'] ?? null, fn ($q, $v) => $q->where('condition_status', $v))
             ->when(! ($filters['include_inactive'] ?? false), fn ($q) => $q->where('is_active', true))
             ->selectRaw('count(*) as asset_count')
             ->selectRaw('sum(case when operational_status = ? then 1 else 0 end) as ready_for_field_count', [OperationalStatus::READY_FOR_FIELD->value])
@@ -177,6 +190,9 @@ class AssetDistributionReportQuery
                 'size' => $keys->mapWithKeys(fn ($k) => [
                     (string) $k => Size::fromCanonical((string) $k)->format(),
                 ])->all(),
+                // Includes retired conditions: assets still carry them, and the
+                // report must name what it is counting.
+                'condition' => AssetConditionLabels::map(),
             };
         }
 
