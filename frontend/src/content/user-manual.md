@@ -80,8 +80,7 @@ following are explicitly excluded and remain in other systems:
   `sendMail` cover account activation, password reset, and the MR/WO workflow
   (submitted, approved, rejected; assigned, started, completed, closed,
   cancelled). No other outbound notification channel exists.
-- **Advanced BI** — read-only operational dashboard KPIs and reports (Section
-  16) are provided, but there is no custom report builder, data warehouse, or
+- **Advanced BI** — read-only operational dashboard KPIs and reports (Section 16) are provided, but there is no custom report builder, data warehouse, or
   BI integration.
 - **ERP write-back** — the system does not update the ERP with maintenance or
   financial records.
@@ -487,17 +486,17 @@ Every asset carries the following fields, stored in the `assets` table:
 
 **Identification & Description:**
 
-| Field | Type | Purpose |
-|---|---|---|
-| `erp_asset_code` | string (unique) | The asset's identifier in the client's ERP system. Links the ATMS asset to its ERP financial record. Required on creation. |
-| `name` | string (required) | Human-readable name (e.g. "Mud Motor 6 3/4\" Lobe"). |
-| `description` | text (nullable) | Free-text notes about the asset. |
-| `category` | string (nullable) | User-defined grouping (e.g. "Downhole Tools", "Surface Equipment"). |
-| `serial_number` | string (nullable) | Manufacturer serial number. Critical for asset tag generation. |
-| `model` | string (nullable) | Manufacturer model designation. |
-| `manufacturer` | string (nullable) | Manufacturer name or ERP vendor code. |
-| `fa_subclass_code` | string (nullable, max 20) | ERP Fixed Asset subclass code — maps to the asset's accounting classification in the ERP (e.g. "MTR" for Mud Motor). Written by the ERP sync, so it describes an asset but never routes ATMS behaviour; it drives asset tag type codes only — reports filter and group on Maintenance Category instead. Populated during ERP import; may be manually set. |
-| `maintenance_category_id` | integer (required) | The ATMS-owned Maintenance Category. Required on every asset — an unclassified asset carries the **Unclassified** category rather than no category. Routes WO Form templates and is what PM rules may cover. |
+| Field                     | Type                      | Purpose                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `erp_asset_code`          | string (unique)           | The asset's identifier in the client's ERP system. Links the ATMS asset to its ERP financial record. Required on creation.                                                                                                                                                                                                                                |
+| `name`                    | string (required)         | Human-readable name (e.g. "Mud Motor 6 3/4\" Lobe").                                                                                                                                                                                                                                                                                                      |
+| `description`             | text (nullable)           | Free-text notes about the asset.                                                                                                                                                                                                                                                                                                                          |
+| `category`                | string (nullable)         | User-defined grouping (e.g. "Downhole Tools", "Surface Equipment").                                                                                                                                                                                                                                                                                       |
+| `serial_number`           | string (nullable)         | Manufacturer serial number. Critical for asset tag generation.                                                                                                                                                                                                                                                                                            |
+| `model`                   | string (nullable)         | Manufacturer model designation.                                                                                                                                                                                                                                                                                                                           |
+| `manufacturer`            | string (nullable)         | Manufacturer name or ERP vendor code.                                                                                                                                                                                                                                                                                                                     |
+| `fa_subclass_code`        | string (nullable, max 20) | ERP Fixed Asset subclass code — maps to the asset's accounting classification in the ERP (e.g. "MTR" for Mud Motor). Written by the ERP sync, so it describes an asset but never routes ATMS behaviour; it drives asset tag type codes only — reports filter and group on Maintenance Category instead. Populated during ERP import; may be manually set. |
+| `maintenance_category_id` | integer (required)        | The ATMS-owned Maintenance Category. Required on every asset — an unclassified asset carries the **Unclassified** category rather than no category. Routes WO Form templates and is what PM rules may cover.                                                                                                                                              |
 
 **Status Fields — Four Orthogonal Dimensions:**
 
@@ -507,20 +506,21 @@ bookings table. They operate independently — a change to one does not
 automatically affect another (with the documented exceptions: WO closure resets
 Condition, and deactivation/withdrawal auto-release bookings).
 
-| Field | Enum | Question It Answers | Values |
-|---|---|---|---|
-| `operational_status` | `OperationalStatus` | **Is the asset working right now?** | `ready_for_field`, `under_maintenance`, `failure`, `at_the_field` |
-| `maintenance_status` | `MaintenanceStatus` | **Is the asset in the maintenance program?** | `enrolled`, `withdrawn` |
-| `condition_status` | string (vocabulary) | **What condition is the asset in?** | **Normal** (default), **Need Assembly**, **Missing Parts**, **Need Inspection** — Administrator-editable labels (Section 5.10) |
-| `is_booked` | boolean (derived) | **Is it reserved for a future job?** | `true` (an active booking covers today), `false` (no active booking) |
+| Field                | Enum                | Question It Answers                          | Values                                                                                                                         |
+| -------------------- | ------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `operational_status` | `OperationalStatus` | **Is the asset working right now?**          | `ready_for_field`, `under_maintenance`, `failure`, `at_the_field`                                                              |
+| `maintenance_status` | `MaintenanceStatus` | **Is the asset in the maintenance program?** | `enrolled`, `withdrawn`                                                                                                        |
+| `condition_status`   | string (vocabulary) | **What condition is the asset in?**          | **Normal** (default), **Need Assembly**, **Missing Parts**, **Need Inspection** — Administrator-editable labels (Section 5.10) |
+| `is_booked`          | boolean (derived)   | **Is it reserved for a future job?**         | `true` (an active booking covers today), `false` (no active booking)                                                           |
 
 And a fifth dimension for the asset record itself:
 
-| Field | Type | Question It Answers |
-|---|---|---|
+| Field       | Type    | Question It Answers                                                                                                                                                             |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `is_active` | boolean | **Does the asset record exist in the active registry?** `true` = active, `false` = deactivated — the way an asset is scrapped or taken permanently out of service (Section 5.9) |
 
 **Why four separate statuses?** Each answers a different operational question:
+
 - An asset can be `operational_status = ready_for_field` (working fine) while
   `maintenance_status = enrolled` (in the program, being monitored by PM rules).
 - It can be `operational_status = under_maintenance` (currently in the workshop)
@@ -537,6 +537,7 @@ And a fifth dimension for the asset record itself:
   workflow (Section 5.10).
 
 For detailed explanations, see:
+
 - **Section 5.4** — Asset Maintenance Status (`maintenance_status`)
 - **Section 5.5** — Asset Booking (`is_booked`)
 - **Section 5.9** — Asset Operational Status (`operational_status`)
@@ -544,32 +545,32 @@ For detailed explanations, see:
 
 **Hierarchy & Assembly:**
 
-| Field | Type | Purpose |
-|---|---|---|
-| `asset_kind` | `AssetKind` enum | Declares the asset's role in assembly: `asset` (standalone), `package` (can have children), `component` (installable). See Section 5.2. |
-| `parent_asset_id` | FK → `assets.id`, nullable | If set, this asset is installed inside the parent. `NULL` = standalone, root, or spare. See Section 5.6. |
-| `asset_tag` | string (max 15, unique) | Human-readable physical label. See Section 5.3. |
+| Field             | Type                       | Purpose                                                                                                                                 |
+| ----------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `asset_kind`      | `AssetKind` enum           | Declares the asset's role in assembly: `asset` (standalone), `package` (can have children), `component` (installable). See Section 5.2. |
+| `parent_asset_id` | FK → `assets.id`, nullable | If set, this asset is installed inside the parent. `NULL` = standalone, root, or spare. See Section 5.6.                                |
+| `asset_tag`       | string (max 15, unique)    | Human-readable physical label. See Section 5.3.                                                                                         |
 
 **ERP Reference:**
 
-| Field | Type | Purpose |
-|---|---|---|
-| `erp_raw_data` | JSON (nullable) | The complete, unmodified ERP record as received during import. Hidden from API responses for non-Administrators. |
-| `erp_last_synced_at` | timestamp (nullable) | When the ERP record was last refreshed. |
+| Field                | Type                 | Purpose                                                                                                          |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `erp_raw_data`       | JSON (nullable)      | The complete, unmodified ERP record as received during import. Hidden from API responses for non-Administrators. |
+| `erp_last_synced_at` | timestamp (nullable) | When the ERP record was last refreshed.                                                                          |
 
 **Location (owned by AM, displayed by ATMS):**
 
-| Field | Type | Purpose |
-|---|---|---|
+| Field                 | Type                          | Purpose                                                                                        |
+| --------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------- |
 | `current_location_id` | FK → `locations.id`, nullable | The asset's current physical location. Updated via AM workflows or the ATMS Locations section. |
 
 **Timestamps & Metadata:**
 
-| Field | Type | Purpose |
-|---|---|---|
-| `created_at` / `updated_at` | timestamps | Standard Laravel timestamps. |
-| `asset_tag_generated_at` | timestamp (nullable) | When the asset tag was auto-generated (set during initial save). |
-| `asset_tag_override_reason` | text (nullable) | Audit reason if an Administrator manually changed the asset tag after creation. |
+| Field                       | Type                 | Purpose                                                                         |
+| --------------------------- | -------------------- | ------------------------------------------------------------------------------- |
+| `created_at` / `updated_at` | timestamps           | Standard Laravel timestamps.                                                    |
+| `asset_tag_generated_at`    | timestamp (nullable) | When the asset tag was auto-generated (set during initial save).                |
+| `asset_tag_override_reason` | text (nullable)      | Audit reason if an Administrator manually changed the asset tag after creation. |
 
 #### Asset Activation vs. Deactivation
 
@@ -616,12 +617,12 @@ ATMS.
 The `fa_subclass_code` is a short string (up to 20 characters) that classifies
 the asset according to the ERP's Fixed Asset subclass taxonomy. Examples:
 
-| Code | Meaning |
-|---|---|
-| `MTR` | Mud Motor |
-| `MWD` | MWD/LWD Tools |
-| `DHT` | Downhole Tools |
-| `JRS` | Jars |
+| Code  | Meaning               |
+| ----- | --------------------- |
+| `MTR` | Mud Motor             |
+| `MWD` | MWD/LWD Tools         |
+| `DHT` | Downhole Tools        |
+| `JRS` | Jars                  |
 | `MEQ` | Machinery / Equipment |
 
 The FA subclass code drives exactly one system feature:
@@ -646,11 +647,11 @@ determines whether the asset has an **assembly state** (Installed / Ready).
 
 There are three asset kinds, defined by the `App\Enums\AssetKind` enum:
 
-| Kind          | Database Value  | Can Have Parent? | Can Have Children? | Typical Example                                            |
-| ------------- | --------------- | ---------------- | ------------------ | ---------------------------------------------------------- |
-| **Asset**     | `asset`         | No               | No                 | Rotor, Stator (indivisible leaf unit)                      |
-| **Package**   | `package`       | Yes              | Yes                | Motor, Power Section (can be both parent and child)        |
-| **Component** | `component`     | Yes              | No                 | Radial Bearing (designed to be installed, has no children) |
+| Kind          | Database Value | Can Have Parent? | Can Have Children? | Typical Example                                            |
+| ------------- | -------------- | ---------------- | ------------------ | ---------------------------------------------------------- |
+| **Asset**     | `asset`        | No               | No                 | Rotor, Stator (indivisible leaf unit)                      |
+| **Package**   | `package`      | Yes              | Yes                | Motor, Power Section (can be both parent and child)        |
+| **Component** | `component`    | Yes              | No                 | Radial Bearing (designed to be installed, has no children) |
 
 #### Asset (`asset`)
 
@@ -731,11 +732,11 @@ The asset kind determines whether an asset has an assembly state at all. The
 state itself is **derived** from `parent_asset_id` — there is no separate field
 to set (see Section 5.6 for install/remove operations):
 
-| Asset Kind     | Assembly State               | Derivation                                     |
-| -------------- | --------------------------------------- | ------------------------------------------------------ |
-| `asset`        | *(none)* — no assembly state is shown   | N/A (standalone, no parent)                            |
-| `package`      | Installed / Ready                    | Installed ⇔ `parent_asset_id` is set            |
-| `component`    | Installed / Ready                    | Installed ⇔ `parent_asset_id` is set            |
+| Asset Kind  | Assembly State                        | Derivation                           |
+| ----------- | ------------------------------------- | ------------------------------------ |
+| `asset`     | _(none)_ — no assembly state is shown | N/A (standalone, no parent)          |
+| `package`   | Installed / Ready                     | Installed ⇔ `parent_asset_id` is set |
+| `component` | Installed / Ready                     | Installed ⇔ `parent_asset_id` is set |
 
 **Consistency rules (enforced):**
 
@@ -762,8 +763,8 @@ change an asset's kind:
 
 If a user without the required role attempts to set `asset_kind` (during asset
 creation or update), the backend returns a `403 Forbidden` response with the
-message: *"Only administrators and maintenance managers can change lifecycle
-fields."* The field is not displayed in the UI for unauthorized roles.
+message: _"Only administrators and maintenance managers can change lifecycle
+fields."_ The field is not displayed in the UI for unauthorized roles.
 
 #### Choosing the Right Kind — Decision Guide
 
@@ -889,14 +890,14 @@ a booking is never overwritten, only superseded by a new one or ended.
 
 **What a booking records:**
 
-| Field | Purpose |
-|---|---|
-| `booked_from` / `booked_until` | The reservation date range (required). |
-| `booking_reference` | Optional job/project reference (e.g. "JOB-2026-014"). |
-| `notes` | Optional free-text context. |
-| `booked_by` | The user who created the booking. |
-| `status` | `active`, `cancelled`, or `released`. |
-| `cancelled_at` | When the booking was cancelled or released. |
+| Field                          | Purpose                                               |
+| ------------------------------ | ----------------------------------------------------- |
+| `booked_from` / `booked_until` | The reservation date range (required).                |
+| `booking_reference`            | Optional job/project reference (e.g. "JOB-2026-014"). |
+| `notes`                        | Optional free-text context.                           |
+| `booked_by`                    | The user who created the booking.                     |
+| `status`                       | `active`, `cancelled`, or `released`.                 |
+| `cancelled_at`                 | When the booking was cancelled or released.           |
 
 **How booking works:**
 
@@ -1044,7 +1045,7 @@ triggered by an Admin or Manager.
   sync process.
 - Own stock as a ledger. **ERP remains the quantity authority**: the scheduled
   sync overwrites `available_quantity` wholesale, discarding local movements
-  since the last run. ATMS consumption keeps the number accurate *between*
+  since the last run. ATMS consumption keeps the number accurate _between_
   refreshes; it is not an inventory system.
 - Manage inventory valuation or warehouse operations — owned by SM.
 - View raw ERP payloads (Administrator only).
@@ -1078,12 +1079,12 @@ deployed at the field.
 Operational status is defined by the `App\Enums\OperationalStatus` enum with
 four values:
 
-| DB Value | Display Label | Meaning |
-|---|---|---|
-| `ready_for_field` | **Ready for Field** | The asset is fully operational and available for normal use. |
-| `under_maintenance` | **Under Maintenance** | The asset is currently in the workshop being serviced. Work is in progress. |
-| `failure` | **Failure** | The asset has a confirmed fault and is not operational. It is waiting to be repaired. |
-| `at_the_field` | **At the Field** | The asset is deployed at a rig or well site. This value is **derived from location** — it is never selected by hand. |
+| DB Value            | Display Label         | Meaning                                                                                                              |
+| ------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ready_for_field`   | **Ready for Field**   | The asset is fully operational and available for normal use.                                                         |
+| `under_maintenance` | **Under Maintenance** | The asset is currently in the workshop being serviced. Work is in progress.                                          |
+| `failure`           | **Failure**           | The asset has a confirmed fault and is not operational. It is waiting to be repaired.                                |
+| `at_the_field`      | **At the Field**      | The asset is deployed at a rig or well site. This value is **derived from location** — it is never selected by hand. |
 
 #### How Operational Status Changes
 
@@ -1098,18 +1099,18 @@ during a WO — but only to `ready_for_field`, `under_maintenance`, or `failure`
 
 The `ApplyWorkOrderAssetStatusTransition` action runs at these lifecycle points:
 
-| Event | Target Status | Logic |
-|---|---|---|
-| **Corrective MR approved** → WO created | `failure` | A corrective request means someone reported a fault — the asset is now confirmed as faulty. **Skip if** the asset is already `under_maintenance` (e.g., a concurrent PM is in progress). **Preventive MRs do not trigger this** — a scheduled service does not mean the asset was broken. |
-| **WO started** (`open` → `in_progress`) | `under_maintenance` | Work has begun in the workshop. The asset is now being actively serviced. **Always applied** — this transition is not conditional. |
-| **WO closed** (`completed` → `closed`) | `ready_for_field` — always | Closure means the work is done and verified: the asset goes back into service. Nobody is asked to choose. Closure also resets the asset's Condition to **Normal** (Section 5.10); if the prior Condition was **Need Inspection** and no PM was marked as performed on this closure, the closer sees a non-blocking warning reminding them the inspection question is still open. |
-| **WO cancelled** | Caller-chosen — `failure` or `ready_for_field` | When cancelling a WO, the user must decide: is the asset still faulty? Choose **Failure** if the fault remains, or **Ready for Field** if the WO was a false alarm. |
+| Event                                   | Target Status                                  | Logic                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Corrective MR approved** → WO created | `failure`                                      | A corrective request means someone reported a fault — the asset is now confirmed as faulty. **Skip if** the asset is already `under_maintenance` (e.g., a concurrent PM is in progress). **Preventive MRs do not trigger this** — a scheduled service does not mean the asset was broken.                                                                                        |
+| **WO started** (`open` → `in_progress`) | `under_maintenance`                            | Work has begun in the workshop. The asset is now being actively serviced. **Always applied** — this transition is not conditional.                                                                                                                                                                                                                                               |
+| **WO closed** (`completed` → `closed`)  | `ready_for_field` — always                     | Closure means the work is done and verified: the asset goes back into service. Nobody is asked to choose. Closure also resets the asset's Condition to **Normal** (Section 5.10); if the prior Condition was **Need Inspection** and no PM was marked as performed on this closure, the closer sees a non-blocking warning reminding them the inspection question is still open. |
+| **WO cancelled**                        | Caller-chosen — `failure` or `ready_for_field` | When cancelling a WO, the user must decide: is the asset still faulty? Choose **Failure** if the fault remains, or **Ready for Field** if the WO was a false alarm.                                                                                                                                                                                                              |
 
 ##### Location-Driven Transitions
 
-| Event | Target Status | Logic |
-|---|---|---|
-| **Asset moved to a rig or well site** | `at_the_field` | Deploying an asset to an operational site means it is in field service. |
+| Event                                                | Target Status     | Logic                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Asset moved to a rig or well site**                | `at_the_field`    | Deploying an asset to an operational site means it is in field service.                                                                                                                                                                                                                                                                  |
 | **Asset moved back from the field** (user-initiated) | `ready_for_field` | Leaving the field returns the asset to the available pool — and sets its Condition to **Need Inspection**, because field-returned assets must be inspected before their next job. Moves made **as part of a Work Order starting** are exempt from this Condition change: the asset is heading into maintenance, not awaiting inspection. |
 
 ##### Manual Override
@@ -1124,18 +1125,19 @@ produces it.
 
 **Who can manually set operational status via WO:**
 
-| Role | Can Set Status? |
-|---|---|
-| Administrator | Yes — any non-closed, non-cancelled WO |
+| Role                | Can Set Status?                        |
+| ------------------- | -------------------------------------- |
+| Administrator       | Yes — any non-closed, non-cancelled WO |
 | Maintenance Manager | Yes — any non-closed, non-cancelled WO |
-| Assigned Technician | Yes — their own assigned WO only |
-| Logistics | No |
-| Requester | No |
+| Assigned Technician | Yes — their own assigned WO only       |
+| Logistics           | No                                     |
+| Requester           | No                                     |
 
 Manual override is blocked on closed and cancelled WOs (the WO is terminal and
 no further changes are permitted).
 
 **What happens on manual override:**
+
 - The asset's `operational_status` is immediately updated to the chosen value.
 - The change is written to the technical audit log.
 - The previous and new values are recorded.
@@ -1149,7 +1151,7 @@ Operational status can also be changed from the asset edit form —
 Maintenance Managers, and Service users. The same three-value restriction
 applies: `at_the_field` cannot be written by hand. In practice, status changes
 almost always happen through a WO or a location move, so there is usually an
-event that explains *why* the status changed.
+event that explains _why_ the status changed.
 
 ##### Manual Location Moves Are Gated by Status
 
@@ -1169,14 +1171,14 @@ action is gated (Section 11):
 
 This is a common point of confusion. Here is the complete distinction:
 
-| Question | Field | Example |
-|---|---|---|
-| **Is the asset working right now?** | `operational_status` | `under_maintenance` — it's in the workshop |
-| **Is the asset in the maintenance program?** | `maintenance_status` | `enrolled` — PM rules are watching it |
-| **What condition is it in between jobs?** | `condition_status` | `need_inspection` — it came back from the field and awaits inspection |
-| **Where is it in an assembly?** | derived from `parent_asset_id` | Installed — it's inside a parent assembly |
-| **Is it reserved for a future job?** | `is_booked` | `true` — Operations has promised it to a client |
-| **Does it exist in the active registry?** | `is_active` | `true` — it appears in the asset list |
+| Question                                     | Field                          | Example                                                               |
+| -------------------------------------------- | ------------------------------ | --------------------------------------------------------------------- |
+| **Is the asset working right now?**          | `operational_status`           | `under_maintenance` — it's in the workshop                            |
+| **Is the asset in the maintenance program?** | `maintenance_status`           | `enrolled` — PM rules are watching it                                 |
+| **What condition is it in between jobs?**    | `condition_status`             | `need_inspection` — it came back from the field and awaits inspection |
+| **Where is it in an assembly?**              | derived from `parent_asset_id` | Installed — it's inside a parent assembly                             |
+| **Is it reserved for a future job?**         | `is_booked`                    | `true` — Operations has promised it to a client                       |
+| **Does it exist in the active registry?**    | `is_active`                    | `true` — it appears in the asset list                                 |
 
 **Real-world scenario combining them all:**
 
@@ -1213,12 +1215,13 @@ asset restores it to the active registry.
 #### Operational Status vs. Maintenance Status — Why Both Exist
 
 `operational_status` is **transient** — it changes frequently as WOs are created,
-started, and closed. It reflects what's happening *right now*.
+started, and closed. It reflects what's happening _right now_.
 
 `maintenance_status` is **persistent** — it reflects a long-term management
 decision about whether the asset participates in the maintenance program.
 
 An asset can be:
+
 - `operational_status = ready_for_field` AND `maintenance_status = enrolled` — working,
   being monitored by PM (normal state).
 - `operational_status = under_maintenance` AND `maintenance_status = enrolled` —
@@ -1240,11 +1243,11 @@ gate.
 
 The seeded vocabulary:
 
-| Value | Label | Meaning |
-|---|---|---|
-| `normal` | **Normal** | The default. Nothing outstanding — the asset is as it should be. Every new asset starts here. |
-| `need_assembly` | **Need Assembly** | The asset needs assembly work before its next job. |
-| `missing_parts` | **Missing Parts** | The asset is missing parts that must be sourced. |
+| Value             | Label               | Meaning                                                                                                                  |
+| ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `normal`          | **Normal**          | The default. Nothing outstanding — the asset is as it should be. Every new asset starts here.                            |
+| `need_assembly`   | **Need Assembly**   | The asset needs assembly work before its next job.                                                                       |
+| `missing_parts`   | **Missing Parts**   | The asset is missing parts that must be sourced.                                                                         |
 | `need_inspection` | **Need Inspection** | The asset needs an inspection before its next job. Set automatically when an asset returns from the field (Section 5.9). |
 
 **Key rules:**
@@ -1287,11 +1290,11 @@ programme has gaps.
 
 Three status tiles sit at the top of the page:
 
-| Tile | Shows | Links To |
-| --- | --- | --- |
-| **Assets in failure** | Count of assets with `operational_status = failure`. | `/assets` |
-| **PM overdue** | Count of overdue PM assignments. | `/reports/overdue-pm` |
-| **Requests pending review** | Count of MRs in `pending_review`. | `/maintenance` |
+| Tile                        | Shows                                                | Links To              |
+| --------------------------- | ---------------------------------------------------- | --------------------- |
+| **Assets in failure**       | Count of assets with `operational_status = failure`. | `/assets`             |
+| **PM overdue**              | Count of overdue PM assignments.                     | `/reports/overdue-pm` |
+| **Requests pending review** | Count of MRs in `pending_review`.                    | `/maintenance`        |
 
 The PM-overdue and pending-review tiles are role-adaptive — they appear only
 when the backend determines your role has relevant items. Non-zero counts are
@@ -1320,19 +1323,19 @@ explanatory empty state ("No failures yet", "None closed"), never zero.
 
 #### Equipment Reliability
 
-| KPI | Description | Unit |
-| --- | --- | --- |
-| **MTBF** | Mean Time Between Failures — the average interval between **classified failures** during the window, on a calendar basis (window days ÷ classified failures). A failure is a corrective Maintenance Request a manager has marked as a real failure (`is_failure = yes`) at approval, optionally revised at Work Order closure. No-fault-found and unclassified corrective requests are excluded. | days |
-| **MTTR** | Mean Time To Repair — the average clock time from WO creation through closure for corrective Work Orders completed in the window. | hours |
-| **Failures** | Total number of classified failures (corrective MRs with `is_failure = yes`) created in the window. | count |
+| KPI          | Description                                                                                                                                                                                                                                                                                                                                                                                      | Unit  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| **MTBF**     | Mean Time Between Failures — the average interval between **classified failures** during the window, on a calendar basis (window days ÷ classified failures). A failure is a corrective Maintenance Request a manager has marked as a real failure (`is_failure = yes`) at approval, optionally revised at Work Order closure. No-fault-found and unclassified corrective requests are excluded. | days  |
+| **MTTR**     | Mean Time To Repair — the average clock time from WO creation through closure for corrective Work Orders completed in the window.                                                                                                                                                                                                                                                                | hours |
+| **Failures** | Total number of classified failures (corrective MRs with `is_failure = yes`) created in the window.                                                                                                                                                                                                                                                                                              | count |
 
 #### Process Performance
 
-| KPI | Description | Unit |
-| --- | --- | --- |
-| **PM compliance** | Percentage of Preventive Maintenance assignments completed on time (WO closed by or before the PM due date) during the window. | % |
-| **Avg request** | Average elapsed time from Maintenance Request creation to its final resolution (conversion, rejection, or cancellation). | hours |
-| **Avg work order** | Average elapsed time from Work Order creation to closure for WOs closed during the window. | hours |
+| KPI                | Description                                                                                                                    | Unit  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| **PM compliance**  | Percentage of Preventive Maintenance assignments completed on time (WO closed by or before the PM due date) during the window. | %     |
+| **Avg request**    | Average elapsed time from Maintenance Request creation to its final resolution (conversion, rejection, or cancellation).       | hours |
+| **Avg work order** | Average elapsed time from Work Order creation to closure for WOs closed during the window.                                     | hours |
 
 ### 6.4 Asset Status & By Location
 
@@ -1349,11 +1352,11 @@ explanatory empty state ("No failures yet", "None closed"), never zero.
 Three readiness metrics show how many of the assets in ATMS are covered, each as
 a figure and progress bar:
 
-| Metric | Meaning |
-| --- | --- |
-| **PM coverage** | Assets with at least one active PM assignment. |
-| **Location recorded** | Assets with a current location recorded. |
-| **Baseline reading** | Assets with a confirmed baseline meter reading. |
+| Metric                | Meaning                                         |
+| --------------------- | ----------------------------------------------- |
+| **PM coverage**       | Assets with at least one active PM assignment.  |
+| **Location recorded** | Assets with a current location recorded.        |
+| **Baseline reading**  | Assets with a confirmed baseline meter reading. |
 
 ### 6.6 Active Workboard & Recent Moves
 
@@ -1403,38 +1406,38 @@ Maintenance Request, stored in the `maintenance_requests` table:
 
 **Core Fields:**
 
-| Field | Type | Purpose |
-|---|---|---|
-| `number` | string | Auto-generated sequence: `MR-XXXXXX` (6-digit zero-padded). Generated by `BusinessNumberSequence`. Globally unique. |
-| `is_preventive` | boolean | **Stored discriminator** (single source of truth): `false` = user-created Corrective, `true` = system-generated Preventive. |
-| `type` | string (derived) | `corrective` or `preventive`. **Derived from `is_preventive` in the API response** — not a stored column. Provided for display/filtering convenience. |
-| `asset_id` | FK → assets | The asset this maintenance request is for. Required. |
-| `description` | text (required) | What is wrong, observed symptoms, context. |
-| `priority` | string | One of `low`, `medium`, `high`, `critical`. Affects ordering in lists and signals urgency to the Manager. |
-| `status` | `MaintenanceRequestStatus` enum | Current state in the review lifecycle. See Section 7.3. |
-| `created_by` | FK → users | Who submitted the MR (user for CM, system user for PM). |
+| Field           | Type                            | Purpose                                                                                                                                               |
+| --------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `number`        | string                          | Auto-generated sequence: `MR-XXXXXX` (6-digit zero-padded). Generated by `BusinessNumberSequence`. Globally unique.                                   |
+| `is_preventive` | boolean                         | **Stored discriminator** (single source of truth): `false` = user-created Corrective, `true` = system-generated Preventive.                           |
+| `type`          | string (derived)                | `corrective` or `preventive`. **Derived from `is_preventive` in the API response** — not a stored column. Provided for display/filtering convenience. |
+| `asset_id`      | FK → assets                     | The asset this maintenance request is for. Required.                                                                                                  |
+| `description`   | text (required)                 | What is wrong, observed symptoms, context.                                                                                                            |
+| `priority`      | string                          | One of `low`, `medium`, `high`, `critical`. Affects ordering in lists and signals urgency to the Manager.                                             |
+| `status`        | `MaintenanceRequestStatus` enum | Current state in the review lifecycle. See Section 7.3.                                                                                               |
+| `created_by`    | FK → users                      | Who submitted the MR (user for CM, system user for PM).                                                                                               |
 
 **PM-Specific Fields (only populated for preventive MRs):**
 
-| Field | Type | Purpose |
-|---|---|---|
-| `pm_rule_id` | FK → pm_rules | Which PM rule generated this request. |
-| `triggered_by_date` | boolean | Was the date threshold crossed when this MR was generated? |
-| `triggered_by_reading` | boolean | Was the reading threshold crossed when this MR was generated? |
-| `trigger_date` | date | The trigger date at generation time (for audit). |
-| `trigger_reading_value` | decimal | The trigger reading value at generation time (for audit). |
+| Field                   | Type          | Purpose                                                       |
+| ----------------------- | ------------- | ------------------------------------------------------------- |
+| `pm_rule_id`            | FK → pm_rules | Which PM rule generated this request.                         |
+| `triggered_by_date`     | boolean       | Was the date threshold crossed when this MR was generated?    |
+| `triggered_by_reading`  | boolean       | Was the reading threshold crossed when this MR was generated? |
+| `trigger_date`          | date          | The trigger date at generation time (for audit).              |
+| `trigger_reading_value` | decimal       | The trigger reading value at generation time (for audit).     |
 
 **Decision Fields (populated when the MR is reviewed):**
 
-| Field | Type | Purpose |
-|---|---|---|
-| `reviewed_by` | FK → users | Who approved or rejected the MR. |
-| `reviewed_at` | timestamp | When the decision was made. |
-| `rejection_reason` | text | Required when status = `rejected`. |
-| `is_failure` | boolean (nullable) | **Corrective only.** The Manager's classification of whether this MR represents a real failure (`true`/`false`), set at approval and optionally revised at WO closure. `null` until reviewed (excluded from reliability KPIs). Preventive MRs are never classified and stay `null`. Drives **MTBF** and **Failure Rate**. |
-| `cancelled_by` | FK → users | Who cancelled the MR. |
-| `cancelled_at` | timestamp | When the cancellation occurred. |
-| `cancellation_reason` | text | Reason for cancellation (optional for CM, may be required for PM). |
+| Field                 | Type               | Purpose                                                                                                                                                                                                                                                                                                                   |
+| --------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reviewed_by`         | FK → users         | Who approved or rejected the MR.                                                                                                                                                                                                                                                                                          |
+| `reviewed_at`         | timestamp          | When the decision was made.                                                                                                                                                                                                                                                                                               |
+| `rejection_reason`    | text               | Required when status = `rejected`.                                                                                                                                                                                                                                                                                        |
+| `is_failure`          | boolean (nullable) | **Corrective only.** The Manager's classification of whether this MR represents a real failure (`true`/`false`), set at approval and optionally revised at WO closure. `null` until reviewed (excluded from reliability KPIs). Preventive MRs are never classified and stay `null`. Drives **MTBF** and **Failure Rate**. |
+| `cancelled_by`        | FK → users         | Who cancelled the MR.                                                                                                                                                                                                                                                                                                     |
+| `cancelled_at`        | timestamp          | When the cancellation occurred.                                                                                                                                                                                                                                                                                           |
+| `cancellation_reason` | text               | Reason for cancellation (optional for CM, may be required for PM).                                                                                                                                                                                                                                                        |
 
 ### 7.1 Corrective Maintenance (CM) Workflow
 
@@ -1547,11 +1550,11 @@ types, evaluation, suppression, and cumulative maintenance — see **Section 12*
 
 The `MaintenanceRequestStatus` enum defines four states:
 
-| Status           | DB Value          | Meaning                                                                                                                   | Terminal? |
-| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------- | --------- |
-| **Pending Review** | `pending_review` | Submitted/generated and awaiting Manager review. Creator or Admin/Manager may edit description, priority, and asset.      | No        |
-| **Converted**      | `converted`      | Approved and atomically converted into exactly one Work Order. There is no separate stored "approved" status — the MR's `converted` status and the WO's existence are created in the same database transaction. | Yes       |
-| **Rejected**       | `rejected`       | Declined by the Maintenance Manager with a required reason. For preventive MRs, creates a suppression record to prevent immediate regeneration. | Yes       |
+| Status             | DB Value         | Meaning                                                                                                                                                                                                                         | Terminal? |
+| ------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| **Pending Review** | `pending_review` | Submitted/generated and awaiting Manager review. Creator or Admin/Manager may edit description, priority, and asset.                                                                                                            | No        |
+| **Converted**      | `converted`      | Approved and atomically converted into exactly one Work Order. There is no separate stored "approved" status — the MR's `converted` status and the WO's existence are created in the same database transaction.                 | Yes       |
+| **Rejected**       | `rejected`       | Declined by the Maintenance Manager with a required reason. For preventive MRs, creates a suppression record to prevent immediate regeneration.                                                                                 | Yes       |
 | **Cancelled**      | `cancelled`      | Withdrawn while awaiting review, before approval and conversion. Once approved and converted, the MR cannot be cancelled — the WO cancellation workflow must be used instead. For preventive MRs, creates a suppression record. | Yes       |
 
 **Status transition diagram:**
@@ -1581,7 +1584,7 @@ MR. The MR remains at `converted`.
 
 - **Approve:** MR must be `pending_review`. The asset must pass the unified
   work-eligibility guard — `is_active = true` and `maintenance_status =
-  enrolled`. The MR and WO are created in one atomic transaction — you cannot
+enrolled`. The MR and WO are created in one atomic transaction — you cannot
   have an approved MR without a WO.
 - **Reject:** MR must be `pending_review`. `rejection_reason` is required. For
   preventive MRs, suppression fields (`suppressed_until_date` and/or
@@ -1596,12 +1599,12 @@ MR. The MR remains at `converted`.
 The priority field communicates urgency to the Maintenance Manager. There is no
 dedicated priority enum — it is a plain string with four accepted values:
 
-| Value | Display Label | Typical Use |
-|---|---|---|
-| `low` | **Low** | Minor issues, cosmetic defects, non-urgent improvements. Can wait. |
-| `medium` | **Medium** | Standard maintenance. Default for all auto-generated PM requests. |
-| `high` | **High** | Significant performance issue, impending failure, urgent attention needed. |
-| `critical` | **Critical** | Immediate safety hazard, production stopped, mission-critical failure. |
+| Value      | Display Label | Typical Use                                                                |
+| ---------- | ------------- | -------------------------------------------------------------------------- |
+| `low`      | **Low**       | Minor issues, cosmetic defects, non-urgent improvements. Can wait.         |
+| `medium`   | **Medium**    | Standard maintenance. Default for all auto-generated PM requests.          |
+| `high`     | **High**      | Significant performance issue, impending failure, urgent attention needed. |
+| `critical` | **Critical**  | Immediate safety hazard, production stopped, mission-critical failure.     |
 
 Priority is set by the person creating the MR (for corrective requests) or
 defaults to `medium` for system-generated preventive requests. When the MR is
@@ -1616,20 +1619,20 @@ queue.
 
 The Maintenance Requests page has four tabs, shown/hidden by role:
 
-| Tab                  | Visible To     | Content                                                                           |
-| -------------------- | -------------- | --------------------------------------------------------------------------------- |
+| Tab                  | Visible To     | Content                                                                                       |
+| -------------------- | -------------- | --------------------------------------------------------------------------------------------- |
 | **New Request**      | Everyone       | Side-sheet form for creating a new repair request, titled "New Maintenance Request (Repair)". |
-| **My Requests**      | Everyone       | All MRs created by the current user.                                              |
-| **Pending Approval** | Admin, Manager | All MRs with status `pending_review`. Row actions: Approve, Reject, Cancel, Edit. |
-| **All Requests**     | Admin, Manager | Every MR regardless of status, with search and filters.                           |
+| **My Requests**      | Everyone       | All MRs created by the current user.                                                          |
+| **Pending Approval** | Admin, Manager | All MRs with status `pending_review`. Row actions: Approve, Reject, Cancel, Edit.             |
+| **All Requests**     | Admin, Manager | Every MR regardless of status, with search and filters.                                       |
 
 #### Repair vs Service — reading the Type column
 
 Every request list carries a **Type** column with one of two values:
 
-| Type | Meaning |
-|---|---|
-| **Repair** | Something is wrong and someone reported it. Created by a person from the New Request tab. Corrective work. |
+| Type        | Meaning                                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| **Repair**  | Something is wrong and someone reported it. Created by a person from the New Request tab. Corrective work.      |
 | **Service** | Scheduled maintenance the system raised because a PM schedule came due. Nobody types these in. Preventive work. |
 
 Both kinds live in the same list, which is why the page keeps the neutral title
@@ -1637,8 +1640,8 @@ Both kinds live in the same list, which is why the page keeps the neutral title
 wording appears on the request and Work Order detail screens, and the PM template
 screen is labelled **PM Rules (Service)** for the same reason.
 
-*(In the API and the database these remain `corrective` and `preventive`; only the
-on-screen wording differs.)*
+_(In the API and the database these remain `corrective` and `preventive`; only the
+on-screen wording differs.)_
 
 ### 7.5 Maintenance Request Detail (Drill-Down)
 
@@ -1717,36 +1720,36 @@ transaction).
 
 Work Orders are stored in the `work_orders` table. Key fields:
 
-| Field | Type | Purpose |
-|---|---|---|
-| `number` | string | Auto-generated: `WO-XXXXXX` (6-digit zero-padded). Generated by `BusinessNumberSequence`. Globally unique. |
-| `maintenance_request_id` | FK → maintenance_requests | **The origin MR.** Each WO has exactly one parent MR. This is the immutable 1:1 link — you can always trace a WO back to its originating request. |
-| `asset_id` | FK → assets | The asset being worked on (copied from the MR). |
-| `status` | `WorkOrderStatus` enum | Current state. See Section 8.1. |
-| `priority` | string | Copied from the MR at creation. Values: `low`, `medium`, `high`, `critical`. |
-| `description` | text | Work description (copied from the MR, may be updated during execution). |
-| `assigned_to` | FK → users, nullable | The user responsible for executing the WO (Technician or Maintenance Manager). Required before the WO can start. |
-| `assigned_at` | timestamp, nullable | When the WO was assigned. |
-| `started_at` | timestamp, nullable | When work began (`open` → `in_progress`). |
-| `completed_at` | timestamp, nullable | When the Technician submitted completion. |
-| `closed_at` | timestamp, nullable | When the Manager finalized the WO. |
-| `cancelled_at` | timestamp, nullable | When the WO was cancelled. |
-| `cancellation_reason` | text, nullable | Required reason when status = `cancelled`. |
-| `execution_details` | text, nullable | Technician's work notes, findings, actions taken. Editable while non-terminal. All changes audited. |
-| `created_at` / `updated_at` | timestamps | Standard Laravel timestamps. |
+| Field                       | Type                      | Purpose                                                                                                                                           |
+| --------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `number`                    | string                    | Auto-generated: `WO-XXXXXX` (6-digit zero-padded). Generated by `BusinessNumberSequence`. Globally unique.                                        |
+| `maintenance_request_id`    | FK → maintenance_requests | **The origin MR.** Each WO has exactly one parent MR. This is the immutable 1:1 link — you can always trace a WO back to its originating request. |
+| `asset_id`                  | FK → assets               | The asset being worked on (copied from the MR).                                                                                                   |
+| `status`                    | `WorkOrderStatus` enum    | Current state. See Section 8.1.                                                                                                                   |
+| `priority`                  | string                    | Copied from the MR at creation. Values: `low`, `medium`, `high`, `critical`.                                                                      |
+| `description`               | text                      | Work description (copied from the MR, may be updated during execution).                                                                           |
+| `assigned_to`               | FK → users, nullable      | The user responsible for executing the WO (Technician or Maintenance Manager). Required before the WO can start.                                  |
+| `assigned_at`               | timestamp, nullable       | When the WO was assigned.                                                                                                                         |
+| `started_at`                | timestamp, nullable       | When work began (`open` → `in_progress`).                                                                                                         |
+| `completed_at`              | timestamp, nullable       | When the Technician submitted completion.                                                                                                         |
+| `closed_at`                 | timestamp, nullable       | When the Manager finalized the WO.                                                                                                                |
+| `cancelled_at`              | timestamp, nullable       | When the WO was cancelled.                                                                                                                        |
+| `cancellation_reason`       | text, nullable            | Required reason when status = `cancelled`.                                                                                                        |
+| `execution_details`         | text, nullable            | Technician's work notes, findings, actions taken. Editable while non-terminal. All changes audited.                                               |
+| `created_at` / `updated_at` | timestamps                | Standard Laravel timestamps.                                                                                                                      |
 
 ### 8.1 Work Order Lifecycle
 
 Work Orders follow a strict lifecycle with five states, defined by the
 `WorkOrderStatus` enum:
 
-| DB Value | Display Label | Meaning |
-|---|---|---|
-| `open` | **Open** | Created from an approved MR. May be unassigned. Awaiting assignment and work commencement. |
-| `in_progress` | **In Progress** | Work has started. Must be assigned to an active Technician or Maintenance Manager. |
-| `completed` | **Completed** | Technician has submitted all work. Awaiting Manager review and closure. |
-| `closed` | **Closed** | Reviewed and finalized by Manager. **Permanently immutable.** |
-| `cancelled` | **Cancelled** | Cancelled by Manager with required reason. Terminal and read-only. |
+| DB Value      | Display Label   | Meaning                                                                                    |
+| ------------- | --------------- | ------------------------------------------------------------------------------------------ |
+| `open`        | **Open**        | Created from an approved MR. May be unassigned. Awaiting assignment and work commencement. |
+| `in_progress` | **In Progress** | Work has started. Must be assigned to an active Technician or Maintenance Manager.         |
+| `completed`   | **Completed**   | Technician has submitted all work. Awaiting Manager review and closure.                    |
+| `closed`      | **Closed**      | Reviewed and finalized by Manager. **Permanently immutable.**                              |
+| `cancelled`   | **Cancelled**   | Cancelled by Manager with required reason. Terminal and read-only.                         |
 
 **Complete transition diagram:**
 
@@ -1791,15 +1794,15 @@ Work Orders follow a strict lifecycle with five states, defined by the
 
 **Rules for each transition:**
 
-| Transition | Who Can Do It | Conditions |
-|---|---|---|
-| `open` → assign | Admin/Manager | Assignee must be an active Technician or Maintenance Manager; the asset must not be withdrawn |
-| `open` → `in_progress` | Assigned user, Admin/Manager | Must be assigned first. Asset `operational_status` → `under_maintenance` (forced). The asset must already be at a `workshop`/`yard`, or the Start dialog supplies the work location — starting then records a real location move (Section 8.3). |
-| `open` → `cancelled` | Admin/Manager | `cancellation_reason` required |
-| `in_progress` → `completed` | Assigned user, Admin/Manager | All required WO Form fields must be filled. Asset `operational_status` and location unchanged — stays `under_maintenance` until close or cancel. |
-| `in_progress` → `cancelled` | Admin/Manager | `cancellation_reason` required |
-| `completed` → `closed` | Admin/Manager | **Side effects run** (see Section 8.5). Asset `operational_status` always set to `ready_for_field` and its Condition reset to the default. A **deactivated** asset is never touched. |
-| `completed` → `cancelled` | Admin/Manager | `cancellation_reason` required. Asset `operational_status` set to the caller-chosen value — applied only when the cancel payload carries `asset_status`; otherwise the asset is left untouched. |
+| Transition                  | Who Can Do It                | Conditions                                                                                                                                                                                                                                      |
+| --------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open` → assign             | Admin/Manager                | Assignee must be an active Technician or Maintenance Manager; the asset must not be withdrawn                                                                                                                                                   |
+| `open` → `in_progress`      | Assigned user, Admin/Manager | Must be assigned first. Asset `operational_status` → `under_maintenance` (forced). The asset must already be at a `workshop`/`yard`, or the Start dialog supplies the work location — starting then records a real location move (Section 8.3). |
+| `open` → `cancelled`        | Admin/Manager                | `cancellation_reason` required                                                                                                                                                                                                                  |
+| `in_progress` → `completed` | Assigned user, Admin/Manager | All required WO Form fields must be filled. Asset `operational_status` and location unchanged — stays `under_maintenance` until close or cancel.                                                                                                |
+| `in_progress` → `cancelled` | Admin/Manager                | `cancellation_reason` required                                                                                                                                                                                                                  |
+| `completed` → `closed`      | Admin/Manager                | **Side effects run** (see Section 8.5). Asset `operational_status` always set to `ready_for_field` and its Condition reset to the default. A **deactivated** asset is never touched.                                                            |
+| `completed` → `cancelled`   | Admin/Manager                | `cancellation_reason` required. Asset `operational_status` set to the caller-chosen value — applied only when the cancel payload carries `asset_status`; otherwise the asset is left untouched.                                                 |
 
 ### 8.2 Work Order Assignment
 
@@ -1811,7 +1814,7 @@ Work Orders follow a strict lifecycle with five states, defined by the
   — never after close or cancel.
 - Assignment is refused when the asset fails the work-eligibility guard —
   deactivated (`is_active = false`) or withdrawn (`maintenance_status =
-  withdrawn`).
+withdrawn`).
 - Assignment is tracked: `assigned_to`, `assigned_at`, and the assignment
   history is audited.
 
@@ -1891,6 +1894,7 @@ and the system finalizes all records. The following happens **atomically** when
 a WO is closed (all in one database transaction):
 
 **1. WO Status Finalized:**
+
 - WO status → `closed` (permanently immutable).
 - `closed_at` timestamp set.
 - All WO fields, parts, readings, and attachments permanently locked.
@@ -1913,21 +1917,23 @@ the job is open or in progress.
   re-enters it.
 
 **0. Precondition — the work order must carry an attachment:**
+
 - A work order **cannot be closed** until at least one file is attached to it —
   normally the completed inspection form or job sheet (PDF or spreadsheet).
   Attempting to close without one is refused, and nothing is changed.
 - The requirement sits on **close, not completion**. The technician marks the
   work finished when the physical job is done, then uploads the paperwork; the
   manager cannot sign it off until it is there. Uploading stays available to the
-  assigned technician *and* to Admin/Manager for the whole of that window.
+  assigned technician _and_ to Admin/Manager for the whole of that window.
 - Once the work order is closed (or cancelled) its attachments are locked.
 - **Cancelling needs no attachment** — a job that never happened has no
   paperwork to show.
 - Any attachment satisfies the rule. ATMS does not distinguish "the inspection
-  form" from a photograph, so this is a check that *something* was filed, not
+  form" from a photograph, so this is a check that _something_ was filed, not
   that the right thing was.
 
 **1b. Preventive Maintenance Applied:**
+
 - If a PM level was recorded on this work order — either marked by the team
   while they worked, or chosen by the closer — that service schedule's clock
   restarts, **and so does every lower numbered level's**. Recording L3 covers
@@ -1941,6 +1947,7 @@ the job is open or in progress.
   skipped and reported as a note — the close still succeeds.
 
 **2. Asset Operational Status Updated:**
+
 - Asset's `operational_status` → **always `ready_for_field`**. The work is done,
   so the asset is back in service.
 - **There is no choice here any more.** A job that did not restore the asset is
@@ -1950,6 +1957,7 @@ the job is open or in progress.
   order cannot undo a retirement decision.
 
 **2b. Asset Condition Reset:**
+
 - The asset's **Condition** returns to the default (**Normal**). The condition
   records what was wrong, and closing the job is the moment that stops being
   true.
@@ -1960,6 +1968,7 @@ the job is open or in progress.
   and a note says so. Nothing is ever cleared to blank.
 
 **3. Meter Readings Confirmed:**
+
 - Every unverified reading recorded on this Work Order is confirmed, **oldest
   first**, and stamped with the closer as the confirmer.
 - A reading that fails a monotonic constraint is **skipped and audited** — the
@@ -1967,6 +1976,7 @@ the job is open or in progress.
 - This is the only way a reading becomes confirmed; there is no verify button.
 
 **4. Service Declared on a Repair (optional):**
+
 - If the closer ticks **"A service was also performed"** and picks the **highest
   PM level performed**, that level — and every level beneath it — is treated as
   serviced by this job. Levels are cumulative: an L3 service covers L2 and L1.
@@ -1976,11 +1986,12 @@ the job is open or in progress.
   since due-ness is what prompts the declaration.
 - Any PM request already raised for a covered schedule is **cancelled**, citing
   this Work Order — so nobody approves a second job for work that is finished. It
-  is recorded as *performed under repair*, not skipped, so PM compliance figures
+  is recorded as _performed under repair_, not skipped, so PM compliance figures
   stay honest.
 
 **5. PM Baseline Reset (if the WO originated from a Preventive MR, or a service
 was declared in step 4):**
+
 - The `AssetPmAssignment` has its baseline reset:
   - `last_triggered_date` = today (the closure date)
   - `last_triggered_reading` = latest confirmed reading at closure time — which
@@ -1989,6 +2000,7 @@ was declared in step 4):**
   this new baseline.
 
 **6. Meter Position Snapshotted:**
+
 - The asset's current meter value is recorded per reading type as an immutable
   snapshot against this Work Order.
 - This is what lets ATMS answer "how many hours since the last repair" — the
@@ -1996,6 +2008,7 @@ was declared in step 4):**
 - The snapshot is never recalculated, even if a reading is later corrected.
 
 **7. Cumulative Maintenance Cascade (if applicable):**
+
 - If the closed WO's PM rule has a standard level (`L1`-`L4`), all
   **lower-level** active assignments on the **same asset** also have their
   baselines
@@ -2005,6 +2018,7 @@ was declared in step 4):**
 - Custom free-text levels are independent and do not cascade.
 
 **8. Failure Classification Review (corrective WOs only):**
+
 - On close, the Manager may revise the originating Maintenance Request's
   `is_failure` classification. The Technician has now physically inspected the
   asset, so this is the ground-truth moment — e.g. an MR approved as a failure
@@ -2020,6 +2034,7 @@ was declared in step 4):**
 and affected fields. Skipped readings and any declared service are recorded too.
 
 **Closure steps for the Manager:**
+
 1. The WO must be in `completed` status — the Technician has submitted all work.
 2. A Maintenance Manager or Administrator opens the WO.
 3. They review: work notes, parts used, readings updated, final asset status.
@@ -2047,6 +2062,7 @@ Manager only. A required reason must be provided. Cancellation is available from
 `open`, `in_progress`, or `completed` status — but not from `closed`.
 
 **On cancellation:**
+
 - WO status → `cancelled` (terminal, read-only).
 - `cancellation_reason` and `cancelled_at` recorded.
 - Asset `operational_status` set to a caller-chosen value: `failure` (the fault
@@ -2072,7 +2088,7 @@ template covers that category, the WO has no form and execution proceeds
 normally.
 
 A form template may serve several maintenance categories, but a category can be
-served by only one *active* template at a time — that is what makes an asset's
+served by only one _active_ template at a time — that is what makes an asset's
 form unambiguous, since each asset carries exactly one category.
 
 **What the form captures:**
@@ -2134,13 +2150,13 @@ After the WO transitions to `completed`, all form fields become read-only.
 
 ### 8.8 Work Order Status Summary
 
-| Status        | Meaning                                                           | Editable By                                                                               | Terminal? |
-| ------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------- |
-| `open`        | Created from approved MR. May be unassigned.                      | Manager (assign, edit exec details), Technician (after assignment)                        | No        |
-| `in_progress` | Work has started. Must be assigned to an active Technician or Maintenance Manager.       | Assigned Technician (exec details, parts, readings, status), Admin/Manager (exec details) | No        |
-| `completed`   | Technician has submitted all completion info. Awaiting closure.   | Admin/Manager (edit exec details, close, cancel)                                          | No        |
-| `closed`      | Reviewed and finalized by Admin or Manager. PM baselines updated. | No one — permanently immutable                                                            | Yes       |
-| `cancelled`   | Cancelled by Admin or Manager with required reason.               | No one — terminal and read-only                                                           | Yes       |
+| Status        | Meaning                                                                            | Editable By                                                                               | Terminal? |
+| ------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------- |
+| `open`        | Created from approved MR. May be unassigned.                                       | Manager (assign, edit exec details), Technician (after assignment)                        | No        |
+| `in_progress` | Work has started. Must be assigned to an active Technician or Maintenance Manager. | Assigned Technician (exec details, parts, readings, status), Admin/Manager (exec details) | No        |
+| `completed`   | Technician has submitted all completion info. Awaiting closure.                    | Admin/Manager (edit exec details, close, cancel)                                          | No        |
+| `closed`      | Reviewed and finalized by Admin or Manager. PM baselines updated.                  | No one — permanently immutable                                                            | Yes       |
+| `cancelled`   | Cancelled by Admin or Manager with required reason.                                | No one — terminal and read-only                                                           | Yes       |
 
 ### 8.9 Work Order Tabs
 
@@ -2327,18 +2343,18 @@ readings, the PM engine cannot determine when a usage-triggered service is due.
 
 Meter readings are stored in the `asset_meter_readings` table:
 
-| Field | Type | Purpose |
-|---|---|---|
-| `asset_id` | FK → assets | The asset this reading belongs to. |
-| `usage_reading_type_id` | FK → `usage_reading_types` | What kind of reading this is (hours, kilometers, etc.). |
-| `reading_value` | decimal(12,2) | The absolute meter total. When recorded from a Work Order, the form enters a delta and the total is derived as `last reading + delta` (see below). |
-| `reading_at` | datetime | When the reading was taken (the timestamp on the meter). |
-| `source` | string | Always `user` (manually entered) or `manual`. |
-| `entered_by_user_id` | FK → users | Who recorded the reading. |
-| `confirmed_by_user_id` | FK → users, nullable | Who confirmed the reading. `NULL` = unverified. |
-| `confirmed_at` | datetime, nullable | When the reading was confirmed. `NULL` = unverified. |
-| `notes` | text, nullable | Optional commentary. |
-| `maintenance_request_id` | FK, nullable | Links to the originating MR, if the reading was submitted during MR creation. |
+| Field                    | Type                       | Purpose                                                                                                                                            |
+| ------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `asset_id`               | FK → assets                | The asset this reading belongs to.                                                                                                                 |
+| `usage_reading_type_id`  | FK → `usage_reading_types` | What kind of reading this is (hours, kilometers, etc.).                                                                                            |
+| `reading_value`          | decimal(12,2)              | The absolute meter total. When recorded from a Work Order, the form enters a delta and the total is derived as `last reading + delta` (see below). |
+| `reading_at`             | datetime                   | When the reading was taken (the timestamp on the meter).                                                                                           |
+| `source`                 | string                     | Always `user` (manually entered) or `manual`.                                                                                                      |
+| `entered_by_user_id`     | FK → users                 | Who recorded the reading.                                                                                                                          |
+| `confirmed_by_user_id`   | FK → users, nullable       | Who confirmed the reading. `NULL` = unverified.                                                                                                    |
+| `confirmed_at`           | datetime, nullable         | When the reading was confirmed. `NULL` = unverified.                                                                                               |
+| `notes`                  | text, nullable             | Optional commentary.                                                                                                                               |
+| `maintenance_request_id` | FK, nullable               | Links to the originating MR, if the reading was submitted during MR creation.                                                                      |
 
 #### Reading Types
 
@@ -2346,11 +2362,11 @@ Reading types are configurable via the Admin → Lists & Dropdowns section. They
 are stored in the `usage_reading_types` table, not as a code enum — this allows
 operators to define custom meter types without code changes. Seed data includes:
 
-| Name | Unit | Typical Use |
-|---|---|---|
-| Operating Hours | hours | Tracks running time for PM intervals (e.g. "every 500 hours") |
-| Kilometer Driven | kilometer | Tracks distance for vehicle fleet PM |
-| Depth | meter | Tracks drilling depth for downhole equipment |
+| Name             | Unit      | Typical Use                                                   |
+| ---------------- | --------- | ------------------------------------------------------------- |
+| Operating Hours  | hours     | Tracks running time for PM intervals (e.g. "every 500 hours") |
+| Kilometer Driven | kilometer | Tracks distance for vehicle fleet PM                          |
+| Depth            | meter     | Tracks drilling depth for downhole equipment                  |
 
 #### The Reading Lifecycle — Two Phases
 
@@ -2359,6 +2375,7 @@ Every meter reading goes through two distinct phases:
 **Phase 1: Recorded (Unverified)**
 
 When a reading is first submitted (`POST /api/assets/{asset}/meter-readings`):
+
 - `entered_by_user_id` is set to the submitter
 - `confirmed_by_user_id` and `confirmed_at` remain `NULL`
 - The reading is marked **"Unverified"** in the UI
@@ -2415,7 +2432,7 @@ since the last recorded reading) — not the meter's absolute total.
   "confirmed" / "not yet confirmed" marker.
 - The **Total (current meter reading)** is auto-calculated as
   `last reading + delta` and displayed read-only — it cannot be typed over. With
-  no prior reading for the selected type, the entered delta *is* the total.
+  no prior reading for the selected type, the entered delta _is_ the total.
 - The stored `reading_value` is always that **absolute total**, so reading
   history and PM calculations keep working with absolute values.
 - **The delta you typed is also stored**, and shown in the readings table under
@@ -2453,6 +2470,7 @@ always forward-moving.
 
 **What if a reading was entered incorrectly?** You cannot edit or delete a
 confirmed reading. Instead:
+
 1. Record a **new** reading with the correct (higher) value.
 2. Add a note explaining the correction.
 3. An Administrator may add an audit note for documentation.
@@ -2575,25 +2593,25 @@ Parts in ATMS have two categories of fields with different ownership:
 
 **ERP-Owned Fields (read-only in ATMS, managed by the ERP sync process):**
 
-| Field | Purpose |
-|---|---|
-| `erp_part_id` | The part's unique identifier in the ERP system. |
-| `erp_part_code` | The human-readable ERP part number displayed in the UI. |
-| `erp_status` | The part's status as recorded in the ERP (e.g. "Active", "Obsolete"). Reference only. |
-| `erp_raw_data` | The complete, unmodified ERP record as JSON. Only visible to Administrators. |
-| `erp_last_synced_at` | Timestamp of the last successful sync for this part. |
+| Field                | Purpose                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `erp_part_id`        | The part's unique identifier in the ERP system.                                       |
+| `erp_part_code`      | The human-readable ERP part number displayed in the UI.                               |
+| `erp_status`         | The part's status as recorded in the ERP (e.g. "Active", "Obsolete"). Reference only. |
+| `erp_raw_data`       | The complete, unmodified ERP record as JSON. Only visible to Administrators.          |
+| `erp_last_synced_at` | Timestamp of the last successful sync for this part.                                  |
 
 **Local Fields (editable in ATMS by Admin/Manager):**
 
-| Field | Purpose |
-|---|---|
-| `name` | Human-readable part name (may be updated locally for operational clarity). |
-| `description` | Additional notes or usage instructions. |
-| `unit_of_measure` | The unit used when recording quantities (e.g. "each", "meter", "liter"). |
-| `maintenance_category_id` | The Maintenance Category the part belongs to, for filtering and search. |
-| `size_inches` | The part's nominal size in inches (displayed as the O&G fractional form, e.g. `6 3/4"`). |
-| `available_quantity` | Stock on hand. Adjusted automatically by WO consumption and editable directly (see 10.4a). **ERP remains the quantity authority** — each sync overwrites it wholesale. |
-| `is_active` | Whether the part is available for selection on WO part forms. Inactive parts are hidden from pickers. |
+| Field                     | Purpose                                                                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                    | Human-readable part name (may be updated locally for operational clarity).                                                                                             |
+| `description`             | Additional notes or usage instructions.                                                                                                                                |
+| `unit_of_measure`         | The unit used when recording quantities (e.g. "each", "meter", "liter").                                                                                               |
+| `maintenance_category_id` | The Maintenance Category the part belongs to, for filtering and search.                                                                                                |
+| `size_inches`             | The part's nominal size in inches (displayed as the O&G fractional form, e.g. `6 3/4"`).                                                                               |
+| `available_quantity`      | Stock on hand. Adjusted automatically by WO consumption and editable directly (see 10.4a). **ERP remains the quantity authority** — each sync overwrites it wholesale. |
+| `is_active`               | Whether the part is available for selection on WO part forms. Inactive parts are hidden from pickers.                                                                  |
 
 This split reflects the design principle: **ERP data is reference only.** Users
 should not feel they are editing official ERP master records. The ERP sync
@@ -2609,13 +2627,13 @@ parts catalogue with search and filters. There are no tabs.
 
 **Columns:**
 
-| Column | Content |
-|---|---|
-| **Part No.** | The ERP part code (`erp_part_code`) — the code the team quotes. Sortable and searchable. |
-| **Name** | The part identity: name, plus supplier part number, size, and maintenance category where present. |
-| **Unit** | Unit of measure. |
-| **Qty** | Available quantity. Parts at zero or below show an **Out of stock** badge. |
-| **Status** | Active / Inactive. |
+| Column       | Content                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| **Part No.** | The ERP part code (`erp_part_code`) — the code the team quotes. Sortable and searchable.          |
+| **Name**     | The part identity: name, plus supplier part number, size, and maintenance category where present. |
+| **Unit**     | Unit of measure.                                                                                  |
+| **Qty**      | Available quantity. Parts at zero or below show an **Out of stock** badge.                        |
+| **Status**   | Active / Inactive.                                                                                |
 
 **Toolbar filters:** Part Number (free text), Size (dropdown), and Maintenance
 Category (dropdown) filter the list. The identity renders as one package, so
@@ -2651,6 +2669,7 @@ Parts are not created in ATMS. They flow from the ERP into the SM subsystem via
 a scheduled or manually triggered sync process:
 
 **Scheduled Sync:**
+
 - **Frequency:** Weekly, every Monday at 03:00 Africa/Tripoli timezone.
 - **Scope:** All parts in the ERP catalogue are synced into SM tables.
 - **Behavior:** New parts are inserted. Existing parts (matched on `erp_part_id`)
@@ -2662,6 +2681,7 @@ a scheduled or manually triggered sync process:
 - **Concurrency:** Overlap prevention ensures only one sync runs at a time.
 
 **Manual Sync:**
+
 - Triggered by Administrator or Maintenance Manager from Admin → System &
   Integration tab.
 - Runs the same sync logic as the scheduled job.
@@ -2670,12 +2690,12 @@ a scheduled or manually triggered sync process:
 
 **Sync Job Statuses:**
 
-| Status | Meaning |
-|---|---|
-| `running` | Sync job is currently executing. |
-| `success` | Sync completed with no errors. All parts processed. |
+| Status    | Meaning                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------- |
+| `running` | Sync job is currently executing.                                                                                    |
+| `success` | Sync completed with no errors. All parts processed.                                                                 |
 | `partial` | Sync completed but some items had errors (e.g., malformed ERP data). Affected items are skipped; others are synced. |
-| `failed` | Sync could not complete (e.g., ERP connection failure, authentication error). No parts were updated. |
+| `failed`  | Sync could not complete (e.g., ERP connection failure, authentication error). No parts were updated.                |
 
 **Sync History:** Viewable by Administrator in Admin → System & Integration tab.
 Each sync run shows start/end timestamps, status, and error details (if any).
@@ -2802,6 +2822,7 @@ Uses the existing admin locations endpoints. The same location definitions
 appear in the Admin → Lists & Dropdowns tab.
 
 ---
+
 ## 12. Preventive Maintenance Rules
 
 Preventive Maintenance (PM) is the system's mechanism for automatically
@@ -2859,16 +2880,16 @@ but cannot create or edit the templates themselves.
 
 #### Template Fields
 
-| Field | Type | Description |
-|---|---|---|
-| **Name** | string (required) | A descriptive label, e.g. "Motor 500-hr Inspection" |
-| **Description** | text (optional) | Notes about the purpose and scope of this PM |
-| **Trigger Type** | enum (`date`, `reading`, `date_or_reading`) | How the system decides this PM is due (see Section 12.3). Only `date` is selectable when creating a rule — the two reading-based types are parked. Existing rules keep their stored value, shown read-only when editing. |
-| **Interval Days** | integer | For `date` and `date_or_reading` triggers: the calendar interval in days |
-| **Interval Reading** | decimal | For `reading` and `date_or_reading` triggers: the usage increment (e.g. 500 hours) |
-| **Reading Type** | FK → `usage_reading_types` | For `reading` and `date_or_reading` triggers: which meter to watch (e.g. "Operating Hours") |
-| **Maintenance Level** | string (optional) | One of `L1`, `L2`, `L3`, `L4` (standard), or a free-text custom level. See Section 12.8 |
-| **Active** | boolean | Whether the template is currently in use. Inactive templates stop generating PM work for all assignments |
+| Field                 | Type                                        | Description                                                                                                                                                                                                              |
+| --------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**              | string (required)                           | A descriptive label, e.g. "Motor 500-hr Inspection"                                                                                                                                                                      |
+| **Description**       | text (optional)                             | Notes about the purpose and scope of this PM                                                                                                                                                                             |
+| **Trigger Type**      | enum (`date`, `reading`, `date_or_reading`) | How the system decides this PM is due (see Section 12.3). Only `date` is selectable when creating a rule — the two reading-based types are parked. Existing rules keep their stored value, shown read-only when editing. |
+| **Interval Days**     | integer                                     | For `date` and `date_or_reading` triggers: the calendar interval in days                                                                                                                                                 |
+| **Interval Reading**  | decimal                                     | For `reading` and `date_or_reading` triggers: the usage increment (e.g. 500 hours)                                                                                                                                       |
+| **Reading Type**      | FK → `usage_reading_types`                  | For `reading` and `date_or_reading` triggers: which meter to watch (e.g. "Operating Hours")                                                                                                                              |
+| **Maintenance Level** | string (optional)                           | One of `L1`, `L2`, `L3`, `L4` (standard), or a free-text custom level. See Section 12.8                                                                                                                                  |
+| **Active**            | boolean                                     | Whether the template is currently in use. Inactive templates stop generating PM work for all assignments                                                                                                                 |
 
 #### Template Lifecycle
 
@@ -2946,7 +2967,7 @@ if either one fires, the PM is due.
 the PM fires based on reading. If the motor sits idle for 6 months without
 reaching 500 hours, the PM fires based on date.
 
-**When to use:** *(Parked — not currently selectable.)* Once re-enabled, the natural
+**When to use:** _(Parked — not currently selectable.)_ Once re-enabled, the natural
 choice for operational equipment. Ensures
 service happens at a reasonable interval regardless of whether the asset is used
 heavily (reading triggers first) or sits idle (date triggers first).
@@ -2965,6 +2986,7 @@ template to a specific asset. This is where the abstract template becomes an
 actionable schedule for a real piece of equipment.
 
 Assignments are managed by **Administrators and Maintenance Managers** from:
+
 - **Asset Detail → PM Assignments** (per-asset view)
 - **Admin → PM Rules (Service)** (per-template view)
 
@@ -3025,12 +3047,13 @@ the question: "When was this asset last serviced under this rule?"
 
 The baseline is stored as two values on the assignment:
 
-| Baseline Field | Meaning |
-|---|---|
-| `last_triggered_date` | The date from which the interval is measured. Stored as a calendar date. |
+| Baseline Field           | Meaning                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| `last_triggered_date`    | The date from which the interval is measured. Stored as a calendar date.           |
 | `last_triggered_reading` | The meter reading from which the usage increment is measured. Stored as a decimal. |
 
 **The system asks:**
+
 - (Date trigger) Is `today >= last_triggered_date + interval_days`?
 - (Reading trigger) Is `latest_confirmed_reading >= last_triggered_reading + interval_reading`?
 
@@ -3051,11 +3074,11 @@ maintenance rules that also reset lower-level baselines.
 Each assignment displays a **PM status indicator** in the UI, calculated from how
 close the asset is to its next due threshold:
 
-| Indicator | Label | Meaning |
-|---|---|---|
-| 🟢 | **OK** | Well within interval. Progress < 60% toward the due threshold. |
-| 🟡 | **Soon** | Approaching the due threshold. Progress is between 60% and 80%. |
-| 🔴 | **Due** | At or past the due threshold. Progress ≥ 80% or `PmDueCalculator::isDue()` returns true. |
+| Indicator | Label    | Meaning                                                                                  |
+| --------- | -------- | ---------------------------------------------------------------------------------------- |
+| 🟢        | **OK**   | Well within interval. Progress < 60% toward the due threshold.                           |
+| 🟡        | **Soon** | Approaching the due threshold. Progress is between 60% and 80%.                          |
+| 🔴        | **Due**  | At or past the due threshold. Progress ≥ 80% or `PmDueCalculator::isDue()` returns true. |
 
 Progress is calculated separately for the date dimension and reading dimension,
 and the higher of the two is used. For example, if the date is 90% elapsed but
@@ -3091,6 +3114,7 @@ You can trigger evaluation manually at any time:
   assets.
 
 Manual evaluation is useful when:
+
 - You just assigned a new rule and want to confirm it would fire correctly
 - A Technician just recorded a large meter reading and you want the PM to trigger
   immediately
@@ -3116,7 +3140,7 @@ order:
    - For `date` triggers: `today >= last_triggered_date + interval_days` AND no
      active date suppression record exists
    - For `reading` triggers: `latest_confirmed_reading >= last_triggered_reading
-     + interval_reading` AND no active reading suppression record exists
+     - interval_reading` AND no active reading suppression record exists
    - For `date_or_reading` triggers: either dimension is due (independently
      evaluated). Only the due dimension needs to pass suppression checks.
 
@@ -3144,15 +3168,15 @@ asset is still due and generate another identical MR.
 
 A suppression record captures:
 
-| Field | Purpose |
-|---|---|
-| `pm_rule_id` + `asset_id` | Links to the specific rule+asset combination |
-| `maintenance_request_id` | The MR that was decided upon |
-| `trigger_type` | Snapshot of the rule's trigger type at decision time |
-| `decision_type` | What happened (e.g. `rejected`) |
-| `triggered_by_date` / `triggered_by_reading` | Which dimension(s) caused the MR |
-| `suppressed_until_date` | **The suppression window for date:** don't fire again until on or after this date |
-| `suppressed_until_reading` | **The suppression window for reading:** don't fire again until this reading or higher |
+| Field                                        | Purpose                                                                               |
+| -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `pm_rule_id` + `asset_id`                    | Links to the specific rule+asset combination                                          |
+| `maintenance_request_id`                     | The MR that was decided upon                                                          |
+| `trigger_type`                               | Snapshot of the rule's trigger type at decision time                                  |
+| `decision_type`                              | What happened (e.g. `rejected`)                                                       |
+| `triggered_by_date` / `triggered_by_reading` | Which dimension(s) caused the MR                                                      |
+| `suppressed_until_date`                      | **The suppression window for date:** don't fire again until on or after this date     |
+| `suppressed_until_reading`                   | **The suppression window for reading:** don't fire again until this reading or higher |
 
 The `PmDueCalculator` checks suppression records during evaluation. If an active
 suppression covers the current trigger condition, the PM is **not** due —
@@ -3160,29 +3184,30 @@ effectively deferred until the suppression window expires.
 
 #### Suppression Windows by Trigger Type
 
-| Trigger Type | What's Required |
-|---|---|
-| `date` only | `suppressed_until_date` must be set |
-| `reading` only | `suppressed_until_reading` must be set |
-| `date_or_reading` — only date fired | Only `suppressed_until_date` needed |
+| Trigger Type                           | What's Required                        |
+| -------------------------------------- | -------------------------------------- |
+| `date` only                            | `suppressed_until_date` must be set    |
+| `reading` only                         | `suppressed_until_reading` must be set |
+| `date_or_reading` — only date fired    | Only `suppressed_until_date` needed    |
 | `date_or_reading` — only reading fired | Only `suppressed_until_reading` needed |
-| `date_or_reading` — both fired | Both suppression boundaries required |
+| `date_or_reading` — both fired         | Both suppression boundaries required   |
 
 #### Suppression Decision Types
 
-A suppression records *why* the occurrence was set aside, and the reason matters for
+A suppression records _why_ the occurrence was set aside, and the reason matters for
 compliance reporting:
 
-| Decision | Meaning |
-|---|---|
-| `rejected` | A Manager reviewed the PM request and declined it. |
-| `cancelled` | The PM request was cancelled before conversion. |
+| Decision                 | Meaning                                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rejected`               | A Manager reviewed the PM request and declined it.                                                                                                                                                                                      |
+| `cancelled`              | The PM request was cancelled before conversion.                                                                                                                                                                                         |
 | `performed_under_repair` | The service was **actually carried out**, under a repair Work Order whose closer declared it (§8.5, step 4). The request was retired because the work is done, not skipped — compliance figures must not count it against the schedule. |
 
 #### Design Rationale
 
 Suppression is a **deferral**, not a permanent skip. The next occurrence will fire
 when:
+
 - The date passes `suppressed_until_date`, OR
 - The reading reaches `suppressed_until_reading`
 
@@ -3212,6 +3237,7 @@ the asset is already in the workshop for a repair.
 #### Direct Reset (the Rule That Just Closed)
 
 The assignment that generated the PM receives:
+
 - `last_triggered_date` = today (the WO closure date)
 - `last_triggered_reading` = the asset's latest confirmed reading at closure time
   (for reading-based triggers only)
@@ -3228,12 +3254,12 @@ rules configured with standard maintenance levels: `L1`, `L2`, `L3`, `L4`.
 
 #### Maintenance Levels
 
-| Level | Typical Scope | Example |
-|---|---|---|
-| **L1** | Minor inspection / basic service | Visual check, fluid top-up |
-| **L2** | Intermediate service | Filter changes, adjustments |
-| **L3** | Major service / overhaul | Disassembly, component replacement |
-| **L4** | Complete rebuild | Full strip-down, every component inspected/replaced |
+| Level  | Typical Scope                    | Example                                             |
+| ------ | -------------------------------- | --------------------------------------------------- |
+| **L1** | Minor inspection / basic service | Visual check, fluid top-up                          |
+| **L2** | Intermediate service             | Filter changes, adjustments                         |
+| **L3** | Major service / overhaul         | Disassembly, component replacement                  |
+| **L4** | Complete rebuild                 | Full strip-down, every component inspected/replaced |
 
 Custom free-text levels (anything not matching the `L1`-`L4` pattern) are
 **independent** — they do not participate in cascade resets.
@@ -3250,12 +3276,14 @@ When a standard-level PM Work Order is closed, the system runs a cascade:
    - `last_triggered_reading` = latest confirmed reading
 
 **Example:** A motor has three PM assignments:
+
 - L1 — "Visual inspection" every 30 days
 - L2 — "Filter change" every 90 days
 - L3 — "Full teardown" every 360 days
 
 The L3 fires at 360 days. A Work Order is created and executed. When the Manager
 closes the L3 WO:
+
 - The L3 baseline resets (next L3 due in 360 days from closure)
 - The L1 baseline resets (next L1 due in 30 days from closure — you don't need
   an L1 inspection the day after a full teardown)
@@ -3267,17 +3295,17 @@ even though the L3 teardown already covered everything an L1 would check.
 
 ### 12.9 Who Can Do What — PM Role Permissions
 
-| Action | Administrator | Maintenance Manager | Technician | Logistics | Requester |
-|---|---|---|---|---|---|
-| Create PM rule templates | Yes | No | No | No | No |
-| Edit PM rule templates | Yes | No | No | No | No |
-| Deactivate / reactivate templates | Yes | No | No | No | No |
-| Assign template to asset | Yes | Yes | No | No | No |
-| Deactivate / reactivate assignment | Yes | Yes | No | No | No |
-| Evaluate single assignment | Yes | Yes | No | No | No |
-| Evaluate all assignments | Yes | No | No | No | No |
-| View PM rules & assignments | Yes | Yes | No | No | No |
-| Approve / reject Preventive MR | Yes | Yes | No | No | No |
+| Action                             | Administrator | Maintenance Manager | Technician | Logistics | Requester |
+| ---------------------------------- | ------------- | ------------------- | ---------- | --------- | --------- |
+| Create PM rule templates           | Yes           | No                  | No         | No        | No        |
+| Edit PM rule templates             | Yes           | No                  | No         | No        | No        |
+| Deactivate / reactivate templates  | Yes           | No                  | No         | No        | No        |
+| Assign template to asset           | Yes           | Yes                 | No         | No        | No        |
+| Deactivate / reactivate assignment | Yes           | Yes                 | No         | No        | No        |
+| Evaluate single assignment         | Yes           | Yes                 | No         | No        | No        |
+| Evaluate all assignments           | Yes           | No                  | No         | No        | No        |
+| View PM rules & assignments        | Yes           | Yes                 | No         | No        | No        |
+| Approve / reject Preventive MR     | Yes           | Yes                 | No         | No        | No        |
 
 ### 12.10 Complete Walkthrough — Setting Up and Running a PM Rule
 
@@ -3307,6 +3335,7 @@ This example follows a Mud Motor through its first PM cycle.
 6. Confirm.
 
 **What happens behind the scenes:**
+
 - A new `AssetPmAssignment` is created for MTR-001 + "Motor 500-hr PM"
 - `last_triggered_date` = today (let's say June 1, 2026)
 - `last_triggered_reading` = MTR-001's latest confirmed reading (let's say 1,200
@@ -3317,6 +3346,7 @@ This example follows a Mud Motor through its first PM cycle.
 #### Phase 3: Daily Evaluation — Nothing Happens (Yet)
 
 Every day at 06:00, the evaluation job runs. For the first few months:
+
 - Date check: today < June 1 + 180 days → NOT due
 - Reading check: latest confirmed reading < 1,700 hours → NOT due
 - Result: No MR generated. The assignment shows 🟢 OK.
@@ -3325,6 +3355,7 @@ Every day at 06:00, the evaluation job runs. For the first few months:
 
 On August 15, a Technician records a confirmed meter reading of 1,720 hours on
 MTR-001. The next day at 06:00:
+
 - Date check: August 16 < December 1 (180 days) → NOT due
 - Reading check: 1,720 >= 1,700 → **DUE**
 - Active chain check: no existing MR or WO → proceed
@@ -3337,6 +3368,7 @@ MTR-001. The next day at 06:00:
 3. Clicks **Approve & Create Work Order**.
 
 **What happens:**
+
 - MR-00452 status → `converted` (terminal)
 - WO-00217 created with status `open`
 - WO is assigned to Technician Tariq
@@ -3355,6 +3387,7 @@ MTR-001. The next day at 06:00:
 2. Clicks **Close Work Order**. Confirms.
 
 **What happens behind the scenes:**
+
 - WO-00217 status → `closed` (terminal, permanently immutable)
 - The "Motor 500-hr PM" assignment baseline resets:
   - `last_triggered_date` = August 20 (closure date)
@@ -3504,9 +3537,10 @@ unambiguous, since every asset has exactly one category.
    name, and **categories already ticked are pinned to the top of the list** so
    you can see what a form covers without scrolling.
 
-   A category already covered by *another* active template is shown greyed out
+   A category already covered by _another_ active template is shown greyed out
    with the name of the template holding it — deactivate that template first, or
    remove the category from it, if you want to take the category over.
+
 4. Add fields to the template:
    - **Label** — what the Technician sees (e.g., "Hours reading").
    - **Type** — boolean, numeric, or text.
@@ -3683,39 +3717,39 @@ The Reports landing page lists every live report, grouped by theme. Each card
 shows the report's spec identifier (R-n), its title, and the operational
 question it answers; click a card to open the report.
 
-| Theme | Reports |
-| --- | --- |
-| **Reliability & Availability** | MTBF / Failure Rate by dimension, MTTR by dimension, Bad-Actor / Breakdown Analysis |
-| **PM Management** | Upcoming PM Schedule, PM Compliance, Overdue PM, PM Coverage / Gaps |
-| **Asset Status & Fleet** | Asset Distribution, Assets Status Report, Operational Status Distribution, Most-Used Assets, Asset Booking / Availability |
-| **Workload & Backlog** | WO Backlog / Aging, Workload by Technician, MR / WO Throughput |
-| **Parts & Movement** | Parts Consumption, Asset Movement Log |
-| **Inspection, Readings & PM Audit** | Work Order Form Results, Meter Reading Progression, PM Suppression Register |
+| Theme                               | Reports                                                                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Reliability & Availability**      | MTBF / Failure Rate by dimension, MTTR by dimension, Bad-Actor / Breakdown Analysis                                       |
+| **PM Management**                   | Upcoming PM Schedule, PM Compliance, Overdue PM, PM Coverage / Gaps                                                       |
+| **Asset Status & Fleet**            | Asset Distribution, Assets Status Report, Operational Status Distribution, Most-Used Assets, Asset Booking / Availability |
+| **Workload & Backlog**              | WO Backlog / Aging, Workload by Technician, MR / WO Throughput                                                            |
+| **Parts & Movement**                | Parts Consumption, Asset Movement Log                                                                                     |
+| **Inspection, Readings & PM Audit** | Work Order Form Results, Meter Reading Progression, PM Suppression Register                                               |
 
 ### 16.2 What Each Report Answers
 
-| ID | Report | What it shows |
-| --- | --- | --- |
-| R-1 | Upcoming PM Schedule | Assets with a PM due in the next 30 days. |
-| R-1B | Assets Status Report | The asset register — tag, name, type, status, Condition, location, assignee, and dates. The only listing report in the catalogue; filterable and exportable. Filters: location, operational status, Condition, asset kind, booked, and a date range (`updated_at` by default, `created_at` optional). "Assigned To" is the Technician on the asset's open work order. |
-| R-2 | Asset Distribution | How assets spread across location, maintenance category, or size, with status, Condition, kind, and booked breakdowns. Groupable by `location`, `maintenance_category`, or `size`. |
-| R-3 | MTBF / Failure Rate by dimension | Where classified failures concentrate — by asset, maintenance category, size, or location. |
-| R-4 | MTTR by dimension | Repair turnaround by asset, maintenance category, size, or technician. |
-| R-6 | Bad-Actor / Breakdown Analysis | Which assets, maintenance categories, sizes, or locations have the most confirmed failures. |
-| R-7 | PM Compliance | On-time PM completion percentage by rule, asset, location, and period. |
-| R-8 | Overdue PM | PMs past due and not closed, by aging bucket. |
-| R-9 | PM Coverage / Gaps | Active assets with no active PM assignment. |
-| R-10A | Operational Status Distribution | Fleet split across operational states — Ready for Field, Under Maintenance, Failure, At the Field. |
-| R-13 | Asset Booking / Availability | Booked vs freely available assets, by location. |
-| R-14 | WO Backlog / Aging | Open and in-progress work orders by age bucket and priority. |
-| R-15 | Workload by Technician | Assigned vs completed work orders and average duration per technician (operational workload only — never performance appraisal or labour costing). |
-| R-16 | MR / WO Throughput | Counts by status over the period, plus average conversion time. |
-| R-17 | Parts Consumption | Quantities used by asset, category, location, and period. |
-| R-18 | Asset Movement Log | Relocations in the period, by from → to route. |
-| R-19 | Work Order Form Results | Pre/post inspection results recorded, by asset, field, and period. |
-| R-20 | Meter Reading Progression | How confirmed readings changed over time, by asset and reading type. |
-| R-21 | PM Suppression Register | Which PM occurrences were suppressed or overridden — by whom, when, and why. |
-| R-22 | Most-Used Assets | Assets ranked by accumulated usage against one reading type (operating hours, kilometres driven, or depth). Usage is a difference, not a sum — meters are cumulative, so only confirmed readings count and the baseline is the last confirmed reading before the window. |
+| ID    | Report                           | What it shows                                                                                                                                                                                                                                                                                                                                                         |
+| ----- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R-1   | Upcoming PM Schedule             | Assets with a PM due in the next 30 days.                                                                                                                                                                                                                                                                                                                             |
+| R-1B  | Assets Status Report             | The asset register — tag, name, type, status, Condition, location, assignee, and dates. The only listing report in the catalogue; filterable and exportable. Filters: location, operational status, Condition, asset kind, booked, and a date range (`updated_at` by default, `created_at` optional). "Assigned To" is the Technician on the asset's open work order. |
+| R-2   | Asset Distribution               | How assets spread across location, maintenance category, or size, with status, Condition, kind, and booked breakdowns. Groupable by `location`, `maintenance_category`, or `size`.                                                                                                                                                                                    |
+| R-3   | MTBF / Failure Rate by dimension | Where classified failures concentrate — by asset, maintenance category, size, or location.                                                                                                                                                                                                                                                                            |
+| R-4   | MTTR by dimension                | Repair turnaround by asset, maintenance category, size, or technician.                                                                                                                                                                                                                                                                                                |
+| R-6   | Bad-Actor / Breakdown Analysis   | Which assets, maintenance categories, sizes, or locations have the most confirmed failures.                                                                                                                                                                                                                                                                           |
+| R-7   | PM Compliance                    | On-time PM completion percentage by rule, asset, location, and period.                                                                                                                                                                                                                                                                                                |
+| R-8   | Overdue PM                       | PMs past due and not closed, by aging bucket.                                                                                                                                                                                                                                                                                                                         |
+| R-9   | PM Coverage / Gaps               | Active assets with no active PM assignment.                                                                                                                                                                                                                                                                                                                           |
+| R-10A | Operational Status Distribution  | Fleet split across operational states — Ready for Field, Under Maintenance, Failure, At the Field.                                                                                                                                                                                                                                                                    |
+| R-13  | Asset Booking / Availability     | Booked vs freely available assets, by location.                                                                                                                                                                                                                                                                                                                       |
+| R-14  | WO Backlog / Aging               | Open and in-progress work orders by age bucket and priority.                                                                                                                                                                                                                                                                                                          |
+| R-15  | Workload by Technician           | Assigned vs completed work orders and average duration per technician (operational workload only — never performance appraisal or labour costing).                                                                                                                                                                                                                    |
+| R-16  | MR / WO Throughput               | Counts by status over the period, plus average conversion time.                                                                                                                                                                                                                                                                                                       |
+| R-17  | Parts Consumption                | Quantities used by asset, category, location, and period.                                                                                                                                                                                                                                                                                                             |
+| R-18  | Asset Movement Log               | Relocations in the period, by from → to route.                                                                                                                                                                                                                                                                                                                        |
+| R-19  | Work Order Form Results          | Pre/post inspection results recorded, by asset, field, and period.                                                                                                                                                                                                                                                                                                    |
+| R-20  | Meter Reading Progression        | How confirmed readings changed over time, by asset and reading type.                                                                                                                                                                                                                                                                                                  |
+| R-21  | PM Suppression Register          | Which PM occurrences were suppressed or overridden — by whom, when, and why.                                                                                                                                                                                                                                                                                          |
+| R-22  | Most-Used Assets                 | Assets ranked by accumulated usage against one reading type (operating hours, kilometres driven, or depth). Usage is a difference, not a sum — meters are cumulative, so only confirmed readings count and the baseline is the last confirmed reading before the window.                                                                                              |
 
 ### 16.3 Report Pages
 
@@ -3790,30 +3824,29 @@ drill-down layer for the dashboard's headline numbers.
 
 ### Maintenance Request Priorities
 
-| Value | Display Label | Typical Use |
-|---|---|---|
-| `low` | **Low** | Minor issues, cosmetic defects, non-urgent improvements. |
-| `medium` | **Medium** | Standard maintenance. Default for auto-generated PM requests. |
-| `high` | **High** | Significant performance issue, impending failure. |
-| `critical` | **Critical** | Immediate safety hazard, production stopped, mission-critical failure. |
-
+| Value      | Display Label | Typical Use                                                            |
+| ---------- | ------------- | ---------------------------------------------------------------------- |
+| `low`      | **Low**       | Minor issues, cosmetic defects, non-urgent improvements.               |
+| `medium`   | **Medium**    | Standard maintenance. Default for auto-generated PM requests.          |
+| `high`     | **High**      | Significant performance issue, impending failure.                      |
+| `critical` | **Critical**  | Immediate safety hazard, production stopped, mission-critical failure. |
 
 ### Work Order Statuses
 
-| Status        | Description                                              | Terminal |
-| ------------- | -------------------------------------------------------- | -------- |
-| `open`        | Created from approved MR. May be unassigned.             | No       |
-| `in_progress` | Work started. Must be assigned to an active Technician or Maintenance Manager.     | No       |
-| `completed`   | Technician submitted all work. Awaiting Manager closure. | No       |
-| `closed`      | Reviewed and finalized. Permanently immutable.           | Yes      |
-| `cancelled`   | Cancelled by Admin/Manager with required reason.         | Yes      |
+| Status        | Description                                                                    | Terminal |
+| ------------- | ------------------------------------------------------------------------------ | -------- |
+| `open`        | Created from approved MR. May be unassigned.                                   | No       |
+| `in_progress` | Work started. Must be assigned to an active Technician or Maintenance Manager. | No       |
+| `completed`   | Technician submitted all work. Awaiting Manager closure.                       | No       |
+| `closed`      | Reviewed and finalized. Permanently immutable.                                 | Yes      |
+| `cancelled`   | Cancelled by Admin/Manager with required reason.                               | Yes      |
 
 ### Asset Maintenance Status
 
-| State | Display Label | PM Eligible |
-| ---------------------------------------------------- | ----------- | ----------- |
-| **Enrolled** (`enrolled`) | "In maintenance program" | Yes |
-| **Withdrawn** (`withdrawn`) | "Withdrawn" | No |
+| State                       | Display Label            | PM Eligible |
+| --------------------------- | ------------------------ | ----------- |
+| **Enrolled** (`enrolled`)   | "In maintenance program" | Yes         |
+| **Withdrawn** (`withdrawn`) | "Withdrawn"              | No          |
 
 There are no sub-statuses (see "Maintenance Sub-Statuses (removed)" below).
 Assembly position is a derived state — Installed when `parent_asset_id` is
@@ -3824,15 +3857,15 @@ set, Ready when it is not (Section 5.2).
 The `operational_status` field describes whether the asset is currently
 functional. It is driven by Work Order lifecycle events. See Section 5.9.
 
-| DB Value | Display Label | Meaning |
-|---|---|---|
-| `ready_for_field` | **Ready for Field** | Serviceable and on base, available to send out. |
-| `under_maintenance` | **Under Maintenance** | Currently in the workshop being serviced. Work is in progress. |
-| `failure` | **Failure** | Has a known fault. Not serviceable until repaired. |
-| `at_the_field` | **At the Field** | Out on a rig or well site. **Set automatically** by a location change — it is never offered in a picker. |
+| DB Value            | Display Label         | Meaning                                                                                                  |
+| ------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `ready_for_field`   | **Ready for Field**   | Serviceable and on base, available to send out.                                                          |
+| `under_maintenance` | **Under Maintenance** | Currently in the workshop being serviced. Work is in progress.                                           |
+| `failure`           | **Failure**           | Has a known fault. Not serviceable until repaired.                                                       |
+| `at_the_field`      | **At the Field**      | Out on a rig or well site. **Set automatically** by a location change — it is never offered in a picker. |
 
 > **Renamed from "Down" (August 2026).** LDC read "Down" as "waiting for parts",
-> which is a *condition*, not an operational state — so the value became
+> which is a _condition_, not an operational state — so the value became
 > **Failure** and the waiting-for-parts idea moved to the Condition field below.
 > The old `scraped`, `under_inspection` and `lost in hole` values were removed at
 > the same time: an asset that has left the fleet is now simply **deactivated**
@@ -3840,15 +3873,15 @@ functional. It is driven by Work Order lifecycle events. See Section 5.9.
 
 ### Condition
 
-Separate from Operational Status, and answering a different question: *what is
-wrong with this asset?* An asset can be **Ready for Field** with a condition of
+Separate from Operational Status, and answering a different question: _what is
+wrong with this asset?_ An asset can be **Ready for Field** with a condition of
 **Missing Parts** — serviceable, but not complete.
 
-| DB Value | Display Label | Meaning |
-|---|---|---|
-| `normal` | **Normal** | Nothing outstanding. The default, and what a work-order close resets to. |
-| `need_assembly` | **Need Assembly** | Complete, but needs putting together before use. |
-| `missing_parts` | **Missing Parts** | Something is missing and has to be sourced. |
+| DB Value          | Display Label       | Meaning                                                                                                      |
+| ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `normal`          | **Normal**          | Nothing outstanding. The default, and what a work-order close resets to.                                     |
+| `need_assembly`   | **Need Assembly**   | Complete, but needs putting together before use.                                                             |
+| `missing_parts`   | **Missing Parts**   | Something is missing and has to be sourced.                                                                  |
 | `need_inspection` | **Need Inspection** | Should be looked at before going out again. Set automatically when an asset returns from a rig or well site. |
 
 Administrators can add, rename and retire conditions under **Lists → Asset
@@ -3866,30 +3899,29 @@ is what a work-order close resets each asset to.
 
 Some sub-statuses were only available for specific asset kinds.
 
-| DB Value | Display Label | Applies To | Meaning |
-|---|---|---|---|
-| `installed` | **Installed** | `asset_kind = component` or `package` | Currently installed inside a parent. `parent_asset_id` must be set. |
-| `ready` | **Ready** | `asset_kind = component` or `package` | Spare. Fully maintained and available for installation. `parent_asset_id` must be `NULL`. |
-| `lih` | **Lost in Hole** | Any (withdrawn only) | Physically inaccessible (e.g., downhole equipment that cannot be retrieved). |
-| `dbr` | **Damaged Beyond Repair** | Any (withdrawn only) | Repair is not economically or technically feasible. |
-| `disposed` | **Disposed** | Any (withdrawn only) | Formally disposed per organizational policy (independent of ERP disposal accounting). |
-| `scrapped` | **Scrapped** | Any (withdrawn only) | Dismantled, sold for scrap, or otherwise removed from the operational pool. |
-| `other` | **Other** | Any (withdrawn only) | Any other reason, with a free-text note for context. |
+| DB Value    | Display Label             | Applies To                            | Meaning                                                                                   |
+| ----------- | ------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `installed` | **Installed**             | `asset_kind = component` or `package` | Currently installed inside a parent. `parent_asset_id` must be set.                       |
+| `ready`     | **Ready**                 | `asset_kind = component` or `package` | Spare. Fully maintained and available for installation. `parent_asset_id` must be `NULL`. |
+| `lih`       | **Lost in Hole**          | Any (withdrawn only)                  | Physically inaccessible (e.g., downhole equipment that cannot be retrieved).              |
+| `dbr`       | **Damaged Beyond Repair** | Any (withdrawn only)                  | Repair is not economically or technically feasible.                                       |
+| `disposed`  | **Disposed**              | Any (withdrawn only)                  | Formally disposed per organizational policy (independent of ERP disposal accounting).     |
+| `scrapped`  | **Scrapped**              | Any (withdrawn only)                  | Dismantled, sold for scrap, or otherwise removed from the operational pool.               |
+| `other`     | **Other**                 | Any (withdrawn only)                  | Any other reason, with a free-text note for context.                                      |
 
 > None of these values is written any more. Withdrawal itself is the gate for
 > PM evaluation; an asset that has left the fleet permanently is deactivated.
-
 
 ### Asset Kinds
 
 Each asset in ATMS carries an `asset_kind` that determines its role in the
 assembly hierarchy and whether it has a derived assembly state.
 
-| Kind          | DB Value      | Can Have Parent? | Can Have Children? | Assembly State (derived) | Typical Example                    |
-| ------------- | ------------- | ---------------- | ------------------ | ------------------------- | ---------------------------------- |
-| **Asset**     | `asset`       | No               | No                 | *(none)*                  | Standalone pump, generator         |
-| **Package**   | `package`     | Yes              | Yes                | Installed / Ready         | Motor, Power Section               |
-| **Component** | `component`   | Yes              | No                 | Installed / Ready         | Radial Bearing, Sensor             |
+| Kind          | DB Value    | Can Have Parent? | Can Have Children? | Assembly State (derived) | Typical Example            |
+| ------------- | ----------- | ---------------- | ------------------ | ------------------------ | -------------------------- |
+| **Asset**     | `asset`     | No               | No                 | _(none)_                 | Standalone pump, generator |
+| **Package**   | `package`   | Yes              | Yes                | Installed / Ready        | Motor, Power Section       |
+| **Component** | `component` | Yes              | No                 | Installed / Ready        | Radial Bearing, Sensor     |
 
 > See Section 5.2 for the full definition of each asset kind, including
 > `parent_asset_id` consistency rules, decision guidance for choosing the right
@@ -3954,7 +3986,7 @@ assembly hierarchy and whether it has a derived assembly state.
 | Trigger manual ERP sync           | Yes   | Yes     | No                | No        | No              |
 | Manage ERP sync settings          | Yes   | No      | No                | No        | No              |
 | Manage users                      | Yes   | No      | No                | No        | No              |
-| Create users (name, email, role)   | Yes   | No      | No                | No        | No              |
+| Create users (name, email, role)  | Yes   | No      | No                | No        | No              |
 | Manage locations / master data    | Yes   | No      | No                | No        | No              |
 | Manage company settings           | Yes   | No      | No                | No        | No              |
 | View technical audit logs         | Yes   | No      | No                | No        | No              |

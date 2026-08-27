@@ -53,7 +53,10 @@ export function useMeterProgressionReport() {
     loading.value = true
     error.value = null
     try {
-      const res = await api.get<MeterProgressionReportPage>('/reports/meter-progression', buildQuery(null))
+      const res = await api.get<MeterProgressionReportPage>(
+        '/reports/meter-progression',
+        buildQuery(null),
+      )
       rows.value = res.data ?? []
       summary.value = res.summary ?? null
       nextCursor.value = res.meta?.next_cursor ?? null

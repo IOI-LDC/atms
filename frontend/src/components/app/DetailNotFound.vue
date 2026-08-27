@@ -35,8 +35,8 @@ const router = useRouter()
 
     <h1 class="detail-notfound-title">{{ entityLabel }} not found</h1>
     <p class="detail-notfound-description">
-      We scanned the register but couldn't pick up this {{ entityLabel.toLowerCase() }} on the
-      grid. It may have been removed, closed out, or the link is simply out of date.
+      We scanned the register but couldn't pick up this {{ entityLabel.toLowerCase() }} on the grid.
+      It may have been removed, closed out, or the link is simply out of date.
     </p>
 
     <div class="detail-notfound-actions">

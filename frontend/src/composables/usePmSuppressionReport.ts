@@ -57,7 +57,10 @@ export function usePmSuppressionReport() {
     loading.value = true
     error.value = null
     try {
-      const res = await api.get<PmSuppressionReportPage>('/reports/pm-suppression', buildQuery(null))
+      const res = await api.get<PmSuppressionReportPage>(
+        '/reports/pm-suppression',
+        buildQuery(null),
+      )
       rows.value = res.data ?? []
       summary.value = res.summary ?? null
       nextCursor.value = res.meta?.next_cursor ?? null

@@ -165,7 +165,9 @@ onMounted(() => {
 
         <div v-else-if="rows.length === 0" class="empty-state">
           <p class="empty-state-title">Nothing overdue</p>
-          <p class="empty-state-description">No date-triggered PMs are past due for these filters.</p>
+          <p class="empty-state-description">
+            No date-triggered PMs are past due for these filters.
+          </p>
         </div>
 
         <template v-else>
@@ -196,10 +198,18 @@ onMounted(() => {
                   <td>
                     <AssetIdentity :asset="row.asset" stacked />
                   </td>
-                  <td><span :class="priorityClass(row.priority)">{{ priorityLabel(row.priority) }}</span></td>
+                  <td>
+                    <span :class="priorityClass(row.priority)">{{
+                      priorityLabel(row.priority)
+                    }}</span>
+                  </td>
                   <td class="report-cell-muted">{{ fmtDate(row.trigger_date) }}</td>
                   <td class="report-table-num report-cell-strong">{{ row.days_overdue }}</td>
-                  <td><span :class="agingBucketClass(row.bucket)">{{ agingBucketLabel(row.bucket) }}</span></td>
+                  <td>
+                    <span :class="agingBucketClass(row.bucket)">{{
+                      agingBucketLabel(row.bucket)
+                    }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>

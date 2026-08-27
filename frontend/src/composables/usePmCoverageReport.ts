@@ -67,7 +67,10 @@ export function usePmCoverageReport() {
     loadingMore.value = true
     error.value = null
     try {
-      const res = await api.get<PmCoverageReportPage>('/reports/pm-coverage', buildQuery(nextCursor.value))
+      const res = await api.get<PmCoverageReportPage>(
+        '/reports/pm-coverage',
+        buildQuery(nextCursor.value),
+      )
       rows.value = [...rows.value, ...(res.data ?? [])]
       nextCursor.value = res.meta?.next_cursor ?? null
     } catch {

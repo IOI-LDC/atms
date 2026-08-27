@@ -40,7 +40,9 @@ export function useAssetSearch(options: { maintenanceStatus?: string } = {}) {
 
   /** Load a default (unfiltered) page immediately — call when the popover opens. */
   function loadInitial() {
-    query.value = ''
+    if (query.value.trim()) {
+      return
+    }
     clearTimeout(timer)
     fetchAssets()
   }

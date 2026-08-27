@@ -72,7 +72,10 @@ export function useThroughputReport() {
     loadingMore.value = true
     error.value = null
     try {
-      const res = await api.get<ThroughputReportPage>('/reports/throughput', buildQuery(nextCursor.value))
+      const res = await api.get<ThroughputReportPage>(
+        '/reports/throughput',
+        buildQuery(nextCursor.value),
+      )
       rows.value = [...rows.value, ...(res.data ?? [])]
       nextCursor.value = res.meta?.next_cursor ?? null
     } catch {

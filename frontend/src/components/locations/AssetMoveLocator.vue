@@ -21,7 +21,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [Asset] }>()
 
-const { query, results, busy, search, loadInitial, reset } = useAssetLocator(toRef(props, 'locationId'))
+const { query, results, busy, search, loadInitial, reset } = useAssetLocator(
+  toRef(props, 'locationId'),
+)
 
 const open = ref(false)
 const displayQuery = ref('')

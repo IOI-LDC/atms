@@ -20,7 +20,8 @@ import { THROUGHPUT_STATUS_OPTIONS, reportDateWindow } from '@/lib/reportOptions
 const ALL = '__all__'
 const DEFAULT = reportDateWindow(90)
 
-const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } = useThroughputReport()
+const { rows, summary, loading, loadingMore, error, hasMore, load, loadMore } =
+  useThroughputReport()
 
 const fromDate = ref(DEFAULT.from)
 const toDate = ref(DEFAULT.to)
@@ -110,10 +111,14 @@ onMounted(() => load({ from: DEFAULT.from, to: DEFAULT.to }))
     <div class="data-card">
       <div class="data-card-content">
         <div v-if="error" class="error-state" role="alert">{{ error }}</div>
-        <div v-else-if="loading && rows.length === 0" class="loading-state">Loading throughput…</div>
+        <div v-else-if="loading && rows.length === 0" class="loading-state">
+          Loading throughput…
+        </div>
         <div v-else-if="rows.length === 0" class="empty-state">
           <p class="empty-state-title">No activity</p>
-          <p class="empty-state-description">No MR or WO lifecycle events in the selected window.</p>
+          <p class="empty-state-description">
+            No MR or WO lifecycle events in the selected window.
+          </p>
         </div>
         <template v-else>
           <p class="report-result-meta">

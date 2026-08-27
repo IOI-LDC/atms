@@ -227,10 +227,18 @@ onMounted(() => {
                   <td :class="row.assigned_to ? '' : 'report-cell-muted'">
                     {{ row.assigned_to?.name ?? '—' }}
                   </td>
-                  <td><span :class="priorityClass(row.priority)">{{ priorityLabel(row.priority) }}</span></td>
+                  <td>
+                    <span :class="priorityClass(row.priority)">{{
+                      priorityLabel(row.priority)
+                    }}</span>
+                  </td>
                   <td class="report-cell-muted">{{ fmtDate(row.created_at) }}</td>
                   <td class="report-table-num report-cell-strong">{{ row.age_days }}</td>
-                  <td><span :class="agingBucketClass(row.bucket)">{{ agingBucketLabel(row.bucket) }}</span></td>
+                  <td>
+                    <span :class="agingBucketClass(row.bucket)">{{
+                      agingBucketLabel(row.bucket)
+                    }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>

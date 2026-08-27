@@ -116,7 +116,10 @@ onMounted(() => {
         v-if="summary"
         :stats="[{ label: 'PMs due in horizon', value: summary.total }]"
       />
-      <div v-if="triggerBreakdown.length || dueWeekBreakdown.length" class="report-chips report-subsummary">
+      <div
+        v-if="triggerBreakdown.length || dueWeekBreakdown.length"
+        class="report-chips report-subsummary"
+      >
         <span v-for="t in triggerBreakdown" :key="t.key" class="report-chip">
           {{ pmTriggerLabel(t.key) }} <b>{{ t.count }}</b>
         </span>
@@ -158,7 +161,7 @@ onMounted(() => {
                   <RouterLink :to="`/assets/${row.asset.id}`" class="report-link">
                     {{ row.asset.name }}
                   </RouterLink>
-                    <AssetIdentityBadges :asset="row.asset" />
+                  <AssetIdentityBadges :asset="row.asset" />
                 </td>
                 <td :class="row.location?.name ? '' : 'report-cell-muted'">
                   {{ row.location?.name ?? 'Unassigned' }}

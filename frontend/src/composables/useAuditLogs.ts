@@ -83,7 +83,10 @@ export function useAuditLogs() {
     loadingMore.value = true
     error.value = null
     try {
-      const res = await api.get<CursorPage<AuditLog>>('/admin/audit-logs', buildQuery(nextCursor.value))
+      const res = await api.get<CursorPage<AuditLog>>(
+        '/admin/audit-logs',
+        buildQuery(nextCursor.value),
+      )
       rows.value = [...rows.value, ...(res.data ?? [])]
       nextCursor.value = res.meta?.next_cursor ?? null
     } catch {

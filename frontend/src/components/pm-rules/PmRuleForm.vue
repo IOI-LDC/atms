@@ -51,9 +51,7 @@ const isEdit = computed(() => props.editing !== null)
 // Reading-based triggers are parked until meter readings are fed in from the
 // Job Management system (and a verify path exists). Restore the two options
 // below to re-enable; the backend contract is unchanged.
-const TRIGGER_OPTIONS = [
-  { value: 'date', label: 'Calendar (date-based)' },
-]
+const TRIGGER_OPTIONS = [{ value: 'date', label: 'Calendar (date-based)' }]
 const LEVEL_OPTIONS = ['L1', 'L2', 'L3', 'L4']
 
 // ── Mode (create only) ────────────────────────────────────────────────────────

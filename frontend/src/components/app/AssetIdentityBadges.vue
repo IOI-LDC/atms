@@ -24,7 +24,10 @@ withDefaults(
   <span
     v-if="
       asset &&
-      (asset.serial_number || asset.size || asset.maintenance_category || (showTag && asset.asset_tag))
+      (asset.serial_number ||
+        asset.size ||
+        asset.maintenance_category ||
+        (showTag && asset.asset_tag))
     "
     class="identity-badges"
   >
