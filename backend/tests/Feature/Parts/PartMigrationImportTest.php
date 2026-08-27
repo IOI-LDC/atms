@@ -121,19 +121,71 @@ class PartMigrationImportTest extends TestCase
         $path = $this->writeCsv([
             $this->validRow($first, ['cleaned_name' => 'First Updated']),
             $this->validRow($second, [
-                'erp_part_code' => 'WRONG-CODE',
+                'status' => 'bogus',
+                'is_active' => 'true',
                 'cleaned_name' => 'Second Updated',
             ]),
         ]);
 
         $this->artisan('atms:import-parts', ['file' => $path])
             ->expectsOutputToContain('validation error')
-            ->expectsOutputToContain('does not match database erp_part_code')
+            ->expectsOutputToContain('invalid status')
             ->assertExitCode(Command::FAILURE);
 
         $this->assertSame('First Original', $first->refresh()->name);
         $this->assertSame('Second Original', $second->refresh()->name);
         $this->assertDatabaseCount('maintenance_categories', 0);
+    }
+
+    public function test_import_applies_erp_code_rename_when_system_id_matches(): void
+    {
+        $part = $this->createPart([
+            'erp_part_code' => 'PRT-010',
+            'name' => 'Renamed Code Part',
+        ]);
+        $path = $this->writeCsv([
+            $this->validRow($part, [
+                'erp_part_code' => 'PRT-010X',
+                'cleaned_name' => 'Renamed Code Part',
+            ]),
+        ]);
+
+        $this->artisan('atms:import-parts', ['file' => $path])
+            ->expectsOutputToContain('1 parts updated')
+            ->assertExitCode(Command::SUCCESS);
+
+        $part->refresh();
+
+        $this->assertSame('PRT-010X', $part->erp_part_code);
+        $this->assertDatabaseCount('parts', 1);
+    }
+
+    public function test_import_rejects_code_rename_that_collides_with_another_part(): void
+    {
+        $owner = $this->createPart([
+            'erp_part_code' => 'PRT-011',
+            'name' => 'Owner Part',
+        ]);
+        $renamed = $this->createPart([
+            'erp_part_code' => 'PRT-012',
+            'name' => 'Rename Target',
+        ]);
+        $path = $this->writeCsv([
+            // renaming PRT-012 to PRT-011 is rejected: that code belongs to owner
+            $this->validRow($renamed, [
+                'erp_part_code' => 'PRT-011',
+                'cleaned_name' => 'Rename Target',
+            ]),
+        ]);
+
+        $this->artisan('atms:import-parts', ['file' => $path])
+            ->expectsOutputToContain('validation error')
+            ->expectsOutputToContain('is already assigned to ERP item')
+            ->assertExitCode(Command::FAILURE);
+
+        $this->assertSame('PRT-011', $owner->refresh()->erp_part_code);
+        $this->assertSame('PRT-012', $renamed->refresh()->erp_part_code);
+        $this->assertDatabaseCount('parts', 2);
     }
 
     public function test_rerunning_import_does_not_touch_unchanged_parts(): void
@@ -158,6 +210,101 @@ class PartMigrationImportTest extends TestCase
             ->assertExitCode(Command::SUCCESS);
 
         $this->assertTrue($part->refresh()->updated_at->equalTo($updatedAt));
+    }
+
+    public function test_import_creates_new_parts_with_erp_system_id(): void
+    {
+        $systemId = (string) Str::uuid();
+        $path = $this->writeCsv([
+            $this->newRow([
+                'erp_system_id' => $systemId,
+                'erp_part_code' => 'NEW-001',
+                'cleaned_name' => 'New Part One',
+                'available_quantity' => '4',
+            ]),
+        ]);
+
+        $this->artisan('atms:import-parts', ['file' => $path])
+            ->expectsOutputToContain('0 parts updated, 0 unchanged, 1 created')
+            ->assertExitCode(Command::SUCCESS);
+
+        $part = Part::where('erp_part_code', 'NEW-001')->firstOrFail();
+
+        $this->assertSame($systemId, $part->erp_part_id);
+        $this->assertSame('New Part One', $part->name);
+        $this->assertSame('4.000', $part->available_quantity);
+        $this->assertDatabaseCount('parts', 1);
+    }
+
+    public function test_import_creates_new_parts_without_erp_system_id_and_is_idempotent(): void
+    {
+        $path = $this->writeCsv([
+            $this->newRow([
+                'erp_system_id' => '',
+                'erp_part_code' => 'NEW-002',
+                'cleaned_name' => 'New Part Two',
+            ]),
+        ]);
+
+        $this->artisan('atms:import-parts', ['file' => $path])
+            ->expectsOutputToContain('0 parts updated, 0 unchanged, 1 created')
+            ->assertExitCode(Command::SUCCESS);
+
+        $part = Part::where('erp_part_code', 'NEW-002')->firstOrFail();
+        $this->assertNull($part->erp_part_id);
+
+        $updatedAt = $part->refresh()->updated_at;
+        $this->travel(1)->minute();
+
+        $this->artisan('atms:import-parts', ['file' => $path])
+            ->expectsOutputToContain('0 parts updated, 1 unchanged, 0 created')
+            ->assertExitCode(Command::SUCCESS);
+
+        $this->assertDatabaseCount('parts', 1);
+        $this->assertTrue($part->refresh()->updated_at->equalTo($updatedAt));
+    }
+
+    public function test_import_rejects_code_already_assigned_to_another_erp_item(): void
+    {
+        $part = $this->createPart([
+            'erp_part_code' => 'PRT-006',
+            'name' => 'Existing Part',
+        ]);
+        $path = $this->writeCsv([
+            $this->newRow([
+                'erp_system_id' => '',
+                'erp_part_code' => 'PRT-006',
+                'cleaned_name' => 'Trying to steal the code',
+            ]),
+        ]);
+
+        $this->artisan('atms:import-parts', ['file' => $path])
+            ->expectsOutputToContain('is already assigned to ERP item')
+            ->assertExitCode(Command::FAILURE);
+
+        $this->assertSame('Existing Part', $part->refresh()->name);
+        $this->assertDatabaseCount('parts', 1);
+    }
+
+    /**
+     * @param  array<string, string>  $overrides
+     * @return array<string, string>
+     */
+    private function newRow(array $overrides = []): array
+    {
+        return array_merge([
+            'erp_system_id' => '',
+            'erp_part_code' => 'NEW-DEFAULT',
+            'cleaned_name' => 'New Part',
+            'available_quantity' => '0',
+            'status' => 'active',
+            'is_active' => 'true',
+            'proposed_maintenance_category_name' => '',
+            'proposed_size' => '',
+            'proposed_size_inches' => '',
+            'proposed_part_number' => '',
+            'requires_review' => 'false',
+        ], $overrides);
     }
 
     /**

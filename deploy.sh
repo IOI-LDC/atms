@@ -111,7 +111,7 @@ fi
 # change must be explicitly approved by updating the hash here; otherwise deploy
 # stops before production data is touched.
 PARTS_IMPORT_FILE="backend/database/data/parts-migration-source.csv"
-PARTS_IMPORT_SHA256="91fb416e124fb4d8bdc032b56b9aaf409d93496bc2eba464194e5fe36c87596f"
+PARTS_IMPORT_SHA256="66f048d9c4824febd5d0a9fd6490bd8c77e2588e8e1583fa6c9805318868a9f5"
 
 if [[ ! -f "$PARTS_IMPORT_FILE" ]]; then
   echo "ERROR: approved parts import file is missing: $PARTS_IMPORT_FILE" >&2

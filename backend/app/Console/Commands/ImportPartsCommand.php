@@ -15,8 +15,12 @@ use Illuminate\Support\Facades\DB;
  * Controlled update of the cleaned LDC parts workbook.
  *
  * Rows match existing parts on the immutable ERP System ID. The ERP part code
- * is cross-checked as a safeguard; this command never inserts or deletes parts.
- * Every row is validated before the transaction begins.
+ * is cross-checked as a safeguard against matching the wrong part; when the
+ * system id matches but the code differs, the code is treated as an ERP rename
+ * and updated. Rows whose system id is unknown (or absent) are inserted as new
+ * parts, keyed on the unique ERP part code, so new items from the ERP export
+ * can be adopted. This command never deletes parts. Every row is validated
+ * before the transaction begins.
  */
 #[Signature('atms:import-parts {file? : Path to the parts migration CSV} {--dry-run : Validate and report only, write nothing}')]
 #[Description('Validate and update existing parts from the cleaned LDC parts workbook.')]
@@ -165,8 +169,12 @@ class ImportPartsCommand extends Command
     private function validateRows(array $rows): array
     {
         $existingByErpId = Part::query()
+            ->whereNotNull('erp_part_id')
             ->get(['id', 'erp_part_id', 'erp_part_code'])
             ->keyBy('erp_part_id');
+        $existingByCode = Part::query()
+            ->get(['id', 'erp_part_id', 'erp_part_code'])
+            ->keyBy('erp_part_code');
         $seenErpIds = [];
         $seenErpCodes = [];
         $categoryNamesByCode = [];
@@ -179,19 +187,6 @@ class ImportPartsCommand extends Command
             $name = trim($row['cleaned_name']);
             $categoryName = trim($row['proposed_maintenance_category_name']);
             $partNumber = trim($row['proposed_part_number']);
-
-            if ($erpId === '') {
-                $this->errors[] = "line {$line}: erp_system_id is blank.";
-
-                continue;
-            }
-
-            if (isset($seenErpIds[$erpId])) {
-                $this->errors[] = "line {$line}: duplicate erp_system_id {$erpId} (also line {$seenErpIds[$erpId]}).";
-
-                continue;
-            }
-            $seenErpIds[$erpId] = $line;
 
             if ($erpCode === '') {
                 $this->errors[] = "line {$line}: erp_part_code is blank.";
@@ -206,17 +201,39 @@ class ImportPartsCommand extends Command
             }
             $seenErpCodes[$erpCode] = $line;
 
-            /** @var Part|null $part */
-            $part = $existingByErpId->get($erpId);
+            if ($erpId !== '') {
+                if (isset($seenErpIds[$erpId])) {
+                    $this->errors[] = "line {$line}: duplicate erp_system_id {$erpId} (also line {$seenErpIds[$erpId]}).";
 
-            if ($part === null) {
-                $this->errors[] = "line {$line}: erp_system_id {$erpId} does not match any existing part.";
-
-                continue;
+                    continue;
+                }
+                $seenErpIds[$erpId] = $line;
             }
 
-            if ($part->erp_part_code !== $erpCode) {
-                $this->errors[] = "line {$line}: {$erpId} does not match database erp_part_code [{$part->erp_part_code}]; workbook has [{$erpCode}].";
+            /** @var Part|null $part */
+            $part = $erpId === '' ? null : $existingByErpId->get($erpId);
+
+            if ($part === null) {
+                // A code already in the database only resolves back to that part
+                // when it is the same item: the ERP id matches, or the stored
+                // part has no ERP id yet (previously inserted from this workbook).
+                $byCode = $existingByCode->get($erpCode);
+
+                if ($byCode !== null && $byCode->erp_part_id !== null) {
+                    $this->errors[] = "line {$line}: erp_part_code {$erpCode} is already assigned to ERP item [{$byCode->erp_part_id}].";
+                } elseif ($byCode !== null) {
+                    $part = $byCode;
+                }
+            }
+
+            if ($part !== null && $part->erp_part_code !== $erpCode) {
+                $byCode = $existingByCode->get($erpCode);
+
+                if ($byCode !== null && $byCode->id !== $part->id) {
+                    $this->errors[] = "line {$line}: erp_part_code {$erpCode} is already assigned to ERP item [{$byCode->erp_part_id}].";
+                }
+                // else: the ERP renamed the code — the immutable system id matched,
+                // so the new code is applied when the import runs.
             }
 
             if ($name === '') {
@@ -261,10 +278,12 @@ class ImportPartsCommand extends Command
             }
 
             $prepared[] = [
-                'part_id' => $part->id,
-                'erp_part_id' => $erpId,
+                'part_id' => $part?->id,
+                'is_new' => $part === null,
+                'erp_part_id' => $erpId === '' ? null : $erpId,
                 'erp_part_code' => $erpCode,
                 'name' => $name,
+                'unit_of_measure' => trim($row['unit_of_measure'] ?? '') ?: 'EA',
                 'available_quantity' => $quantity,
                 'erp_status' => $status,
                 'is_active' => $isActive,
@@ -342,12 +361,14 @@ class ImportPartsCommand extends Command
     private function reportPlan(array $prepared): void
     {
         $categories = collect($prepared)->pluck('category_name')->filter()->unique()->sort()->values();
-        $partIds = collect($prepared)->pluck('part_id');
+        $partIds = collect($prepared)->pluck('part_id')->filter();
         $untouched = Part::whereNotIn('id', $partIds->all())->count();
+        $newCount = count($prepared) - $partIds->count();
 
         $this->newLine();
         $this->table(['', 'Count'], [
-            ['Parts to update', count($prepared)],
+            ['Parts to update', $partIds->count()],
+            ['New parts to create', $newCount],
             ['Maintenance categories', $categories->count()],
             ['Rows with a size', collect($prepared)->whereNotNull('size')->count()],
             ['Rows without a size', collect($prepared)->whereNull('size')->count()],
@@ -364,18 +385,46 @@ class ImportPartsCommand extends Command
     {
         $updated = 0;
         $unchanged = 0;
+        $created = 0;
 
-        DB::transaction(function () use ($prepared, &$updated, &$unchanged): void {
+        DB::transaction(function () use ($prepared, &$updated, &$unchanged, &$created): void {
             $categoryIds = $this->syncCategories($prepared);
-            $parts = Part::whereKey(collect($prepared)->pluck('part_id'))
+            $parts = Part::whereKey(collect($prepared)->pluck('part_id')->filter())
                 ->get()
                 ->keyBy('id');
 
             foreach ($prepared as $row) {
+                if ($row['is_new']) {
+                    Part::create([
+                        'erp_part_id' => $row['erp_part_id'],
+                        'erp_part_code' => $row['erp_part_code'],
+                        'part_number' => $row['part_number'],
+                        'name' => $row['name'],
+                        'unit_of_measure' => $row['unit_of_measure'],
+                        'available_quantity' => $row['available_quantity'],
+                        'erp_status' => $row['erp_status'],
+                        'is_active' => $row['is_active'],
+                        'maintenance_category_id' => $row['category_code'] === ''
+                            ? null
+                            : $categoryIds[$row['category_code']],
+                        'size_inches' => $row['size'],
+                    ]);
+                    $created++;
+
+                    continue;
+                }
+
+                /** @var Part $part */
                 $part = $parts->get($row['part_id']);
 
+                if ($part->erp_part_id === null && $row['erp_part_id'] !== null) {
+                    $part->erp_part_id = $row['erp_part_id'];
+                }
+
                 $part->fill([
+                    'erp_part_code' => $row['erp_part_code'],
                     'name' => $row['name'],
+                    'unit_of_measure' => $row['unit_of_measure'],
                     'available_quantity' => $row['available_quantity'],
                     'erp_status' => $row['erp_status'],
                     'is_active' => $row['is_active'],
@@ -396,7 +445,7 @@ class ImportPartsCommand extends Command
         });
 
         $this->newLine();
-        $this->info("Imported. {$updated} parts updated, {$unchanged} unchanged, ".MaintenanceCategory::count().' maintenance categories present.');
+        $this->info("Imported. {$updated} parts updated, {$unchanged} unchanged, {$created} created, ".MaintenanceCategory::count().' maintenance categories present.');
     }
 
     /**
