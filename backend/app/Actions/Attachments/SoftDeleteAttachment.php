@@ -16,12 +16,16 @@ class SoftDeleteAttachment
      * policy alone.
      *
      * `AttachmentPolicy::delete` refuses on a closed or cancelled work order,
-     * but a policy runs on a row read at the start of the request. Closing a
-     * work order requires at least one attachment, so the losing sequence is
-     * real and small: this delete passes the policy while the order is still
-     * in progress, a close commits, and this then removes the very attachment
-     * that permitted the close. The result is a closed work order with no
-     * evidence — a state the system otherwise makes unreachable.
+     * but a policy runs on a row read at the start of the request. The losing
+     * sequence is real and small: this delete passes the policy while the order
+     * is still in progress, a close commits, and this then removes a file from
+     * what is now a closed record. A terminal work order's attachments are
+     * immutable — the lock is what makes that true under concurrency, not just
+     * in the common case.
+     *
+     * Note this does not depend on the close-time attachment requirement, which
+     * was removed 2026-08-30. Attachments are optional at close; whatever is
+     * attached when a work order goes terminal stays.
      *
      * Work order first, then the attachment: the same order `CancelWorkOrder`
      * and `ClearWorkOrderPmMark` take, so the two cannot deadlock against each

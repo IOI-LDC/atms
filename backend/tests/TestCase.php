@@ -39,16 +39,14 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Satisfy the close-time attachment requirement (RQ2, 2026-08-16).
+     * Give a work order an attachment directly in the database.
      *
-     * A work order cannot be closed until it carries at least one attachment.
-     * Tests about anything *other* than that rule should call this rather than
-     * restate it — the same reasoning as `workshopLocation()` above.
-     *
-     * The row is written directly instead of going through the upload endpoint:
-     * the gate checks presence, not content, and no test that merely needs to
-     * reach `closed` cares about bytes on disk. `AttachmentGateTest` covers the
-     * rule itself through the real API.
+     * Attachments are optional at close (2026-08-30), so tests only need this
+     * when the attachment itself, an upload audit, or the terminal locks are
+     * under test — tests that merely need to reach `closed` may close without
+     * one. The row is written directly instead of going through the upload
+     * endpoint, because no test that just needs the row cares about bytes on
+     * disk; `WorkOrderAttachmentGateTest` covers the real API.
      */
     protected function attachToWorkOrder(WorkOrder $workOrder, ?User $uploadedBy = null): Attachment
     {

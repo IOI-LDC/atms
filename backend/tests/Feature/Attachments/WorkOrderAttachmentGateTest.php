@@ -18,19 +18,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * RQ2 (confirmed with the user 2026-08-16): a work order cannot be **closed**
- * until it carries at least one attachment.
+ * Attachments are OPTIONAL at close (loosened 2026-08-30, superseding the RQ2
+ * gate of 2026-08-16): a work order closes whether or not it carries one.
  *
- * The gate is on close, not completion, and that ordering is the whole design.
- * Completion is the technician saying the physical work is finished — often
- * from a yard or a rig, where uploading a file is awkward. Closing is the
- * manager signing it off. Between those two moments the paperwork arrives,
- * which is why uploads stay open on a COMPLETED work order and why the
- * technician who did the job is still the one who can supply the evidence.
- *
- * Any attachment satisfies the gate. ATMS has no concept of "the inspection
- * form" specifically — that would need an attachment category that does not
- * exist — so this is a presence check, deliberately.
+ * Everything else about the upload window is unchanged. Uploads stay open on a
+ * COMPLETED work order — the technician marks the work finished, then files the
+ * paperwork — and lock once the work order is closed or cancelled, as does
+ * deletion. Cancelling never needed one.
  */
 class WorkOrderAttachmentGateTest extends TestCase
 {
@@ -105,24 +99,15 @@ class WorkOrderAttachmentGateTest extends TestCase
             ->post("/api/work-orders/{$workOrder->id}/attachments", ['file' => $file]);
     }
 
-    // ── The gate ────────────────────────────────────────────────────────────────
+    // ── Attachments are optional at close ──────────────────────────────────────
 
-    public function test_a_work_order_with_no_attachment_cannot_be_closed(): void
+    public function test_a_work_order_with_no_attachment_can_be_closed(): void
     {
         $wo = $this->completedWorkOrder();
 
-        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")
-            ->assertStatus(409)
-            ->assertJsonPath(
-                'message',
-                'This work order has no attachments. Upload the completed form or supporting document before closing it.',
-            );
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
 
-        $this->assertSame(
-            WorkOrderStatus::COMPLETED,
-            $wo->fresh()->status,
-            'A refused close must not half-apply.',
-        );
+        $this->assertSame(WorkOrderStatus::CLOSED, $wo->fresh()->status);
     }
 
     public function test_closing_succeeds_once_something_is_attached(): void
@@ -137,29 +122,13 @@ class WorkOrderAttachmentGateTest extends TestCase
         $this->assertSame(WorkOrderStatus::CLOSED, $wo->fresh()->status);
     }
 
-    /**
-     * The asset must be untouched by a refused close — the guard runs before
-     * every mutation in `CloseWorkOrder`, and this pins that rather than
-     * trusting the ordering to stay put.
-     */
-    public function test_a_refused_close_changes_nothing_about_the_asset(): void
-    {
-        $wo = $this->completedWorkOrder();
-        $wo->asset->update(['condition_status' => 'missing_parts']);
-
-        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertStatus(409);
-
-        $this->assertSame('missing_parts', $wo->asset->fresh()->condition_status);
-        $this->assertSame('under_maintenance', $wo->asset->fresh()->operational_status->value);
-    }
-
-    // ── Uploading after completion — the point of gating close, not complete ────
+    // ── Uploading after completion ─────────────────────────────────────────────
 
     /**
-     * The requirement in one test: the technician marks the work done, *then*
+     * The working order in one test: the technician marks the work done, *then*
      * uploads the paperwork. Before 2026-08-16 the SPA hid the upload control at
-     * completion, so the person who did the job could not supply the evidence
-     * the close now demands.
+     * completion, so the person who did the job could not file the evidence for
+     * it afterwards.
      */
     public function test_the_assigned_technician_can_upload_to_a_completed_work_order(): void
     {
@@ -209,8 +178,8 @@ class WorkOrderAttachmentGateTest extends TestCase
 
     /**
      * The user manual has always said a closed work order's attachments are
-     * locked; until 2026-08-16 nothing enforced it. Tightened here because the
-     * close gate makes a post-close upload meaningless anyway.
+     * locked; until 2026-08-16 nothing enforced it. A closed work order is a
+     * finished record — nothing may be added to it afterwards.
      */
     public function test_a_closed_work_order_rejects_further_uploads(): void
     {
@@ -222,6 +191,25 @@ class WorkOrderAttachmentGateTest extends TestCase
             ->assertForbidden();
         $this->upload($this->manager, $wo->fresh(), UploadedFile::fake()->create('late.pdf', 20, 'application/pdf'))
             ->assertForbidden();
+    }
+
+    /**
+     * A work order closed with nothing attached was unreachable before
+     * 2026-08-30 and is now ordinary. The terminal lock does not depend on an
+     * attachment existing: nothing may be filed against the closed record
+     * afterwards, including the first file.
+     */
+    public function test_a_work_order_closed_with_no_attachment_still_rejects_uploads(): void
+    {
+        $wo = $this->completedWorkOrder();
+        $this->actingAs($this->manager)->postJson("/api/work-orders/{$wo->id}/close")->assertOk();
+
+        $this->upload($this->tech, $wo->fresh(), UploadedFile::fake()->create('late.pdf', 20, 'application/pdf'))
+            ->assertForbidden();
+        $this->upload($this->manager, $wo->fresh(), UploadedFile::fake()->create('late.pdf', 20, 'application/pdf'))
+            ->assertForbidden();
+
+        $this->assertSame(0, $wo->fresh()->attachments()->count());
     }
 
     public function test_a_cancelled_work_order_rejects_further_uploads(): void
@@ -242,10 +230,10 @@ class WorkOrderAttachmentGateTest extends TestCase
     /**
      * Blocking post-close uploads is only half a lock.
      *
-     * A work order cannot be closed without an attachment and cannot receive one
-     * afterwards — but deletion stayed open to Admin and Manager at every stage,
-     * so the file that justified the closure could be removed the minute after,
-     * leaving a closed work order with no evidence and no way to supply any.
+     * A closed work order cannot receive an attachment — but deletion stayed
+     * open to Admin and Manager at every stage, so the evidence filed for the
+     * job could be removed the minute after it closed, leaving a closed work
+     * order stripped of it and no way to supply any.
      * Attachments are soft-deleted behind a global scope, so it did not even
      * leave a visible gap.
      *

@@ -157,18 +157,15 @@ export function useWorkOrderDetail() {
   /**
    * Attachments outlive `canEdit` by one status.
    *
-   * Closing requires at least one attachment (RQ2), and completion is exactly
-   * when the technician has finished the job and is ready to upload the form.
-   * Gating uploads on `canEdit` — which excludes `completed` — left the person
-   * who did the work unable to supply the evidence the close demands. Mirrors
-   * `AttachmentPolicy::uploadToWorkOrder`: open through completed, locked once
-   * closed or cancelled.
+   * Completion is exactly when the technician has finished the job and is
+   * ready to upload the form. Gating uploads on `canEdit` — which excludes
+   * `completed` — would leave the person who did the work unable to file the
+   * paperwork. Mirrors `AttachmentPolicy::uploadToWorkOrder`: open through
+   * completed, locked once closed or cancelled.
    */
   const canUploadAttachment = computed(
     () => !!record.value && !isTerminal.value && (auth.isAdminOrManager || isAssignedToMe.value),
   )
-  /** Whether the close gate is currently satisfied — drives the dialog's hint. */
-  const hasAttachment = computed(() => attachments.value.length > 0)
   // Assign while open; reassign while in progress too (the backend permits
   // assigning any non-closed/cancelled WO). Closed/cancelled stay locked.
   const canAssign = computed(
@@ -184,9 +181,6 @@ export function useWorkOrderDetail() {
   const canComplete = computed(
     () => !!record.value && isInProgress.value && (auth.isAdminOrManager || isAssignedToMe.value),
   )
-  // Deliberately does not include `hasAttachment`: the Close button stays
-  // reachable so the dialog can explain what is missing. Hiding it would leave
-  // a manager guessing why the action disappeared.
   const canClose = computed(() => !!record.value && isCompleted.value && auth.isAdminOrManager)
   const canCancel = computed(() => !!record.value && !isTerminal.value && auth.isAdminOrManager)
   const canSetAssetStatus = computed(
@@ -1204,7 +1198,6 @@ export function useWorkOrderDetail() {
     requiredFieldStatus,
     canEdit,
     canUploadAttachment,
-    hasAttachment,
     canAssign,
     canStart,
     canComplete,

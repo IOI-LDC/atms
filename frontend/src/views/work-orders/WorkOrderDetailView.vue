@@ -86,7 +86,6 @@ const {
   requiredFieldStatus,
   canEdit,
   canUploadAttachment,
-  hasAttachment,
   canAssign,
   canStart,
   canComplete,
@@ -1086,9 +1085,12 @@ watch(
           the job did not restore the asset, cancel the work order instead — that is where the
           still-faulty choice lives.
         </p>
-        <p v-if="!hasAttachment" class="form-error">
-          This work order has no attachments. Upload the completed form or supporting document
-          before closing it — close, then reopen this dialog.
+        <!-- Encouragement, never a block: attachments are optional at close
+             (2026-08-30), so this states what is missing and lets the close
+             proceed. Deliberately `form-help`, not `form-error`. -->
+        <p v-if="attachments.length === 0" class="form-help">
+          No attachments on this work order. If a completed form or supporting document exists,
+          upload it before closing — attachments lock once the work order is closed.
         </p>
         <div v-if="serviceAssignmentOptions.length > 0" class="form-field">
           <label class="checkbox-field">
@@ -1124,7 +1126,6 @@ watch(
           <Button
             :disabled="
               closeLoading ||
-              !hasAttachment ||
               (isCorrectiveOrigin && closeIsFailure === null) ||
               (serviceDeclared && servicedAssignmentId === null)
             "

@@ -1916,21 +1916,18 @@ the job is open or in progress.
 - The close dialog shows what was recorded, so the closer confirms rather than
   re-enters it.
 
-**0. Precondition — the work order must carry an attachment:**
+**0. Attachments are optional at close:**
 
-- A work order **cannot be closed** until at least one file is attached to it —
-  normally the completed inspection form or job sheet (PDF or spreadsheet).
-  Attempting to close without one is refused, and nothing is changed.
-- The requirement sits on **close, not completion**. The technician marks the
-  work finished when the physical job is done, then uploads the paperwork; the
-  manager cannot sign it off until it is there. Uploading stays available to the
-  assigned technician _and_ to Admin/Manager for the whole of that window.
+- A work order **can be closed with or without attachments**. Upload the
+  completed inspection form or job sheet (PDF or spreadsheet) when one exists —
+  it is the evidence for the job — but a close is not refused when there is no
+  file to attach.
+- Uploading stays available to the assigned technician _and_ to Admin/Manager
+  while the work order is open, in progress, **or completed** — the technician
+  can mark the work finished and file the paperwork afterwards.
 - Once the work order is closed (or cancelled) its attachments are locked.
 - **Cancelling needs no attachment** — a job that never happened has no
   paperwork to show.
-- Any attachment satisfies the rule. ATMS does not distinguish "the inspection
-  form" from a photograph, so this is a check that _something_ was filed, not
-  that the right thing was.
 
 **1b. Preventive Maintenance Applied:**
 

@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project rules
+
+1. Follow the instructions clearly, nothing beyond.
+2. No yapping or extra complex statements — be clear and concise.
+3. More rules can come later.
+
 ## What this is
 
 ATMS is LDC's asset maintenance tracking system: a Laravel 13 JSON API (`backend/`) plus a Vue 3 SPA (`frontend/`) on PostgreSQL, run as a Docker Compose stack. The core workflow is **Maintenance Request → manager approval → Work Order → complete → close**, alongside assets, parts, locations, preventive maintenance (PM) rules, meter readings, attachments, ~18 reports, and admin/master data.

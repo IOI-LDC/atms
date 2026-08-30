@@ -52,11 +52,11 @@ class AttachmentPolicy
      * Uploads stay open through COMPLETED and close only when the work order
      * does.
      *
-     * That ordering is the point of RQ2: closing requires an attachment, so the
-     * window between "the technician says the work is done" and "the manager
-     * signs it off" is exactly when the paperwork arrives. Locking uploads at
-     * completion would leave the person who did the job unable to supply the
-     * evidence the close demands.
+     * Completion is when the technician has finished the job and is ready to
+     * file the paperwork; locking uploads there would leave the person who did
+     * the work unable to attach it. Attachments themselves are optional at
+     * close (2026-08-30) — this window is about letting the evidence arrive
+     * whenever it can, not about requiring it.
      *
      * Closed and cancelled are terminal — the user manual has always said a
      * closed work order's attachments are locked, and until 2026-08-16 nothing

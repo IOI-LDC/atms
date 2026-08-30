@@ -3,7 +3,49 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-17 (latest — external review, all five batches landed)
+## Session — 2026-08-30 (latest — RQ2 attachment gate removed)
+
+**LDC direction: a work order must be closable with no attachment.** Some jobs
+have no paperwork to file, and the 2026-08-16 gate stranded them at `completed`.
+The 409 guard is gone from `CloseWorkOrder`; a close with zero attachments
+succeeds.
+
+### What this reverses, and what it does not
+
+The 2026-08-16 decision was argued carefully — gate on **close, not completion**,
+so the technician could finish in the field and the manager could not sign off
+until the paperwork arrived. **Only the requirement is withdrawn. Every
+consequence of that reasoning stays**, and each now stands on its own merits:
+
+- **Uploads stay open through COMPLETED** (`AttachmentPolicy::uploadToWorkOrder`).
+  Originally so the technician could supply what the close demanded; now simply
+  because completion is when the person who did the job is ready to file. Do not
+  re-tighten this to `canEdit` — that was the pre-2026-08-16 bug.
+- **Uploads and deletion 403 once closed or cancelled.** A terminal work order is
+  a finished record. ⚠️ `SoftDeleteAttachment` re-reads the WO **under lock**
+  rather than trusting the policy; its docblock used to justify that with the
+  gate. It is not derived from the gate — do not remove the lock along with it.
+- **Cancel was never gated**, and still is not.
+
+### Decisions
+
+- **Optional means optional — no soft gate.** The close dialog shows a
+  `form-help` line when nothing is attached and the button stays enabled. A
+  confirm-step or a warning in the close response would reintroduce the gate
+  as friction; LDC asked for it gone, not softened.
+- **The `warnings` array was left alone.** Adding "closed with no attachment" to
+  it would push the same judgement into every report reading that field.
+- **`work_order.has_attachments` on R-x backlog stays** — a reporting fact, not
+  a compliance signal, and now genuinely informative rather than always true.
+
+Reviewed after the fact: the removal itself was clean, but four comments and one
+doc still narrated the deleted rule as live (`SoftDeleteAttachment`, `docs/API.md`
+WO-attachments row, three docblocks in `WorkOrderAttachmentGateTest`), and a
+newly-reachable state — a closed WO with zero attachments — had no test. Both
+fixed; `test_a_work_order_closed_with_no_attachment_still_rejects_uploads` pins
+that the terminal lock does not depend on an attachment existing.
+
+## Session — 2026-08-17 (external review, all five batches landed)
 
 **1280 tests green (4006 assertions), Pint clean, vue-tsc clean, SPA builds.**
 
