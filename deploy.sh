@@ -106,48 +106,25 @@ else
   echo "==> Users present ($USER_COUNT) — skipping seed."
 fi
 
-# --- 5. Apply the approved LDC parts workbook -------------------------------
-# The hash pins this deploy step to the reviewed source file. Any future workbook
-# change must be explicitly approved by updating the hash here; otherwise deploy
-# stops before production data is touched.
-PARTS_IMPORT_FILE="backend/database/data/parts-migration-source.csv"
-PARTS_IMPORT_SHA256="66f048d9c4824febd5d0a9fd6490bd8c77e2588e8e1583fa6c9805318868a9f5"
-
-if [[ ! -f "$PARTS_IMPORT_FILE" ]]; then
-  echo "ERROR: approved parts import file is missing: $PARTS_IMPORT_FILE" >&2
-  exit 1
-fi
-command -v sha256sum >/dev/null 2>&1 || {
-  echo "ERROR: sha256sum is required to verify the approved parts import." >&2
-  exit 1
-}
-
-ACTUAL_PARTS_IMPORT_SHA256=$(sha256sum "$PARTS_IMPORT_FILE" | awk '{print $1}')
-if [[ "$ACTUAL_PARTS_IMPORT_SHA256" != "$PARTS_IMPORT_SHA256" ]]; then
-  echo "ERROR: parts import SHA-256 does not match the approved source." >&2
-  echo "  Expected: $PARTS_IMPORT_SHA256" >&2
-  echo "  Actual:   $ACTUAL_PARTS_IMPORT_SHA256" >&2
-  exit 1
-fi
-
-echo "==> Validating approved parts import…"
-docker compose exec -T api php artisan atms:import-parts --dry-run
-
-echo "==> Applying approved parts import…"
-docker compose exec -T api php artisan atms:import-parts
-
-# --- 6. Cache config/routes/views -------------------------------------------
+# --- 5. Cache config/routes/views --------------------------------------------
+# The parts workbook import (atms:import-parts) was deliberately removed from
+# this script: it was a one-time data migration and it OVERWRITES live stock —
+# since Q6/Phase 3 quantities are live balances moved by work order consumption
+# and quantity uploads, so re-applying the workbook on every deploy reverted
+# them. Run it manually only when a freshly approved workbook must be applied:
+#   docker compose exec api php artisan atms:import-parts --dry-run
+#   docker compose exec api php artisan atms:import-parts
 docker compose exec -T api php artisan config:cache
 docker compose exec -T api php artisan route:cache
 docker compose exec -T api php artisan view:cache
 
-# --- 7. Reload Caddy (picks up Caddyfile changes if any) --------------------
+# --- 6. Reload Caddy (picks up Caddyfile changes if any) --------------------
 if systemctl is-active --quiet caddy; then
   echo "==> Reloading Caddy…"
   sudo systemctl reload caddy
 fi
 
-# --- 8. Status + verification hints -----------------------------------------
+# --- 7. Status + verification hints -----------------------------------------
 echo ""
 echo "==> Stack status:"
 docker compose ps
