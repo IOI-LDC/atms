@@ -6,11 +6,14 @@
 #   /api/*, /sanctum/*, /storage/*, /up → reverse-proxied to the Docker
 #     "nginx" container (port 8080 = BACKEND_PORT) — Laravel API, Sanctum
 #     endpoints, the public storage disk, and the framework health check.
+#   /favicon.ico, /favicon.svg, /apple-touch-icon.png, /robots.txt → served
+#     from the SPA build, but WITHOUT the SPA fallback, so a missing one
+#     returns 404 rather than a 200 full of HTML.
 #   everything else → the built Vue SPA (static files + SPA fallback).
 #
-# The backend matcher is declared before the catch-all `handle` block:
-# Caddy's `handle` directives short-circuit on first match, so ordering here
-# is load-bearing — swapping them would send every request to the SPA.
+# Both matchers are declared before the catch-all `handle` block: Caddy's
+# `handle` directives short-circuit on first match, so ordering here is
+# load-bearing — moving the catch-all up would swallow every request.
 #
 # Terminates TLS automatically (Let's Encrypt via Caddy).
 #
@@ -36,6 +39,18 @@
 			header_up X-Forwarded-Host {host}
 			header_up X-Real-IP {remote_host}
 		}
+	}
+
+	# Root-level static files, served WITHOUT the SPA fallback below.
+	#
+	# `try_files {path} /index.html` turns any missing file into a 200 carrying
+	# index.html, so a favicon that never made it into dist/ is served to the
+	# browser as an HTML document — it silently shows the default icon and
+	# nothing, anywhere, logs an error. These paths 404 honestly instead.
+	@rooticons path /favicon.ico /favicon.svg /apple-touch-icon.png /robots.txt
+	handle @rooticons {
+		root * /srv/atms/frontend/dist
+		file_server
 	}
 
 	# Everything else: built Vue bundle. `npm run build` in frontend/ produces

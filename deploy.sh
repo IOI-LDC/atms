@@ -44,6 +44,18 @@ set -a; [[ -f .env ]] && source .env; set +a
 
 APP_HOST="${APP_HOST:-assets.ldc.com.ly}"
 
+# Every `docker compose` call below goes through this, so none of them can pick
+# up compose.override.yaml. That override is the DEV one — Compose auto-loads it
+# for any command without explicit `-f` flags, and it sets APP_DEBUG=true,
+# bind-mounts ./backend over the image (whose vendor/ is not in git), and mounts
+# zzz-dev.ini, re-enabling opcache.validate_timestamps at a 20–40% throughput
+# cost (see docker/backend/php/zz-atms.ini). Only the `up` used to be guarded;
+# every exec and ps ran bare.
+#
+# Scripts under scripts/ still run a bare `docker compose`. Set COMPOSE_FILE in
+# the VPS .env to cover those too — see .env.example.
+COMPOSE=(docker compose --env-file .env -f compose.yaml -f compose.production.yaml)
+
 # --- 0. Sanity checks -------------------------------------------------------
 if [[ ! -f .env ]]; then
   echo "ERROR: .env missing. Copy .env.production.example and fill it in first." >&2
@@ -56,6 +68,18 @@ if [[ -z "${APP_KEY:-}" ]]; then
 fi
 command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not installed." >&2; exit 1; }
 
+# This script is safe either way — it always passes its own `-f` flags. The
+# warning is about every OTHER `docker compose` on this host: scripts/*.sh, and
+# anyone debugging by hand. Without COMPOSE_FILE those pick up the dev override.
+if [[ -f compose.override.yaml && -z "${COMPOSE_FILE:-}" ]]; then
+  echo "WARNING: compose.override.yaml is present and COMPOSE_FILE is unset." >&2
+  echo "         A bare 'docker compose up -d' on this host would apply the DEV" >&2
+  echo "         override: APP_DEBUG=true, ./backend bind-mounted over the image," >&2
+  echo "         and OPcache timestamp validation back on (20-40% slower)." >&2
+  echo "         Fix — add to .env:  COMPOSE_FILE=compose.yaml:compose.production.yaml" >&2
+  echo "         Or drop the file from this checkout: scripts/vps-trim-checkout.sh" >&2
+fi
+
 # --- 0b. Release 4b tripwire ------------------------------------------------
 # This script starts the new image (step 2) before migrating (step 3). For every
 # ordinary release that is fine. For 4b it is not: the narrowed OperationalStatus
@@ -65,8 +89,8 @@ command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not installed." >&2; 
 # That used to be a comment at the top of this file and nothing else — safety by
 # hoping the operator reads. This refuses to run instead, and names the document
 # that describes the correct sequence.
-if [[ -n "$(docker compose ps -q postgres 2>/dev/null || true)" ]]; then
-  LEGACY_STATUSES=$(docker compose exec -T postgres \
+if [[ -n "$("${COMPOSE[@]}" ps -q postgres 2>/dev/null || true)" ]]; then
+  LEGACY_STATUSES=$("${COMPOSE[@]}" exec -T postgres \
     psql -U "${DB_USERNAME:-atms}" -d "${DB_DATABASE:-atms}" -tAc \
     "SELECT count(*) FROM assets WHERE operational_status IN ('down','scraped','under_inspection','lih')" \
     2>/dev/null | tr -d '[:space:]' || true)
@@ -91,22 +115,19 @@ echo "==> Building frontend (VITE_API_ORIGIN from frontend/.env.production)…"
 
 # --- 2. Build + start the Docker stack --------------------------------------
 echo "==> Bringing up Docker stack…"
-docker compose --env-file .env \
-  -f compose.yaml \
-  -f compose.production.yaml \
-  up -d --build
+"${COMPOSE[@]}" up -d --build
 
 # --- 3. Migrate (idempotent) ------------------------------------------------
 echo "==> Running database migrations…"
-docker compose exec -T api php artisan migrate --force
+"${COMPOSE[@]}" exec -T api php artisan migrate --force
 
 # --- 4. Seed only on first boot (empty users table) -------------------------
-USER_COUNT=$(docker compose exec -T \
+USER_COUNT=$("${COMPOSE[@]}" exec -T \
   api php artisan tinker --execute 'echo \DB::table("users")->count();' \
   2>/dev/null | tr -d '[:space:]')
 if [[ "$USER_COUNT" == "0" ]]; then
   echo "==> First boot — seeding database…"
-  docker compose exec -T api php artisan db:seed --force
+  "${COMPOSE[@]}" exec -T api php artisan db:seed --force
 else
   echo "==> Users present ($USER_COUNT) — skipping seed."
 fi
@@ -119,9 +140,9 @@ fi
 # them. Run it manually only when a freshly approved workbook must be applied:
 #   docker compose exec api php artisan atms:import-parts --dry-run
 #   docker compose exec api php artisan atms:import-parts
-docker compose exec -T api php artisan config:cache
-docker compose exec -T api php artisan route:cache
-docker compose exec -T api php artisan view:cache
+"${COMPOSE[@]}" exec -T api php artisan config:cache
+"${COMPOSE[@]}" exec -T api php artisan route:cache
+"${COMPOSE[@]}" exec -T api php artisan view:cache
 
 # --- 6. Reload Caddy (picks up Caddyfile changes if any) --------------------
 if systemctl is-active --quiet caddy; then
@@ -132,7 +153,7 @@ fi
 # --- 7. Status + verification hints -----------------------------------------
 echo ""
 echo "==> Stack status:"
-docker compose ps
+"${COMPOSE[@]}" ps
 
 echo ""
 echo "==> Deploy complete. Verify:"

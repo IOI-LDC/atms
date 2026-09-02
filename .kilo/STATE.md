@@ -3,7 +3,162 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-09-02 (latest — same-origin deployment for assets.ldc.com.ly)
+## Session — 2026-09-02 (latest — post-deploy fixes: favicon, VPS checkout trim, latency triage)
+
+First session against the **live** single-host VPS. Three threads.
+
+### 1. Favicon — fixed, root cause was the file itself
+
+`frontend/public/favicon.ico` was a **single-entry, non-square 256×146 ICO**,
+154 KB — the 402×230 wordmark exported straight to `.ico` at its native aspect
+ratio (verified by parsing the ICO directory: `w=256 h=146 bpp=32`). Browsers
+commonly reject non-square icon entries. Neither the file nor `index.html` had
+changed since the initial commit (`git log --follow` on both → `6efca89`), so
+nothing in the migration broke it; the new origin simply meant no cached icon
+was papering over it any more.
+
+Replaced with a proper square set generated from `src/assets/logo.svg` — the
+white LDC wordmark at 78% width on the brand navy `#21274b`:
+
+- `favicon.ico` — 16/32/48, **3.4 KB** (was 154 KB)
+- `favicon.svg` — hand-authored square wrapper around the existing path
+- `apple-touch-icon.png` — 180×180
+
+`index.html` now declares all three explicitly.
+
+**Caddyfile hardening (the real lesson):** `try_files {path} /index.html` turns
+*any* missing root-level file into a **200 carrying index.html**, so a favicon
+absent from `dist/` is delivered to the browser as an HTML document and nothing,
+anywhere, logs an error. Added an `@rooticons` handle **before** the SPA
+catch-all that serves those paths with `file_server` only, so a missing one 404s
+honestly. Ordering is load-bearing — `handle` short-circuits on first match.
+
+### 2. `compose.override.yaml` was shipping to production ⚠️
+
+Found while answering "minimise what we ship to the VPS". The **dev** override is
+git-tracked, so it is on the VPS, and Compose auto-loads it for every
+`docker compose` command that does not pass explicit `-f` flags. It sets
+`APP_DEBUG=true`, bind-mounts `./backend` over the image (whose `vendor/` is not
+in git), and mounts `zzz-dev.ini`, which re-enables
+`opcache.validate_timestamps` — worth **20–40% of throughput** by
+`docker/backend/php/zz-atms.ini`'s own note.
+
+**Only one call in `deploy.sh` passed `-f`** (the `up -d --build`); every `exec`
+and `ps` ran bare, as does every script in `scripts/`. Fixed three ways:
+
+- `deploy.sh` routes all ten call sites through one `COMPOSE=(...)` array.
+- `.env.example` documents `COMPOSE_FILE=compose.yaml:compose.production.yaml`
+  for the VPS — one line that also covers `scripts/*.sh` and hand-typed commands.
+- `scripts/vps-trim-checkout.sh` removes the file from the VPS entirely.
+
+**Not yet confirmed whether this actually degraded the live host** — see below.
+
+### 3. VPS checkout trimmed
+
+`scripts/vps-trim-checkout.sh` uses `git sparse-checkout --no-cone` to drop
+`docs/`, `.kilo/`, `.claude/`, `.agents/`, `.codex/`, `.zcode/`, `.vscode/`,
+`AGENTS.md`, `ATMS_UI_RULES.md`, `CLAUDE.md`, `kilo.json`, `.mcp.json` and
+`compose.override.yaml` — ~2.6 MB / ~200 files, 10 MB → 7.6 MB on disk. Survives
+`git pull`, `--undo` restores. Tested in a throwaway clone, not on the VPS.
+
+`backend/tests/` deliberately **kept**: the documented way to check a
+prod-shaped stack is running the suite in the api container. None of the removed
+files was ever web-exposed — Caddy's root is `frontend/dist` and nothing else.
+
+### Assets-page latency — MEASURED: the server is NOT the cause
+
+⚠️ **Beware cold samples.** A single `/up` on the new host read **128 ms** and was
+briefly written up here as a 7.5× regression. That was a first hit against an
+empty OPcache after the stack came up. Warm steady state is **14 ms**. Always take
+five samples before concluding anything about this stack.
+
+Old-vs-new A/B, both hosts running the same stack, warm:
+
+| | old (4 vCPU / 7 GB) | new (6 vCPU / 11 GB) | ratio |
+|---|---|---|---|
+| `/up` loopback TTFB, mean of 5 | 7.9 ms | 14.1 ms | 1.8× |
+| `php` 10M-iteration CPU loop | 0.074 s | 0.085 s | 1.15× |
+| steal time (`vmstat` st) | 0 | 0 | — |
+
+CPU: AMD EPYC-Rome (old) vs AMD EPYC with IBPB (new). The new cores are ~15%
+slower, with **no steal** — not oversubscribed.
+
+**Server-side cost is ~6 ms extra per API request.** The Assets page makes a
+handful of calls, so ~30 ms total. That cannot produce a 25–35% page-load
+regression. The `/up` gap (1.8×) exceeding the CPU gap (1.15×) is most likely the
+new host's cold page cache — `buff/cache` was 784 MB against the old host's
+5.3 GB — and should close as it warms.
+
+**Open:** the client→server path, the only thing never measured, since every
+sample so far was a machine timing itself. The SPA is 1.7 MB across ~106 chunks
+and is latency-bound. Next step is `curl -w` for `tcp`/`tls`/`ttfb` and
+`speed_download` **from a client machine** against both hosts.
+
+**Everything in the application checked out** — OPcache on with
+`validate_timestamps=0`, `APP_ENV=production`, `APP_DEBUG=false`, config/routes/
+views cached, composer autoloader built with `--optimize --no-dev`, compression
+applied, planner statistics present (autoanalyzed), host shape matching the
+6 vCPU/12 GB/NVMe tuning (`ROTA=0`). **429 assets** — the dataset is trivial.
+
+**Do NOT re-test these; all were measured and cleared:**
+
+- Missing index on `assets.name` — irrelevant at 429 rows. Was ranked high on
+  code reading alone; the row count killed it.
+- `VACUUM ANALYZE` — `last_autoanalyze` was already populated.
+- Postgres/FPM tuning vs host shape — the new host matches the assumptions.
+- OPcache `validate_timestamps` — correct on the live host; the
+  `compose.override.yaml` hazard below is real but was **not** active.
+- Caddy compression — `encode` (20) sorts before `handle` (25) and
+  `reverse_proxy` (33); the site-level encoder wraps the backend handle.
+- N+1 — `AssetConditionLabels` memoises per request; both relations eager-loaded.
+
+**Open:** whether the 7.5× is raw CPU (oversubscribed/slower cores → a hosting
+problem, not a code one) or a cold OPcache on a recently-booted host. Awaiting a
+repeated `/up` loop and a `php -r` single-core benchmark on both hosts. The new
+host showed `buff/cache 0` with 10 GB free, consistent with a recent boot, so the
+single 128 ms sample may have been cold.
+
+**Separate finding, not the regression:** `SESSION_DRIVER` and `CACHE_STORE` both
+default to `database` and neither is set in `compose.yaml` or `.env.example`, so
+every authenticated request does a session `SELECT` plus `UPDATE` in Postgres.
+Equally true on the old VPS, so it explains nothing here — but it is a real
+per-request cost worth removing on its own merits.
+
+### Original triage (superseded by the measurements above)
+
+**Ruled out by reading the code, so nobody re-tests them:**
+
+- *Not* an N+1. `AssetConditionLabels` memoises on the container per request;
+  `currentLocation` and `maintenanceCategory` are eager-loaded in
+  `AssetIndexQuery`.
+- *Not* lost compression. Caddy's documented directive order puts `encode` (20)
+  **before** `handle` (25) and `reverse_proxy` (33), so the site-level encoder
+  wraps the backend handle exactly as it wrapped the old API site block. The
+  same-origin move also *removes* CORS preflights. This was the leading
+  hypothesis on structural grounds and it is wrong.
+
+**Live candidates, in order:**
+
+1. **OPcache** — `docker compose exec api php -i | grep validate_timestamps`.
+   If it reports `1`, thread 2 above is the entire regression.
+2. **No `ANALYZE` on the freshly-imported database.** Data was loaded into an
+   empty Postgres (`efadf8e`); a bulk-loaded table has no planner statistics
+   until autovacuum arrives. `VACUUM ANALYZE` is the cheapest possible test.
+3. **No index on `assets.name`.** The page always requests `sort=name:asc` with
+   `per_page=5000`, and `cursorPaginate` orders by `(name, id)`. Indexes exist on
+   `maintenance_status`, `parent_asset_id`, `current_location_id` and
+   `(maintenance_category_id, size_inches)` — none on `name`. Latent on the old
+   VPS too; only visible once the host got slower.
+4. **Host shape.** `compose.yaml`'s Postgres flags and `atms-fpm-pool.conf` are
+   tuned in their own comments for 6 vCPU / 12 GB / NVMe. If the new VPS is not
+   that, `random_page_cost=1.1` actively misleads the planner.
+
+Fixes were **not** applied speculatively — measure first, or the real cause gets
+buried under four simultaneous changes.
+
+---
+
+## Session — 2026-09-02 (same-origin deployment for assets.ldc.com.ly)
 
 **Client's environment only exposes one host.** Moved production topology from
 split subdomains (`atms.inova.krd` SPA / `atmsapi.inova.krd` API, sharing the
