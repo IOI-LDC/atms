@@ -3,7 +3,74 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-08-30 (latest — RQ2 attachment gate removed)
+## Session — 2026-09-02 (latest — same-origin deployment for assets.ldc.com.ly)
+
+**Client's environment only exposes one host.** Moved production topology from
+split subdomains (`atms.inova.krd` SPA / `atmsapi.inova.krd` API, sharing the
+registrable domain so Sanctum's cross-subdomain cookie auth worked) to
+same-origin on a single host, `assets.ldc.com.ly` (SPA at `/`, API at `/api`).
+
+**This was config/infra only — no application code changed.** The codebase was
+already written origin-agnostically (`frontend/src/lib/api.ts` treats an empty
+`VITE_API_ORIGIN` as same-origin by design; every backend domain setting in
+`config/sanctum.php`/`config/cors.php`/`config/session.php` is env-driven with
+no hardcoded host). Changed:
+
+- **`Caddyfile`** — collapsed the two site blocks into one for
+  `assets.ldc.com.ly`, with a `@backend` matcher (`/api/*`, `/sanctum/*`,
+  `/storage/*`, `/up`) declared before the catch-all SPA `handle` block. Matcher
+  ordering is load-bearing — Caddy `handle` short-circuits on first match.
+- **`.env.production.example`** — `APP_HOST`/`API_HOST` collapsed to one
+  `APP_HOST`; `SESSION_DOMAIN`/`SANCTUM_STATEFUL_DOMAINS`/`CORS_ALLOWED_ORIGINS`
+  all point at the single host (no leading-dot `SESSION_DOMAIN` needed anymore).
+- **`frontend/.env.production`** — `VITE_API_ORIGIN=` (empty → relative
+  `/api` paths).
+- **`deploy.sh`** — single `APP_HOST` var, simplified final verification
+  message (no more cross-subdomain cookie-triple reminder).
+- Stale `atms.inova.krd`/`atmsapi.inova.krd` references genericized in
+  `frontend/.env.example`, `frontend/src/lib/api.ts`, and
+  `usePartsCsvRoundTrip.ts` comments (illustrative examples only, not logic).
+- `docs/OPERATIONS.md`, `docs/ROADMAP.md` updated; new
+  `docs/VPS-PROVISIONING.md` runbook added and linked from
+  `docs/README.md`'s read order.
+
+**`docs/ROADMAP.md`'s "Official SPA hostname" external dependency is resolved**
+— `assets.ldc.com.ly` is the confirmed host, removed from the open-dependency
+table.
+
+**Not touched, confirmed unnecessary:** `backend/config/*`, `bootstrap/app.php`,
+`routes/api.php`, `docker/backend/nginx.conf`, `compose.yaml` — all already
+origin-agnostic. CORS middleware/config left in place (inert for same-origin
+SPA traffic, not removed, in case a future cross-origin consumer needs it).
+`docs/PROD-VPS-MIGRATION.md` was already domain-agnostic — no changes needed
+there for this cutover.
+
+**Update, same session — the actual new VPS provisioning happened.** SSH access
+to the real target VPS (`vmi3550835`, `161.97.137.9:2202`, Ubuntu 24.04) was
+available after all. Installed Docker, `docker compose` (v2 plugin), Caddy;
+transferred the repo to `/srv/atms` (GitHub HTTPS clone needs credentials not
+available here, so used `git ls-files | tar` over SSH instead — ships tracked
+files only, correctly excludes `vendor/`, `node_modules/`, and any local
+`.env`); copied `.env.production.example` → `.env` with only the non-secret
+values pre-filled; installed and reloaded the `Caddyfile`. **Deliberately
+stopped there and left `APP_KEY`/`DB_PASSWORD`/`GRAPH_*`/`LDC_ERP_*` for the
+user to fill in themselves** — this was an explicit instruction, not a
+default; a tool call to run `key:generate` on their behalf was correctly
+rejected after they'd already filled the real `.env` themselves.
+
+⚠️ **Runbook gap found and fixed:** `deploy.sh` runs `npm run build` **on the
+VPS host**, not in a container — neither the original `docs/VPS-PROVISIONING.md`
+nor `deploy.sh`'s own prerequisites comment mentioned installing Node.js, so
+the first real deploy failed on `npm: command not found`. Also, Ubuntu 24.04's
+apt package is `docker-compose-v2`, not `docker-compose-plugin` (the name the
+prerequisites previously listed) — that one didn't surface as a failure only
+because docker-compose-v2 happened to get installed correctly this time; fixed
+in both docs anyway since the wrong name would 404 on `apt install`. Both
+`deploy.sh` and `docs/VPS-PROVISIONING.md` now document installing Node 22.x
+via NodeSource (frontend `engines`: `^20.19.0 || >=22.12.0`) and use the
+correct `docker-compose-v2` package name.
+
+## Session — 2026-08-30 (RQ2 attachment gate removed)
 
 **LDC direction: a work order must be closable with no attachment.** Some jobs
 have no paperwork to file, and the 2026-08-16 gate stranded them at `completed`.

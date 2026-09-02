@@ -64,11 +64,13 @@ notification behaviour last verified 2026-07-25; other areas last verified
 3. [API.md](API.md) — active HTTP surface and integration rules.
 4. [FRONTEND.md](FRONTEND.md) — Vue application structure, routes, and UI rules.
 5. [OPERATIONS.md](OPERATIONS.md) — runtime, deployment, backup, and test guidance.
-6. [ROADMAP.md](ROADMAP.md) — open decisions and live follow-up work.
-7. [FUTURE_SCOPE.md](FUTURE_SCOPE.md) — bounded Phase 2/3 work; not current scope.
-8. [REQUIREMENTS.md](REQUIREMENTS.md) — captured work that is not implemented.
-9. [IMPLEMENTATION_HISTORY.md](IMPLEMENTATION_HISTORY.md) — concise outcomes for
-   requirements that have landed.
+6. [VPS-PROVISIONING.md](VPS-PROVISIONING.md) — fresh-VPS setup runbook for the
+   single-host, same-origin production topology.
+7. [ROADMAP.md](ROADMAP.md) — open decisions and live follow-up work.
+8. [FUTURE_SCOPE.md](FUTURE_SCOPE.md) — bounded Phase 2/3 work; not current scope.
+9. [REQUIREMENTS.md](REQUIREMENTS.md) — captured work that is not implemented.
+10. [IMPLEMENTATION_HISTORY.md](IMPLEMENTATION_HISTORY.md) — concise outcomes for
+    requirements that have landed.
 
 ## Documentation rules
 

@@ -47,7 +47,6 @@ Phase 2 or Phase 3 work implicitly.
 | ERP parts API | Page name and sample payload/field mapping | Parts sync quality and future SM work. |
 | ERP consumption write-back | Confirm supported BC warehouse transaction and contract | Required before Phase 3 SM consumption write-back. |
 | Asset ownership | **Answered 2026-08-17: ERP becomes authoritative.** A weekly ERP sync covering **both assets and parts** is planned for **Phase 3 — roughly six months out, subject to LDC budget.** | Until then ATMS is the operational source for asset reference data and ERP status reaches it only through the manual `atms:import-erp-assets` CSV import. Design decisions taken now must not make that sync harder to add — see 🟠 D-024. |
-| Official SPA hostname | Confirm the permanent LDC subdomain. The SPA is hosted at `https://atms.inova.krd` for now, which is what `FRONTEND_URL` should be set to on the deployed backend; treat it as provisional. | Email deep links point wherever `FRONTEND_URL` says, so the value must be revisited when the permanent host is issued. |
 | Exchange Application Access Policy | LDC IT restricts the notification Entra application to `notification@ldc.com.ly` | Required before enabling production email; today the credential can send as any tenant mailbox. |
 
 ## Completed Phase 1 work
@@ -59,10 +58,15 @@ current behavior is documented in the active files.
 
 Email is **live** as of 2026-07-26: `ACCOUNT_EMAIL_TRANSPORT=graph`, verified by a
 direct send and by a queued send processed by the worker container. Any workflow
-action now emails the real `ldc.com.ly` recipients for that transition. The two
-dependencies above remain open — the SPA hostname is provisional, and the Application
-Access Policy is still unset, so the credential can currently send as any mailbox in
-the tenant.
+action now emails the real `ldc.com.ly` recipients for that transition. The
+Application Access Policy dependency above remains open, so the credential can
+currently send as any mailbox in the tenant.
+
+**2026-09-02: official hostname resolved.** The client's environment has a single
+available host, `assets.ldc.com.ly` — the SPA is served at `/`, the API under
+`/api`, same-origin (no split subdomain). `FRONTEND_URL`/`APP_URL` on the deployed
+backend are `https://assets.ldc.com.ly`. See [OPERATIONS.md](OPERATIONS.md) and
+[VPS-PROVISIONING.md](VPS-PROVISIONING.md).
 
 ## Delivery rule
 

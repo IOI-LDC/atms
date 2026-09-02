@@ -1,39 +1,55 @@
 # ===========================================================================
-# ATMS — production reverse proxy (Option A, split subdomain)
+# ATMS — production reverse proxy (single host, same-origin)
 # --------------------------------------------------------------------------
-# Run on the VPS (NOT in Docker). Two site blocks:
+# Run on the VPS (NOT in Docker). One site block for assets.ldc.com.ly:
 #
-#   atms.inova.krd    → serves the built Vue SPA (static files + SPA fallback)
-#   atmsapi.inova.krd → reverse-proxies ALL traffic to the Docker "nginx"
-#                       container (port 8080 = WEB_PORT) — Laravel API +
-#                       Sanctum endpoints. Bearer-token third-party clients
-#                       also hit this host.
+#   /api/*, /sanctum/*, /storage/*, /up → reverse-proxied to the Docker
+#     "nginx" container (port 8080 = BACKEND_PORT) — Laravel API, Sanctum
+#     endpoints, the public storage disk, and the framework health check.
+#   everything else → the built Vue SPA (static files + SPA fallback).
 #
-# Both terminate TLS automatically (Let's Encrypt via Caddy).
+# The backend matcher is declared before the catch-all `handle` block:
+# Caddy's `handle` directives short-circuit on first match, so ordering here
+# is load-bearing — swapping them would send every request to the SPA.
+#
+# Terminates TLS automatically (Let's Encrypt via Caddy).
 #
 # Install:
 #   sudo apt install caddy
 #   sudo cp Caddyfile /etc/caddy/Caddyfile
 #   sudo systemctl reload caddy
 #
-# DNS: both atms.inova.krd and atmsapi.inova.krd must resolve (A records or
-# CNAMEs) to this VPS's public IP. Caddy cannot issue certs until DNS
-# resolves.
+# DNS: assets.ldc.com.ly must resolve (A record or CNAME) to this VPS's
+# public IP. Caddy cannot issue a cert until DNS resolves.
 # ===========================================================================
 
-# ---- SPA host --------------------------------------------------------------
-{$APP_HOST:atms.inova.krd} {
+{$APP_HOST:assets.ldc.com.ly} {
 	encode gzip zstd
 
-	# Built Vue bundle. `npm run build` in frontend/ produces frontend/dist/.
-	root * /srv/atms/frontend/dist
+	# Laravel-served paths go to the Docker stack (nginx container = BACKEND_PORT).
+	# Cookie auth + bearer auth both work through this.
+	@backend path /api/* /sanctum/* /storage/* /up
+	handle @backend {
+		reverse_proxy 127.0.0.1:{$BACKEND_PORT:8080} {
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+			header_up X-Real-IP {remote_host}
+		}
+	}
 
-	# SPA fallback: unknown paths return index.html so vue-router resolves them.
-	try_files {path} /index.html
-	file_server
+	# Everything else: built Vue bundle. `npm run build` in frontend/ produces
+	# frontend/dist/.
+	handle {
+		root * /srv/atms/frontend/dist
 
-	# Fingerprinted Vite assets are immutable; cache aggressively.
-	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+		# SPA fallback: unknown paths return index.html so vue-router resolves them.
+		try_files {path} /index.html
+		file_server
+
+		# Fingerprinted Vite assets are immutable; cache aggressively.
+		header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	}
 
 	# Match nginx.conf's 25m upload limit for any future form posts.
 	request_body {
@@ -41,31 +57,7 @@
 	}
 
 	log {
-		output file /var/log/caddy/atms.log
-		format console
-	}
-}
-
-# ---- API host --------------------------------------------------------------
-{$API_HOST:atmsapi.inova.krd} {
-	encode gzip zstd
-
-	# Everything goes to the Laravel Docker stack (nginx container = WEB_PORT).
-	# This covers /api/*, /sanctum/csrf-cookie, /storage/*, and any other
-	# Laravel-served path. Cookie auth + bearer auth both work through this.
-	reverse_proxy 127.0.0.1:{$BACKEND_PORT:8080} {
-		header_up Host {host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
-		header_up X-Real-IP {remote_host}
-	}
-
-	request_body {
-		max_size 30MB
-	}
-
-	log {
-		output file /var/log/caddy/atmsapi.log
+		output file /var/log/caddy/assets.log
 		format console
 	}
 }

@@ -10,6 +10,21 @@ empty database, and seeding would collide with the rows this migration imports.
 It becomes the deploy tool again from the second release onwards (see
 [After cutover](#after-cutover)).
 
+⚠️ **`php artisan migrate` does not leave an empty database.** Several migrations
+insert rows of their own, into tables that also move — see
+[Migrations seed rows](#migrations-seed-rows-clear-them-before-loading). Skipping
+`db:seed` is not enough on its own; the load step aborts without the truncate.
+
+**All `docker compose` commands below assume the production file pair.** On the
+VPS either delete `compose.override.yaml` (it mounts `./backend` over the app and
+forces `APP_ENV=local` — it is a dev-only file and says so) or pass
+`--env-file .env -f compose.yaml -f compose.production.yaml` on **every**
+invocation, not just the ones shown with it. `exec` into an already-running
+container tolerates the omission; `up` and `run` do not.
+
+`-U atms -d atms` below matches `.env.production.example`. If the new VPS's
+`.env` sets a different `DB_USERNAME`/`DB_DATABASE`, substitute throughout.
+
 ---
 
 ## What moves, and what stays
@@ -69,6 +84,32 @@ MTBF, MTTR, PM compliance, backlog, consumption — starts empty on the new VPS
 and builds forward. PM schedules themselves are unharmed: baselines travel with
 `asset_pm_assignments`.
 
+### Migrations seed rows — clear them before loading
+
+`php artisan migrate --force` on a brand-new database is **not** a no-data
+operation. Several migrations write rows in their `up()`, and four of the tables
+they write to are tables that move. Verified 2026-08-30 by migrating a scratch
+database and counting:
+
+| Table | Left by `migrate` alone | Collides with the dump on |
+|---|---|---|
+| `locations` | 1 — Tajoura Base, `code = TJB`, id 1 | `locations_pkey`, `locations_code_unique` |
+| `maintenance_categories` | 1 — `code = UNCLASSIFIED`, id 1 | `maintenance_categories_pkey`, `maintenance_categories_code_unique` |
+| `master_data_items` | 4 — the asset-condition vocabulary | `master_data_items_pkey`, `master_data_items_group_key_value_unique` |
+| `business_number_sequences` | 2 — the `MR` and `WO` counters at 0 | `business_number_sequences_pkey`, `business_number_sequences_type_unique` |
+
+Each collides on **both** its primary key and a business unique index, so the
+load fails no matter how ids are treated. The load runs in one transaction
+(`psql -1`), so the first duplicate rolls back the entire import.
+
+**They are truncated, not merged.** `ON CONFLICT DO NOTHING` would look like it
+worked and would be worse: the freshly-seeded `business_number_sequences` rows
+would win and the MR/WO counters would silently restart at 0 — exactly the
+outcome carrying that table is meant to prevent.
+
+The truncate belongs **between the migrate and the load** (step ③ below). Run
+after the load and it destroys the imported data.
+
 ### The users decision
 
 Users move (recommended, and what the commands below do). The alternative —
@@ -87,8 +128,10 @@ problem. Inactive users move too and simply stay inactive.
 ./scripts/survey-data.sh > survey-old-vps.txt
 
 # ② Confirm nothing has changed about attachments since 2026-08-30.
-#    If this ever shows attachable_type = 'asset', STOP and extend the plan:
-#    those files live in the attachments volume and would need copying.
+#    The four possible values are the morph aliases in Attachment::getMorphMap():
+#    asset, part, maintenance_request, work_order. Only the last two may appear.
+#    If this shows 'asset' OR 'part', STOP and extend the plan: those parents
+#    move, so their files in the attachments volume must be copied too.
 docker compose exec -T postgres psql -U atms -d atms -c \
   "SELECT attachable_type, count(*) FROM attachments GROUP BY 1"
 
@@ -114,8 +157,16 @@ docker compose exec -T postgres pg_dump -U atms -d atms \
 scp atms-move-set.sql user@new-vps:/srv/atms/
 ```
 
-`--disable-triggers` makes load order irrelevant and requires table ownership —
-the compose `postgres` user owns the database, so this is fine.
+`--disable-triggers` makes load order irrelevant: foreign keys are enforced by
+internal triggers, so with them off the tables can arrive in any order.
+
+⚠️ **It needs SUPERUSER, not ownership.** Disabling *internally generated*
+constraint triggers is a superuser-only operation — table ownership is enough for
+`DISABLE TRIGGER USER`, not for `ALL`. This works because the `postgres` image
+creates `POSTGRES_USER` (`atms`) as a superuser in that container. On managed
+Postgres, or anywhere the app user is merely the owner, this dump will not load
+and the fix is not a `GRANT` — you would drop `--disable-triggers` and load in
+dependency order instead.
 
 ---
 
@@ -132,21 +183,40 @@ docker compose --env-file .env -f compose.yaml -f compose.production.yaml build
 # ① Database only — do NOT start api/queue/scheduler yet.
 docker compose --env-file .env -f compose.yaml -f compose.production.yaml up -d postgres
 
-# ② Schema, explicitly WITHOUT seeding. Seeding here would collide with the
-#    roles, master data and sequences the dump is about to import.
+# ② Schema, explicitly WITHOUT seeding. `db:seed` here would collide with the
+#    roles, master data and sequences the dump is about to import — and note
+#    that skipping it is NOT sufficient on its own; step ③ is the other half.
 docker compose --env-file .env -f compose.yaml -f compose.production.yaml \
   run --rm api php artisan migrate --force
 
-# ③ Load the move set in one transaction.
+# ③ Clear the rows the MIGRATIONS themselves seeded — Tajoura Base, the
+#    UNCLASSIFIED category, the asset-condition vocabulary and the MR/WO
+#    counters. Every one of them duplicates a row in the dump, on both the
+#    primary key and a unique index, and step ④ runs in one transaction, so
+#    the first collision would roll back the whole import.
+#    See "Migrations seed rows" above. MUST run before the load, never after.
+#
+#    First prove the database is still empty — the TRUNCATE below CASCADEs into
+#    assets, parts and the MR/WO tables, and being empty is the ONLY reason it
+#    is safe. Do not run it on anything but a freshly migrated database.
+docker compose exec -T postgres psql -U atms -d atms -c \
+  "SELECT (SELECT count(*) FROM assets) assets, (SELECT count(*) FROM parts) parts,
+          (SELECT count(*) FROM work_orders) wos"   # expect 0 | 0 | 0
+
+docker compose exec -T postgres psql -U atms -d atms -c \
+  "TRUNCATE TABLE locations, maintenance_categories, master_data_items,
+   business_number_sequences RESTART IDENTITY CASCADE"
+
+# ④ Load the move set in one transaction.
 docker compose exec -T postgres psql -U atms -d atms -1 \
   -f - < atms-move-set.sql
 
-# ④ Drop the WO/MR references on meter readings (see the table list above).
+# ⑤ Drop the WO/MR references on meter readings (see the table list above).
 docker compose exec -T postgres psql -U atms -d atms -c \
   "UPDATE asset_meter_readings SET work_order_id = NULL, maintenance_request_id = NULL
    WHERE work_order_id IS NOT NULL OR maintenance_request_id IS NOT NULL"
 
-# ⑤ Push every moved table's id sequence past its imported max, or the first
+# ⑥ Push every moved table's id sequence past its imported max, or the first
 #    insert after cutover fails on a duplicate key.
 docker compose exec -T postgres psql -U atms -d atms <<'SQL'
 SELECT format(
@@ -163,7 +233,7 @@ WHERE schemaname = 'public'
 \gexec
 SQL
 
-# ⑥ Start the whole stack, then build the caches deploy.sh normally builds:
+# ⑦ Start the whole stack, then build the caches deploy.sh normally builds:
 docker compose --env-file .env -f compose.yaml -f compose.production.yaml up -d
 docker compose exec -T api php artisan config:cache
 docker compose exec -T api php artisan route:cache
@@ -171,7 +241,8 @@ docker compose exec -T api php artisan view:cache
 ```
 
 The attachments volume starts empty — correct, because no moving table owns
-attachment files (step ② of the old-VPS section proves it for the current data).
+attachment files (step ② of the old-VPS section proves it for the current data:
+no `asset` or `part` rows in `attachments`).
 
 ---
 
@@ -191,7 +262,15 @@ docker compose exec -T postgres psql -U atms -d atms -c \
    SELECT 'asset_meter_readings', count(*) FROM asset_meter_readings UNION ALL
    SELECT 'form_templates', count(*) FROM form_templates UNION ALL
    SELECT 'master_data_items', count(*) FROM master_data_items UNION ALL
+   SELECT 'maintenance_categories', count(*) FROM maintenance_categories UNION ALL
    SELECT 'business_number_sequences', count(*) FROM business_number_sequences"
+
+# The four tables the truncate cleared are the ones to read first: if any is
+# LARGER on the new VPS than the old, the truncate was skipped or ran late and
+# a migration-seeded row survived alongside the imported one.
+docker compose exec -T postgres psql -U atms -d atms -c \
+  "SELECT type, current_value FROM business_number_sequences ORDER BY type"
+#   → must show the OLD VPS's counters, not 0.
 
 # No WO/MR references survived the trip:
 docker compose exec -T postgres psql -U atms -d atms -c \
@@ -218,8 +297,10 @@ In the browser:
 ### Rollback
 
 Nothing on the old VPS was touched, so rollback is: point DNS back, restart the
-old stack. The new VPS can be re-loaded from `atms-move-set.sql` at any time
-(`migrate:fresh --force` first, then steps ③–⑥ again).
+old stack. The new VPS can be re-loaded from `atms-move-set.sql` at any time:
+`migrate:fresh --force` first, then steps ③–⑦ again — **including the truncate**,
+because `migrate:fresh` re-runs the data migrations and re-creates exactly the
+rows that collide.
 
 ---
 

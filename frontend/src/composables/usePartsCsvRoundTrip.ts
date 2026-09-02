@@ -52,12 +52,14 @@ export function usePartsCsvRoundTrip(onApplied?: () => void | Promise<void>) {
   /**
    * Goes through `api.download`, never a bare navigation.
    *
-   * A `window.location.href = '/api/…'` resolves against the *SPA* origin. In
-   * production the SPA is served from `atms.inova.krd` and the API from
-   * `atmsapi.inova.krd`, and the SPA host has no `/api` proxy — its catch-all
-   * returns `index.html`, so the operator gets the app's own HTML saved as a
-   * spreadsheet. `api.download` applies `VITE_API_ORIGIN` and surfaces a failure
-   * as an ApiError instead of replacing the page with it.
+   * A `window.location.href = '/api/…'` resolves against the *SPA* origin. If
+   * the SPA and API are ever split back onto separate hosts (see the
+   * cross-origin case in `VITE_API_ORIGIN`'s docs), the SPA host has no `/api`
+   * proxy and its catch-all returns `index.html` — the operator would get the
+   * app's own HTML saved as a spreadsheet. `api.download` applies
+   * `VITE_API_ORIGIN` and surfaces a failure as an ApiError instead of
+   * replacing the page with it. Production is same-origin today, but this
+   * stays defensive since nothing here should assume that won't change again.
    */
   async function downloadCsv(): Promise<void> {
     downloading.value = true

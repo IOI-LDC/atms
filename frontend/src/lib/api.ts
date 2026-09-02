@@ -1,6 +1,7 @@
 // API origin is env-driven so the SPA can run same-origin (dev proxy, empty
-// string → relative paths) or cross-origin (production subdomain split:
-// VITE_API_ORIGIN=https://atmsapi.inova.krd). Never hardcode the origin here.
+// string → relative paths — the current production setup) or cross-origin
+// (a future subdomain split: VITE_API_ORIGIN=https://api.example.com). Never
+// hardcode the origin here.
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? ''
 const BASE_URL = `${API_ORIGIN}/api`
 const CSRF_URL = `${API_ORIGIN}/sanctum/csrf-cookie`

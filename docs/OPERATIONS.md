@@ -14,14 +14,24 @@ queue-worker, and scheduler services. Persistent `pgdata` and `attachments`
 volumes must survive a deploy. Only HTTPS should be externally exposed; PostgreSQL
 and PHP-FPM must remain private to the Docker network.
 
+Production is a single host, `assets.ldc.com.ly`: one Caddy site block serves the
+built SPA and reverse-proxies `/api/*`, `/sanctum/*`, `/storage/*`, and `/up` to
+the Docker `nginx` container — see the `Caddyfile` at the repo root. For a
+from-scratch VPS setup see [VPS-PROVISIONING.md](VPS-PROVISIONING.md); for moving
+existing data onto a new VPS see [PROD-VPS-MIGRATION.md](PROD-VPS-MIGRATION.md).
+
 ## Production configuration
 
 - Configure separate credentials for ERP and Microsoft Graph; they are different
   Entra ID applications.
 - Production email uses Graph `sendMail`; development and tests use the fake
   transport. See "Email delivery" below.
-- Set trusted Sanctum stateful domains and CORS/cookie settings for the deployed SPA
-  and API hosts.
+- Set trusted Sanctum stateful domains and cookie settings for the deployed host.
+  Production is single-host, same-origin (SPA at `/`, API at `/api` on
+  `assets.ldc.com.ly`): `SESSION_DOMAIN` and `SANCTUM_STATEFUL_DOMAINS` are the
+  one host, no shared-parent-domain trick needed, and `CORS_ALLOWED_ORIGINS` is
+  effectively moot for the SPA's own same-origin requests (kept set for any
+  future cross-origin consumer). See the `Caddyfile` and `.env.production.example`.
 - Retain database and attachment volumes across deploys.
 - Monitor queue workers, scheduler execution, Graph credential expiry, ERP sync
   errors, disk capacity, and backup completion.
@@ -69,9 +79,11 @@ will mail whoever holds the Manager or Technician role. Addresses on `ldc.com.ly
 real; any remaining `atms.local` or `atms.internal` address is a placeholder that will
 bounce, and only matters while the account holding it is active.
 
-Set `FRONTEND_URL` per environment: `https://atms.inova.krd` on the deployed backend
-(provisional — see [ROADMAP.md](ROADMAP.md)), and the local dev server address when
-running locally.
+Set `FRONTEND_URL` per environment: `https://assets.ldc.com.ly` on the deployed
+backend, and the local dev server address when running locally. Same-origin
+deployment means `FRONTEND_URL` can also be left unset — `FrontendUrl::to()`
+falls back to `APP_URL`, which is now the correct host either way — but setting
+it explicitly is clearer.
 
 ## Deploy and update
 

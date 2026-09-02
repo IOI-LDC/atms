@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
 # ===========================================================================
-# ATMS — VPS deploy script (Option A: Caddy + Docker, split subdomain)
+# ATMS — VPS deploy script (Caddy + Docker, single host / same-origin)
 # --------------------------------------------------------------------------
 # Run on the VPS, from the project root (e.g. /srv/atms).
 #
-#   SPA:  https://atms.inova.krd     (Vue static files)
-#   API:  https://atmsapi.inova.krd  (Laravel via Docker nginx)
+#   Host: https://assets.ldc.com.ly  (SPA at /, Laravel via Docker nginx at /api)
 #
-# Prerequisites on the VPS (one-time):
-#   sudo apt update && sudo apt install -y docker.io docker-compose-plugin caddy git
+# Prerequisites on the VPS (one-time) — see docs/VPS-PROVISIONING.md for the
+# full runbook. Short version:
+#   sudo apt update && sudo apt install -y docker.io docker-compose-v2 caddy git
 #   sudo usermod -aG docker $USER && newgrp docker
 #   git clone <repo> /srv/atms && cd /srv/atms
 #   cp .env.production.example .env && nano .env   # fill every secret
 #   sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+#
+# Step 1 below runs `npm run build` ON THE HOST (not in Docker), so Node.js
+# must also be installed — Ubuntu 24.04's apt `nodejs` is v18, too old for
+# this frontend's `engines` (^20.19.0 || >=22.12.0). Use NodeSource:
+#   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+#   sudo apt-get install -y nodejs
 #
 # Idempotent — safe to re-run on every deploy.
 #
@@ -36,8 +42,7 @@ cd "$PROJECT_DIR"
 # shellcheck disable=SC1091
 set -a; [[ -f .env ]] && source .env; set +a
 
-APP_HOST="${APP_HOST:-atms.inova.krd}"
-API_HOST="${API_HOST:-atmsapi.inova.krd}"
+APP_HOST="${APP_HOST:-assets.ldc.com.ly}"
 
 # --- 0. Sanity checks -------------------------------------------------------
 if [[ ! -f .env ]]; then
@@ -131,12 +136,11 @@ docker compose ps
 
 echo ""
 echo "==> Deploy complete. Verify:"
-echo "    SPA :  https://${APP_HOST}"
-echo "    API :  https://${API_HOST}/api/health/ready"
+echo "    App :  https://${APP_HOST}"
+echo "    API :  https://${APP_HOST}/api/health/ready"
 echo "    Logs:  docker compose logs -f api"
 echo ""
-echo "Sanctum cross-subdomain cookie auth requires these .env values to agree:"
-echo "    SESSION_DOMAIN=.inova.krd"
+echo "Same-origin Sanctum cookie auth requires these .env values to agree:"
+echo "    SESSION_DOMAIN=${APP_HOST}"
 echo "    SANCTUM_STATEFUL_DOMAINS=${APP_HOST}"
-echo "    CORS_ALLOWED_ORIGINS=https://${APP_HOST}"
-echo "If login 401s, that triple is the first thing to check."
+echo "If login 401s, that pair is the first thing to check."
