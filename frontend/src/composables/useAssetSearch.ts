@@ -22,7 +22,7 @@ export function useAssetSearch(options: { maintenanceStatus?: string } = {}) {
   async function fetchAssets() {
     busy.value = true
     try {
-      const params: Record<string, string | number> = { per_page: 10 }
+      const params: Record<string, string | number> = { per_page: 50 }
       if (query.value.trim()) {
         params.search = query.value
       }

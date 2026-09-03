@@ -11,13 +11,11 @@ category vocabulary only ever existed in a database, created by
 `atms:import-assets` on dev, so `php artisan migrate` on a new host produced no
 classification at all.
 
-Two migrations, sourced from the **dev** database:
-
-- `2026_09_03_090000_seed_maintenance_categories` — the 25 codes, `insertOrIgnore`
-  so an Admin's rename is never re-stamped.
-- `2026_09_03_090100_backfill_asset_maintenance_categories` — `erp_asset_code` →
-  category code for 400 assets, restricted to rows still on `UNCLASSIFIED`, so it
-  backfills and never overwrites a hand-set classification.
+One migration, `2026_09_03_090000_restore_maintenance_categories`, sourced from
+the **dev** database. It seeds the 25 codes (`insertOrIgnore`, so an Admin's
+rename is never re-stamped), then maps `erp_asset_code` → category code for 400
+assets, restricted to rows still on `UNCLASSIFIED` — a backfill that never
+overwrites a hand-set classification.
 
 **Not `atms:import-assets`.** Its write path (`applyImport`) also writes
 `operational_status`, `maintenance_status`, `name`, `serial_number`, `model`,
