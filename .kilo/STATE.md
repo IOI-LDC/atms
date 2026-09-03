@@ -3,7 +3,62 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-09-02 (latest — post-deploy fixes: favicon, VPS checkout trim, latency triage)
+## Session — 2026-09-03 (latest — maintenance categories restored on prod)
+
+The production VPS came up with **1** maintenance category (the `UNCLASSIFIED`
+sentinel seeded by `2026_08_01_090000`) and every asset defaulted to it: the
+category vocabulary only ever existed in a database, created by
+`atms:import-assets` on dev, so `php artisan migrate` on a new host produced no
+classification at all.
+
+Two migrations, sourced from the **dev** database:
+
+- `2026_09_03_090000_seed_maintenance_categories` — the 25 codes, `insertOrIgnore`
+  so an Admin's rename is never re-stamped.
+- `2026_09_03_090100_backfill_asset_maintenance_categories` — `erp_asset_code` →
+  category code for 400 assets, restricted to rows still on `UNCLASSIFIED`, so it
+  backfills and never overwrites a hand-set classification.
+
+**Not `atms:import-assets`.** Its write path (`applyImport`) also writes
+`operational_status`, `maintenance_status`, `name`, `serial_number`, `model`,
+`asset_kind` and `asset_tag` whenever the workbook cell is non-blank — and they
+all are. Running it to fix categories would reset live asset state to the
+workbook's August values.
+
+**Not `backend/database/data/assets.csv` either.** It disagrees with dev on 15
+assets: it spells one category `SUB FLOW / MWD` where dev's code is
+`MWD_SUB_FLOW` ("MWD / SUB FLOW"), and leaves 2 assets blank that dev classifies
+as `COMPLETION`. Dev has no unclassified asset. Verified by diffing all 400.
+
+**Ids are never copied** — dev has `MOTOR` at id 1 and `UNCLASSIFIED` at 27;
+production has `UNCLASSIFIED` at id 1. Everything matches on `code`, which is
+also what `form_template_maintenance_category` and `pm_rule_maintenance_category`
+route on.
+
+### Two bugs the testing caught, worth remembering
+
+1. **`groupBy` renumbers.** `collect($map)->groupBy(fn ($c) => $c)` drops the
+   original keys unless `preserveKeys: true`, so `$assets->keys()` returned
+   `0..n` and every UPDATE matched nothing — the migration reported DONE and
+   changed zero rows. Silent.
+2. **Seeded reference data collides with the test suite.** The suite creates
+   categories with explicit realistic codes (`JAR`, `MOTOR`, `MWD_APS`,
+   `MWD_SUB_FLOW`, `MWD_VERTEX`, plus the factory's `COMPLETION`/`WHIPSTOCK`/
+   `SHOCK_SUB`) — 38 of 61 `MaintenanceCategory::factory()` calls pass a literal
+   `code`. Seeding first broke **78 tests** on
+   `maintenance_categories_code_unique`. Both migrations now return early when
+   `app()->environment('testing')`; `phpunit.xml` pins `APP_ENV=testing` with
+   both a forced `<env>` and its `<server>` twin, so the check is reliable.
+   **Any future data-seeding migration in this repo needs the same guard.**
+
+Verified against a copy of the production state (1 category, 400 unclassified):
+26 categories, 0 unclassified, and the asset→category mapping byte-identical to
+dev across all 400. Re-run leaves a hand-set category alone. 1285 tests pass,
+Pint clean.
+
+---
+
+## Session — 2026-09-02 (post-deploy fixes: favicon, VPS checkout trim, latency triage)
 
 First session against the **live** single-host VPS. Three threads.
 
