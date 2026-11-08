@@ -3,7 +3,30 @@
 > **For AI agents:** Read this at the start of every session. It tells you what
 > was done, what is decided, what is blocked, and what to tackle next.
 
-## Session — 2026-09-03 (latest — maintenance categories restored on prod)
+## Session — 2026-11-08 (latest — new-VPS asset names/sizes behind dev)
+
+Client reported old asset names and no size filter on the new VPS. **Code was not
+stale**: the VPS runs `64d8e58` (latest), built 2026-09-03. **Data was**: 429
+assets, `size_inches` set on **0**, names are raw ERP descriptions (`(#2)` suffix
+from `atms:import-erp-assets`), not the workbook's. Dev matches `assets.csv`
+exactly (400 names, 400 tags, 312 sizes). The size filter only lists sizes
+present in the data, so an empty column renders an empty dropdown.
+
+The 2026-09-03 category migration restored categories only; name and size never
+followed. The old VPS was deleted, so what it last ran is unknowable.
+
+**New `atms:sync-asset-names [file] [--dry-run]`** — writes `name` and
+`size_inches` only, matched on `erp_asset_code`, from `database/data/assets.csv`.
+Blank cells never clear a value; assets not in the workbook are untouched
+(the VPS has 31 such rows, not inspected); one bad size rejects the whole file;
+each change is audited `asset.workbook_sync`. **Not `atms:import-assets`** — that
+also overwrites status, serial, model, tag. Verified on a scratch copy of dev made
+VPS-like: 400 names + 312 sizes changed, result identical to dev, re-run is a
+no-op. 1290 tests pass.
+
+**Not yet run on the VPS.** Needs deploy, then `--dry-run` reviewed by LDC first.
+
+## Session — 2026-09-03 (maintenance categories restored on prod)
 
 The production VPS came up with **1** maintenance category (the `UNCLASSIFIED`
 sentinel seeded by `2026_08_01_090000`) and every asset defaulted to it: the
