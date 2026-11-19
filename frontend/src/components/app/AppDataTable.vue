@@ -75,6 +75,10 @@ const props = withDefaults(
     // explicit key only when one route renders multiple tables with equal labels,
     // or pass an empty string to opt out of persistence.
     stateKey?: string
+    // Explicit column filters supplied by the host view (e.g. from URL query
+    // params such as a Dashboard drill-down). When present, these override any
+    // cached filters/search from earlier in the session.
+    initialColumnFilters?: ColumnFiltersState
   }>(),
   { loading: false, searchable: true, rowKey: 'id' },
 )
@@ -176,7 +180,9 @@ const globalFilterFn: FilterFn<AnyRow> = (row, columnId, filterValue) => {
 
 // ── Owned state (manual control so we can persist/restore) ───────────────────
 const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
+const columnFilters = ref<ColumnFiltersState>(
+  props.initialColumnFilters ? [...props.initialColumnFilters] : [],
+)
 const globalFilter = ref('')
 const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: 10 })
 
@@ -186,6 +192,19 @@ const applySearch = useDebounceFn((v: string) => {
   globalFilter.value = v
 }, 200)
 watch(search, (v) => applySearch(v))
+
+watch(
+  () => props.initialColumnFilters,
+  (next, prev) => {
+    if (next?.length) {
+      columnFilters.value = [...next]
+      globalFilter.value = ''
+      search.value = ''
+    } else if (prev?.length) {
+      columnFilters.value = []
+    }
+  },
+)
 
 const table = useVueTable<AnyRow>({
   // `rows` change reactively as data loads.
@@ -343,10 +362,11 @@ function restore() {
   const snap = tableStateCache.get(stateKey)
   if (!snap) return
   sorting.value = snap.sorting
+  pagination.value = { pageIndex: 0, pageSize: snap.pageSize }
+  if (props.initialColumnFilters?.length) return
   columnFilters.value = snap.columnFilters
   globalFilter.value = snap.globalFilter
   search.value = snap.globalFilter
-  pagination.value = { pageIndex: 0, pageSize: snap.pageSize }
 }
 
 watch(

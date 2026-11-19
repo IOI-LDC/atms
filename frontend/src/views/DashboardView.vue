@@ -119,7 +119,11 @@ const locationMax = computed(() =>
                 {{ failureCount === 1 ? 'asset down' : 'assets down' }}
               </span>
             </span>
-            <RouterLink class="dash-attn-link" to="/assets">View</RouterLink>
+            <RouterLink
+              class="dash-attn-link"
+              :to="{ path: '/assets', query: { tab: 'all-assets', operational_status: 'failure' } }"
+              >View</RouterLink
+            >
           </div>
 
           <div v-if="showOverduePm" class="dash-card dash-attn dash-span-4">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { ColumnFiltersState } from '@tanstack/vue-table'
 import AppLayout from '@/components/app/AppLayout.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
 import AssetIdentity from '@/components/app/AssetIdentity.vue'
@@ -61,7 +62,16 @@ const activeTab = computed(() => {
 })
 
 watch(activeTab, (tab) => {
-  if (tab && route.query.tab !== tab) router.replace({ path: route.path, query: { tab } })
+  if (tab && route.query.tab !== tab) {
+    router.replace({ path: route.path, query: { ...route.query, tab } })
+  }
+})
+
+const initialColumnFilters = computed<ColumnFiltersState | undefined>(() => {
+  const status = route.query.operational_status
+  if (typeof status !== 'string') return undefined
+  const valid = assetFilterOptions.operational_status?.some((o) => o.value === status)
+  return valid ? [{ id: 'operational_status', value: status }] : undefined
 })
 
 watch(
@@ -137,6 +147,7 @@ function goDetail(payload: { row: Asset }) {
           :rows="filteredRows"
           :columns="assetColumns"
           :filter-options="mergedFilterOptions"
+          :initial-column-filters="initialColumnFilters"
           empty-text="No assets found."
           label="Assets"
           :loading="all.loading.value"
